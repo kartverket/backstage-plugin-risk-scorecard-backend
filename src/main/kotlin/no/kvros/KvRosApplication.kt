@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class KvRosApplication
 
 fun main(args: Array<String>) {
-	runApplication<KvRosApplication>(*args)
+    runApplication<KvRosApplication>(*args)
 }
