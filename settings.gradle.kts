@@ -1,1 +1,1 @@
-rootProject.name = "kv-ros"
+rootProject.name = "kv-ros-backend"
