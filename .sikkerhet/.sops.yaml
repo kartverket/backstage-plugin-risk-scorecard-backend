@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: \.ros\.yaml$
+    age: 'age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf'
