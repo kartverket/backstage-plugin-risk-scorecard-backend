@@ -21,8 +21,6 @@ fun decryptYamlData(encryptedData: String): String? {
         // Wait for the process to complete
         process.waitFor()
 
-        println(decryptedData)
-
         return decryptedData
     } catch (e: Exception) {
         e.printStackTrace()
