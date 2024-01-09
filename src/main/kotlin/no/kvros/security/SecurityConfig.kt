@@ -16,7 +16,7 @@ class SecurityConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("api/**").permitAll() }
 
         return http.build()
