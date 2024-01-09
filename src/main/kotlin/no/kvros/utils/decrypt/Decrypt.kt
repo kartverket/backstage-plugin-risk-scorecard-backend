@@ -1,15 +1,10 @@
 package no.kvros.utils.decrypt
 
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStreamReader
 
 fun decryptYamlData(encryptedData: String): String? {
-
-    val encData = File(".sikkerhet/ros/kryptert.ros.yaml").readText()
-    println("encData:::: " + encData)
-
-    val processBuilder = ProcessBuilder("sops", "--input-type", "yaml", "--output-type", "yaml", "--decrypt", "/dev/stdin")
+    val processBuilder = ProcessBuilder("sops", "--input-type", "yaml", "--output-type", "json", "--decrypt", "/dev/stdin")
     processBuilder.redirectErrorStream(true)
 
     try {
@@ -25,6 +20,8 @@ fun decryptYamlData(encryptedData: String): String? {
 
         // Wait for the process to complete
         process.waitFor()
+
+        println(decryptedData)
 
         return decryptedData
     } catch (e: Exception) {

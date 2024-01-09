@@ -1,5 +1,6 @@
 package no.kvros.github
 
+import no.kvros.utils.decrypt.decryptYamlData
 import org.springframework.stereotype.Service
 
 @Service
@@ -11,9 +12,8 @@ class GithubService(
         repository: String,
         pathToRoser: String,
         accessToken: String,
-    ): List<String>? {
-        val res = githubConnector.fetchROSes(owner, repository, pathToRoser, accessToken)
-        // Decrypt data
-        return res
-    }
+    ): List<String>? =
+        githubConnector
+            .fetchROSes(owner, repository, pathToRoser, accessToken)
+            ?.let { it.mapNotNull { decryptYamlData(it) } }
 }
