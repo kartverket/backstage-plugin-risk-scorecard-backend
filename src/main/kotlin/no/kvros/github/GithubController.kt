@@ -13,11 +13,11 @@ class GithubController(
     @GetMapping("/github/{token}")
     fun fetchROS(
         @PathVariable token: String,
-    ): List<String>? =
+    ): String? =
         githubService.fetchROSes(
             "bekk",
             "kv-ros-backend",
             ".sikkerhet/ros",
             token,
-        )
+        ).toString()
 }
