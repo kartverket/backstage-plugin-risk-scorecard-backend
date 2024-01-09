@@ -1,4 +1,4 @@
-package no.kvros.client
+package no.kvros.utils.connector
 
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.web.reactive.function.client.WebClient

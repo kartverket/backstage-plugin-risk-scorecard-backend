@@ -1,4 +1,4 @@
-package no.kvros.github
+package no.kvros.ros
 
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -7,17 +7,17 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api")
-class GithubController(
-    private val githubService: GithubService,
+class ROSController(
+    private val ROSService: ROSService,
 ) {
-    @GetMapping("/github/{token}")
-    fun fetchROS(
-        @PathVariable token: String,
+    @GetMapping("/ros/{githubAccessToken}")
+    fun getROSesFromGithub(
+        @PathVariable githubAccessToken: String,
     ): String? =
-        githubService.fetchROSes(
+        ROSService.fetchROSesFromGithub(
             "bekk",
             "kv-ros-backend",
             ".sikkerhet/ros",
-            token,
+            githubAccessToken,
         ).toString()
 }

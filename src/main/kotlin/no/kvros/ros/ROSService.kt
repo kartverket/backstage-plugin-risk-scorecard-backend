@@ -1,13 +1,13 @@
-package no.kvros.github
+package no.kvros.ros
 
 import no.kvros.utils.decrypt.decryptYamlData
 import org.springframework.stereotype.Service
 
 @Service
-class GithubService(
+class ROSService(
     private val githubConnector: GithubConnector,
 ) {
-    fun fetchROSes(
+    fun fetchROSesFromGithub(
         owner: String,
         repository: String,
         pathToRoser: String,

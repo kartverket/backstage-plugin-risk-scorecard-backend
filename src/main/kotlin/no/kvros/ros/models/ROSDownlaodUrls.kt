@@ -1,4 +1,4 @@
-package no.kvros.github
+package no.kvros.ros.models
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
