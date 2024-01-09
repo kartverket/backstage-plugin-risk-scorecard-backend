@@ -12,3 +12,4 @@ build/
 *.iml
 .gradle/
 /out/
+http-client.private.env.json
