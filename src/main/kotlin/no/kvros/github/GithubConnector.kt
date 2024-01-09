@@ -9,13 +9,13 @@ val mapper = jacksonObjectMapper()
 
 @Component
 class GithubConnector : Connector("https://api.github.com/repos") {
-    fun fetchROSes(
+    fun fetchROSesFromGithub(
         owner: String,
         repository: String,
         pathToRoser: String,
         accessToken: String,
     ): List<String>? =
-        fetchROSUrls(owner, repository, pathToRoser, accessToken)
+        fetchROSUrlsFromGithub(owner, repository, pathToRoser, accessToken)
             ?.map {
                 webClient
                     .get()
@@ -27,7 +27,7 @@ class GithubConnector : Connector("https://api.github.com/repos") {
             }
             ?.mapNotNull { it.block() }
 
-    private fun fetchROSUrls(
+    private fun fetchROSUrlsFromGithub(
         owner: String,
         repository: String,
         pathToRoser: String,

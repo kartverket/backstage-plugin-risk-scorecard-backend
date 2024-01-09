@@ -14,6 +14,6 @@ class GithubService(
         accessToken: String,
     ): List<String>? =
         githubConnector
-            .fetchROSes(owner, repository, pathToRoser, accessToken)
+            .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
             ?.let { it.mapNotNull { decryptYamlData(it) } }
 }
