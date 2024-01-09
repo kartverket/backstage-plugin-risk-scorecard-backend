@@ -11,16 +11,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig() {
+class SecurityConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .cors { corsConfigurer ->
-                corsConfigurer.configurationSource(corsConfigurationSource())
-            }
-            .authorizeHttpRequests {
-                it.requestMatchers("api/**").permitAll()
-            }
+            .cors { it.configurationSource(corsConfigurationSource()) }
+            .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("api/**").permitAll() }
 
         return http.build()
     }
@@ -29,8 +26,7 @@ class SecurityConfig() {
     fun corsConfigurationSource(): CorsConfigurationSource? {
         val configuration = CorsConfiguration()
         configuration.allowedOrigins = getAllowedOrigins()
-        configuration.allowedMethods =
-            listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         configuration.allowedHeaders =
             listOf("authorization", "content-type", "x-auth-token", "x-request-id", "contenttype", "Authorization")
         configuration.exposedHeaders = mutableListOf("x-auth-token")

@@ -1,1 +1,10 @@
-GET http://localhost:8080/helloworld
+### Health
+GET http://localhost:8080/actuator/health
+
+### Github API
+GET https://api.github.com/repos/bekk/kv-ros-backend/contents/.sikkerhet/ros
+Accept: application/vnd.github+json
+Authorization: token {{GITHUB_TOKEN}}
+
+### GET /github
+GET http://localhost:8080/api/ros/{{GITHUB_TOKEN}}
