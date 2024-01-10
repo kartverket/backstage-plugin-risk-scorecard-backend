@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 class SopsEncryptorForYamlTest {
+    private val decryptedROS =
+        File("src/test/kotlin/no/kvros/encryption/utils/ukryptert.ros.json").readText(Charsets.UTF_8)
+
     @Test
     fun `when ciphertext is not yaml then null is returned`() {
         val ciphertextThatIsJustAString =
@@ -18,10 +21,10 @@ class SopsEncryptorForYamlTest {
     @Test
     fun `when ciphertext is yaml then the json equivalent is returned`() {
         val ciphertextThatIsYaml =
-            File(".sikkerhet/ros/kryptert.ros.yaml").bufferedReader().readText()
+            File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros.yaml").readText(Charsets.UTF_8)
 
         val actual = SopsEncryptorForYaml.decrypt(ciphertextThatIsYaml)
 
-        assertThat(actual).isNotNull()
+        assertThat(actual).isEqualTo(decryptedROS)
     }
 }
