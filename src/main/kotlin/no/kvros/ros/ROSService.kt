@@ -1,6 +1,6 @@
 package no.kvros.ros
 
-import no.kvros.utils.decrypt.decryptYamlData
+import no.kvros.encryption.SopsEncryptorForYaml
 import org.springframework.stereotype.Service
 
 @Service
@@ -15,5 +15,5 @@ class ROSService(
     ): List<String>? =
         githubConnector
             .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
-            ?.let { it.mapNotNull { decryptYamlData(it) } }
+            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
 }

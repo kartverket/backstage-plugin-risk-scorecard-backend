@@ -1,12 +1,12 @@
-package no.kvros.utils.connector
+package no.kvros.infra.connector
 
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.web.reactive.function.client.WebClient
 
-abstract class Connector(
-    private val webClientBaseUrl: String,
+abstract class WebClientConnector(
+    baseURL: String,
 ) {
-    protected val webClient = WebClient.create(webClientBaseUrl)
+    protected val webClient = WebClient.create(baseURL)
 
     protected inline fun <reified T> typeReference() = object : ParameterizedTypeReference<T>() {}
 }

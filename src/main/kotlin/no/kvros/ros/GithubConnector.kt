@@ -2,14 +2,14 @@ package no.kvros.ros
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import no.kvros.infra.connector.WebClientConnector
 import no.kvros.ros.models.ROSDownloadUrls
-import no.kvros.utils.connector.Connector
 import org.springframework.stereotype.Component
 
 val mapper = jacksonObjectMapper()
 
 @Component
-class GithubConnector : Connector("https://api.github.com/repos") {
+class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     fun fetchROSesFromGithub(
         owner: String,
         repository: String,
