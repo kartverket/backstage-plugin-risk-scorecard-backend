@@ -25,6 +25,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("net.pwall.json:json-kotlin-schema:0.44")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

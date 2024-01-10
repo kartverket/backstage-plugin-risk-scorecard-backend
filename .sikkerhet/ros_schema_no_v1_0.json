@@ -191,7 +191,7 @@
       "type": "object",
       "properties": {
         "oppsummering": {
-          "type": "string",
+          "type": "string"
         },
         "sannsynlighet": {
           "description": "Antall hendelser/dag",
