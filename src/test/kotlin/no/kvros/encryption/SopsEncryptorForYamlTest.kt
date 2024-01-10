@@ -21,7 +21,7 @@ class SopsEncryptorForYamlTest {
     @Test
     fun `when ciphertext is yaml then the json equivalent is returned`() {
         val ciphertextThatIsYaml =
-            File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros.yaml").readText(Charsets.UTF_8)
+            File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
 
         val actual = SopsEncryptorForYaml.decrypt(ciphertextThatIsYaml)
 

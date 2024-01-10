@@ -15,5 +15,5 @@ class ROSService(
     ): List<String>? =
         githubConnector
             .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
-            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
+            ?.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) }
 }
