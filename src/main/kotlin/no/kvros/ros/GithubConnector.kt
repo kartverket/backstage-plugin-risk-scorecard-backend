@@ -6,11 +6,12 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import java.util.UUID
 
 data class GithubWritePayload(
     val message: String,
     val content: String,
-    //val sha: String - denne må brukes når vi skal oppdatere noe -> kommer snart
+    // val sha: String - denne må brukes når vi skal oppdatere noe -> kommer snart
 ) {
     fun toContentBody(): String = "{\"message\":\"$message\", \"content\":\"$content\"}"
 }
@@ -32,9 +33,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         pathToRoser: String,
         accessToken: String,
-    ): List<ROSDownloadUrl>? =
-        getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).toROSDownloadUrls()
-
+    ): List<ROSDownloadUrl>? = getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).toROSDownloadUrls()
 
     internal fun getRosSha(
         owner: String,
@@ -51,7 +50,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         accessToken: String,
         writePayload: GithubWritePayload,
-        rosFilePath: String = ".sikkerhet/ros/test2.ros.yaml",
+        rosFilePath: String = ".sikkerhet/ros/${UUID.randomUUID()}.ros.yaml",
     ): String? {
         val uri = "/$owner/$repository/contents/$rosFilePath"
 
@@ -68,14 +67,15 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
 
     private fun ResponseSpec.toROS(): String? = this.bodyToMono<String>().block()
 
-    private fun ResponseSpec.toROSDownloadUrls(): List<ROSDownloadUrl>? =
-        this.bodyToMono<List<ROSDownloadUrl>>().block()
+    private fun ResponseSpec.toROSDownloadUrls(): List<ROSDownloadUrl>? = this.bodyToMono<List<ROSDownloadUrl>>().block()
 
-    private fun getGithubResponse(uri: String, accessToken: String): ResponseSpec =
+    private fun getGithubResponse(
+        uri: String,
+        accessToken: String,
+    ): ResponseSpec =
         webClient.get()
             .uri(uri)
             .header("Accept", "application/vnd.github+json")
             .header("Authorization", "token $accessToken")
             .retrieve()
-
 }
