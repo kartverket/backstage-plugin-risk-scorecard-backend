@@ -1,12 +1,18 @@
 package no.kvros.ros
 
 import no.kvros.encryption.SopsEncryptorForYaml
+import no.kvros.ros.models.ROSWrapperObject
+import no.kvros.validation.JSONValidator
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
 class ROSService(
+
     private val githubConnector: GithubConnector,
+    @Value("\${sops.publicKey}")
+    private val publicKey: String
 ) {
     fun fetchROSesFromGithub(
         owner: String,
@@ -16,19 +22,27 @@ class ROSService(
     ): List<String>? =
         githubConnector
             .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
-            ?.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) }
-
+            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
 
     fun postNewROSToGithub(
         owner: String,
         repository: String,
         accessToken: String,
-        content: String
-    ): String? = githubConnector.writeToGithub(
-        owner, repository, accessToken,
-        GithubWritePayload(
-            message = "Yeehaw dette er en ny ros",
-            content = Base64.getEncoder().encodeToString(content.toByteArray()),
-        ),
-    )
+        content: ROSWrapperObject
+    ): String?  {
+        val validationStatus  = JSONValidator.validateJSON(content.ros)
+        if (!validationStatus.valid) {
+            return validationStatus.errors?.last()?.error
+        }
+            val encryptedData = SopsEncryptorForYaml.encrypt(publicKey , content.ros).also { println(it) } ?:
+            return "encryption failed"
+
+        return githubConnector.writeToGithub(
+            owner, repository, accessToken,
+            GithubWritePayload(
+                message = "Yeehaw dette er en ny ros",
+                content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+            ),
+        )
+    }
 }

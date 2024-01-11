@@ -13,11 +13,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @EnableWebSecurity
 class SecurityConfig {
     @Bean
+    // TODO: Get rid of the quickfix with csrf().disable()
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("api/**").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("api/**").permitAll() }.csrf().disable()
 
         return http.build()
     }

@@ -51,7 +51,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         accessToken: String,
         writePayload: GithubWritePayload,
-        rosFilePath: String = "./sikkerhet/.ros2.yaml",
+        rosFilePath: String = ".sikkerhet/ros/test2.ros.yaml",
     ): String? {
         val uri = "/$owner/$repository/contents/$rosFilePath"
 
