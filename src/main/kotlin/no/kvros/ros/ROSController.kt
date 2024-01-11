@@ -28,10 +28,8 @@ class ROSController(
 
     @PostMapping(value = ["/ros/{githubAccessToken}"])
     @ResponseStatus(HttpStatus.CREATED)
-    fun postROS(@RequestBody ros: ROSWrapperObject, @PathVariable githubAccessToken: String){
-    ROSService.postROSToGithub(ros, "bekk",
-        "kv-ros-backend",
-        ".sikkerhet/ros",
-        githubAccessToken, )
+    fun postROS(@RequestBody ros: ROSWrapperObject, @PathVariable githubAccessToken: String): String?{
+    val msg = ROSService.postROSToGithub(ros)
+    return msg
     }
 }

@@ -25,28 +25,14 @@ class ROSService(
 
     fun postROSToGithub(
         ros: ROSWrapperObject,
-        owner: String,
-        repository: String,
-        pathToRoser: String,
-        accessToken: String,
     ) :String? {
         val validationStatus  = JSONValidator.validateJSON(ros.ros)
-        println("VALIDATIONSTATUS::::" + validationStatus)
         if (validationStatus.valid) {
           val encryptedData = SopsEncryptorForYaml.encrypt(publicKey , ros.ros)
                 ?.let{
-                  ROSWrapperObject(it)
+                  return "success"
                 }
-        println("ENCDATA:::: " + encryptedData)
-        githubConnector
-            .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
-            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
         }
-        return validationStatus.errors.toString()
+        return validationStatus.errors?.last()?.error
     }
-
-
-        // Legg til at det hvis !valid, så sender man tilbake erroroutputen tilbake til frontend :))
-
-
 }
