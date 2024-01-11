@@ -16,7 +16,7 @@ class ROSController(
             repository = "kv-ros-backend",
             pathToRoser = ".sikkerhet/ros",
             accessToken = githubAccessToken,
-        ).toString()
+        )?.first().toString()
 
     @PostMapping("/ros/{githubAccessToken}", consumes = ["text/plain"], produces = ["text/plain"])
     fun postROSToGithub(
