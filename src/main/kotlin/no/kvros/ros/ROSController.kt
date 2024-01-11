@@ -19,5 +19,5 @@ class ROSController(
             "kv-ros-backend",
             ".sikkerhet/ros",
             githubAccessToken,
-        ).toString()
+        )?.first().toString()
 }
