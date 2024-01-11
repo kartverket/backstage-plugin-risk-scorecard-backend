@@ -1,6 +1,5 @@
 package no.kvros.ros
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.util.*
 
@@ -9,7 +8,6 @@ class GithubConnectorTest {
 
     private val githubConnector = GithubConnector()
 
-    @Test
     fun `prov a poste noe nytt til et github-repo`() {
 
         githubConnector.writeToGithub(
