@@ -1,12 +1,10 @@
 package no.kvros.ros
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import no.kvros.infra.connector.WebClientConnector
-import no.kvros.ros.models.ROSDownloadUrls
+import no.kvros.ros.models.ROSDownloadUrl
 import org.springframework.stereotype.Component
-
-val mapper = jacksonObjectMapper()
+import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
+import org.springframework.web.reactive.function.client.bodyToMono
 
 @Component
 class GithubConnector : WebClientConnector("https://api.github.com/repos") {
@@ -17,33 +15,26 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
     ): List<String>? =
         fetchROSUrlsFromGithub(owner, repository, pathToRoser, accessToken)
-            ?.map {
-                webClient
-                    .get()
-                    .uri(it.download_url)
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "token $accessToken")
-                    .retrieve()
-                    .bodyToMono(typeReference<String>())
-            }
-            ?.mapNotNull { it.block() }
+            ?.map { getGithubResponse(it.download_url, accessToken) }
+            ?.mapNotNull { it.toROS() }
 
     private fun fetchROSUrlsFromGithub(
         owner: String,
         repository: String,
         pathToRoser: String,
         accessToken: String,
-    ): List<ROSDownloadUrls>? =
-        webClient
-            .get()
-            .uri("/$owner/$repository/contents/$pathToRoser")
+    ): List<ROSDownloadUrl>? =
+        getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).toROSDownloadUrls()
+
+    private fun ResponseSpec.toROS(): String? = this.bodyToMono<String>().block()
+
+    private fun ResponseSpec.toROSDownloadUrls(): List<ROSDownloadUrl>? =
+        this.bodyToMono<List<ROSDownloadUrl>>().block()
+
+    private fun getGithubResponse(uri: String, accessToken: String): ResponseSpec =
+        webClient.get()
+            .uri(uri)
             .header("Accept", "application/vnd.github+json")
             .header("Authorization", "token $accessToken")
             .retrieve()
-            .bodyToMono(typeReference<String>())
-            .block()?.let {
-                mapper.readValue<List<ROSDownloadUrls>>(
-                    it,
-                )
-            }
 }
