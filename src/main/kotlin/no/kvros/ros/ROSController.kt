@@ -7,13 +7,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import java.security.PublicKey
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api")
 class ROSController(
     private val ROSService: ROSService,
-    @Value("\${sops.publicKey}")
-    private val publicKey: String
 ) {
     @GetMapping("/ros/{githubAccessToken}")
     fun getROSesFromGithub(
@@ -24,12 +23,18 @@ class ROSController(
             "kv-ros-backend",
             ".sikkerhet/ros",
             githubAccessToken,
-        ).toString()
+        )?.first().toString()
 
-    @PostMapping(value = ["/ros/{githubAccessToken}"])
-    @ResponseStatus(HttpStatus.CREATED)
-    fun postROS(@RequestBody ros: ROSWrapperObject, @PathVariable githubAccessToken: String): String?{
-    val msg = ROSService.postROSToGithub(ros)
-    return msg
-    }
+
+    @PostMapping("/ros/{githubAccessToken}", produces = ["text/plain"])
+    fun postROSToGithub(
+        @PathVariable githubAccessToken: String,
+        @RequestBody ros: ROSWrapperObject,
+    ): String? =
+        ROSService.postNewROSToGithub(
+            owner = "bekk",
+            repository = "kv-ros-backend",
+            accessToken = githubAccessToken,
+            content = ros
+        )
 }

@@ -5,6 +5,7 @@ import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.util.*
 
 @Service
 class ROSService(
@@ -34,5 +35,32 @@ class ROSService(
                 }
         }
         return validationStatus.errors?.last()?.error
+    }
+
+    fun postNewROSToGithub(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        content: ROSWrapperObject
+    ): String?  {
+println("første")
+        val validationStatus  = JSONValidator.validateJSON(content.ros)
+println("her??")
+        println(validationStatus.valid)
+        println(content.ros)
+        if (!validationStatus.valid) {
+            return validationStatus.errors?.last()?.error
+        }
+
+            val encryptedData = SopsEncryptorForYaml.encrypt(publicKey , content.ros).also { println(it) } ?:
+            return "encryption failed"
+
+        return githubConnector.writeToGithub(
+            owner, repository, accessToken,
+            GithubWritePayload(
+                message = "Yeehaw dette er en ny ros",
+                content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+            ),
+        )
     }
 }
