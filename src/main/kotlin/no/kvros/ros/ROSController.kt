@@ -1,9 +1,6 @@
 package no.kvros.ros
 
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api")
@@ -15,9 +12,21 @@ class ROSController(
         @PathVariable githubAccessToken: String,
     ): String? =
         ROSService.fetchROSesFromGithub(
-            "bekk",
-            "kv-ros-backend",
-            ".sikkerhet/ros",
-            githubAccessToken,
+            owner = "bekk",
+            repository = "kv-ros-backend",
+            pathToRoser = ".sikkerhet/ros",
+            accessToken = githubAccessToken,
         )?.first().toString()
+
+    @PostMapping("/ros/{githubAccessToken}", consumes = ["text/plain"], produces = ["text/plain"])
+    fun postROSToGithub(
+        @PathVariable githubAccessToken: String,
+        @RequestBody ros: String
+    ): String =
+        ROSService.postNewROSToGithub(
+            owner = "bekk",
+            repository = "kv-ros-backend",
+            accessToken = githubAccessToken,
+            content = ros
+        ) ?: "søren"
 }

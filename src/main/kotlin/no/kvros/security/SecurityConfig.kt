@@ -28,7 +28,15 @@ class SecurityConfig {
         configuration.allowedOrigins = getAllowedOrigins()
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         configuration.allowedHeaders =
-            listOf("authorization", "content-type", "x-auth-token", "x-request-id", "contenttype", "Authorization")
+            listOf(
+                "authorization",
+                "content-type",
+                "x-auth-token",
+                "x-request-id",
+                "contenttype",
+                "Content-Type",
+                "Authorization"
+            )
         configuration.exposedHeaders = mutableListOf("x-auth-token")
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
