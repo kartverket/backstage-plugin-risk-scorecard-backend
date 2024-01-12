@@ -1,8 +1,8 @@
 package no.kvros.ros
 
 import no.kvros.ros.models.ROSWrapperObject
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-
 
 @RestController
 @RequestMapping("/api")
@@ -24,11 +24,11 @@ class ROSController(
     fun postROSToGithub(
         @PathVariable githubAccessToken: String,
         @RequestBody ros: ROSWrapperObject,
-    ): String? =
+    ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
             owner = "bekk",
             repository = "kv-ros-backend",
             accessToken = githubAccessToken,
-            content = ros
+            content = ros,
         )
 }
