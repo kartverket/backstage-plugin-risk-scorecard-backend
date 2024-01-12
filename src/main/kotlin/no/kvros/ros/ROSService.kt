@@ -17,16 +17,17 @@ class ROSService(
     fun fetchROSesFromGithub(
         owner: String,
         repository: String,
-        pathToRoser: String,
+        path: String,
         accessToken: String,
     ): List<String>? =
         githubConnector
-            .fetchROSesFromGithub(owner, repository, pathToRoser, accessToken)
+            .fetchROSesFromGithub(owner, repository, path, accessToken)
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
 
     fun postNewROSToGithub(
         owner: String,
         repository: String,
+        path: String,
         accessToken: String,
         content: ROSWrapperObject,
     ): ResponseEntity<String?> {
@@ -41,13 +42,15 @@ class ROSService(
 
         return ResponseEntity.ok(
             githubConnector.writeToGithub(
-                owner,
-                repository,
-                accessToken,
-                GithubWritePayload(
-                    message = "Yeehaw dette er en ny ros",
-                    content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                ),
+                owner = owner,
+                repository = repository,
+                path = path,
+                accessToken = accessToken,
+                writePayload =
+                    GithubWritePayload(
+                        message = "Yeehaw dette er en ny ros",
+                        content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+                    ),
             ),
         )
     }

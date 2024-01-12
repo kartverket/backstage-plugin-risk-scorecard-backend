@@ -40,7 +40,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         accessToken: String,
         writePayload: GithubWritePayload,
-        rosFilePath: String = "./sikkerhet/.ros2.yaml",
+        path: String,
     ): String {
         return ""
     }
@@ -48,11 +48,11 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     internal fun writeToGithub(
         owner: String,
         repository: String,
+        path: String,
         accessToken: String,
         writePayload: GithubWritePayload,
-        rosFilePath: String = ".sikkerhet/ros/${UUID.randomUUID()}.ros.yaml",
     ): String? {
-        val uri = "/$owner/$repository/contents/$rosFilePath"
+        val uri = "/$owner/$repository/contents/$path/$${UUID.randomUUID()}.ros.yaml"
 
         return webClient
             .put()

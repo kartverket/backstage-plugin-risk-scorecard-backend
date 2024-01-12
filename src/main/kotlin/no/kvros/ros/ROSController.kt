@@ -1,6 +1,7 @@
 package no.kvros.ros
 
 import no.kvros.ros.models.ROSWrapperObject
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -8,16 +9,19 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api")
 class ROSController(
     private val ROSService: ROSService,
+    @Value("\${github.repository.owner}") private val owner: String,
+    @Value("\${github.repository.name}") private val repository: String,
+    @Value("\${github.repository.ros-folder-path}") private val path: String,
 ) {
     @GetMapping("/ros/{githubAccessToken}")
     fun getROSesFromGithub(
         @PathVariable githubAccessToken: String,
     ): String? =
         ROSService.fetchROSesFromGithub(
-            "bekk",
-            "kv-ros-backend",
-            ".sikkerhet/ros",
-            githubAccessToken,
+            owner = owner,
+            repository = repository,
+            path = path,
+            accessToken = githubAccessToken,
         )?.first().toString()
 
     @PostMapping("/ros/{githubAccessToken}", produces = ["text/plain"])
@@ -26,8 +30,9 @@ class ROSController(
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
-            owner = "bekk",
-            repository = "kv-ros-backend",
+            owner = owner,
+            repository = repository,
+            path = path,
             accessToken = githubAccessToken,
             content = ros,
         )
