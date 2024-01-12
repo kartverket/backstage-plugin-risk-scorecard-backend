@@ -22,7 +22,7 @@ class ROSController(
             repository = repository,
             path = path,
             accessToken = githubAccessToken,
-        )?.first().toString()
+        )?.last().toString()
 
     @PostMapping("/ros/{githubAccessToken}", produces = ["text/plain"])
     fun postROSToGithub(

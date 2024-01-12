@@ -52,7 +52,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
         writePayload: GithubWritePayload,
     ): String? {
-        val uri = "/$owner/$repository/contents/$path/$${UUID.randomUUID()}.ros.yaml"
+        val uri = "/$owner/$repository/contents/$path/${UUID.randomUUID()}.ros.yaml"
 
         return webClient
             .put()
