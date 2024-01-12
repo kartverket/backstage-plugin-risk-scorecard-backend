@@ -1,0 +1,74 @@
+versjon: ENC[AES256_GCM,data:LRmc,iv:5Mo8qz1V+GSoEVIdx3bdN3ulybGsZGNhBa3JJmI83c8=,tag:DLbVp+tUs+G+LCDYgEeguA==,type:str]
+verdivurderinger:
+    - Verdi 1:
+        beskrivelse: ENC[AES256_GCM,data:UO4Q9BPep9i7Has4UPzrSyISL34Bu6LdOVjX7wFojcGyB18FZnLw9pPlexKQkAw4,iv:aDwpxsjtAokU9NG5YJ59K8+5pNwHH1Nl4K3XdURTlqA=,tag:2Dd4f40/2hPcsTVbnmYPjg==,type:str]
+        konfidensialitet: ENC[AES256_GCM,data:wkiBf4i+aze5,iv:bjXAxGwBP9M3hW+U6a4+hp57W2oxdctxiFzwD1pruAY=,tag:tFylhNJFwSvNLfXwgYAGNw==,type:str]
+        integritet: ENC[AES256_GCM,data:OgwmqtdwYDeV,iv:rHVWUK1E88WBUnQex8Q653L0Bu+znW1sCqXqGXQGYPw=,tag:IlaJxb5inUADDEzUzY+mvQ==,type:str]
+        tilgjengelighet: ENC[AES256_GCM,data:3XIyY/fzNTv/xOxQZvkE,iv:tuP8u8yOTBVJYwfLiQVihdmxjmp97uC9I+tVZcH8RJo=,tag:gY9loyfLnUHzMDDeA/a4yg==,type:str]
+    - Verdi 2:
+        beskrivelse: ENC[AES256_GCM,data:wnozozGWIc22cU6ZqHyujaDnngSfacs794qdkXSn/XcAFKWaazuO/yjwrGF3gjaO/wbTNg==,iv:Urgo55rl/G2b1JrzvadEzAmmretsHDLCe0PwhEalmGc=,tag:KZFjV23pzC8TXiZp2GJpJA==,type:str]
+        konfidensialitet: ENC[AES256_GCM,data:b34TiQN/8b62XFH2NnlnyVE=,iv:2UmPkTR930ZncoKB/W4hDLMWfWbIWlTCNPkiBbNSrME=,tag:fj43U7/6cD8phhtfHcLdSA==,type:str]
+        integritet: ENC[AES256_GCM,data:6eDjmb/BTw==,iv:HIeMVn+BGl4SIsgnCvRqmlQBgDfVdtxoOje5DU5+HzI=,tag:cnRYNucQW4HtaFpNS0DDsQ==,type:str]
+        tilgjengelighet: ENC[AES256_GCM,data:uIvHFrE7lA==,iv:D4aBRpIGDE+wJ0Y9SfVB6lATukx8dvUL9ZcxwpKyxDA=,tag:++76y5Hvv/ZQQKXD1rbFkg==,type:str]
+scenarier:
+    - Scenario 1:
+        url: ENC[AES256_GCM,data:9cHcS7pYjCXPbjO0LBRYzI+RFB6UcT2PXD8yKXsyPSl/MGIRGlGsMfTUvMff4rJMpWPuKSK7lAXQpMwAC900br13L6X7sHyJv+6C7Y7bZY3MiOIUQLcXdNYucuq8D1vnH11yAmN2ObcNPjNPVLsiSA+3jF7yQw==,iv:aKKRVeb67Pc6pI3hz+lzB08FkolForErwqw+oZfN4oU=,tag:oWeNIBjrGtEO0LnGqvxptA==,type:str]
+        beskrivelse: ENC[AES256_GCM,data:8eOIGcBlGGoHpglQFt+IKEvsFL+ZJmc=,iv:C1ii9P0kzyibkoK75aMBpz6rwwVSTbfuEVDyhtYo42Y=,tag:oEUuqEeFECD/nvdxmaTAfA==,type:str]
+        trusselaktører:
+            - ENC[AES256_GCM,data:dSkD9T1wO0E=,iv:58edE4q/UQWDbzn2lLmNDkE+zYEtuKbPf92nnIQ8Nxs=,tag:3V02TZAg7bK0xPiTqWk/Mw==,type:str]
+        sårbarheter:
+            - ENC[AES256_GCM,data:ieOrTpTr5uOJLyKVcma8Wz9pTPgW5T2PLQ==,iv:zAJBPoezmvNxmwKANFgqKD2D8wXtkmd48EAEqCY7hoo=,tag:/npx3Upq5H+t/j4RINLX3g==,type:str]
+        risiko:
+            oppsummering: ENC[AES256_GCM,data:3jinEGzEsmVUVoqb9CN1Vtb41nVuawuNzjRUIFJJLnc3I/WdrxcfIK79+AYQX+1bV0dJMHH2LKT9ySvd,iv:hNKhgjgo9x9mLPaMNodbkC1nI8kSRcx5jKV0bs8O0Uc=,tag:upwOuUystR9KsH9+Z2TE1Q==,type:str]
+            sannsynlighet: ENC[AES256_GCM,data:TTt2RCA=,iv:vTSPpoKomGwuuA+Yd4GdcPUFhUy1ve6sv1j5dSUB0jg=,tag:OqPlwI5CREg68zEuLMQqZA==,type:float]
+            konsekvens: ENC[AES256_GCM,data:mmgKWafDlw==,iv:s4N67byVI7H6AWhycLO6IZMNsIykc4pIigVIgEqg2R4=,tag:smB9gI9B6pS+bfzeAB3CoA==,type:float]
+        tiltak:
+            - Tiltak 1.1:
+                beskrivelse: ENC[AES256_GCM,data:XCV+jtZGNxcU2/2i,iv:MPxktT+hjpyXItT61/3nuv6ukJzEvJ1XhaBlGbSnyAg=,tag:J0QsA19PQISGMOMF/lRbeA==,type:str]
+                tiltakseier: ENC[AES256_GCM,data:ROaI0CQ7M/16HI4VD1gO5THqyw==,iv:WCkGTlqKohsgfe+G6gNiI+FovH3Xhu8VaSqHn4KviWA=,tag:FW6X/oxDvY0IAFb7vDcjrA==,type:str]
+                frist: ENC[AES256_GCM,data:ayaKi8dqnCHhnQ==,iv:6zeoTHpRleVNyK5xI0MBSyg/lvU8pRRTzJ9c6xjimF8=,tag:iajZ/nzjxhyLIb221WxTPA==,type:str]
+                status: ENC[AES256_GCM,data:hcsr3r1uuoIX4XkA,iv:gFYZXp4yPX6Hoh3Hx7eB7PNRP4FWDAJutqPpu1Ghi60=,tag:twGgqxcqJdO1S9vWtX8cww==,type:str]
+                restrisiko:
+                    oppsummering: ENC[AES256_GCM,data:bKAR6Qxc/3HWX7piAWXxJnOik88j1hftg4XiQOBZw68/QR7LvURrCDueaIguDJC5bg==,iv:tTHc1wmYJjuX3usDfky8Bb5Sg3noDHfT4NSUdDLZHs0=,tag:Y6Y2rQ/VwlB5UIR6VUx1NA==,type:str]
+                    sannsynlighet: ENC[AES256_GCM,data:kfiSvFOv,iv:yWlx5tX3NeQGKBCNniOI1ZzCn3lWYSFuh2ibg6NlPgg=,tag:KITD9uXgv3SGclzak58kEg==,type:float]
+                    konsekvens: ENC[AES256_GCM,data:Tpkp5dTCaw==,iv:MfQtiv/Ax96yntA377RI5inCfzAiSr8CkqnaICA8g/0=,tag:JPqlK07zfMffH1SedHRNUg==,type:float]
+    - Scenario 2:
+        beskrivelse: ENC[AES256_GCM,data:AXUsFccwmEb5owuRQ3LibIYai2La3m2Mopy/uh5F5aNh4Z2ivpiEXaabt9msoKc1q5vbPeVPxlA=,iv:8wR5zTeZsL1Vxfa3nk3ms+EfIYCMpnX7cESDod7gkGs=,tag:VcVh8O8y2K1FQnA3YQReDA==,type:str]
+        trusselaktører:
+            - ENC[AES256_GCM,data:UVCvS1FEq8rbCIZLQ7G9q8OwRxEr3Q==,iv:zGQhgp83UwdzTtYxrp4cFODUFt7EVaEmx0kTvOAiHxg=,tag:CWbZ7KgCFdOIEWCEZOtd0g==,type:str]
+        sårbarheter:
+            - ENC[AES256_GCM,data:/iwDShRJkPrI+i+cyRn7WLXm,iv:MYgfXVHxVFVidM65oop9ckdP4tgq41+yXnNOCzdOpic=,tag:RmRxFNAcsIPdRIVAgYek7Q==,type:str]
+        risiko:
+            oppsummering: ENC[AES256_GCM,data:WBfcClYrHWZMUyvHAQ+14YBMfP4PEbibszQN/tWTrwAzQm6Jg68AUs9fOAKiX6mzHdzL5+4UVkIsdZlvqd8YFGo=,iv:g9OKMuSYqPJw+UsWMtLl7WWPZEVfA+qTzIfj+HylJkM=,tag:lQqqQJ0UP+Azu3jwb2CIUg==,type:str]
+            sannsynlighet: ENC[AES256_GCM,data:TbsKc50=,iv:ZecMqOx20RniJmiRPoIYO1FjZ12EzkSGXC/sFTh+hmA=,tag:4iGKb5S10Sl9j7p8OOKumg==,type:float]
+            konsekvens: ENC[AES256_GCM,data:tfhqWQQzSh4=,iv:9wx8YrnzO3nIVo6htjmkPi2GYHzBvGtnFLoXVAQoJHM=,tag:xUxLBz0yWu85gy7+UbjrGA==,type:float]
+        tiltak:
+            - Tiltak 2.1:
+                beskrivelse: ENC[AES256_GCM,data:pbawg5e6BVZHGVeWEf2dB2/w,iv:27NY5P0FKpgid+N6XV5ie4zsePQ9GfLOf9ztPLaQkdo=,tag:ikaNjHHWS3drn+SM6W0SYw==,type:str]
+                tiltakseier: ENC[AES256_GCM,data:tRFbSX7YfhdNdYhki1RjMbgiLA==,iv:9wlrlUczP7jFbf8jqoxqFgFjHJwO7xbA9E/ruYQhsg4=,tag:WDso0YeMs6/gfxc0JsT3Lg==,type:str]
+                frist: ENC[AES256_GCM,data:J5y+dsDsnJfVEg==,iv:rpmpZXC9jUj7zON9HcPaDjRoxhJm26AUTJfwuTDzW5c=,tag:7MNGUK7HEJbq8VKeHVQJKw==,type:str]
+                status: ENC[AES256_GCM,data:4Ww2NxWJknUI2YiO,iv:+trmfu5dihUGk2yj5Wej8RBa6waNB8kCeI18LujEG2w=,tag:FYJS6SviXS6RrWiFSELy1A==,type:str]
+                restrisiko:
+                    oppsummering: ENC[AES256_GCM,data:TzEWcDflCWfU66/jghlkQuKIZq646fN0P9CN97/TBr5YhS5Mt6YGAQ8LCFnWMV5E4sjYRI4yFM3D4BsEbKom6Tg=,iv:YI5zGl0OoacYBLDGN6lPjOWgH9SaJq0Lxm7LFl7RkKo=,tag:hrUVTBsmx6xWRUA9335IGA==,type:str]
+                    sannsynlighet: ENC[AES256_GCM,data:XmBE8aVc,iv:oR8H3h2tD1tt8DTHPFqD6edzHcRV24Pp0ztlTuCTnkI=,tag:Tw7rixl/AnhrcPck1pYCUw==,type:float]
+                    konsekvens: ENC[AES256_GCM,data:lG4ZvoeU594=,iv:PetRZknYVrtfv0uD7RNKYZmxKuRVOkw9hhlllONr/Es=,tag:h9O1ZWfya80jnc039T8mag==,type:float]
+sops:
+    kms: []
+    gcp_kms: []
+    azure_kv: []
+    hc_vault: []
+    age:
+        - recipient: age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKWSsvK2hlQUdpV3VFZlUr
+            VXFRLzA5TGx5VVVTUWxsZFZUVjlPa2FhY1M0Cm1wTkRxNTVFeEhWYWV1dXlQZ0lk
+            bUdRYWlBU0d3ZU1iTEQzdHF0NXdLQ2sKLS0tIEFUNU9zUGFoaUZrUDJWYlNqYTYy
+            WFVkV1ZtQjJJWXBETllEc21yZU1RNG8KhQrFdF+14gE2PEzzfqUVC3Iq0KkUWkCJ
+            YXW3SOYFAp5dSLsW4VHM4uGH3TdsBf4JPUGJPTk+YDah0V4+V6bRvQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2024-01-12T07:47:50Z"
+    mac: ENC[AES256_GCM,data:KgznmuL/qCOSE1W6bNji/s9oWtZT58hNxC0aZ6jiL9cxml1M0XLGdPoUsgxfHmfFPhzJyZaOHDDtvAZBn3PXzNlRUIGaMOK0QY+0pS5xcE5zwkJduSFHcgDJHPAXY7ogHj3gpLXl7C5GlwwcbMqpB3rXhGfgHBC4EjgtGHEKA2M=,iv:cFIxRMiPSWLdzU/VqwAcrBbQ19OLI+rUVz6jbiYH4/c=,tag:2hJ2GscQhos2lCFvG6uE9w==,type:str]
+    pgp: []
+    unencrypted_suffix: _unencrypted
+    version: 3.8.1
