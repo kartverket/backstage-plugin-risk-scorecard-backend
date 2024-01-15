@@ -13,12 +13,12 @@ class GithubConnectorTest {
         githubConnector.writeToGithub(
             owner = "bekk",
             repository = "kv-ros-backend",
+            path = "/",
             accessToken = "accessToken",
             writePayload = GithubWritePayload(
                 message = "Commit-melding for noe fra kotlin",
                 content = Base64.getEncoder().encodeToString("Dette er min melding".toByteArray()),
             ),
-            rosFilePath = "rosetiros.txt"
         )
     }
 }
