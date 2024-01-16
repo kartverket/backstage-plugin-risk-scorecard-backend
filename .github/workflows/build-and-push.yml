@@ -1,0 +1,39 @@
+name: Build and push image to GCP
+
+on: push #TODO change to on: push main after testing
+
+jobs:
+  docker_build_push_gcp:
+    name: 'Docker build and push to GCP'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - uses: 'actions/checkout@v4'
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ secrets.GCS_ACC_KEY_JSON }}
+
+      # To optionally display info about current gcloud environment
+      - name: 'Set up Cloud SDK'
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      - name: "Use gcloud CLI"
+        run: "gcloud info"
+
+      # Auth Docker to access the artifact registry
+      - name: "Docker auth"
+        run: |-
+          gcloud auth configure-docker europe-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: docker image build --file DOCKERFILE_LOCATION -t kv-ros-backend .
+        working-directory: ../../
+
+      - name: Push image
+        run: docker push europe-docker.pkg.dev/spire-ros-5lmr/eu.gcr.io
+
