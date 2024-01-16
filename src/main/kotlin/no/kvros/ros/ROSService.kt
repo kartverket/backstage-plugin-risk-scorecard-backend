@@ -40,6 +40,8 @@ class ROSService(
             SopsEncryptorForYaml.encrypt(publicKey, content.ros)
                 ?: return ResponseEntity.internalServerError().body("Kryptering feilet")
 
+        val shaForExisingROS = githubConnector.getRosSha(owner, repository, accessToken, path)
+
         return ResponseEntity.ok(
             githubConnector.writeToGithub(
                 owner = owner,
@@ -47,10 +49,11 @@ class ROSService(
                 path = path,
                 accessToken = accessToken,
                 writePayload =
-                    GithubWritePayload(
-                        message = "Yeehaw dette er en ny ros",
-                        content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                    ),
+                GithubWritePayload(
+                    message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
+                    content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+                    sha = shaForExisingROS
+                ),
             ),
         )
     }

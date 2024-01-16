@@ -1,19 +1,24 @@
 package no.kvros.ros
 
 import no.kvros.infra.connector.WebClientConnector
-import no.kvros.ros.models.ROSDownloadUrl
+import no.kvros.ros.models.ROSDownloadUrlDTO
+import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import java.util.UUID
+import java.util.*
 
 data class GithubWritePayload(
     val message: String,
     val content: String,
-    // val sha: String - denne må brukes når vi skal oppdatere noe -> kommer snart
+    val sha: String? = null
 ) {
-    fun toContentBody(): String = "{\"message\":\"$message\", \"content\":\"$content\"}"
+    fun toContentBody(): String =
+        when (sha) {
+            null -> "{\"message\":\"$message\", \"content\":\"$content\"}"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\"}"
+        }
 }
 
 @Component
@@ -33,16 +38,20 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         pathToRoser: String,
         accessToken: String,
-    ): List<ROSDownloadUrl>? = getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).toROSDownloadUrls()
+    ): List<ROSDownloadUrlDTO>? =
+        getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).rosDownloadUrls()
 
     internal fun getRosSha(
         owner: String,
         repository: String,
         accessToken: String,
-        writePayload: GithubWritePayload,
-        path: String,
-    ): String {
-        return ""
+        pathToROS: String,
+    ): String? {
+        val shaForExistingROS: ShaResponseDTO =
+            getGithubResponse("/$owner/$repository/contents/$pathToROS", accessToken).shaReponseDTO()
+                ?: return null
+
+        return shaForExistingROS.sha
     }
 
     internal fun writeToGithub(
@@ -67,7 +76,11 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
 
     private fun ResponseSpec.toROS(): String? = this.bodyToMono<String>().block()
 
-    private fun ResponseSpec.toROSDownloadUrls(): List<ROSDownloadUrl>? = this.bodyToMono<List<ROSDownloadUrl>>().block()
+    private fun ResponseSpec.rosDownloadUrls(): List<ROSDownloadUrlDTO>? =
+        this.bodyToMono<List<ROSDownloadUrlDTO>>().block()
+
+    private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? =
+        this.bodyToMono<List<ShaResponseDTO>>().block()?.firstOrNull()
 
     private fun getGithubResponse(
         uri: String,
