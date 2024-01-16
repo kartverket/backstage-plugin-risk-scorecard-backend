@@ -31,7 +31,7 @@ jobs:
           gcloud auth configure-docker europe-docker.pkg.dev --quiet
 
       - name: Build image
-        run: docker image build --file DOCKERFILE_LOCATION -t kv-ros-backend .
+        run: docker image build -t kv-ros-backend .
         working-directory: ../../
 
       - name: Push image

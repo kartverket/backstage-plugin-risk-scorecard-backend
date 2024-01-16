@@ -1,0 +1,16 @@
+# flyctl launch added from .gitignore
+# Default ignored files
+shelf
+.idea/workspace.xml
+# Editor-based HTTP Client requests
+httpRequests
+# Datasource local storage ignored files
+dataSources
+dataSources.local.xml
+
+**/build
+**/.idea
+**/*.iml
+**/.gradle
+out
+**/http-client.private.env.json
