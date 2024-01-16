@@ -19,5 +19,5 @@ docker image build -t kv-ros-backend .
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e SOPS_AGE_KEY=${SOPS_AGE_KEY} kv-ros-backend
+docker run -it -p 8080:8080 -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e SOPS_AGE_KEY=${SOPS_AGE_PRIVATE_KEY} kv-ros-backend
 ```
