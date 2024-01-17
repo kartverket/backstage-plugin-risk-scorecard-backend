@@ -11,7 +11,8 @@ import java.io.File
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ROSServiceTest {
     private val githubConnector: GithubConnector = mockk()
-    private val rosService = ROSService(githubConnector)
+    private val arbitraryPrivateKey = ""
+    private val rosService = ROSService(githubConnector, arbitraryPrivateKey)
     private val encryptedROS =
         File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
     val arbitraryOwner = "testowner"
@@ -38,7 +39,7 @@ class ROSServiceTest {
     fun `when github connector returns a list with one ROS it is decrypted correctly`() {
         mockkObject(SopsEncryptorForYaml)
         every { githubConnector.fetchROSesFromGithub(any(), any(), any(), any()) } returns listOf(encryptedROS)
-        every { SopsEncryptorForYaml.decrypt(any()) } returns "some valid json structures"
+        every { SopsEncryptorForYaml.decrypt(any(), any()) } returns "some valid json structures"
 
         val actual = rosService.fetchROSesFromGithub(
             arbitraryOwner,
@@ -50,7 +51,7 @@ class ROSServiceTest {
         assertThat(actual).isNotNull
         assertThat(actual!!.size).isEqualTo(1)
 
-        verify(exactly = 1) { SopsEncryptorForYaml.decrypt(any()) }
+        verify(exactly = 1) { SopsEncryptorForYaml.decrypt(any(), any()) }
         unmockkObject(SopsEncryptorForYaml)
     }
 

@@ -3,15 +3,42 @@ package no.kvros.encryption
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+data class SopsEncryptorStrategy(
+    val keyRingId: String? = null,
+    val publicKey: String? = null,
+    val provider: SopsEncryptionKeyProvider,
+) {
+    private val inputTypeYaml = listOf("--input-type", "yaml")
+    private val inputTypeJson = listOf("--input-type", "json")
+    private val outputTypeYaml = listOf("--output-type", "yaml")
+    private val outputTypeJson = listOf("--output-type", "json")
+    private val sopsCmd = listOf("sops")
+
+    fun toEncryptionCommand(): List<String> =
+        sopsCmd + inputTypeJson + outputTypeYaml + encryptorStrategy() + listOf("--encrypt", "/dev/stdin")
+
+    fun toDecryptionCommand(): List<String> =
+        sopsCmd + inputTypeYaml + outputTypeJson + encryptorStrategy() + listOf("--decrypt", "/dev/stdin")
+
+    private fun encryptorStrategy(): List<String> = when (provider) {
+        SopsEncryptionKeyProvider.GoogleCloudPlatform -> listOf(provider.sopsCommand, keyRingId!!)
+        SopsEncryptionKeyProvider.AGE -> listOf(provider.sopsCommand, publicKey!!)
+    }
+}
+
+enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
+    GoogleCloudPlatform("--gcp-kms"),
+    AGE("--age")
+}
+
 object SopsEncryptorForYaml {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
-
     private const val EXECUTION_STATUS_OK = 0
 
-    fun decrypt(ciphertext: String): String? =
+    fun decrypt(ciphertext: String, sopsEncryptorStrategy: SopsEncryptorStrategy): String? =
         try {
             processBuilder
-                .command("sops", "--input-type", "yaml", "--output-type", "json", "--decrypt", "/dev/stdin")
+                .command(sopsEncryptorStrategy.toDecryptionCommand())
                 .start()
                 .run {
                     outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
@@ -31,12 +58,12 @@ object SopsEncryptorForYaml {
         }
 
     fun encrypt(
-        publicKey: String,
         text: String,
+        sopsEncryptorStrategy: SopsEncryptorStrategy
     ): String? =
         try {
             processBuilder
-                .command("sops", "--input-type", "json", "--output-type", "yaml", "--encrypt", "--age", publicKey, "/dev/stdin")
+                .command(sopsEncryptorStrategy.toEncryptionCommand())
                 .start()
                 .run {
                     outputStream.buffered().also { it.write(text.toByteArray()) }.close()
