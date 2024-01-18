@@ -6,63 +6,16 @@
   "type": "object",
   "properties": {
     "versjon": {
+      "description": "Versjon av analysen",
+      "type": "string"
+    },
+    "skjemaversjon": {
       "description": "Versjon av skjema",
       "type": "string"
     },
-    "verdivurderinger": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "propertyNames": {
-          "minLength": 3
-        },
-        "patternProperties": {
-          "": {
-            "type": "object",
-            "properties": {
-              "beskrivelse": {
-                "type": "string"
-              },
-              "konfidensialitet": {
-                "type": "string",
-                "enum": [
-                  "Åpen",
-                  "Intern",
-                  "Fortrolig",
-                  "Strengt fortrolig"
-                ]
-              },
-              "integritet": {
-                "type": "string",
-                "enum": [
-                  "Ingen betydning",
-                  "Forventet",
-                  "Avhengig",
-                  "Kritisk"
-                ]
-              },
-              "tilgjengelighet": {
-                "type": "string",
-                "enum": [
-                  "Ingen betydning",
-                  "2 dager",
-                  "4 timer",
-                  "Umiddelbar"
-                ]
-              }
-            },
-            "required": [
-              "beskrivelse",
-              "konfidensialitet",
-              "integritet",
-              "tilgjengelighet"
-            ],
-            "additionalProperties": false
-          }
-        }
-      },
-      "minItems": 1,
-      "uniqueItems": true
+    "ID": {
+      "description": "Unik identifikator for analysen",
+      "type": "string"
     },
     "scenarier": {
       "type": "array",
@@ -71,109 +24,108 @@
         "propertyNames": {
           "minLength": 3
         },
-        "patternProperties": {
-          "": {
-            "type": "object",
-            "properties": {
-              "beskrivelse": {
-                "type": "string"
+        "properties": {
+          "ID": { "type": "number" },
+          "beskrivelse": {
+            "type": "string"
+          },
+          "url": {
+            "$ref": "#/$defs/url"
+          },
+          "sistEndret": {
+            "type": "string",
+            "format": "date"
+          },
+          "trusselaktører": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Datasnok",
+                "Hacktivist",
+                "Uheldig ansatt",
+                "Innside-aktør",
+                "Organiserte kriminelle",
+                "Terroristorganisasjon",
+                "Nasjon/stat"
+              ]
+            }
+          },
+          "sårbarheter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Kompromittert adminbruker",
+                "Sårbarhet i avhengighet",
+                "Lekket hemmelighet",
+                "Feilkonfigurering",
+                "Klussing med input",
+                "Benekte brukerhandling",
+                "Informasjonslekkasje",
+                "Tjenestenekt",
+                "Rettighetseskalering"
+              ]
+            }
+          },
+          "risiko": {
+            "$ref": "#/$defs/risiko"
+          },
+          "tiltak": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "minLength": 3
               },
-              "url": {
-                "$ref": "#/$defs/url"
-              },
-              "trusselaktører": {
-                "type": "array",
-                "items": {
+              "properties": {
+                "ID": { "type": "number" },
+                "beskrivelse": {
+                  "type": "string"
+                },
+                "tiltakseier": {
+                  "type": "string"
+                },
+                "frist": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "status": {
                   "type": "string",
                   "enum": [
-                    "Datasnok",
-                    "Hacktivist",
-                    "Uheldig ansatt",
-                    "Innside-aktør",
-                    "Organiserte kriminelle",
-                    "Terroristorganisasjon",
-                    "Nasjon/stat"
+                    "Ikke startet",
+                    "Startet",
+                    "På vent",
+                    "Fullført",
+                    "Avbrutt"
                   ]
+                },
+                "restrisiko": {
+                  "$ref": "#/$defs/risiko"
                 }
               },
-              "sårbarheter": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "enum": [
-                    "Kompromittert adminbruker",
-                    "Sårbarhet i avhengighet",
-                    "Lekket hemmelighet",
-                    "Feilkonfigurering",
-                    "Klussing med input",
-                    "Benekte brukerhandling",
-                    "Informasjonslekkasje",
-                    "Tjenestenekt",
-                    "Rettighetseskalering"
-                  ]
-                }
-              },
-              "risiko": {
-                "$ref": "#/$defs/risiko"
-              },
-              "tiltak": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "propertyNames": {
-                    "minLength": 3
-                  },
-                  "patternProperties": {
-                    "": {
-                      "type": "object",
-                      "properties": {
-                        "beskrivelse": {
-                          "type": "string"
-                        },
-                        "tiltakseier": {
-                          "type": "string"
-                        },
-                        "frist": {
-                          "type": "string",
-                          "format": "date"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "Ikke startet",
-                            "Startet",
-                            "På vent",
-                            "Fullført",
-                            "Avbrutt"
-                          ]
-                        },
-                        "restrisiko": {
-                          "$ref": "#/$defs/risiko"
-                        }
-                      },
-                      "required": [
-                        "beskrivelse",
-                        "tiltakseier",
-                        "frist",
-                        "status",
-                        "restrisiko"
-                      ],
-                      "additionalProperties": false
-                    }
-                  }
-                }
-              }
-            },
-            "required": [
-              "beskrivelse",
-              "trusselaktører",
-              "sårbarheter",
-              "risiko",
-              "tiltak"
-            ],
-            "additionalProperties": false
+              "required": [
+                "ID",
+                "beskrivelse",
+                "tiltakseier",
+                "frist",
+                "status",
+                "restrisiko"
+              ],
+              "additionalProperties": false
+            }
           }
-        }
+        },
+        "required": [
+          "ID",
+          "beskrivelse",
+          "sistEndret",
+          "trusselaktører",
+          "sårbarheter",
+          "risiko",
+          "tiltak"
+        ],
+        "additionalProperties": false
       }
     },
     "sops": {
@@ -182,7 +134,6 @@
   },
   "required": [
     "versjon",
-    "verdivurderinger",
     "scenarier"
   ],
   "additionalProperties": false,
