@@ -8,6 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.util.*
+import org.apache.commons.lang3.RandomStringUtils;
 
 data class GithubWritePayload(
     val message: String,
@@ -61,7 +62,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
         writePayload: GithubWritePayload,
     ): String? {
-        val uri = "/$owner/$repository/contents/$path/${UUID.randomUUID()}.ros.yaml"
+        val uri = "/$owner/$repository/contents/$path/${(RandomStringUtils.randomAlphanumeric(5))}.ros.yaml"
 
         return webClient
             .put()

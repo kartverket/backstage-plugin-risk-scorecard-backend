@@ -13,10 +13,6 @@
       "description": "Versjon av skjema",
       "type": "string"
     },
-    "ID": {
-      "description": "Unik identifikator for analysen",
-      "type": "string"
-    },
     "scenarier": {
       "type": "array",
       "items": {

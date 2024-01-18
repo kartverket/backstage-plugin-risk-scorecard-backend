@@ -1,6 +1,5 @@
 versjon: "1.0"
 skjema_versjon: "1.0"
-ID: 1
 scenarier:
     - ID: 1
       url: https://github.com/kartverket/ros-as-code/blob/53e23ce5e62fa5465529e8f0f08835ebef1b6aa9/eksempel/scenario_1_utdypet.md
