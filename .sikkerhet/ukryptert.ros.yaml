@@ -1,54 +1,45 @@
 versjon: "1.0"
-verdivurderinger:
-    - Verdi 1:
-        beskrivelse: Svært verdifull database med masse viktige ting
-        konfidensialitet: Fortrolig
-        integritet: Forventet
-        tilgjengelighet: Ingen betydning #Vi kan bygge den opp igjen fra andre kilder
-    - Verdi 2:
-        beskrivelse: En godt skjult hemmelighet ingen må få vite noe om
-        konfidensialitet: Strengt fortrolig
-        integritet: Kritisk
-        tilgjengelighet: 4 timer
+skjema_versjon: "1.0"
+ID: 1
 scenarier:
-    - Scenario 1:
-        url: https://github.com/kartverket/ros-as-code/blob/53e23ce5e62fa5465529e8f0f08835ebef1b6aa9/eksempel/scenario_1_utdypet.md
-        beskrivelse: Datasnok bryter seg inn
-        trusselaktører:
-          - Datasnok
-        sårbarheter:
-          - Kompromittert adminbruker
-        risiko:
-            oppsummering: Antatt å skje hvert 3. år til en kostnad av en mill kroner
-            sannsynlighet: 0.001
+    - ID: 1
+      url: https://github.com/kartverket/ros-as-code/blob/53e23ce5e62fa5465529e8f0f08835ebef1b6aa9/eksempel/scenario_1_utdypet.md
+      beskrivelse: Datasnok bryter seg inn
+      trusselaktører:
+        - Datasnok
+      sårbarheter:
+        - Kompromittert adminbruker
+      risiko:
+        oppsummering: Antatt å skje hvert 3. år til en kostnad av en mill kroner
+        sannsynlighet: 0.001
+        konsekvens: 1000000
+      tiltak:
+        - ID: 1
+          beskrivelse: Legg på MFA
+          tiltakseier: ole.olsen@email.org
+          frist: "2024-12-15"
+          status: Ikke startet
+          restrisiko:
+            oppsummering: Reduserer sannsynlighet til en gang hvert 30. år
+            sannsynlighet: 0.0001
             konsekvens: 1000000
-        tiltak:
-            - Tiltak 1.1:
-                beskrivelse: Legg på MFA
-                tiltakseier: ole.olsen@email.org
-                frist: "2024-12-15"
-                status: Ikke startet
-                restrisiko:
-                    oppsummering: Reduserer sannsynlighet til en gang hvert 30. år
-                    sannsynlighet: 0.0001
-                    konsekvens: 1000000
-    - Scenario 2:
-        beskrivelse: Intern bruker blir tvunget til å gi fra seg hemmelighet
-        trusselaktører:
-          - Organiserte kriminelle
-        sårbarheter:
-          - Lekket hemmelighet
-        risiko:
-            oppsummering: Antatt å skje hvert 3. år til en kostnad av ti millioner kroner
-            sannsynlighet: 0.001
+    - ID: 2
+      beskrivelse: Intern bruker blir tvunget til å gi fra seg hemmelighet
+      trusselaktører:
+        - Organiserte kriminelle
+      sårbarheter:
+        - Lekket hemmelighet
+      risiko:
+          oppsummering: Antatt å skje hvert 3. år til en kostnad av ti millioner kroner
+          sannsynlighet: 0.001
+          konsekvens: 10000000
+      tiltak:
+        - ID: 1
+          beskrivelse: Send alle på kurs
+          tiltakseier: ole.olsen@email.org
+          frist: "2025-07-01"
+          status: Ikke startet
+          restrisiko:
+            oppsummering: Antatt å skje hvert 6. år til en kostnad av ti millioner kroner
+            sannsynlighet: 0.0005
             konsekvens: 10000000
-        tiltak:
-            - Tiltak 2.1:
-                beskrivelse: Send alle på kurs
-                tiltakseier: ole.olsen@email.org
-                frist: "2025-07-01"
-                status: Ikke startet
-                restrisiko:
-                    oppsummering: Antatt å skje hvert 6. år til en kostnad av ti millioner kroner
-                    sannsynlighet: 0.0005
-                    konsekvens: 10000000
