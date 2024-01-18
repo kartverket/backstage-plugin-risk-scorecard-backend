@@ -13,3 +13,5 @@ build/
 .gradle/
 /out/
 http-client.private.env.json
+.DS_Store
+.sikkerhet/.DS_Store
