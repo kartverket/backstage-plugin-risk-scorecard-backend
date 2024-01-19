@@ -1,6 +1,9 @@
 name: Build and push image to GCP
 
-on: push #TODO change to on: push main after testing
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   docker_build_push_gcp:
@@ -22,7 +25,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: "google-github-actions/setup-gcloud@v1"
 
-      - name: "Use gcloud CLI"
+      - name: Use gcloud CLI
         run: "gcloud info"
 
       # Auth Docker to access the artifact registry
