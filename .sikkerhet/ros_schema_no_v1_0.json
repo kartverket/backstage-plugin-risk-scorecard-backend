@@ -9,7 +9,7 @@
       "description": "Versjon av analysen",
       "type": "string"
     },
-    "skjemaversjon": {
+    "skjemaVersjon": {
       "description": "Versjon av skjema",
       "type": "string"
     },
@@ -129,6 +129,7 @@
     }
   },
   "required": [
+    "skjemaVersjon",
     "versjon",
     "scenarier"
   ],
