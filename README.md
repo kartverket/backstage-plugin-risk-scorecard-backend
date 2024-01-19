@@ -2,7 +2,8 @@
 
 ### JSON Schema validation
 
-The JSON schema validation is done using the [json-kotlin-schema](https://github.com/pwall567/json-kotlin-schema) library version 0.44.  
+The JSON schema validation is done using the [json-kotlin-schema](https://github.com/pwall567/json-kotlin-schema)
+library version 0.44.  
 This library has some limitations.  
 It does not fully support the latest JSON Schema draft.  
 It covers our need regarding the JSON Schema validation.  
@@ -19,5 +20,5 @@ docker image build -t kv-ros-backend .
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e SOPS_AGE_KEY=${SOPS_AGE_PRIVATE_KEY} kv-ros-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=$GCP_KMS_RESOURCE_PATH kv-ros-backend
 ```
