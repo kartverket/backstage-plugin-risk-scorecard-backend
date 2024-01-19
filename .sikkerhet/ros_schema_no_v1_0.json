@@ -9,7 +9,7 @@
       "description": "Versjon av analysen",
       "type": "string"
     },
-    "skjemaversjon": {
+    "skjemaVersjon": {
       "description": "Versjon av skjema",
       "type": "string"
     },
@@ -18,7 +18,7 @@
       "items": {
         "type": "object",
         "propertyNames": {
-          "minLength": 3
+          "minLength": 2
         },
         "properties": {
           "ID": { "type": "number" },
@@ -72,7 +72,7 @@
             "items": {
               "type": "object",
               "propertyNames": {
-                "minLength": 3
+                "minLength": 2
               },
               "properties": {
                 "ID": { "type": "number" },
@@ -129,6 +129,7 @@
     }
   },
   "required": [
+    "skjemaVersjon",
     "versjon",
     "scenarier"
   ],
