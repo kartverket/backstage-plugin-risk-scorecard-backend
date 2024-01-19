@@ -1,9 +1,7 @@
 name: Build and push image to GCP
 
 on:
-  push:
-    branches:
-      - main
+  push
 
 jobs:
   docker_build_push_gcp:
