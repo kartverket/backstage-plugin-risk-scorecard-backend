@@ -1,7 +1,7 @@
 versjon: ENC[AES256_GCM,data:5Pcw,iv:TxCrKsHuAuct3s7u5IPBvqzutg6GW0FSIlH/nUQeDlg=,tag:8Z9etpmDebOy8WzVsgrtew==,type:str]
 verdivurderinger:
     - Verdi 1:
-        beskrivelse: ENC[AES256_GCM,data:dIgUegL7885F1wvb5jyBjnCfRWgJNbjwAYiVLmFUOr/h8urBBBPe2M25lkw0yZSp,iv:VNceG9qUFh/BD4gdOIxWh1sddRwhSMzyuz1+MhtLCBY=,tag:6UCtfRCmdsGWKi+OatZ1QQ==,type:str]
+        beskrivelse: ENC[AES256_GCM,data:4YYJIpUwqE+rEm4v1v8qnDnHbIY98ugbU5rpkHSAF/TxdqQL4xoNbsePlVjsgc3F/7DekOw+lw==,iv:2w2GT4UzKBWIuBvfBRac5bilZNA5dSWbMz8j+cFzTUM=,tag:/6QOYxyiRUqJEBxtEMvCeQ==,type:str]
         konfidensialitet: ENC[AES256_GCM,data:IgbJQJrBWEyI,iv:aogLjHW2yRPPN/oof2WPG+vr52DahRsBxNnwTTKCmqc=,tag:8R4oHIA38lfWd6n3UuKebg==,type:str]
         integritet: ENC[AES256_GCM,data:+XdeI0xVmnBk,iv:sQZIARuLPndSAlWUmIrGb9feBOk8wROvb/Yby0ybRq0=,tag:Nv1PjQ0YddtEAzFDvWu1yA==,type:str]
         #ENC[AES256_GCM,data:oUho+tA+Yws4znoRHIWS978/xrF4Kr3DRAATHONCAZ56ISgILfofQTIpDQ==,iv:8xF7GTNH8cdRDiaQqhmY/Ui6W78tqvaP7aQCE1EmFso=,tag:0ZxhHuSFbhqDAk2jJSABPA==,type:comment]
@@ -68,8 +68,8 @@ sops:
             SFRyNmEwNU9MNUxMYXBnYUhMYURaTUUKfdEykstMU81y+60fgrOfPbX3pkqU8KwI
             DHJJuVdrAUu02J0j5PfE/dpAhVvNfz/usWUZJUu0Rjwp+UgCwwGijQ==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2024-01-05T12:27:26Z"
-    mac: ENC[AES256_GCM,data:j7FDeNPv8uLaoLD0y+chyBIPtBAZ0A/mmbfNT43Qi06HyxxhwPr0Pg+nPGSRbVlR77nLVw3EFnX5ILlNTSmYYd0umXVcDDjg7gjSuwxjbxTuNWPp3n/xylkSm7m6sVUL9UkOXIbTvrQWrAyVBmOr5x208ReiCq11wn5zAO0f13s=,iv:av3SptdnyANJvmvXiPWcIcrf7qNEVk8rEHd2LwbLwwg=,tag:/C1UQpIge1/Wpu4CVEbBdQ==,type:str]
+    lastmodified: "2024-01-19T13:16:46Z"
+    mac: ENC[AES256_GCM,data:ZSNPSHQlmHWkD7zzRIj4u/0kI72uVo3orshx2SVCJ0Uk4Ga56rzeF8u1TX2ahVxYnfA/uStXPKqFEo9v4uDeHov6LJk1imr46nOsXiNUCEnu11drkFXs6e3SoNQxNusdXQWmjm8P8C1lJCEKXz0vP35Gu4pWfiV0ZQ6PYfAUqBE=,iv:WJqs2dyCDNELiYWCOVaMH4Dg29CefzQBDGyxAoeA5Hk=,tag:iaI9ImhgXvWzSnMC1zFpdQ==,type:str]
     pgp: []
     unencrypted_suffix: _unencrypted
     version: 3.8.1
