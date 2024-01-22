@@ -20,5 +20,21 @@ docker image build -t kv-ros-backend .
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=$GCP_KMS_RESOURCE_PATH kv-ros-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e SOPS_AGE_KEY=${SOPS_AGE_PRIVATE_KEY} kv-ros-backend
 ```
+
+Eller bruk .run-config
+
+```
+📦 Containerized Server
+```
+
+### Kjør lokalt
+
+Kan kjøres opp med .run-config.
+Husk å sette miljøvariabel: ```SOPS_AGE_KEY``` 🪄
+
+```
+✨ Lokal Server
+```
+
