@@ -7,18 +7,25 @@ import java.io.File
 class SopsEncryptorForYamlTest {
     private val decryptedROS =
         File("src/test/kotlin/no/kvros/encryption/utils/ukryptert.ros.json").readText(Charsets.UTF_8)
-
-    private val sopsEncryptorStrategy = SopsEncryptorStrategy(
-        publicKey = "",
-        provider = SopsEncryptionKeyProvider.AGE
-    )
+    private val testAgePublicKey =
+        "age18r28lrah6ky42urwww065k6rg50dn35a4wk7llpklnrztmjjx93qaaevuu" // SOPS_AGE_KEY settes for test-miljøvariabler i build.gradle.kts
 
     @Test
     fun `when ciphertext is not yaml then null is returned`() {
         val ciphertextThatIsJustAString =
-            "ENC[AES256_GCM,data:dIgUegL7885F1wvb5jyBjnCfRWgJNbjwAYiVLmFUOr/h8urBBBPe2M25lkw0yZSp,iv:VNceG9qUFh/BD4gdOIxWh1sddRwhSMzyuz1+MhtLCBY=,tag:6UCtfRCmdsGWKi+OatZ1QQ==,type:str]"
+            "ENC[AES256_GCM,data:dYo75pR4EvbtULEJ926/tm9qZns2n8LHkNg78GpYk41gZGd6awrZ3NVtWVFeu4ns,iv:pjcpGaqDfU0vy76PgF6ZdMOriXNfeANOoYyda8Mq9EA=,tag:Rcv+ZgI1n2fgKy8DSep4jQ==,type:str]"
 
-        val actual = SopsEncryptorForYaml.decrypt(ciphertextThatIsJustAString, sopsEncryptorStrategy)
+        val actual = SopsEncryptorForYaml.decrypt(
+            ciphertext = ciphertextThatIsJustAString,
+            sopsEncryptorHelper = SopsEncryptorHelper(
+                listOf(
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.AGE,
+                        publicKeyOrPath = testAgePublicKey
+                    )
+                )
+            )
+        )
 
         assertThat(actual).isNull()
     }
@@ -28,7 +35,16 @@ class SopsEncryptorForYamlTest {
         val ciphertextThatIsYaml =
             File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
 
-        val actual = SopsEncryptorForYaml.decrypt(ciphertextThatIsYaml, sopsEncryptorStrategy)
+        val actual = SopsEncryptorForYaml.decrypt(
+            ciphertextThatIsYaml, SopsEncryptorHelper(
+                listOf(
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.AGE,
+                        publicKeyOrPath = testAgePublicKey
+                    )
+                )
+            )
+        )
 
         assertThat(actual).isEqualTo(decryptedROS)
     }

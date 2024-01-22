@@ -39,5 +39,6 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Test> {
+    environment["SOPS_AGE_KEY"] = "AGE-SECRET-KEY-12ZJZ9F3SSUGHTZMPMRX32R7MUT0C5JHWVND65643K8HDTMXQ0HZS4AHC08"
     useJUnitPlatform()
 }

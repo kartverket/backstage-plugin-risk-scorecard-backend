@@ -3,10 +3,13 @@ package no.kvros.encryption
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-data class SopsEncryptorStrategy(
-    val keyRingId: String? = null,
-    val publicKey: String? = null,
+data class SopsProviderAndCredentials(
     val provider: SopsEncryptionKeyProvider,
+    val publicKeyOrPath: String
+)
+
+data class SopsEncryptorHelper(
+    val sopsProvidersAndCredentials: List<SopsProviderAndCredentials>
 ) {
     private val inputTypeYaml = listOf("--input-type", "yaml")
     private val inputTypeJson = listOf("--input-type", "json")
@@ -15,15 +18,35 @@ data class SopsEncryptorStrategy(
     private val sopsCmd = listOf("sops")
 
     fun toEncryptionCommand(): List<String> =
-        sopsCmd + inputTypeJson + outputTypeYaml + encryptorStrategy() + listOf("--encrypt", "/dev/stdin")
+        sopsCmd + inputTypeJson + outputTypeYaml + encryptWithGcpAndAge() + listOf("--encrypt", "/dev/stdin")
 
     fun toDecryptionCommand(): List<String> =
-        sopsCmd + inputTypeYaml + outputTypeJson + encryptorStrategy() + listOf("--decrypt", "/dev/stdin")
+        sopsCmd + inputTypeYaml + outputTypeJson + decryptWithGcp() + listOf("--decrypt", "/dev/stdin")
 
-    private fun encryptorStrategy(): List<String> = when (provider) {
-        SopsEncryptionKeyProvider.GoogleCloudPlatform -> listOf(provider.sopsCommand, keyRingId!!)
-        SopsEncryptionKeyProvider.AGE -> listOf(provider.sopsCommand, publicKey!!)
+    private fun encryptWithGcpAndAge(): List<String> {
+        val providersAndCredentials = mutableListOf<String>()
+
+        sopsProvidersAndCredentials.map {
+            providersAndCredentials.add(it.provider.sopsCommand)
+            providersAndCredentials.add(it.publicKeyOrPath)
+        }
+
+        return providersAndCredentials
     }
+
+    private fun decryptWithGcp(): List<String> {
+        val providersAndCredentials = mutableListOf<String>()
+
+        sopsProvidersAndCredentials.map {
+            if (it.provider == SopsEncryptionKeyProvider.GoogleCloudPlatform) {
+                providersAndCredentials.add(it.provider.sopsCommand)
+                providersAndCredentials.add(it.publicKeyOrPath)
+            }
+        }
+
+        return providersAndCredentials
+    }
+
 }
 
 enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
@@ -35,10 +58,11 @@ object SopsEncryptorForYaml {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
 
-    fun decrypt(ciphertext: String, sopsEncryptorStrategy: SopsEncryptorStrategy): String? =
+    fun decrypt(ciphertext: String, sopsEncryptorHelper: SopsEncryptorHelper): String? =
         try {
+            println(sopsEncryptorHelper.toDecryptionCommand())
             processBuilder
-                .command(sopsEncryptorStrategy.toDecryptionCommand())
+                .command(sopsEncryptorHelper.toDecryptionCommand())
                 .start()
                 .run {
                     outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
@@ -59,11 +83,12 @@ object SopsEncryptorForYaml {
 
     fun encrypt(
         text: String,
-        sopsEncryptorStrategy: SopsEncryptorStrategy
+        sopsEncryptorHelper: SopsEncryptorHelper
     ): String? =
         try {
+            println(sopsEncryptorHelper.toEncryptionCommand())
             processBuilder
-                .command(sopsEncryptorStrategy.toEncryptionCommand())
+                .command(sopsEncryptorHelper.toEncryptionCommand())
                 .start()
                 .run {
                     outputStream.buffered().also { it.write(text.toByteArray()) }.close()

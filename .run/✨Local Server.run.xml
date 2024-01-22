@@ -1,13 +1,17 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-    <option name="ACTIVE_PROFILES" value="dev" />
-    <envs>
-      <env name="GCP_KMS_RESOURCE_PATH" value="projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code" />
-    </envs>
-    <module name="kv-ros-backend.main" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication" />
-    <method v="2">
-      <option name="Make" enabled="true" />
-    </method>
-  </configuration>
+    <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType"
+                   factoryName="Spring Boot">
+        <option name="ACTIVE_PROFILES" value="dev"/>
+        <envs>
+            <env name="GCP_KMS_RESOURCE_PATH"
+                 value="projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"/>
+            <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-xxx"/>
+            <env name="SOPS_AGE_PUBLIC_KEY" value="age-xxx"/>
+        </envs>
+        <module name="kv-ros-backend.main"/>
+        <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication"/>
+        <method v="2">
+            <option name="Make" enabled="true"/>
+        </method>
+    </configuration>
 </component>

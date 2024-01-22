@@ -11,8 +11,8 @@ import java.io.File
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ROSServiceTest {
     private val githubConnector: GithubConnector = mockk()
-    private val arbitraryPrivateKey = ""
-    private val rosService = ROSService(githubConnector, arbitraryPrivateKey)
+    private val arbitraryKey = ""
+    private val rosService = ROSService(githubConnector, arbitraryKey, arbitraryKey)
     private val encryptedROS =
         File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
     val arbitraryOwner = "testowner"
