@@ -54,11 +54,11 @@ class ROSService(
                 path = path,
                 accessToken = accessToken,
                 writePayload =
-                GithubWritePayload(
-                    message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
-                    content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                    sha = shaForExisingROS
-                ),
+                    GithubWritePayload(
+                        message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
+                        content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+                        sha = shaForExisingROS,
+                    ),
             ),
         )
     }
