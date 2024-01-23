@@ -1,0 +1,22 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: kv-ros
+  annotations:
+    github.com/project-slug: bekk/kv-ros-backend
+spec:
+  owner: rosene
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kv-ros-backend
+  annotations:
+    github.com/project-slug: bekk/kv-ros-backend
+tags: kotlin
+spec:
+  type: Service
+  owner: rosene
+  system: kv-ros
+  lifecycle: experimental
