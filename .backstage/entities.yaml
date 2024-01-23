@@ -5,7 +5,7 @@ kind: System
 metadata:
   name: kv-ros-system
 spec:
-  owner: kv-ros-team
+  owner: kv-ros
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -15,7 +15,7 @@ metadata:
     github.com/project-slug: bekk/kv-ros-backend
 spec:
   type: service
-  owner: kv-ros-team
+  owner: kv-ros
   lifecycle: experimental
   system: kv-ros-system
 ---
