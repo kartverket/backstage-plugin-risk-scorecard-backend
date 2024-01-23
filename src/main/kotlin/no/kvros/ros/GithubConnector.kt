@@ -1,6 +1,7 @@
 package no.kvros.ros
 
 import no.kvros.infra.connector.WebClientConnector
+import no.kvros.ros.models.ROSContentDTO
 import no.kvros.ros.models.ROSDownloadUrlDTO
 import no.kvros.ros.models.ROSFilenameDTO
 import no.kvros.ros.models.ShaResponseDTO
@@ -34,6 +35,25 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
             ?.map { getGithubResponse(it.download_url, accessToken) }
             ?.mapNotNull { it.toROS() }
 
+
+    fun fetchROSFromGithub(
+        owner: String,
+        repository: String,
+        pathToROS: String,
+        id: String,
+        accessToken: String,
+    ): String? =
+        fetchROSContentFromGithub(owner, repository, pathToROS, id, accessToken)?.content
+
+    private fun fetchROSContentFromGithub(
+        owner: String,
+        repository: String,
+        pathToROS: String,
+        id: String,
+        accessToken: String,
+    ): ROSContentDTO? =
+        getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent(
+    )
 
     fun fetchROSFilenamesFromGithub(
         owner: String,
@@ -100,6 +120,9 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
 
     private fun ResponseSpec.rosFilenames(): List<ROSFilenameDTO>? =
         this.bodyToMono<List<ROSFilenameDTO>>().block()
+
+    private fun ResponseSpec.rosContent(): ROSContentDTO? =
+        this.bodyToMono<ROSContentDTO>().block()
 
     private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? =
         this.bodyToMono<List<ShaResponseDTO>>().block()?.firstOrNull()
