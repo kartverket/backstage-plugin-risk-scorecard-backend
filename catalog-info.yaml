@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kv-ros-backend
+  annotations:
+    github.com/project-slug: bekk/kv-ros-backend
+spec:
+  type: other
+  lifecycle: unknown
+  owner: kv-ros
