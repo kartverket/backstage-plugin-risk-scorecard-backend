@@ -24,6 +24,17 @@ class ROSController(
             accessToken = githubAccessToken,
         )?.last().toString()
 
+    @GetMapping("/ros/ids/{githubAccessToken}")
+    fun getROSFilenamesFromGithub(
+        @PathVariable githubAccessToken: String,
+    ): List<String>? =
+        ROSService.fetchROSFilenamesFromGithub(
+            owner = owner,
+            repository = repository,
+            path = path,
+            accessToken = githubAccessToken,
+        )
+
     @PostMapping("/ros/{githubAccessToken}", produces = ["text/plain"])
     fun postROSToGithub(
         @PathVariable githubAccessToken: String,
@@ -36,4 +47,6 @@ class ROSController(
             accessToken = githubAccessToken,
             content = ros,
         )
+
+    
 }

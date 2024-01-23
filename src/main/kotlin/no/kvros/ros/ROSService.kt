@@ -24,6 +24,13 @@ class ROSService(
             .fetchROSesFromGithub(owner, repository, path, accessToken)
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it) } }
 
+    fun fetchROSFilenamesFromGithub(
+        owner: String,
+        repository: String,
+        path: String,
+        accessToken: String,
+    ): List<String>? =
+        githubConnector.fetchROSFilenamesFromGithub(owner, repository, path, accessToken)
     fun postNewROSToGithub(
         owner: String,
         repository: String,
