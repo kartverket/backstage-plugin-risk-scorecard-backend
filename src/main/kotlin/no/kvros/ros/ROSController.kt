@@ -53,11 +53,12 @@ class ROSController(
     fun postROSToGithub(
         @PathVariable githubAccessToken: String,
         @RequestBody ros: ROSWrapperObject,
+        @RequestBody rosFileName: String = "kryptert.ros.yaml"
     ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
             owner = owner,
             repository = repository,
-            path = path,
+            rosFilePath = "$path/$rosFileName",
             accessToken = githubAccessToken,
             content = ros,
         )

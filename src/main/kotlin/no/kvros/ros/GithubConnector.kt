@@ -100,7 +100,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
         writePayload: GithubWritePayload,
     ): String? {
-        val uri = "/$owner/$repository/contents/$path/${(RandomStringUtils.randomAlphanumeric(5))}.ros.yaml"
+        val uri = "/$owner/$repository/contents/$path"
 
         return webClient
             .put()
@@ -125,7 +125,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         this.bodyToMono<ROSContentDTO>().block()
 
     private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? =
-        this.bodyToMono<List<ShaResponseDTO>>().block()?.firstOrNull()
+        this.bodyToMono<ShaResponseDTO>().block()
 
     private fun getGithubResponse(
         uri: String,
@@ -133,7 +133,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     ): ResponseSpec =
         webClient.get()
             .uri(uri)
-            .header("Accept", "application/vnd.github+json")
+            .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
             .retrieve()
 }

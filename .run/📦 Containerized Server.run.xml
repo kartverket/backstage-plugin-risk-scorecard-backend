@@ -1,0 +1,31 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="📦 Containerized Server" type="docker-deploy" factoryName="dockerfile" server-name="Docker">
+    <deployment type="dockerfile">
+      <settings>
+        <option name="imageTag" value="backend" />
+        <option name="containerName" value="backend" />
+        <option name="sourceFilePath" value="Dockerfile" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+  <configuration default="false" name="📦 Containerized Server" type="ShConfigurationType">
+    <option name="SCRIPT_TEXT" value="docker image build -t kv-ros-backend . &amp;&amp; docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=&quot;project/project-id/locations/location-id/keyRings/keyRingsName/keyName&quot; kv-ros-backend" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+    <option name="SCRIPT_PATH" value="" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+    <option name="INTERPRETER_PATH" value="/bin/zsh" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="EXECUTE_IN_TERMINAL" value="true" />
+    <option name="EXECUTE_SCRIPT_FILE" value="false" />
+    <envs>
+      <env name="GCP_KMS_RESOURCE_PATH" value="projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code" />
+      <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1PS3J6CETZ2HV35UDL3CWCGX9QFMR3CDTA9U9EMTWTQEG6SD7ZDMS5M9NUH" />
+      <env name="SOPS_AGE_PUBLIC_KEY" value="age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>
