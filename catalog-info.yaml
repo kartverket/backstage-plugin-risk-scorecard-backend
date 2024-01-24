@@ -4,7 +4,6 @@ metadata:
   name: kv-ros-backend
   annotations:
     github.com/project-slug: bekk/kv-ros-backend
-tags: kotlin
 spec:
   type: service
   owner: rosene
