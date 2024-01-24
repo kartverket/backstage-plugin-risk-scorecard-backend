@@ -41,6 +41,30 @@ class ROSService(
             .fetchROSesFromGithub(owner, repository, path, accessToken)
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
 
+
+    fun fetchROSFromGithub(
+        owner: String,
+        repository: String,
+        path: String,
+        id: String,
+        accessToken: String,
+    ): String? {
+        val base64EncryptedROS = githubConnector.fetchROSFromGithub(owner, repository, path, id, accessToken)
+        val decodedROSBytes = Base64.getMimeDecoder().decode(base64EncryptedROS)
+        val decodedROSString = String(decodedROSBytes, Charsets.UTF_8)
+
+        return SopsEncryptorForYaml.decrypt(ciphertext = decodedROSString, sopsEncryptorHelper)
+    }
+
+
+    fun fetchROSFilenamesFromGithub(
+        owner: String,
+        repository: String,
+        path: String,
+        accessToken: String,
+    ): List<String>? =
+        githubConnector.fetchROSFilenamesFromGithub(owner, repository, path, accessToken)
+
     fun postNewROSToGithub(
         owner: String,
         repository: String,
