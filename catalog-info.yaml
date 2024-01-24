@@ -1,13 +1,3 @@
----
-apiVersion: backstage.io/v1alpha1
-kind: System
-metadata:
-  name: kv-ros
-  annotations:
-    github.com/project-slug: bekk/kv-ros-backend
-spec:
-  owner: rosene
----
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
