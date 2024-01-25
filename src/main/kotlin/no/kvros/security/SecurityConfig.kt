@@ -12,8 +12,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
-    @Bean
     // TODO: Get rid of the quickfix with csrf().disable()
+    @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -36,7 +36,8 @@ class SecurityConfig {
                 "x-request-id",
                 "contenttype",
                 "Content-Type",
-                "Authorization"
+                "Authorization",
+                "Github-Access-Token",
             )
         configuration.exposedHeaders = mutableListOf("x-auth-token")
         val source = UrlBasedCorsConfigurationSource()
@@ -47,7 +48,7 @@ class SecurityConfig {
     fun getAllowedOrigins(): List<String> {
         return listOf(
             "http://localhost:3000/",
-            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app"
+            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app",
         )
     }
 }

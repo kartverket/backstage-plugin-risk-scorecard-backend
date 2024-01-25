@@ -6,6 +6,10 @@ GET https://api.github.com/repos/bekk/kv-ros-backend/contents/.sikkerhet/ros
 Accept: application/vnd.github+json
 Authorization: token {{GITHUB_TOKEN}}
 
-### GET /github
-GET http://localhost:8080/api/ros/{{GITHUB_TOKEN}}
+### GET /ros/ids
+GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-1/ids
+Github-Access-Token: {{GITHUB_TOKEN}}
 
+### GET /ros/{id}
+GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-1/kryptert
+Github-Access-Token: {{GITHUB_TOKEN}}
