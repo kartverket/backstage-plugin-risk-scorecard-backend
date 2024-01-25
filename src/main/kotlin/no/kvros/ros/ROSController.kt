@@ -6,62 +6,54 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/ros")
 class ROSController(
     private val ROSService: ROSService,
-    @Value("\${github.repository.owner}") private val owner: String,
-    @Value("\${github.repository.name}") private val repository: String,
-    @Value("\${github.repository.ros-folder-path}") private val path: String,
+    @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) {
-    @GetMapping("/ros/{githubAccessToken}")
-    fun getROSesFromGithub(
-        @PathVariable githubAccessToken: String,
-    ): String? =
-        ROSService.fetchROSesFromGithub(
-            owner = owner,
-            repository = repository,
-            path = path,
-            accessToken = githubAccessToken,
-        )?.last().toString()
-
-
-    @GetMapping("/ros/ids/{githubAccessToken}")
-    fun getROSFilenamesFromGithub(
+    @GetMapping("/{repositoryOwner}/{repositoryName}/ids/{githubAccessToken}")
+    fun getROSFilenamesFromGithubRepository(
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
         @PathVariable githubAccessToken: String,
     ): List<String>? =
         ROSService.fetchROSFilenamesFromGithub(
-            owner = owner,
-            repository = repository,
-            path = path,
+            owner = repositoryOwner,
+            repository = repositoryName,
+            path = defaultROSPath,
             accessToken = githubAccessToken,
         )
 
-    @GetMapping("/ros/single/{id}/{githubAccessToken}")
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{id}/{githubAccessToken}")
     fun getSingleROSFromGithub(
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
         @PathVariable githubAccessToken: String,
         @PathVariable id: String,
     ): String? =
         ROSService.fetchROSFromGithub(
-            owner = owner,
-            repository = repository,
-            path = path,
+            owner = repositoryOwner,
+            repository = repositoryName,
+            path = defaultROSPath,
             id = id,
             accessToken = githubAccessToken,
-            )
+        )
 
-    @PostMapping("/ros/{githubAccessToken}", produces = ["text/plain"])
+    @PostMapping("/{repositoryOwner}/{repositoryName}/{githubAccessToken}", produces = ["text/plain"])
     fun postROSToGithub(
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
         @PathVariable githubAccessToken: String,
         @RequestBody ros: ROSWrapperObject,
-        @RequestBody rosFileName: String = "kryptert.ros.yaml"
+        @RequestBody rosFileName: String = "kryptert.ros.yaml" // TODO: fjerne default-input?
     ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
-            owner = owner,
-            repository = repository,
-            rosFilePath = "$path/$rosFileName",
+            owner = repositoryOwner,
+            repository = repositoryName,
+            rosFilePath = "$defaultROSPath/$rosFileName",
             accessToken = githubAccessToken,
             content = ros,
         )
 
-    
+
 }

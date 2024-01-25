@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import org.apache.commons.lang3.RandomStringUtils;
 
 data class GithubWritePayload(
     val message: String,
@@ -53,7 +52,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
     ): ROSContentDTO? =
         getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent(
-    )
+        )
 
     fun fetchROSFilenamesFromGithub(
         owner: String,
