@@ -47,6 +47,7 @@ class SecurityConfig {
     fun getAllowedOrigins(): List<String> {
         return listOf(
             "http://localhost:3000/",
+            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app"
         )
     }
 }
