@@ -9,7 +9,7 @@ import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
-import java.util.Base64
+import java.util.*
 
 @Service
 class ROSService(
@@ -22,16 +22,16 @@ class ROSService(
     private val sopsEncryptorHelper =
         SopsEncryptorHelper(
             sopsProvidersAndCredentials =
-                listOf(
-                    SopsProviderAndCredentials(
-                        provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
-                        publicKeyOrPath = gcpKeyResourcePath,
-                    ),
-                    SopsProviderAndCredentials(
-                        provider = SopsEncryptionKeyProvider.AGE,
-                        publicKeyOrPath = agePublicKey,
-                    ),
+            listOf(
+                SopsProviderAndCredentials(
+                    provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
+                    publicKeyOrPath = gcpKeyResourcePath,
                 ),
+                SopsProviderAndCredentials(
+                    provider = SopsEncryptionKeyProvider.AGE,
+                    publicKeyOrPath = agePublicKey,
+                ),
+            ),
         )
 
     fun fetchROSesFromGithub(
@@ -103,19 +103,12 @@ class ROSService(
                 path = rosFilePath,
                 accessToken = accessToken,
                 writePayload =
-                    GithubWriteToFilePayload(
-                        message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
-                        content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                        sha = shaForExisingROS,
-                    ),
+                GithubWriteToFilePayload(
+                    message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
+                    content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+                    sha = shaForExisingROS,
+                ),
             ),
         )
-    }
-
-
-    fun createNewBranch(): Boolean {
-
-
-        return false
     }
 }
