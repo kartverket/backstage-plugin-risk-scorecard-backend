@@ -60,7 +60,12 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         accessToken: String,
         pathToROS: String,
-    ): String? = getGithubResponse("/$owner/$repository/contents/$pathToROS", accessToken).shaReponseDTO()?.sha
+    ): String? =
+        try {
+            getGithubResponse("/$owner/$repository/contents/$pathToROS", accessToken).shaReponseDTO()?.sha
+        } catch (e: Exception) {
+            null
+        }
 
     internal fun writeToGithub(
         owner: String,
