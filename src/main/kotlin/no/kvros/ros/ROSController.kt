@@ -3,13 +3,7 @@ package no.kvros.ros
 import no.kvros.ros.models.ROSWrapperObject
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/ros")
@@ -60,4 +54,14 @@ class ROSController(
             accessToken = githubAccessToken,
             content = ros,
         )
+
+
+    private fun createBranchForNewRos(): StatusDTO {
+        return StatusDTO("yes, da ble det ny branch da")
+    }
 }
+
+
+data class StatusDTO(
+    val message: String,
+)

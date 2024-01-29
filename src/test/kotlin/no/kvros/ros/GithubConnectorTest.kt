@@ -10,12 +10,12 @@ class GithubConnectorTest {
 
     fun `prov a poste noe nytt til et github-repo`() {
 
-        githubConnector.writeToGithub(
+        githubConnector.writeToFile(
             owner = "bekk",
             repository = "kv-ros-backend",
             path = "/",
             accessToken = "accessToken",
-            writePayload = GithubWritePayload(
+            writePayload = GithubWriteToFilePayload(
                 message = "Commit-melding for noe fra kotlin",
                 content = Base64.getEncoder().encodeToString("Dette er min melding".toByteArray()),
             ),

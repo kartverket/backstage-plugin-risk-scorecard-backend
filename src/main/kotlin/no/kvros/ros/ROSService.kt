@@ -38,7 +38,7 @@ class ROSService(
         accessToken: String,
     ): List<String>? =
         githubConnector
-            .fetchROSesFromGithub(owner, repository, path, accessToken)
+            .fetchMultipleROSes(owner, repository, path, accessToken)
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
 
 
@@ -49,7 +49,7 @@ class ROSService(
         id: String,
         accessToken: String,
     ): String? {
-        val base64EncryptedROS = githubConnector.fetchROSFromGithub(owner, repository, path, id, accessToken)
+        val base64EncryptedROS = githubConnector.fetchROS(owner, repository, path, id, accessToken)
         val decodedROSBytes = Base64.getMimeDecoder().decode(base64EncryptedROS)
         val decodedROSString = String(decodedROSBytes, Charsets.UTF_8)
 
@@ -62,8 +62,22 @@ class ROSService(
         repository: String,
         path: String,
         accessToken: String,
-    ): List<String>? =
-        githubConnector.fetchROSFilenamesFromGithub(owner, repository, path, accessToken)
+    ): List<String> {
+        val refExists =
+            githubConnector.fetchAllROSBranches(owner = owner, repository = repository, accessToken = accessToken)
+        val fetchFilenamesFromROSPath = githubConnector.fetchFilenamesFromROSPath(
+            owner,
+            repository,
+            path,
+            accessToken
+        ) ?: emptyList()
+
+        return fetchFilenamesFromROSPath + refExists.map {
+            it.ref.split(
+                "/"
+            ).last()
+        }
+    }
 
     fun postNewROSToGithub(
         owner: String,
@@ -79,21 +93,28 @@ class ROSService(
             SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
                 ?: return ResponseEntity.internalServerError().body("Kryptering feilet")
 
-        val shaForExisingROS = githubConnector.getRosSha(owner, repository, accessToken, rosFilePath)
+        val shaForExisingROS = githubConnector.fetchLatestSHAOfFile(owner, repository, accessToken, rosFilePath)
 
         return ResponseEntity.ok(
-            githubConnector.writeToGithub(
+            githubConnector.writeToFile(
                 owner = owner,
                 repository = repository,
                 path = rosFilePath,
                 accessToken = accessToken,
                 writePayload =
-                GithubWritePayload(
+                GithubWriteToFilePayload(
                     message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
                     content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
                     sha = shaForExisingROS,
                 ),
             ),
         )
+    }
+
+
+    fun createNewBranch(): Boolean {
+
+
+        return false
     }
 }
