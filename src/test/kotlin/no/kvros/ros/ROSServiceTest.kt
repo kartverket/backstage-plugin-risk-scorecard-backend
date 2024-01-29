@@ -26,7 +26,7 @@ class ROSServiceTest {
         every { githubConnector.fetchMultipleROSes(any(), any(), any(), any()) } throws Exception()
 
         assertThrows<Exception> {
-            rosService.fetchROSesFromGithub(
+            rosService.fetchAllROSes(
                 arbitraryOwner,
                 arbitraryRepository,
                 arbitraryPathToROS,
@@ -41,7 +41,7 @@ class ROSServiceTest {
         every { githubConnector.fetchMultipleROSes(any(), any(), any(), any()) } returns listOf(encryptedROS)
         every { SopsEncryptorForYaml.decrypt(any(), any()) } returns "some valid json structures"
 
-        val actual = rosService.fetchROSesFromGithub(
+        val actual = rosService.fetchAllROSes(
             arbitraryOwner,
             arbitraryRepository,
             arbitraryPathToROS,

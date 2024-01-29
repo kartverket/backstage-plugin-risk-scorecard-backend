@@ -34,7 +34,7 @@ class ROSService(
             ),
         )
 
-    fun fetchROSesFromGithub(
+    fun fetchAllROSes(
         owner: String,
         repository: String,
         path: String,
@@ -45,7 +45,7 @@ class ROSService(
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
 
 
-    fun fetchROSFromGithub(
+    fun fetchROS(
         owner: String,
         repository: String,
         path: String,
@@ -56,7 +56,7 @@ class ROSService(
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
-    fun fetchROSFilenamesFromGithub(
+    fun fetchROSFilenames(
         owner: String,
         repository: String,
         path: String,
@@ -78,7 +78,7 @@ class ROSService(
         }
     }
 
-    fun postNewROSToGithub(
+    fun createNewROS(
         owner: String,
         repository: String,
         rosFilePath: String,

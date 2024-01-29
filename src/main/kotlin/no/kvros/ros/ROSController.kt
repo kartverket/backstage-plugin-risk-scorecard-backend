@@ -18,7 +18,7 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<String>? =
-        ROSService.fetchROSFilenamesFromGithub(
+        ROSService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
             path = defaultROSPath,
@@ -32,7 +32,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @PathVariable id: String,
     ): String? =
-        ROSService.fetchROSFromGithub(
+        ROSService.fetchROS(
             owner = repositoryOwner,
             repository = repositoryName,
             path = defaultROSPath,
@@ -47,7 +47,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<String?> =
-        ROSService.postNewROSToGithub(
+        ROSService.createNewROS(
             owner = repositoryOwner,
             repository = repositoryName,
             rosFilePath = "$defaultROSPath/${RandomStringUtils.randomAlphanumeric(5)}.ros.yaml",
@@ -63,7 +63,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<String?> =
-        ROSService.postNewROSToGithub(
+        ROSService.createNewROS(
             owner = repositoryOwner,
             repository = repositoryName,
             rosFilePath = "$defaultROSPath/$id.ros.yaml",
