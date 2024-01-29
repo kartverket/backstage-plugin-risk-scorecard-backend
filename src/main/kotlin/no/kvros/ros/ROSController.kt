@@ -13,7 +13,7 @@ class ROSController(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
-    fun getROSFilenamesFromGithubRepository(
+    fun getROSFilenames(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -26,7 +26,7 @@ class ROSController(
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
-    fun getSingleROSFromGithub(
+    fun fetchROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -41,7 +41,7 @@ class ROSController(
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
-    fun postROSToGithub(
+    fun createNewROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -56,7 +56,7 @@ class ROSController(
         )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
-    fun putROSToGithub(
+    fun editROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
