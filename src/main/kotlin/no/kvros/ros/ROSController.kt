@@ -1,9 +1,17 @@
 package no.kvros.ros
 
 import no.kvros.ros.models.ROSWrapperObject
+import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/ros")
@@ -45,12 +53,27 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-        @RequestBody rosFileName: String = "kryptert.ros.yaml",
     ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosFilePath = "$defaultROSPath/$rosFileName",
+            rosFilePath = "$defaultROSPath/${RandomStringUtils.randomAlphanumeric(5)}.ros.yaml",
+            accessToken = githubAccessToken,
+            content = ros,
+        )
+
+    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
+    fun putROSToGithub(
+        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable id: String,
+        @PathVariable repositoryName: String,
+        @RequestBody ros: ROSWrapperObject,
+    ): ResponseEntity<String?> =
+        ROSService.postNewROSToGithub(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            rosFilePath = "$defaultROSPath/$id.ros.yaml",
             accessToken = githubAccessToken,
             content = ros,
         )

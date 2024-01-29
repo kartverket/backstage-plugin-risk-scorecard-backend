@@ -3,7 +3,9 @@ package no.kvros.ros
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import no.kvros.infra.connector.WebClientConnector
-import no.kvros.ros.models.*
+import no.kvros.ros.models.ROSContentDTO
+import no.kvros.ros.models.ROSFilenameDTO
+import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -40,8 +42,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         pathToROS: String,
         id: String,
         accessToken: String,
-    ): String? =
-        fetchROSContent(owner, repository, pathToROS, id, accessToken)
+    ): String? = fetchROSContent(owner, repository, pathToROS, id, accessToken)
 
     private fun fetchROSContent(
         owner: String,
@@ -126,7 +127,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
 
         return null
     }
-    
+
     internal fun fetchAllROSBranches(
         owner: String,
         repository: String,
@@ -140,10 +141,6 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         ).toRefObjects() ?: emptyList()
     }
 
-    private fun ResponseSpec.toROS(): String? = this.bodyToMono<String>().block()
-
-    private fun ResponseSpec.rosDownloadUrls(): List<ROSDownloadUrlDTO>? =
-        this.bodyToMono<List<ROSDownloadUrlDTO>>().block()
 
     private fun ResponseSpec.rosFilenames(): List<ROSFilenameDTO>? =
         this.bodyToMono<List<ROSFilenameDTO>>().block()
