@@ -1,6 +1,7 @@
 package no.kvros.ros
 
 import no.kvros.ros.models.ROSWrapperObject
+import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -56,7 +57,7 @@ class ROSController(
         ROSService.postNewROSToGithub(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosFilePath = "$defaultROSPath/ny-ros.ros.yaml",
+            rosFilePath = "$defaultROSPath/${RandomStringUtils.randomAlphanumeric(5)}.ros.yaml",
             accessToken = githubAccessToken,
             content = ros,
         )
