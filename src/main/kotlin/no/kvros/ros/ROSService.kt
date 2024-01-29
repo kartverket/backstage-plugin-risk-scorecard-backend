@@ -9,7 +9,7 @@ import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.Base64
 
 @Service
 class ROSService(
@@ -21,26 +21,18 @@ class ROSService(
 ) {
     private val sopsEncryptorHelper =
         SopsEncryptorHelper(
-            sopsProvidersAndCredentials = listOf(
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.GoogleCloudPlatform, publicKeyOrPath = gcpKeyResourcePath
+            sopsProvidersAndCredentials =
+                listOf(
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
+                        publicKeyOrPath = gcpKeyResourcePath,
+                    ),
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.AGE,
+                        publicKeyOrPath = agePublicKey,
+                    ),
                 ),
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.AGE, publicKeyOrPath = agePublicKey
-                )
-            )
         )
-
-    fun fetchROSesFromGithub(
-        owner: String,
-        repository: String,
-        path: String,
-        accessToken: String,
-    ): List<String>? =
-        githubConnector
-            .fetchROSesFromGithub(owner, repository, path, accessToken)
-            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
-
 
     fun fetchROSFromGithub(
         owner: String,
@@ -48,22 +40,17 @@ class ROSService(
         path: String,
         id: String,
         accessToken: String,
-    ): String? {
-        val base64EncryptedROS = githubConnector.fetchROSFromGithub(owner, repository, path, id, accessToken)
-        val decodedROSBytes = Base64.getMimeDecoder().decode(base64EncryptedROS)
-        val decodedROSString = String(decodedROSBytes, Charsets.UTF_8)
-
-        return SopsEncryptorForYaml.decrypt(ciphertext = decodedROSString, sopsEncryptorHelper)
-    }
-
+    ): String? =
+        githubConnector.fetchROSFromGithub(owner, repository, path, id, accessToken)
+            ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
+            ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
     fun fetchROSFilenamesFromGithub(
         owner: String,
         repository: String,
         path: String,
         accessToken: String,
-    ): List<String>? =
-        githubConnector.fetchROSFilenamesFromGithub(owner, repository, path, accessToken)
+    ): List<String>? = githubConnector.fetchROSFilenamesFromGithub(owner, repository, path, accessToken)
 
     fun postNewROSToGithub(
         owner: String,
@@ -73,7 +60,9 @@ class ROSService(
         content: ROSWrapperObject,
     ): ResponseEntity<String?> {
         val validationStatus = JSONValidator.validateJSON(content.ros)
-        if (!validationStatus.valid) return ResponseEntity.badRequest().body(validationStatus.errors?.last()?.error)
+        if (!validationStatus.valid) {
+            return ResponseEntity.badRequest().body(validationStatus.errors?.joinToString("\n") { it.error })
+        }
 
         val encryptedData =
             SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
@@ -88,11 +77,11 @@ class ROSService(
                 path = rosFilePath,
                 accessToken = accessToken,
                 writePayload =
-                GithubWritePayload(
-                    message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
-                    content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                    sha = shaForExisingROS,
-                ),
+                    GithubWritePayload(
+                        message = if (shaForExisingROS == null) "Yeehaw new ROS" else "Yeehaw oppdatert ROS",
+                        content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
+                        sha = shaForExisingROS,
+                    ),
             ),
         )
     }

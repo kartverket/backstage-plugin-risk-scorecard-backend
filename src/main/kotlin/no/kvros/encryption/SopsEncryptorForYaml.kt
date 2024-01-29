@@ -5,11 +5,11 @@ import java.io.InputStreamReader
 
 data class SopsProviderAndCredentials(
     val provider: SopsEncryptionKeyProvider,
-    val publicKeyOrPath: String
+    val publicKeyOrPath: String,
 )
 
 data class SopsEncryptorHelper(
-    val sopsProvidersAndCredentials: List<SopsProviderAndCredentials>
+    val sopsProvidersAndCredentials: List<SopsProviderAndCredentials>,
 ) {
     private val inputTypeYaml = listOf("--input-type", "yaml")
     private val inputTypeJson = listOf("--input-type", "json")
@@ -46,21 +46,22 @@ data class SopsEncryptorHelper(
 
         return providersAndCredentials
     }
-
 }
 
 enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
     GoogleCloudPlatform("--gcp-kms"),
-    AGE("--age")
+    AGE("--age"),
 }
 
 object SopsEncryptorForYaml {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
 
-    fun decrypt(ciphertext: String, sopsEncryptorHelper: SopsEncryptorHelper): String? =
+    fun decrypt(
+        ciphertext: String,
+        sopsEncryptorHelper: SopsEncryptorHelper,
+    ): String? =
         try {
-            println(sopsEncryptorHelper.toDecryptionCommand())
             processBuilder
                 .command(sopsEncryptorHelper.toDecryptionCommand())
                 .start()
@@ -83,7 +84,7 @@ object SopsEncryptorForYaml {
 
     fun encrypt(
         text: String,
-        sopsEncryptorHelper: SopsEncryptorHelper
+        sopsEncryptorHelper: SopsEncryptorHelper,
     ): String? =
         try {
             println(sopsEncryptorHelper.toEncryptionCommand())
