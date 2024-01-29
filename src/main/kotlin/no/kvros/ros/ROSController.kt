@@ -45,18 +45,18 @@ class ROSController(
             accessToken = githubAccessToken,
         )
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
+    @PostMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
     fun postROSToGithub(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
+        @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-        @RequestBody rosFileName: String = "kryptert.ros.yaml",
     ): ResponseEntity<String?> =
         ROSService.postNewROSToGithub(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosFilePath = "$defaultROSPath/$rosFileName",
+            rosFilePath = "$defaultROSPath/$id.ros.yaml",
             accessToken = githubAccessToken,
             content = ros,
         )
