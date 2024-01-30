@@ -13,6 +13,14 @@
       "description": "Versjon av skjema",
       "type": "string"
     },
+    "tittel": {
+      "description": "Tittel på analysen",
+      "type": "string"
+    },
+    "omfang": {
+      "description": "Omfang av analysen",
+      "type": "string"
+    },
     "scenarier": {
       "type": "array",
       "items": {
