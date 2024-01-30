@@ -3,6 +3,7 @@ package no.kvros.ros
 import no.kvros.ros.models.ROSWrapperObject
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -46,16 +47,19 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<ROSResult> = ResponseEntity.ok().body(
-        ROSService.updateOrCreateROS(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            rosDirectory = defaultROSPath,
-            rosId = RandomStringUtils.randomAlphanumeric(5),
-            accessToken = githubAccessToken,
-            content = ros,
+    ): ResponseEntity<ROSResult> = ResponseEntity
+        .ok()
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(
+            ROSService.updateOrCreateROS(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                rosDirectory = defaultROSPath,
+                rosId = RandomStringUtils.randomAlphanumeric(5),
+                accessToken = githubAccessToken,
+                content = ros,
+            )
         )
-    )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
     fun editROS(
@@ -64,15 +68,33 @@ class ROSController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<ROSResult> =
-        ResponseEntity.ok().body(
-            ROSService.updateOrCreateROS(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                rosDirectory = defaultROSPath,
-                rosId = id,
-                content = ros,
-                accessToken = githubAccessToken,
-            )
+    ): ResponseEntity<ROSResult> {
+        val editResult = ROSService.updateOrCreateROS(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            rosDirectory = defaultROSPath,
+            rosId = id,
+            content = ros,
+            accessToken = githubAccessToken,
         )
+
+        return when (editResult.status) {
+            ProcessingStatus.ROSNotValid,
+            ProcessingStatus.EncrptionFailed,
+            ProcessingStatus.CouldNotCreateBranch,
+            ProcessingStatus.ErrorWhenUpdatingROS
+            -> ResponseEntity
+                .internalServerError()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(editResult)
+
+            ProcessingStatus.UpdatedNewBranchCreatedForNewROS,
+            ProcessingStatus.UpdatedNewBranchCreatedForExistingROS,
+            ProcessingStatus.UpdatedROSOnExistingBranch
+            -> ResponseEntity
+                .ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(editResult)
+        }
+    }
 }
