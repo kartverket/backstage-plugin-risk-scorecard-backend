@@ -52,6 +52,8 @@ class ROSService(
     @Value("\${sops.agePublicKey}")
     private val agePublicKey: String,
 ) {
+    private val draftPostfix = " (kladd)"
+
     private val sopsEncryptorHelper =
         SopsEncryptorHelper(
             sopsProvidersAndCredentials =
@@ -66,17 +68,6 @@ class ROSService(
                 ),
             ),
         )
-
-    fun fetchAllROSes(
-        owner: String,
-        repository: String,
-        path: String,
-        accessToken: String,
-    ): List<String>? =
-        githubConnector
-            .fetchPublishedROSes(owner, repository, path, accessToken)
-            ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
-
 
     fun fetchROSContent(
         owner: String,
@@ -99,7 +90,7 @@ class ROSService(
         path: String,
         rosName: ROSName,
         accessToken: String
-    ) =
+    ): String? =
         githubConnector.fetchDraftedROSContent(owner, repository, path, rosName.id, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
@@ -137,8 +128,6 @@ class ROSService(
         }
     }
 
-    private val draftPostfix = " (kladd)"
-
     fun updateOrCreateROS(
         owner: String,
         repository: String,
@@ -146,16 +135,12 @@ class ROSService(
         rosId: String,
         content: ROSWrapperObject,
         accessToken: String,
-    ): ResponseEntity<ROSResult> {
-
-        // Sjekk at fil er skrevet med riktige verdier for gitt JSon-schema
+    ): ROSResult {
         val validationStatus = JSONValidator.validateJSON(content.ros)
         if (!validationStatus.valid)
-            return ResponseEntity.badRequest().body(
-                ROSResult(
-                    ProcessingStatus.ROSNotValid,
-                    validationStatus.errors?.joinToString("\n") { it.error }.toString()
-                )
+            return ROSResult(
+                ProcessingStatus.ROSNotValid,
+                validationStatus.errors?.joinToString("\n") { it.error }.toString()
             )
 
         val pathToROS = "${rosDirectory}/$rosId.ros.yaml"
@@ -169,11 +154,9 @@ class ROSService(
 
         val encryptedData =
             SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
-                ?: return ResponseEntity.internalServerError().body(
-                    ROSResult(
-                        ProcessingStatus.EncrptionFailed,
-                        "Klarte ikke kryptere ROS" /*TODO: Legge ved hvorfor det feilet*/
-                    )
+                ?: return ROSResult(
+                    ProcessingStatus.EncrptionFailed,
+                    "Klarte ikke kryptere ROS" /*TODO: Legge ved hvorfor det feilet*/
                 )
 
 
@@ -192,7 +175,7 @@ class ROSService(
             ), accessToken
         )
 
-        return ResponseEntity.ok().body(ROSResult(ProcessingStatus.ExistingROSBranch, ""))
+        return ROSResult(ProcessingStatus.ExistingROSBranch, "")
     }
 
     private fun writeROS(
