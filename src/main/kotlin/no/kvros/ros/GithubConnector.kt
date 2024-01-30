@@ -90,7 +90,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         accessToken: String,
         path: String,
     ): String? =
-        getGithubResponse("/$owner/$repository/contents/$path", accessToken).contentReponseDTO()?.sha?.value
+        getGithubResponse("/$owner/$repository/contents/$path", accessToken).contentReponseDTO()?.sha
 
 
     internal fun writeToFile(

@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class ContentResponseDTO(
     val name: String,
     val path: String,
-    val sha: ShaResponseDTO,
+    val sha: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
