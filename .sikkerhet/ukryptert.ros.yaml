@@ -1,44 +1,48 @@
 versjon: "1.0"
-skjema_versjon: "1.0"
+skjemaVersjon: "1.0"
+tittel: Dokumentbestilling
+omfang: Hvilke deler av systemet som skal vurderes
 scenarier:
-    - ID: 1
-      url: https://github.com/kartverket/ros-as-code/blob/53e23ce5e62fa5465529e8f0f08835ebef1b6aa9/eksempel/scenario_1_utdypet.md
-      beskrivelse: Datasnok bryter seg inn
-      trusselaktører:
-        - Datasnok
-      sårbarheter:
-        - Kompromittert adminbruker
-      risiko:
-        oppsummering: Antatt å skje hvert 3. år til en kostnad av en mill kroner
-        sannsynlighet: 0.001
-        konsekvens: 1000000
-      tiltak:
-        - ID: 1
-          beskrivelse: Legg på MFA
-          tiltakseier: ole.olsen@email.org
-          frist: "2024-12-15"
-          status: Ikke startet
-          restrisiko:
-            oppsummering: Reduserer sannsynlighet til en gang hvert 30. år
-            sannsynlighet: 0.0001
-            konsekvens: 1000000
-    - ID: 2
-      beskrivelse: Intern bruker blir tvunget til å gi fra seg hemmelighet
-      trusselaktører:
-        - Organiserte kriminelle
-      sårbarheter:
-        - Lekket hemmelighet
-      risiko:
-          oppsummering: Antatt å skje hvert 3. år til en kostnad av ti millioner kroner
-          sannsynlighet: 0.001
+  - ID: 1
+    url: https://github.com/kartverket/ros-as-code/blob/53e23ce5e62fa5465529e8f0f08835ebef1b6aa9/eksempel/scenario_1_utdypet.md
+    beskrivelse: Datasnok bryter seg inn
+    sistEndret: "2021-01-01"
+    trusselaktører:
+      - Datasnok
+    sårbarheter:
+      - Kompromittert adminbruker
+    risiko:
+      oppsummering: Antatt å skje hvert 3. år til en kostnad av en mill kroner
+      sannsynlighet: 0.001
+      konsekvens: 1000000
+    tiltak:
+      - ID: 1
+        beskrivelse: Legg på MFA
+        tiltakseier: ole.olsen@email.org
+        frist: "2024-12-15"
+        status: Ikke startet
+        restrisiko:
+          oppsummering: Reduserer sannsynlighet til en gang hvert 30. år
+          sannsynlighet: 0.0001
+          konsekvens: 1000000
+  - ID: 2
+    beskrivelse: Intern bruker blir tvunget til å gi fra seg hemmelighet
+    sistEndret: "2021-01-01"
+    trusselaktører:
+      - Organiserte kriminelle
+    sårbarheter:
+      - Lekket hemmelighet
+    risiko:
+      oppsummering: Antatt å skje hvert 3. år til en kostnad av ti millioner kroner
+      sannsynlighet: 0.001
+      konsekvens: 10000000
+    tiltak:
+      - ID: 1
+        beskrivelse: Send alle på kurs
+        tiltakseier: ole.olsen@email.org
+        frist: "2025-07-01"
+        status: Ikke startet
+        restrisiko:
+          oppsummering: Antatt å skje hvert 6. år til en kostnad av ti millioner kroner
+          sannsynlighet: 0.0005
           konsekvens: 10000000
-      tiltak:
-        - ID: 1
-          beskrivelse: Send alle på kurs
-          tiltakseier: ole.olsen@email.org
-          frist: "2025-07-01"
-          status: Ikke startet
-          restrisiko:
-            oppsummering: Antatt å skje hvert 6. år til en kostnad av ti millioner kroner
-            sannsynlighet: 0.0005
-            konsekvens: 10000000
