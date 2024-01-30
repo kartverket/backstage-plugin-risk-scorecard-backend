@@ -46,14 +46,16 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<String?> =
-        ROSService.createNewROS(
+    ): ResponseEntity<ROSResult> {
+        return ROSService.updateOrCreateROS(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosFilePath = "$defaultROSPath/${RandomStringUtils.randomAlphanumeric(5)}.ros.yaml",
+            rosDirectory = defaultROSPath,
+            rosId = RandomStringUtils.randomAlphanumeric(5),
             accessToken = githubAccessToken,
             content = ros,
         )
+    }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
     fun editROS(
@@ -62,12 +64,13 @@ class ROSController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<String?> =
-        ROSService.createNewROS(
+    ): ResponseEntity<ROSResult> =
+        ROSService.updateOrCreateROS(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosFilePath = "$defaultROSPath/$id.ros.yaml",
-            accessToken = githubAccessToken,
+            rosDirectory = defaultROSPath,
+            rosId = id,
             content = ros,
+            accessToken = githubAccessToken,
         )
 }
