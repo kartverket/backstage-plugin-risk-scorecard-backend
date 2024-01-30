@@ -23,7 +23,7 @@ class ROSServiceTest {
 
     @Test
     fun `service throws exception when the github connector throws exception when fetching ROSes`() {
-        every { githubConnector.fetchMultipleROSes(any(), any(), any(), any()) } throws Exception()
+        every { githubConnector.fetchPublishedROSes(any(), any(), any(), any()) } throws Exception()
 
         assertThrows<Exception> {
             rosService.fetchAllROSes(
@@ -38,7 +38,7 @@ class ROSServiceTest {
     @Test
     fun `when github connector returns a list with one ROS it is decrypted correctly`() {
         mockkObject(SopsEncryptorForYaml)
-        every { githubConnector.fetchMultipleROSes(any(), any(), any(), any()) } returns listOf(encryptedROS)
+        every { githubConnector.fetchPublishedROSes(any(), any(), any(), any()) } returns listOf(encryptedROS)
         every { SopsEncryptorForYaml.decrypt(any(), any()) } returns "some valid json structures"
 
         val actual = rosService.fetchAllROSes(

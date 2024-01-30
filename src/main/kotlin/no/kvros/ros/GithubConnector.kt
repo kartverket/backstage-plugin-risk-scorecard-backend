@@ -1,9 +1,13 @@
 package no.kvros.ros
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import no.kvros.github.GithubReferenceHelper
+import no.kvros.github.GithubReferenceHelper.toReferenceObjects
+import no.kvros.github.GithubReferenceObject
 import no.kvros.infra.connector.WebClientConnector
-import no.kvros.ros.models.*
+import no.kvros.ros.models.ContentResponseDTO
+import no.kvros.ros.models.ROSContentDTO
+import no.kvros.ros.models.ROSDownloadUrlDTO
+import no.kvros.ros.models.ROSFilenameDTO
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -21,36 +25,28 @@ data class GithubWriteToFilePayload(
         }
 }
 
-
-data class GithubCreateNewBranchPayload(
-    val nameOfNewBranch: String,
-    val shaOfLatestMain: String
-) {
-    fun toContentBody(): String = "{ \"ref\":\"refs/heads/$nameOfNewBranch\", \"sha\": \"$shaOfLatestMain\" }"
-}
-
 @Component
 class GithubConnector : WebClientConnector("https://api.github.com/repos") {
-    fun fetchMultipleROSes(
+    fun fetchPublishedROSes(
         owner: String,
         repository: String,
         pathToRoser: String,
         accessToken: String,
     ): List<String>? =
-        fetchROSUrls(owner, repository, pathToRoser, accessToken)
+        fetchPublishedROSUrls(owner, repository, pathToRoser, accessToken)
             ?.map { getGithubResponse(it.download_url, accessToken) }
             ?.mapNotNull { it.rosContent()?.content }
 
 
-    fun fetchROS(
+    fun fetchPublishedROS(
         owner: String,
         repository: String,
         pathToROS: String,
         id: String,
         accessToken: String,
-    ): String? = fetchROSContent(owner, repository, pathToROS, id, accessToken)
+    ): String? = fetchPublishedROSContent(owner, repository, pathToROS, id, accessToken)
 
-    private fun fetchROSContent(
+    private fun fetchPublishedROSContent(
         owner: String,
         repository: String,
         pathToROS: String,
@@ -59,16 +55,16 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     ): String? =
         getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent()?.content
 
-    fun fetchFilenamesFromROSPath(
+    fun fetchPublishedROSFilenames(
         owner: String,
         repository: String,
         pathToRoser: String,
         accessToken: String,
     ): List<String>? =
-        fetchROSIds(owner, repository, pathToRoser, accessToken)
+        fetchPublishedROSIds(owner, repository, pathToRoser, accessToken)
             ?.map { it.name.substringBefore('.') }
 
-    private fun fetchROSIds(
+    private fun fetchPublishedROSIds(
         owner: String,
         repository: String,
         pathToRoser: String,
@@ -76,7 +72,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     ): List<ROSFilenameDTO>? =
         getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).rosFilenames()
 
-    private fun fetchROSUrls(
+    private fun fetchPublishedROSUrls(
         owner: String,
         repository: String,
         pathToRoser: String,
@@ -84,7 +80,7 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     ): List<ROSDownloadUrlDTO>? =
         getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).downloadUrls()
 
-    internal fun fetchLatestSHAOfFile(
+    internal fun fetchLatestSHAOfFileInMain(
         owner: String,
         repository: String,
         accessToken: String,
@@ -92,12 +88,6 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     ): String? =
         getGithubResponse("/$owner/$repository/contents/$path", accessToken).contentReponseDTO()?.sha?.value
 
-    internal fun fetchLatestSHAOfBranch(
-        owner: String,
-        repository: String,
-        accessToken: String,
-        path: String = "main",
-    ): String? = getGithubResponse("/$owner/$repository/commits/$path", accessToken).shaReponseDTO()?.value
 
     internal fun writeToFile(
         owner: String,
@@ -119,54 +109,16 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
             .block()
     }
 
-    private val rosPrefixForRefs = "heads/ros-"
-    internal fun createNewBranch(
+
+    fun fetchAllROSBranches(
         owner: String,
         repository: String,
-        rosId: String,
         accessToken: String,
-    ): String? {
-        val latestShaForMainBranch = fetchLatestSHAOfBranch(owner, repository, accessToken) ?: return null
+    ): List<GithubReferenceObject> {
+        val uri = GithubReferenceHelper.uriToFindAllRosBranches(owner, repository)
 
-        val uri = "/$owner/$repository/git/refs"
-        val newBranchPayload = GithubCreateNewBranchPayload(
-            nameOfNewBranch = rosId, shaOfLatestMain = latestShaForMainBranch
-        )
-
-        val response = writeNewRef(uri, accessToken, newBranchPayload)
-        return response // TODO få på bedre returverdier og feilmeldinger
+        return getGithubResponse(uri, accessToken).toReferenceObjects()
     }
-
-    private fun writeNewRef(
-        uri: String,
-        accessToken: String,
-        newBranchPayload: GithubCreateNewBranchPayload
-    ): String? {
-        return webClient
-            .post()
-            .uri(uri)
-            .header("Accept", "application/vnd.github+json")
-            .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .body(Mono.just(newBranchPayload.toContentBody()), String::class.java)
-            .retrieve()
-            .bodyToMono<String>()
-            .block()
-    }
-
-    internal fun fetchAllROSBranches(
-        owner: String,
-        repository: String,
-        accessToken: String
-    ): List<GithubRefDTO> {
-        val uri = "/$owner/$repository/git/matching-refs/$rosPrefixForRefs"
-
-        return getGithubResponse(
-            uri = uri,
-            accessToken = accessToken
-        ).toRefObjects() ?: emptyList()
-    }
-
 
     private fun ResponseSpec.rosFilenames(): List<ROSFilenameDTO>? =
         this.bodyToMono<List<ROSFilenameDTO>>().block()
@@ -177,11 +129,6 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     private fun ResponseSpec.contentReponseDTO(): ContentResponseDTO? =
         this.bodyToMono<ContentResponseDTO>().block()
 
-    private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? =
-        this.bodyToMono<ShaResponseDTO>().block()
-
-    private fun ResponseSpec.toRefObjects(): List<GithubRefDTO>? =
-        this.bodyToMono<List<GithubRefDTO>>().block()
 
     private fun ResponseSpec.downloadUrls(): List<ROSDownloadUrlDTO>? =
         this.bodyToMono<List<ROSDownloadUrlDTO>>().block()
@@ -196,17 +143,3 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
             .header("Authorization", "token $accessToken")
             .retrieve()
 }
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefDTO(
-    val ref: String,
-    val url: String,
-    @JsonProperty("object")
-    val shaObject: GithubRefShaDTO
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefShaDTO(
-    val sha: String,
-    val url: String
-)

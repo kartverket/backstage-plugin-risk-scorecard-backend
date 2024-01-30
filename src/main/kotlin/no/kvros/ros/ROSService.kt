@@ -56,7 +56,7 @@ class ROSService(
         accessToken: String,
     ): List<String>? =
         githubConnector
-            .fetchMultipleROSes(owner, repository, path, accessToken)
+            .fetchPublishedROSes(owner, repository, path, accessToken)
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
 
 
@@ -67,7 +67,7 @@ class ROSService(
         id: String,
         accessToken: String,
     ): String? =
-        githubConnector.fetchROS(owner, repository, path, id, accessToken)
+        githubConnector.fetchPublishedROS(owner, repository, path, id, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
@@ -77,29 +77,23 @@ class ROSService(
         path: String,
         accessToken: String,
     ): List<String> {
-        val refExists =
-            githubConnector.fetchAllROSBranches(owner = owner, repository = repository, accessToken = accessToken)
-        val fetchFilenamesFromROSPath = githubConnector.fetchFilenamesFromROSPath(
+        val draftROSes = githubConnector.fetchAllROSBranches(owner, repository, accessToken)
+
+        val publishedROSes = githubConnector.fetchPublishedROSFilenames(
             owner,
             repository,
             path,
             accessToken
         ) ?: emptyList()
 
-        return fetchFilenamesFromROSPath + refExists.map {
+        return publishedROSes + draftROSes.map {
             it.ref.split(
                 "/"
-            ).last()
+            ).last() + draftPostfix
         }
     }
 
-    /*
-    * sjekk om det finnes en branch fra før - hvis ja: finn fil på branch, hvis nei: lag en branch
-    * sjekk om det finnes en fil fra før - hvis ja: lag en branch på nytt for detta
-    * krypter data
-    * lag et objekt med data + sha
-    * post objekt til branch
-    * */
+    private val draftPostfix = " (kladd)"
 
     fun updateOrCreateROS(
         owner: String,
@@ -122,7 +116,7 @@ class ROSService(
 
         val pathToROS = "${rosDirectory}/$rosId.ros.yaml"
 
-        val shaForExisingROS = githubConnector.fetchLatestSHAOfFile(
+        val shaForExisingROS = githubConnector.fetchLatestSHAOfFileInMain(
             owner = owner,
             repository = repository,
             path = pathToROS,
