@@ -44,6 +44,8 @@ data class GithubCreateNewBranchPayload(
 
 object GithubReferenceHelper {
     private const val rosPrefixForRefs = "heads/ros-"
+    private const val rosPostfixForFiles = "ros.yaml"
+    private const val defaultPathToROSDirectory = ".security/ros"
 
     fun uriToFindAllRosBranches(
         owner: String,
@@ -59,6 +61,13 @@ object GithubReferenceHelper {
     fun WebClient.ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
         this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
 
+    fun uriToFetchDraftedROSContent(
+        owner: String,
+        repository: String,
+        rosId: String
+    ): String =
+        "/$owner/$repository/contents/$defaultPathToROSDirectory/ros-${rosId}.${rosPostfixForFiles}?ref=ros-$rosId"
+
     fun uriToCreateNewBranchForROS(
         owner: String,
         repository: String,
@@ -69,7 +78,6 @@ object GithubReferenceHelper {
         latestShaAtMain: String
     ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/ros-$rosId", latestShaAtMain)
 
-    fun fetchInformationFromLastCommitToROSBranch(): String = "/"
 
     fun createNewBranch(
         owner: String,

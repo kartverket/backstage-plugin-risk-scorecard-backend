@@ -4,6 +4,7 @@ import no.kvros.encryption.SopsEncryptionKeyProvider
 import no.kvros.encryption.SopsEncryptorForYaml
 import no.kvros.encryption.SopsEncryptorHelper
 import no.kvros.encryption.SopsProviderAndCredentials
+import no.kvros.ros.ROSName.Companion.toROSName
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
@@ -24,6 +25,23 @@ enum class ProcessingStatus(val message: String) {
     NewBranchCreatedForNewROS("Created new branch for new ROS"),
     NewBranchCreatedForExistingROS("Created new branch for existing ROS"),
     ExistingROSBranch("Using existing branch for ROS"),
+}
+
+data class ROSName(
+    val id: String,
+    val draftIndicator: String? = null
+) {
+    companion object {
+        fun String.toROSName(): ROSName {
+            val rosAndIndicator = this.replace(" ", "").split("(")
+            return ROSName(
+                id = rosAndIndicator.first().split("-").last(),
+                draftIndicator = if (rosAndIndicator.size > 1) rosAndIndicator.last() else null
+            )
+        }
+    }
+
+    fun isDraft(): Boolean = draftIndicator != null && draftIndicator.contains("kladd")
 }
 
 @Service
@@ -60,7 +78,33 @@ class ROSService(
             ?.let { it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) } }
 
 
-    fun fetchROS(
+    fun fetchROSContent(
+        owner: String,
+        repository: String,
+        path: String,
+        id: String,
+        accessToken: String,
+    ): String? {
+        val rosName = id.toROSName()
+        if (!rosName.isDraft()) return fetchPublishedROS(owner, repository, path, id, accessToken)
+
+        // Sjekke om branchen til denne fila finnes?
+
+        return fetchDraftedROS(owner, repository, path, rosName, accessToken)
+    }
+
+    private fun fetchDraftedROS(
+        owner: String,
+        repository: String,
+        path: String,
+        rosName: ROSName,
+        accessToken: String
+    ) =
+        githubConnector.fetchDraftedROSContent(owner, repository, path, rosName.id, accessToken)
+            ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
+            ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+
+    fun fetchPublishedROS(
         owner: String,
         repository: String,
         path: String,

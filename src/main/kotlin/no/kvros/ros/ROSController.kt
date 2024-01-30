@@ -32,7 +32,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @PathVariable id: String,
     ): String? =
-        ROSService.fetchROS(
+        ROSService.fetchROSContent(
             owner = repositoryOwner,
             repository = repositoryName,
             path = defaultROSPath,

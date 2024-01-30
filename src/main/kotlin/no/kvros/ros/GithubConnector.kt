@@ -44,16 +44,20 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         pathToROS: String,
         id: String,
         accessToken: String,
-    ): String? = fetchPublishedROSContent(owner, repository, pathToROS, id, accessToken)
+    ): String? =
+        getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent()?.content
 
-    private fun fetchPublishedROSContent(
+
+    fun fetchDraftedROSContent(
         owner: String,
         repository: String,
         pathToROS: String,
         id: String,
         accessToken: String,
-    ): String? =
-        getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent()?.content
+    ): String? = getGithubResponse(
+        uri = GithubReferenceHelper.uriToFetchDraftedROSContent(owner, repository, id),
+        accessToken = accessToken
+    ).rosContent()?.content
 
     fun fetchPublishedROSFilenames(
         owner: String,
