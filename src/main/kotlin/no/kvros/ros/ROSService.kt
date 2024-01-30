@@ -81,44 +81,41 @@ class ROSService(
     fun fetchROSContent(
         owner: String,
         repository: String,
-        path: String,
         id: String,
         accessToken: String,
     ): String? {
         val rosName = id.toROSName()
-        if (!rosName.isDraft()) return fetchPublishedROS(owner, repository, path, id, accessToken)
+        if (!rosName.isDraft()) return fetchPublishedROS(owner, repository, id, accessToken)
 
         // Sjekke om branchen til denne fila finnes?
 
-        return fetchDraftedROS(owner, repository, path, rosName, accessToken)
+        return fetchDraftedROS(owner, repository, rosName, accessToken)
     }
 
     private fun fetchDraftedROS(
         owner: String,
         repository: String,
-        path: String,
         rosName: ROSName,
         accessToken: String
     ): String? =
-        githubConnector.fetchDraftedROSContent(owner, repository, path, rosName.fileName, accessToken)
+        githubConnector.fetchDraftedROSContent(owner, repository, rosName.fileName, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
     fun fetchPublishedROS(
         owner: String,
         repository: String,
-        path: String,
         id: String,
         accessToken: String,
     ): String? =
-        githubConnector.fetchPublishedROS(owner, repository, path, id, accessToken)
+        githubConnector
+            .fetchPublishedROS(owner, repository, id, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
     fun fetchROSFilenames(
         owner: String,
         repository: String,
-        path: String,
         accessToken: String,
     ): List<String> {
         val draftROSes = githubConnector.fetchAllROSBranches(owner, repository, accessToken)
@@ -126,7 +123,6 @@ class ROSService(
         val publishedROSes = githubConnector.fetchPublishedROSFilenames(
             owner,
             repository,
-            path,
             accessToken
         ) ?: emptyList()
 
@@ -140,7 +136,6 @@ class ROSService(
     fun updateOrCreateROS(
         owner: String,
         repository: String,
-        rosDirectory: String,
         rosId: String,
         content: ROSWrapperObject,
         accessToken: String,
@@ -154,12 +149,11 @@ class ROSService(
 
         val rosName = rosId.toROSName()
 
-        val pathToROS = "${rosDirectory}/${rosName.fileName}.ros.yaml"
 
         val shaForExisingROS = githubConnector.fetchLatestSHAOfFileInMain(
             owner = owner,
             repository = repository,
-            path = pathToROS,
+            rosId = "${rosName.fileName}.ros.yaml",
             accessToken = accessToken,
         )
 
@@ -174,7 +168,7 @@ class ROSService(
         if (shaForExisingROS != null) return writeROS(
             owner = owner,
             repository = repository,
-            fileToROS = pathToROS,
+            rosId = rosId,
             updateWithROSPayload = GithubWriteToFilePayload(
                 message = "Ny ROS",
                 content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
@@ -189,15 +183,15 @@ class ROSService(
     private fun writeROS(
         owner: String,
         repository: String,
-        fileToROS: String,
         updateWithROSPayload: GithubWriteToFilePayload,
+        rosId: String,
         accessToken: String
     ): ROSResult {
         try {
             githubConnector.writeToFile(
                 owner = owner,
                 repository = repository,
-                path = fileToROS,
+                rosId = rosId,
                 accessToken = accessToken,
                 writePayload = updateWithROSPayload,
             )
@@ -208,7 +202,7 @@ class ROSService(
 
             return PostROSResult(
                 ProcessingStatus.ErrorWhenUpdatingROS,
-                e.message ?: "Klarte ikke oppdatere ROS med id $fileToROS"
+                e.message ?: "Klarte ikke oppdatere ROS med id $rosId"
             )
         }
     }

@@ -2,7 +2,6 @@ package no.kvros.ros
 
 import no.kvros.ros.models.ROSWrapperObject
 import org.apache.commons.lang3.RandomStringUtils
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/ros")
 class ROSController(
     private val ROSService: ROSService,
-    @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
     fun getROSFilenames(
@@ -22,7 +20,6 @@ class ROSController(
         ROSService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
-            path = defaultROSPath,
             accessToken = githubAccessToken,
         )
 
@@ -36,7 +33,6 @@ class ROSController(
         ROSService.fetchROSContent(
             owner = repositoryOwner,
             repository = repositoryName,
-            path = defaultROSPath,
             id = id,
             accessToken = githubAccessToken,
         )
@@ -54,7 +50,6 @@ class ROSController(
             ROSService.updateOrCreateROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                rosDirectory = defaultROSPath,
                 rosId = RandomStringUtils.randomAlphanumeric(5),
                 accessToken = githubAccessToken,
                 content = ros,
@@ -72,7 +67,6 @@ class ROSController(
         val editResult = ROSService.updateOrCreateROS(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosDirectory = defaultROSPath,
             rosId = id,
             content = ros,
             accessToken = githubAccessToken,

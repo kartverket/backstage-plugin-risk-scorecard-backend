@@ -8,6 +8,7 @@ import no.kvros.ros.models.ContentResponseDTO
 import no.kvros.ros.models.ROSContentDTO
 import no.kvros.ros.models.ROSDownloadUrlDTO
 import no.kvros.ros.models.ROSFilenameDTO
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -26,32 +27,23 @@ data class GithubWriteToFilePayload(
 }
 
 @Component
-class GithubConnector : WebClientConnector("https://api.github.com/repos") {
-    fun fetchPublishedROSes(
-        owner: String,
-        repository: String,
-        pathToRoser: String,
-        accessToken: String,
-    ): List<String>? =
-        fetchPublishedROSUrls(owner, repository, pathToRoser, accessToken)
-            ?.map { getGithubResponse(it.download_url, accessToken) }
-            ?.mapNotNull { it.rosContent()?.content }
-
-
+class GithubConnector(@Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String) :
+    WebClientConnector("https://api.github.com/repos") {
     fun fetchPublishedROS(
         owner: String,
         repository: String,
-        pathToROS: String,
         id: String,
         accessToken: String,
     ): String? =
-        getGithubResponse("/$owner/$repository/contents/$pathToROS/$id.ros.yaml", accessToken).rosContent()?.content
+        getGithubResponse(
+            "/$owner/$repository/contents/$defaultROSPath/$id.ros.yaml",
+            accessToken
+        ).rosContent()?.content
 
 
     fun fetchDraftedROSContent(
         owner: String,
         repository: String,
-        pathToROS: String,
         id: String,
         accessToken: String,
     ): String? = getGithubResponse(
@@ -62,45 +54,40 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     fun fetchPublishedROSFilenames(
         owner: String,
         repository: String,
-        pathToRoser: String,
         accessToken: String,
     ): List<String>? =
-        fetchPublishedROSIds(owner, repository, pathToRoser, accessToken)
+        getGithubResponse("/$owner/$repository/contents/$defaultROSPath", accessToken).rosFilenames() // TODO : helper
             ?.map { it.name.substringBefore('.') }
 
-    private fun fetchPublishedROSIds(
-        owner: String,
-        repository: String,
-        pathToRoser: String,
-        accessToken: String,
-    ): List<ROSFilenameDTO>? =
-        getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).rosFilenames()
-
-    private fun fetchPublishedROSUrls(
-        owner: String,
-        repository: String,
-        pathToRoser: String,
-        accessToken: String,
-    ): List<ROSDownloadUrlDTO>? =
-        getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).downloadUrls()
 
     internal fun fetchLatestSHAOfFileInMain(
         owner: String,
         repository: String,
         accessToken: String,
-        path: String,
+        rosId: String,
     ): String? =
-        getGithubResponse("/$owner/$repository/contents/$path", accessToken).contentReponseDTO()?.sha
+        getGithubResponse(
+            "/$owner/$repository/contents/$defaultROSPath/$rosId.ros.yaml",
+            accessToken
+        ).contentReponseDTO()?.sha
+
+
+    private fun postNewROS() {}
+    private fun updateExistingROS(
+        owner: String,
+        repository: String,
+    ) {
+    }
 
 
     internal fun writeToFile(
         owner: String,
         repository: String,
-        path: String,
+        rosId: String,
         accessToken: String,
         writePayload: GithubWriteToFilePayload,
     ): String? {
-        val uri = "/$owner/$repository/contents/$path"
+        val uri = "/$owner/$repository/contents/$defaultROSPath/$rosId.ros.yaml" // TODO: helper
 
         return webClient
             .put()
