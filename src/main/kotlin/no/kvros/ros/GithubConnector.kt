@@ -78,10 +78,7 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
             accessToken = accessToken,
         )
 
-        val latestShaForROS = getGithubResponse(
-            GithubReferenceHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId),
-            accessToken
-        ).contentReponseDTO()?.sha
+        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken)
 
         val commitMessage = if (latestShaForROS != null) "refactor: Oppdater ROS" else "feat: Lag ny ROS"
 
@@ -95,6 +92,20 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
                 branchName = "ros-$rosId"
             )
         ).bodyToMono<String>().block()
+    }
+
+    private fun getSHAForExistingROSDraftOrNull(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String
+    ) = try {
+        getGithubResponse(
+            GithubReferenceHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId),
+            accessToken
+        ).contentReponseDTO()?.sha
+    } catch (e: Exception) {
+        null
     }
 
     private fun branchForROSDraftExists(
