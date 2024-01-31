@@ -5,9 +5,9 @@ import no.kvros.encryption.SopsEncryptorForYaml
 import no.kvros.encryption.SopsEncryptorHelper
 import no.kvros.encryption.SopsProviderAndCredentials
 import no.kvros.github.GithubPullRequestObject
-import no.kvros.ros.ROSName.Companion.toROSIdWithDraftIdentificator
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
+import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.*
@@ -35,22 +35,17 @@ enum class ProcessingStatus(val message: String) {
     ErrorWhenUpdatingROS("Error when updating ROS"),
 }
 
-data class ROSName(
+data class ROSIdentifier(
     val id: String,
-    val draftIndicator: String? = null
-) {
-    companion object {
-        fun String.toROSIdWithDraftIdentificator(): ROSName {
-            val rosAndIndicator = this.replace(" ", "").split("(")
-            return ROSName(
-                id = rosAndIndicator.first().split("-").last(),
-                draftIndicator = if (rosAndIndicator.size > 1) rosAndIndicator.last() else null
-            )
-        }
-    }
+    val status: ROSStatus
+)
 
-    fun isDraft(): Boolean = draftIndicator != null && draftIndicator.contains("kladd")
+enum class ROSStatus(val description: String) {
+    Draft("Kladd"),
+    SentForApproval("Sendt til godkjenning"),
+    Published("Publisert")
 }
+
 
 @Service
 class ROSService(
@@ -80,24 +75,23 @@ class ROSService(
     fun fetchROSContent(
         owner: String,
         repository: String,
-        id: String,
+        rosId: String,
         accessToken: String,
-    ): String? {
-        val rosName = id.toROSIdWithDraftIdentificator()
-        if (!rosName.isDraft()) return fetchPublishedROS(owner, repository, id, accessToken)
-
-        // Sjekke om branchen til denne fila finnes?
-
-        return fetchDraftedROS(owner, repository, rosName, accessToken)
-    }
+    ): String? =
+        fetchDraftedROS(owner, repository, rosId, accessToken) ?: fetchPublishedROS(
+            owner,
+            repository,
+            rosId,
+            accessToken
+        )
 
     private fun fetchDraftedROS(
         owner: String,
         repository: String,
-        rosName: ROSName,
+        rosId: String,
         accessToken: String
     ): String? =
-        githubConnector.fetchDraftedROSContent(owner, repository, rosName.id, accessToken)
+        githubConnector.fetchDraftedROSContent(owner, repository, rosId, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
@@ -116,10 +110,7 @@ class ROSService(
         owner: String,
         repository: String,
         accessToken: String,
-    ): List<String> {
-        // Sjekke om default-path finnes og gi feilmelding om dette?
-        // Vil du opprette denne mappen?
-
+    ): List<ROSIdentifier> {
         val draftROSes = try {
             githubConnector.fetchAllROSBranches(owner, repository, accessToken)
         } catch (e: Exception) {
@@ -127,7 +118,7 @@ class ROSService(
         }
 
         val publishedROSes = try {
-            githubConnector.fetchPublishedROSFilenames(
+            githubConnector.fetchPublishedROSIdentifiers(
                 owner,
                 repository,
                 accessToken
@@ -136,17 +127,66 @@ class ROSService(
             emptyList()
         }
 
-        return publishedROSes + draftROSes.map {
-            it.ref.split(
-                "/"
-            ).last() + draftPostfix
+        val rosSentForApproval = try {
+            githubConnector.fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
+        } catch (e: Exception) {
+            emptyList()
         }
+
+
+        return combinePublishedDraftAndSentForApproval(draftROSes, publishedROSes, rosSentForApproval)
     }
 
-    fun updateOrCreateROS(
+    fun combinePublishedDraftAndSentForApproval(
+        draftRosList: List<ROSIdentifier>,
+        sentForApprovalList: List<ROSIdentifier>,
+        publishedRosList: List<ROSIdentifier>
+    ): List<ROSIdentifier> {
+        val draftIds = draftRosList.map { it.id }
+        val sentForApprovalsIds = sentForApprovalList.map { it.id }
+        val publisedROSIdentifiersNotInDraftList =
+            publishedRosList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
+        val draftROSIdentifiersNotInSentForApprovalsList = draftRosList.filter { it.id !in sentForApprovalsIds }
+
+        return sentForApprovalList + publisedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
+    }
+
+    fun updateROS(
         owner: String,
         repository: String,
-        rosReference: String, // todo: endre variabelnavn og på klassen
+        rosId: String,
+        content: ROSWrapperObject,
+        accessToken: String,
+    ): ROSResult {
+        return updateOrCreateROS(
+            owner = owner,
+            repository = repository,
+            rosId = rosId,
+            content = content,
+            accessToken = accessToken
+        )
+    }
+
+    fun createROS(
+        owner: String,
+        repository: String,
+        content: ROSWrapperObject,
+        accessToken: String,
+    ): ROSResult {
+        val uniqueROSId = RandomStringUtils.randomAlphanumeric(5)
+        return updateOrCreateROS(
+            owner = owner,
+            repository = repository,
+            rosId = uniqueROSId,
+            content = content,
+            accessToken = accessToken
+        )
+    }
+
+    private fun updateOrCreateROS(
+        owner: String,
+        repository: String,
+        rosId: String,
         content: ROSWrapperObject,
         accessToken: String,
     ): ROSResult {
@@ -164,13 +204,11 @@ class ROSService(
                     "Klarte ikke kryptere ROS"
                 )
 
-        val rosId = rosReference.toROSIdWithDraftIdentificator()
-
         try {
             githubConnector.updateOrCreateDraft(
                 owner = owner,
                 repository = repository,
-                rosId = rosId.id,
+                rosId = rosId,
                 fileContent = encryptedData,
                 accessToken = accessToken
             )

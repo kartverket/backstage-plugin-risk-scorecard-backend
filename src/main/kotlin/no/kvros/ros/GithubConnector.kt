@@ -1,6 +1,9 @@
 package no.kvros.ros
 
-import no.kvros.github.*
+import no.kvros.github.GithubCreateNewBranchPayload
+import no.kvros.github.GithubCreateNewPullRequestPayload
+import no.kvros.github.GithubPullRequestObject
+import no.kvros.github.GithubReferenceHelper
 import no.kvros.github.GithubReferenceHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.ros.models.*
@@ -54,13 +57,22 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         null
     }
 
-    fun fetchPublishedROSFilenames(
+    fun fetchPublishedROSIdentifiers(
         owner: String,
         repository: String,
         accessToken: String,
-    ): List<String> =
-        getGithubResponse("/$owner/$repository/contents/$defaultROSPath", accessToken).rosFilenames() // TODO : helper
-            ?.map { it.name.substringBefore('.') } ?: emptyList()
+    ): List<ROSIdentifier> =
+        getGithubResponse("/$owner/$repository/contents/$defaultROSPath", accessToken).rosFilenames()
+            ?.map { ROSIdentifier(id = it.name.substringBefore('.'), status = ROSStatus.Published) } ?: emptyList()
+
+    fun fetchROSIdentifiersSentForApproval(
+        owner: String,
+        repository: String,
+        accessToken: String,
+    ): List<ROSIdentifier> = getGithubResponse(
+        GithubReferenceHelper.uriToFetchAllPullRequests(owner, repository),
+        accessToken
+    ).pullRequestResponseDTOs().map { ROSIdentifier(it.head.ref.split("-").last(), ROSStatus.SentForApproval) }
 
     internal fun updateOrCreateDraft(
         owner: String,
@@ -131,10 +143,11 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         owner: String,
         repository: String,
         accessToken: String,
-    ): List<GithubReferenceObject> = getGithubResponse(
+    ): List<ROSIdentifier> = getGithubResponse(
         uri = GithubReferenceHelper.uriToFindAllRosBranches(owner, repository),
         accessToken = accessToken
     ).toReferenceObjects()
+        .map { ROSIdentifier(id = it.ref.split("/").last(), status = ROSStatus.Draft) }
 
     private fun fetchLatestShaForDefaultBranch(owner: String, repository: String, accessToken: String): String? =
         getGithubResponse(

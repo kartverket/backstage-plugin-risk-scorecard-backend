@@ -2,7 +2,6 @@ package no.kvros.ros
 
 import no.kvros.github.GithubPullRequestObject
 import no.kvros.ros.models.ROSWrapperObject
-import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -17,7 +16,7 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): List<String>? =
+    ): List<ROSIdentifier>? =
         rosService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
@@ -34,7 +33,7 @@ class ROSController(
         rosService.fetchROSContent(
             owner = repositoryOwner,
             repository = repositoryName,
-            id = id,
+            rosId = id,
             accessToken = githubAccessToken,
         )
 
@@ -44,18 +43,31 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<ROSResult> = ResponseEntity
-        .ok()
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(
-            rosService.updateOrCreateROS(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                rosReference = RandomStringUtils.randomAlphanumeric(5),
-                accessToken = githubAccessToken,
-                content = ros,
-            )
+    ): ResponseEntity<ROSResult> {
+        val response = rosService.createROS(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessToken = githubAccessToken,
+            content = ros,
         )
+
+        return when (response.status) {
+            ProcessingStatus.ROSNotValid,
+            ProcessingStatus.EncrptionFailed,
+            ProcessingStatus.CouldNotCreateBranch,
+            ProcessingStatus.ErrorWhenUpdatingROS
+            -> ResponseEntity
+                .internalServerError()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response)
+
+            ProcessingStatus.UpdatedROS,
+            -> ResponseEntity
+                .ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(response)
+        }
+    }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
     fun editROS(
@@ -65,11 +77,11 @@ class ROSController(
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<ROSResult> {
-        val editResult = rosService.updateOrCreateROS(
+        val editResult = rosService.updateROS(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosReference = id,
             content = ros,
+            rosId = id,
             accessToken = githubAccessToken,
         )
 
@@ -97,10 +109,8 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<List<GithubPullRequestObject>> {
-        return ResponseEntity.ok()
-            .body(rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken))
-    }
+    ): ResponseEntity<List<GithubPullRequestObject>> = ResponseEntity.ok()
+        .body(rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken))
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     fun sendROSForPublishing(
@@ -108,8 +118,7 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String
-    ): ResponseEntity<GithubPullRequestObject> {
-        return ResponseEntity.ok().body(rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken))
-    }
+    ): ResponseEntity<GithubPullRequestObject> =
+        ResponseEntity.ok().body(rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken))
 
 }
