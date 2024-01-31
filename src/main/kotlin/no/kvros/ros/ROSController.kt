@@ -47,6 +47,20 @@ class ROSController(
             accessToken = githubAccessToken,
         )
 
+    @GetMapping("/{repositoryOwner}/{repositoryName}")
+    fun getAllROSesFromGithub(
+        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): List<String>? =
+        ROSService.fetchAllROSesFromGithub(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            path = defaultROSPath,
+            accessToken = githubAccessToken,
+        )
+
+
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
     fun postROSToGithub(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,

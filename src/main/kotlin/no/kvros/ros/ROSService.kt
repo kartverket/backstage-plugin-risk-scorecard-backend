@@ -45,6 +45,16 @@ class ROSService(
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
+    fun fetchAllROSesFromGithub(
+        owner: String,
+        repository: String,
+        path: String,
+        accessToken: String,
+    ): List<String>? =
+        githubConnector.fetchROSesFromGithub(owner, repository, path, accessToken)?.let {
+            it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+        }
+
     fun fetchROSFilenamesFromGithub(
         owner: String,
         repository: String,

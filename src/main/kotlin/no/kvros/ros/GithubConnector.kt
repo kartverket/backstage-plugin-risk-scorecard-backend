@@ -2,6 +2,7 @@ package no.kvros.ros
 
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.ros.models.ROSContentDTO
+import no.kvros.ros.models.ROSDownloadUrlDTO
 import no.kvros.ros.models.ROSFilenameDTO
 import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.stereotype.Component
@@ -30,6 +31,30 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         id: String,
         accessToken: String,
     ): String? = fetchROSContentFromGithub(owner, repository, pathToROS, id, accessToken)?.content
+
+
+    fun fetchROSesFromGithub(
+        owner: String,
+        repository: String,
+        pathToROS: String,
+        accessToken: String,
+    ): List<String>? = fetchROSUrlsFromGithub(owner, repository, pathToROS, accessToken)?.map{
+            webClient
+                .get()
+                .uri(it.download_url)
+                .header("Accept", "application/vnd.github+json")
+                .header("Authorization", "token $accessToken")
+                .retrieve()
+                .bodyToMono(typeReference<String>())
+        }
+            ?.mapNotNull { it.block() }
+
+    private fun fetchROSUrlsFromGithub(
+        owner: String,
+        repository: String,
+        pathToRoser: String,
+        accessToken: String,
+    ): List<ROSDownloadUrlDTO>? = getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).rosUrls()
 
     private fun fetchROSContentFromGithub(
         owner: String,
@@ -92,6 +117,8 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
     private fun ResponseSpec.rosContent(): ROSContentDTO? = this.bodyToMono<ROSContentDTO>().block()
 
     private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? = this.bodyToMono<ShaResponseDTO>().block()
+
+    private fun ResponseSpec.rosUrls(): List<ROSDownloadUrlDTO>? = this.bodyToMono<List<ROSDownloadUrlDTO>>().block()
 
     private fun getGithubResponse(
         uri: String,
