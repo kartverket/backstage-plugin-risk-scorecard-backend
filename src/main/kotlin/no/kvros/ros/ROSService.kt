@@ -4,7 +4,7 @@ import no.kvros.encryption.SopsEncryptionKeyProvider
 import no.kvros.encryption.SopsEncryptorForYaml
 import no.kvros.encryption.SopsEncryptorHelper
 import no.kvros.encryption.SopsProviderAndCredentials
-import no.kvros.ros.ROSName.Companion.toROSName
+import no.kvros.ros.ROSName.Companion.toROSIdWithDraftIdentificator
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
@@ -30,21 +30,19 @@ enum class ProcessingStatus(val message: String) {
     ROSNotValid("ROS is not valid according to JSON-Schema"),
     EncrptionFailed("Kryptering av ROS feilet"),
     CouldNotCreateBranch("Could not create new branch for ROS"),
-    UpdatedNewBranchCreatedForNewROS("Created new branch for new ROS"),
-    UpdatedNewBranchCreatedForExistingROS("Created new branch for existing ROS"),
-    UpdatedROSOnExistingBranch("Using existing branch for ROS"),
+    UpdatedROS("Created new branch for new ROS"),
     ErrorWhenUpdatingROS("Error when updating ROS"),
 }
 
 data class ROSName(
-    val fileName: String,
+    val id: String,
     val draftIndicator: String? = null
 ) {
     companion object {
-        fun String.toROSName(): ROSName {
+        fun String.toROSIdWithDraftIdentificator(): ROSName {
             val rosAndIndicator = this.replace(" ", "").split("(")
             return ROSName(
-                fileName = rosAndIndicator.first().split("-").last(),
+                id = rosAndIndicator.first().split("-").last(),
                 draftIndicator = if (rosAndIndicator.size > 1) rosAndIndicator.last() else null
             )
         }
@@ -84,7 +82,7 @@ class ROSService(
         id: String,
         accessToken: String,
     ): String? {
-        val rosName = id.toROSName()
+        val rosName = id.toROSIdWithDraftIdentificator()
         if (!rosName.isDraft()) return fetchPublishedROS(owner, repository, id, accessToken)
 
         // Sjekke om branchen til denne fila finnes?
@@ -98,7 +96,7 @@ class ROSService(
         rosName: ROSName,
         accessToken: String
     ): String? =
-        githubConnector.fetchDraftedROSContent(owner, repository, rosName.fileName, accessToken)
+        githubConnector.fetchDraftedROSContent(owner, repository, rosName.id, accessToken)
             ?.let { Base64.getMimeDecoder().decode(it).decodeToString() }
             ?.let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
@@ -118,13 +116,24 @@ class ROSService(
         repository: String,
         accessToken: String,
     ): List<String> {
-        val draftROSes = githubConnector.fetchAllROSBranches(owner, repository, accessToken)
+        // Sjekke om default-path finnes og gi feilmelding om dette?
+        // Vil du opprette denne mappen?
 
-        val publishedROSes = githubConnector.fetchPublishedROSFilenames(
-            owner,
-            repository,
-            accessToken
-        ) ?: emptyList()
+        val draftROSes = try {
+            githubConnector.fetchAllROSBranches(owner, repository, accessToken)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val publishedROSes = try {
+            githubConnector.fetchPublishedROSFilenames(
+                owner,
+                repository,
+                accessToken
+            )
+        } catch (e: Exception) {
+            emptyList()
+        }
 
         return publishedROSes + draftROSes.map {
             it.ref.split(
@@ -136,7 +145,7 @@ class ROSService(
     fun updateOrCreateROS(
         owner: String,
         repository: String,
-        rosId: String,
+        rosReference: String, // todo: endre variabelnavn og på klassen
         content: ROSWrapperObject,
         accessToken: String,
     ): ROSResult {
@@ -147,63 +156,33 @@ class ROSService(
                 validationStatus.errors?.joinToString("\n") { it.error }.toString()
             )
 
-        val rosName = rosId.toROSName()
-
-
-        val shaForExisingROS = githubConnector.fetchLatestSHAOfFileInMain(
-            owner = owner,
-            repository = repository,
-            rosId = "${rosName.fileName}.ros.yaml",
-            accessToken = accessToken,
-        )
-
         val encryptedData =
             SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
                 ?: return PostROSResult(
                     ProcessingStatus.EncrptionFailed,
-                    "Klarte ikke kryptere ROS" /*TODO: Legge ved hvorfor det feilet*/
+                    "Klarte ikke kryptere ROS"
                 )
 
+        val rosId = rosReference.toROSIdWithDraftIdentificator()
 
-        if (shaForExisingROS != null) return writeROS(
-            owner = owner,
-            repository = repository,
-            rosId = rosId,
-            updateWithROSPayload = GithubWriteToFilePayload(
-                message = "Ny ROS",
-                content = Base64.getEncoder().encodeToString(encryptedData.toByteArray()),
-                sha = shaForExisingROS,
-            ),
-            accessToken = accessToken
-        )
-
-        return PostROSResult(ProcessingStatus.ErrorWhenUpdatingROS, "Dette er mocketimock")
-    }
-
-    private fun writeROS(
-        owner: String,
-        repository: String,
-        updateWithROSPayload: GithubWriteToFilePayload,
-        rosId: String,
-        accessToken: String
-    ): ROSResult {
         try {
-            githubConnector.writeToFile(
+            githubConnector.updateOrCreateDraft(
                 owner = owner,
                 repository = repository,
-                rosId = rosId,
-                accessToken = accessToken,
-                writePayload = updateWithROSPayload,
+                rosId = rosId.id,
+                fileContent = encryptedData,
+                accessToken = accessToken
             )
 
-            return PostROSResult(ProcessingStatus.UpdatedROSOnExistingBranch, "")
+            return PostROSResult(ProcessingStatus.UpdatedROS, "")
         } catch (e: Exception) {
-            println(e)
-
             return PostROSResult(
                 ProcessingStatus.ErrorWhenUpdatingROS,
-                e.message ?: "Klarte ikke oppdatere ROS med id $rosId"
+                "Feilet med feilemelding ${e.message} for ros med id $rosId"
             )
         }
+
+
     }
+
 }

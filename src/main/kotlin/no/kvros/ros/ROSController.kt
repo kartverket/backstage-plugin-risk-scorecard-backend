@@ -50,7 +50,7 @@ class ROSController(
             ROSService.updateOrCreateROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                rosId = RandomStringUtils.randomAlphanumeric(5),
+                rosReference = RandomStringUtils.randomAlphanumeric(5),
                 accessToken = githubAccessToken,
                 content = ros,
             )
@@ -67,7 +67,7 @@ class ROSController(
         val editResult = ROSService.updateOrCreateROS(
             owner = repositoryOwner,
             repository = repositoryName,
-            rosId = id,
+            rosReference = id,
             content = ros,
             accessToken = githubAccessToken,
         )
@@ -82,9 +82,7 @@ class ROSController(
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(editResult)
 
-            ProcessingStatus.UpdatedNewBranchCreatedForNewROS,
-            ProcessingStatus.UpdatedNewBranchCreatedForExistingROS,
-            ProcessingStatus.UpdatedROSOnExistingBranch
+            ProcessingStatus.UpdatedROS,
             -> ResponseEntity
                 .ok()
                 .contentType(MediaType.APPLICATION_JSON)
