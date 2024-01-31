@@ -4,6 +4,7 @@ import no.kvros.encryption.SopsEncryptionKeyProvider
 import no.kvros.encryption.SopsEncryptorForYaml
 import no.kvros.encryption.SopsEncryptorHelper
 import no.kvros.encryption.SopsProviderAndCredentials
+import no.kvros.github.GithubPullRequestObject
 import no.kvros.ros.ROSName.Companion.toROSIdWithDraftIdentificator
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
@@ -181,8 +182,20 @@ class ROSService(
                 "Feilet med feilemelding ${e.message} for ros med id $rosId"
             )
         }
-
-
     }
+
+    fun fetchAllROSDraftsSentToPublication(
+        owner: String,
+        repository: String,
+        accessToken: String
+    ): List<GithubPullRequestObject> = githubConnector.fetchAllPullRequestsForROS(owner, repository, accessToken)
+
+    fun publishROS(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String
+    ): GithubPullRequestObject? =
+        githubConnector.createPullRequestForPublishingROS(owner, repository, rosId, accessToken)
 
 }

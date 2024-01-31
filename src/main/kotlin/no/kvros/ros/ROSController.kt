@@ -1,5 +1,6 @@
 package no.kvros.ros
 
+import no.kvros.github.GithubPullRequestObject
 import no.kvros.ros.models.ROSWrapperObject
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.http.MediaType
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/ros")
 class ROSController(
-    private val ROSService: ROSService,
+    private val rosService: ROSService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
     fun getROSFilenames(
@@ -17,7 +18,7 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<String>? =
-        ROSService.fetchROSFilenames(
+        rosService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
             accessToken = githubAccessToken,
@@ -30,7 +31,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @PathVariable id: String,
     ): String? =
-        ROSService.fetchROSContent(
+        rosService.fetchROSContent(
             owner = repositoryOwner,
             repository = repositoryName,
             id = id,
@@ -47,7 +48,7 @@ class ROSController(
         .ok()
         .contentType(MediaType.APPLICATION_JSON)
         .body(
-            ROSService.updateOrCreateROS(
+            rosService.updateOrCreateROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 rosReference = RandomStringUtils.randomAlphanumeric(5),
@@ -64,7 +65,7 @@ class ROSController(
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<ROSResult> {
-        val editResult = ROSService.updateOrCreateROS(
+        val editResult = rosService.updateOrCreateROS(
             owner = repositoryOwner,
             repository = repositoryName,
             rosReference = id,
@@ -89,4 +90,26 @@ class ROSController(
                 .body(editResult)
         }
     }
+
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/sentToPublication")
+    fun fetchAllDraftsSentToPublication(
+        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): ResponseEntity<List<GithubPullRequestObject>> {
+        return ResponseEntity.ok()
+            .body(rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken))
+    }
+
+    @PostMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
+    fun sendROSForPublishing(
+        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable id: String
+    ): ResponseEntity<GithubPullRequestObject> {
+        return ResponseEntity.ok().body(rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken))
+    }
+
 }

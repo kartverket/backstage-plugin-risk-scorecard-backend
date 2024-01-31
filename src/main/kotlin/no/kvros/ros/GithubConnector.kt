@@ -1,9 +1,7 @@
 package no.kvros.ros
 
-import no.kvros.github.GithubCreateNewBranchPayload
-import no.kvros.github.GithubReferenceHelper
+import no.kvros.github.*
 import no.kvros.github.GithubReferenceHelper.toReferenceObjects
-import no.kvros.github.GithubReferenceObject
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.ros.models.*
 import org.springframework.beans.factory.annotation.Value
@@ -155,17 +153,57 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
             fetchLatestShaForDefaultBranch(owner, repository, accessToken) ?: return null
 
 
-        return postBranchRequestToGithub(
+        return postNewBranchToGithub(
             GithubReferenceHelper.uriToCreateNewBranchForROS(owner, repository),
             accessToken,
             GithubReferenceHelper.bodyToCreateNewBranchForROSFromMain(rosId, latestShaForMainBranch),
         )
             .bodyToMono<String>()
             .block()
-
     }
 
-    private fun postBranchRequestToGithub(
+
+    fun fetchAllPullRequestsForROS(
+        owner: String,
+        repository: String,
+        accessToken: String,
+    ): List<GithubPullRequestObject> {
+        return getGithubResponse(
+            GithubReferenceHelper.uriToFetchAllPullRequests(owner, repository),
+            accessToken
+        ).pullRequestResponseDTOs()
+    }
+
+
+    fun createPullRequestForPublishingROS(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String,
+    ): GithubPullRequestObject? {
+        return postNewPullRequestToGithub(
+            GithubReferenceHelper.uriToCreatePullRequest(owner, repository),
+            accessToken,
+            GithubReferenceHelper.bodyToCreateNewPullRequest(owner, rosId)
+        ).pullRequestResponseDTO()
+    }
+
+    private fun postNewPullRequestToGithub(
+        uri: String,
+        accessToken: String,
+        pullRequestPayload: GithubCreateNewPullRequestPayload
+    ) = webClient
+        .post()
+        .uri(uri)
+        .header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json")
+        .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java)
+        .retrieve()
+
+
+    private fun postNewBranchToGithub(
         uri: String,
         accessToken: String,
         branchPayload: GithubCreateNewBranchPayload
@@ -209,6 +247,13 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
 
     fun WebClient.ResponseSpec.shaReponseDTO(): ShaResponseDTO? =
         this.bodyToMono<ShaResponseDTO>().block()
+
+
+    fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
+        this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
+
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
 
     private fun getGithubResponse(

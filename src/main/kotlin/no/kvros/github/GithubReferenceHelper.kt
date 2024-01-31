@@ -36,6 +36,30 @@ data class GithubCreateNewBranchPayload(
     fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestMain\" }"
 }
 
+data class GithubCreateNewPullRequestPayload(
+    val title: String,
+    val body: String,
+    val repositoryOwner: String,
+    val rosId: String,
+    val baseBranch: String
+) {
+    fun toContentBody(): String =
+        "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$rosId\", \"base\": \"$baseBranch\" }"
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubPullRequestObject(
+    @JsonProperty("html_url")
+    val url: String,
+    val head: GithubPullRequestHead
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubPullRequestHead(
+    val ref: String
+)
+
+
 object GithubReferenceHelper {
     private const val rosPrefixForRefs = "heads/ros-"
     private const val rosPostfixForFiles = ".ros.yaml"
@@ -81,6 +105,28 @@ object GithubReferenceHelper {
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/git/refs"
+
+
+    fun uriToFetchAllPullRequests(
+        owner: String,
+        repository: String
+    ): String = "/$owner/$repository/pulls"
+
+    fun uriToCreatePullRequest(
+        owner: String,
+        repository: String,
+    ): String = "/$owner/$repository/pulls"
+
+    fun bodyToCreateNewPullRequest(
+        repositoryOwner: String,
+        rosId: String,
+    ): GithubCreateNewPullRequestPayload = GithubCreateNewPullRequestPayload(
+        title = "Branch for ros $rosId",
+        body = "ROS body",
+        repositoryOwner,
+        rosId,
+        baseBranch = "main"
+    )
 
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,
