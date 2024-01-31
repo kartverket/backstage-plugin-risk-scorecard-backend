@@ -33,7 +33,7 @@ data class GithubCreateNewBranchPayload(
     val nameOfNewBranch: String,
     val shaOfLatestMain: String,
 ) {
-    fun toContentBody(): String = "{ \"ref\":\"refs/heads/$nameOfNewBranch\", \"sha\": \"$shaOfLatestMain\" }"
+    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestMain\" }"
 }
 
 object GithubReferenceHelper {
@@ -75,7 +75,7 @@ object GithubReferenceHelper {
         owner: String,
         repository: String,
         branchName: String
-    ): String = "s/$owner/$repository/commits/$branchName/status"
+    ): String = "/$owner/$repository/commits/$branchName/status"
 
     fun uriToCreateNewBranchForROS(
         owner: String,

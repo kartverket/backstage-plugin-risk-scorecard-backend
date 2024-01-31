@@ -159,7 +159,7 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         accessToken: String,
         branchPayload: GithubCreateNewBranchPayload
     ) = webClient
-        .put()
+        .post()
         .uri(uri)
         .header("Accept", "application/vnd.github+json")
         .header("Authorization", "token $accessToken")
