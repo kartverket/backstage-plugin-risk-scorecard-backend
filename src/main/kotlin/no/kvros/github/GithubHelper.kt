@@ -136,5 +136,5 @@ object GithubHelper {
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,
         latestShaAtMain: String
-    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/${rosId}", latestShaAtMain)
+    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/${rosId}", latestShaAtMain)
 }
