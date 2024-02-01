@@ -28,7 +28,7 @@ data class GithubRosIdentifiersResponse(
 )
 
 enum class GithubStatus {
-    FileNotFound,
+    NotFound,
     Unauthorized,
     ContentIsEmpty,
     Success,
@@ -146,7 +146,7 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus = when (e) {
         is WebClientResponseException -> when (e) {
-            is WebClientResponseException.NotFound -> GithubStatus.FileNotFound
+            is WebClientResponseException.NotFound -> GithubStatus.NotFound
             is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
             is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
             else -> GithubStatus.InternalError
@@ -161,7 +161,7 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         accessToken: String,
     ): List<ROSIdentifier> =
         getGithubResponse(
-            GithubHelper.uriToFindRosFiles(owner, repository, accessToken),
+            GithubHelper.uriToFindRosFiles(owner, repository, defaultROSPath),
             accessToken
         ).rosIdentifiersPublished()
 

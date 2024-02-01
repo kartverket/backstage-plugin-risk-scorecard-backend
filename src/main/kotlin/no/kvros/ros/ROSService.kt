@@ -156,7 +156,7 @@ class ROSService(
                 }
             }
 
-            GithubStatus.FileNotFound -> ROSContentResultDTO(
+            GithubStatus.NotFound -> ROSContentResultDTO(
                 ContentStatus.FileNotFound,
                 this.decryptContent(),
                 rosId
