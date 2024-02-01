@@ -84,9 +84,9 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids = combinePublishedDraftAndSentForApproval(
-                draftROSes,
-                publishedROSes,
-                rosSentForApproval
+                draftRosList = draftROSes,
+                sentForApprovalList = rosSentForApproval,
+                publishedRosList = publishedROSes,
             ),
         )
     }

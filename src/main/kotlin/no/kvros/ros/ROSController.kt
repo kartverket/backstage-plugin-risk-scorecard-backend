@@ -62,7 +62,7 @@ class ROSController(
             content = ros,
         )
 
-        
+
         return when (response.status) {
             ProcessingStatus.ROSNotValid,
             ProcessingStatus.EncrptionFailed,
@@ -130,7 +130,7 @@ class ROSController(
         }
     }
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
+    @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendROSForPublishing(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
