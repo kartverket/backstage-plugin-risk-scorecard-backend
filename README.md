@@ -1,4 +1,28 @@
 # kv-ros-backend
+## High level components
+
+```mermaid
+flowchart TD
+     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.sikkerhet/ros| C[(GitHub)]
+     style B fill:#FFBF00,color:black
+```
+
+## Simplified Git ROS-flow
+
+```mermaid
+gitGraph TB:
+   commit
+   commit
+   branch ROS-xyz12
+   checkout ROS-xyz12
+   commit id: "Lagt til scenarier"
+   commit id: "Justert konsekvens"
+   commit id: "Godkjent" tag: "Godkjent av risikoeier"
+   checkout main
+   merge ROS-xyz12
+   commit
+   commit
+```
 
 ### JSON Schema validation
 
