@@ -15,3 +15,4 @@ build/
 http-client.private.env.json
 .DS_Store
 .sikkerhet/.DS_Store
+*.private.env.jsons
