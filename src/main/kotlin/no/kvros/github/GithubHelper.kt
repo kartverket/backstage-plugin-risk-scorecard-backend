@@ -60,21 +60,26 @@ data class GithubPullRequestHead(
 )
 
 
-object GithubReferenceHelper {
-    private const val rosPrefixForRefs = "heads/ros-"
+object GithubHelper {
     private const val rosPostfixForFiles = ".ros.yaml"
     private const val defaultPathToROSDirectory = ".security/ros"
+
+    fun uriToFindRosFiles(
+        owner: String,
+        repository: String,
+        rosPath: String
+    ): String = "/$owner/$repository/contents/$rosPath"
 
     fun uriToFindAllRosBranches(
         owner: String,
         repository: String,
-    ): String = "/$owner/$repository/git/matching-refs/$rosPrefixForRefs"
+    ): String = "/$owner/$repository/git/matching-refs/heads/ros-"
 
     fun uriToFindExistingBranchForROS(
         owner: String,
         repository: String,
         rosId: String
-    ): String = "/$owner/$repository/git/matching-refs/${rosPrefixForRefs}${rosId}"
+    ): String = "/$owner/$repository/git/matching-refs/heads/${rosId}"
 
     fun WebClient.ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
         this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
@@ -83,17 +88,17 @@ object GithubReferenceHelper {
         owner: String,
         repository: String,
         rosId: String,
-        draftBranch: String = "ros-$rosId"
+        draftBranch: String = rosId
     ): String =
-        "/$owner/$repository/contents/$defaultPathToROSDirectory/ros-${rosId}${rosPostfixForFiles}?ref=$draftBranch"
+        "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}${rosPostfixForFiles}?ref=$draftBranch"
 
     fun uriToPostContentOfFileOnDraftBranch(
         owner: String,
         repository: String,
         rosId: String,
-        draftBranch: String = "ros-$rosId"
+        draftBranch: String = rosId
     ): String =
-        "/$owner/$repository/contents/$defaultPathToROSDirectory/ros-${rosId}${rosPostfixForFiles}?ref=$draftBranch"
+        "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}${rosPostfixForFiles}?ref=$draftBranch"
 
     fun uriToGetCommitStatus(
         owner: String,
@@ -131,5 +136,5 @@ object GithubReferenceHelper {
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,
         latestShaAtMain: String
-    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/${rosPrefixForRefs}${rosId}", latestShaAtMain)
+    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/${rosId}", latestShaAtMain)
 }

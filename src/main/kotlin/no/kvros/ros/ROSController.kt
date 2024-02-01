@@ -1,6 +1,5 @@
 package no.kvros.ros
 
-import no.kvros.github.GithubPullRequestObject
 import no.kvros.ros.models.ROSWrapperObject
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -16,12 +15,18 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): List<ROSIdentifier>? =
-        rosService.fetchROSFilenames(
+    ): ResponseEntity<ROSIdentifiersResultDTO> {
+        val result = rosService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
             accessToken = githubAccessToken,
         )
+
+        return when (result.status) {
+            SimpleStatus.Success -> ResponseEntity.ok().body(result)
+            else -> ResponseEntity.internalServerError().body(result)
+        }
+    }
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
     fun fetchROS(
@@ -29,13 +34,19 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-    ): String? =
-        rosService.fetchROSContent(
+    ): ResponseEntity<ROSContentResultDTO> {
+        val result = rosService.fetchROSContent(
             owner = repositoryOwner,
             repository = repositoryName,
             rosId = id,
             accessToken = githubAccessToken,
         )
+
+        return when (result.status) {
+            ContentStatus.Success -> ResponseEntity.ok().body(result)
+            else -> ResponseEntity.internalServerError().body(result)
+        }
+    }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
     fun createNewROS(
@@ -43,7 +54,7 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<ROSResult> {
+    ): ResponseEntity<ProcessROSResultDTO> {
         val response = rosService.createROS(
             owner = repositoryOwner,
             repository = repositoryName,
@@ -51,6 +62,7 @@ class ROSController(
             content = ros,
         )
 
+        
         return when (response.status) {
             ProcessingStatus.ROSNotValid,
             ProcessingStatus.EncrptionFailed,
@@ -76,7 +88,7 @@ class ROSController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
-    ): ResponseEntity<ROSResult> {
+    ): ResponseEntity<ProcessROSResultDTO> {
         val editResult = rosService.updateROS(
             owner = repositoryOwner,
             repository = repositoryName,
@@ -109,8 +121,14 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<List<GithubPullRequestObject>> = ResponseEntity.ok()
-        .body(rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken))
+    ): ResponseEntity<ROSIdentifiersResultDTO> {
+        val result = rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken)
+
+        return when (result.status) {
+            SimpleStatus.Success -> ResponseEntity.ok().body(result)
+            SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
+        }
+    }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     fun sendROSForPublishing(
@@ -118,7 +136,13 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String
-    ): ResponseEntity<GithubPullRequestObject> =
-        ResponseEntity.ok().body(rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken))
+    ): ResponseEntity<ROSPublishedObjectResultDTO> {
+        val result = rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken)
+
+        return when (result.status) {
+            SimpleStatus.Success -> ResponseEntity.ok().body(result)
+            SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
+        }
+    }
 
 }
