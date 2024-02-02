@@ -4,6 +4,7 @@ import no.kvros.encryption.SopsEncryptionKeyProvider
 import no.kvros.encryption.SopsEncryptorForYaml
 import no.kvros.encryption.SopsEncryptorHelper
 import no.kvros.encryption.SopsProviderAndCredentials
+import no.kvros.ros.models.ROSAndFilename
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.springframework.beans.factory.annotation.Value
@@ -50,10 +51,18 @@ class ROSService(
         repository: String,
         path: String,
         accessToken: String,
-    ): List<String>? =
-        githubConnector.fetchROSesFromGithub(owner, repository, path, accessToken)?.let {
-            it.mapNotNull { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+    ): List<ROSAndFilename>? =
+        githubConnector.fetchROSesFromGithub(owner, repository, path, accessToken)?.let { rosAndFilename ->
+            rosAndFilename.mapNotNull {
+                val decryptedROS = SopsEncryptorForYaml.decrypt(ciphertext = it.ros, sopsEncryptorHelper)
+                if (decryptedROS != null) {
+                    ROSAndFilename(decryptedROS, it.filename)
+                } else {
+                    null
+                }
+            }
         }
+
 
     fun fetchROSFilenamesFromGithub(
         owner: String,

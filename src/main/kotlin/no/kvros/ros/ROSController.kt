@@ -1,5 +1,6 @@
 package no.kvros.ros
 
+import no.kvros.ros.models.ROSAndFilename
 import no.kvros.ros.models.ROSWrapperObject
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
@@ -52,7 +53,7 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): List<String>? =
+    ): List<ROSAndFilename>? =
         ROSService.fetchAllROSesFromGithub(
             owner = repositoryOwner,
             repository = repositoryName,

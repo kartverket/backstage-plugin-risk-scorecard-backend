@@ -1,10 +1,7 @@
 package no.kvros.ros
 
 import no.kvros.infra.connector.WebClientConnector
-import no.kvros.ros.models.ROSContentDTO
-import no.kvros.ros.models.ROSDownloadUrlDTO
-import no.kvros.ros.models.ROSFilenameDTO
-import no.kvros.ros.models.ShaResponseDTO
+import no.kvros.ros.models.*
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -38,16 +35,21 @@ class GithubConnector : WebClientConnector("https://api.github.com/repos") {
         repository: String,
         pathToROS: String,
         accessToken: String,
-    ): List<String>? = fetchROSUrlsFromGithub(owner, repository, pathToROS, accessToken)?.map{
-            webClient
-                .get()
-                .uri(it.download_url)
-                .header("Accept", "application/vnd.github+json")
-                .header("Authorization", "token $accessToken")
-                .retrieve()
-                .bodyToMono(typeReference<String>())
+    ): List<ROSAndFilename>? = fetchROSUrlsFromGithub(owner, repository, pathToROS, accessToken)?.mapNotNull {
+        val response = webClient
+            .get()
+            .uri(it.download_url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Authorization", "token $accessToken")
+            .retrieve()
+            .bodyToMono<String>().block()
+         if (response != null) {
+            ROSAndFilename(response, it.name.substringBefore('.'))
+        } else {
+            null
         }
-            ?.mapNotNull { it.block() }
+    }
+
 
     private fun fetchROSUrlsFromGithub(
         owner: String,
