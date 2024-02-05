@@ -1,13 +1,11 @@
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: kv-ros-backend
+  name: kv-ros
 spec:
-  type: service
-  owner: rosene
-  system: kv-ros
-  lifecycle: production
+  type: url
   targets:
     - .backstage/system/system.yaml
     - .backstage/component/ros.yaml
     - .backstage/component/publicApi.yaml
+    - .backstage/component/backend.yaml
