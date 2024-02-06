@@ -14,5 +14,5 @@ build/
 /out/
 http-client.private.env.json
 .DS_Store
-.sikkerhet/.DS_Store
+.security/.DS_Store
 *.private.env.jsons
