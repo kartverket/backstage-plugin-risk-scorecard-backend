@@ -12,7 +12,9 @@ import java.util.*
 
 class ProcessROSResultDTO(
     val status: ProcessingStatus,
-    val statusMessage: String
+    val statusMessage: String,
+    val rosId: String?,
+    val rosContent: String?
 )
 
 class ROSContentResultDTO(
@@ -212,8 +214,10 @@ class ROSService(
         val validationStatus = JSONValidator.validateJSON(content.ros)
         if (!validationStatus.valid)
             return ProcessROSResultDTO(
-                ProcessingStatus.ROSNotValid,
-                validationStatus.errors?.joinToString("\n") { it.error }.toString()
+                status = ProcessingStatus.ROSNotValid,
+                statusMessage = validationStatus.errors?.joinToString("\n") { it.error }.toString(),
+                rosId = rosId,
+                rosContent = content.ros
             )
 
         val encryptedData =
@@ -221,8 +225,10 @@ class ROSService(
                 SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
             } catch (_: Exception) {
                 return ProcessROSResultDTO(
-                    ProcessingStatus.EncrptionFailed,
-                    "Klarte ikke kryptere ROS"
+                    status = ProcessingStatus.EncrptionFailed,
+                    statusMessage = "Klarte ikke kryptere ROS",
+                    rosId = rosId,
+                    rosContent = content.ros
                 )
             }
 
@@ -235,11 +241,13 @@ class ROSService(
                 accessToken = accessToken
             )
 
-            return ProcessROSResultDTO(ProcessingStatus.UpdatedROS, "")
+            return ProcessROSResultDTO(ProcessingStatus.UpdatedROS, "ROS ble oppdatert", rosId, content.ros)
         } catch (e: Exception) {
             return ProcessROSResultDTO(
-                ProcessingStatus.ErrorWhenUpdatingROS,
-                "Feilet med feilemelding ${e.message} for ros med id $rosId"
+                status = ProcessingStatus.ErrorWhenUpdatingROS,
+                statusMessage = "Kunne ikke oppdatere ROS med id $rosId",
+                rosId = rosId,
+                rosContent = content.ros
             )
         }
     }
