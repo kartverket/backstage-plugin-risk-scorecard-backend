@@ -29,7 +29,9 @@
           "minLength": 2
         },
         "properties": {
-          "ID": { "type": "number" },
+          "ID": {
+            "type": "number"
+          },
           "beskrivelse": {
             "type": "string"
           },
@@ -83,7 +85,9 @@
                 "minLength": 2
               },
               "properties": {
-                "ID": { "type": "number" },
+                "ID": {
+                  "type": "number"
+                },
                 "beskrivelse": {
                   "type": "string"
                 },
@@ -103,9 +107,6 @@
                     "Fullført",
                     "Avbrutt"
                   ]
-                },
-                "restrisiko": {
-                  "$ref": "#/$defs/risiko"
                 }
               },
               "required": [
@@ -113,11 +114,13 @@
                 "beskrivelse",
                 "tiltakseier",
                 "frist",
-                "status",
-                "restrisiko"
+                "status"
               ],
               "additionalProperties": false
             }
+          },
+          "restrisiko": {
+            "$ref": "#/$defs/risiko"
           }
         },
         "required": [
@@ -127,7 +130,8 @@
           "trusselaktører",
           "sårbarheter",
           "risiko",
-          "tiltak"
+          "tiltak",
+          "restrisiko"
         ],
         "additionalProperties": false
       }
