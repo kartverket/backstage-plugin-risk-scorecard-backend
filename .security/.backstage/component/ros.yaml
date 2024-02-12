@@ -8,4 +8,4 @@ spec:
   type: service
   owner: rosene
   system: kv-ros
-  lifecycle: experimental
+  lifecycle: production

@@ -1,0 +1,24 @@
+
+# Hent alle pull-requests i repo
+GET https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/pulls
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+# Lag en ny pull-request
+POST https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/pulls
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"title": "Branch {{newReferenceName}}",
+	"body": "Her må det være noe - hvis ikke så får du feilmelding",
+	"head": "{{repositoryOwner}}:{{newReferenceName}}",
+	"base": "main"
+}
+
+###
