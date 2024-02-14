@@ -1,8 +1,6 @@
 package no.kvros.ros
 
-import no.kvros.ros.models.ROSAndFilename
 import no.kvros.ros.models.ROSWrapperObject
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,59 +9,23 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/ros")
 class ROSController(
     private val rosService: ROSService,
-    @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) {
-    @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
-    fun getROSFilenames(
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/all")
+    fun fetchAllROSes(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<ROSIdentifiersResultDTO> {
-        val result = rosService.fetchROSFilenames(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            accessToken = githubAccessToken,
-        )
+    ): ResponseEntity<List<ROSResultDTO>> {
+        val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, githubAccessToken)
 
-        return when (result.status) {
-            SimpleStatus.Success -> ResponseEntity.ok().body(result)
+        val successResults = result.filter { it.status == ContentStatus.Success }
+
+        return when {
+            successResults.isNotEmpty() -> ResponseEntity.ok().body(successResults)
             else -> ResponseEntity.internalServerError().body(result)
         }
     }
-
-    @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
-    fun fetchROS(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-        @PathVariable id: String,
-    ): ResponseEntity<ROSContentResultDTO> {
-        val result = rosService.fetchROSContent(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            rosId = id,
-            accessToken = githubAccessToken,
-        )
-
-        return when (result.status) {
-            ContentStatus.Success -> ResponseEntity.ok().body(result)
-            else -> ResponseEntity.internalServerError().body(result)
-        }
-    }
-
-    @GetMapping("/{repositoryOwner}/{repositoryName}")
-    fun getAllROSesFromGithub(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-    ): List<ROSAndFilename>? =
-        rosService.fetchAllROSesFromGithub(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            path = defaultROSPath,
-            accessToken = githubAccessToken,
-        )
-
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
     fun createNewROS(
@@ -161,5 +123,4 @@ class ROSController(
             SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
         }
     }
-
 }

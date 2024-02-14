@@ -8,7 +8,6 @@ import no.kvros.ros.models.ROSContentDTO
 import no.kvros.ros.models.ROSFilenameDTO
 import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.beans.factory.annotation.Value
-import no.kvros.ros.models.*
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
@@ -144,36 +143,6 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
     } catch (e: Exception) {
         GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
     }
-
-    fun fetchROSesFromGithub(
-        owner: String,
-        repository: String,
-        pathToROS: String,
-        accessToken: String,
-    ): List<ROSAndFilename>? = fetchROSUrlsFromGithub(owner, repository, pathToROS, accessToken)?.mapNotNull {
-        val response = webClient
-            .get()
-            .uri(it.download_url)
-            .header("Accept", "application/vnd.github+json")
-            .header("Authorization", "token $accessToken")
-            .retrieve()
-            .bodyToMono<String>().block()
-        if (response != null) {
-            ROSAndFilename(response, it.name.substringBefore('.'))
-        } else {
-            null
-        }
-    }
-
-
-    private fun fetchROSUrlsFromGithub(
-        owner: String,
-        repository: String,
-        pathToRoser: String,
-        accessToken: String,
-    ): List<ROSDownloadUrlDTO>? = getGithubResponse("/$owner/$repository/contents/$pathToRoser", accessToken).rosUrls()
-
-
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus = when (e) {
         is WebClientResponseException -> when (e) {
@@ -408,8 +377,6 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
 
     fun List<GithubReferenceObject>.rosIdentifiersDrafted(): List<ROSIdentifier> =
         this.map { ROSIdentifier(id = it.ref.split("/").last(), status = ROSStatus.Draft) }
-
-    private fun ResponseSpec.rosUrls(): List<ROSDownloadUrlDTO>? = this.bodyToMono<List<ROSDownloadUrlDTO>>().block()
 
     private fun getGithubResponse(
         uri: String,

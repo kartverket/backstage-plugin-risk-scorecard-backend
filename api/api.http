@@ -26,3 +26,15 @@ Content-Type: application/json
 ###
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3
 Github-Access-Token: {{GITHUB_TOKEN}}
+
+### GET /ros/all
+GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-2/all
+Github-Access-Token: {{GITHUB_TOKEN}}
+
+### GET /ros/{id}
+GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-2/ros-124151
+Github-Access-Token: {{GITHUB_TOKEN}}
+
+### GET /ros/allofit
+GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3/allofit
+Github-Access-Token: {{GITHUB_TOKEN}}
