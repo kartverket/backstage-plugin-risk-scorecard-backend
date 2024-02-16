@@ -1,7 +1,10 @@
 package no.kvros.ros
 
 import no.kvros.encryption.*
+import no.kvros.github.GithubConnector
+import no.kvros.github.GithubContentResponse
 import no.kvros.github.GithubPullRequestObject
+import no.kvros.github.GithubStatus
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils

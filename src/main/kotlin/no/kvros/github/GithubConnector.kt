@@ -1,8 +1,9 @@
-package no.kvros.ros
+package no.kvros.github
 
-import no.kvros.github.*
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
+import no.kvros.ros.ROSIdentifier
+import no.kvros.ros.ROSStatus
 import no.kvros.ros.models.ContentResponseDTO
 import no.kvros.ros.models.ROSContentDTO
 import no.kvros.ros.models.ROSFilenameDTO
@@ -61,7 +62,7 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
         val draftROSes = try {
             fetchROSIdentifiersDrafted(owner, repository, accessToken)
         } catch (e: Exception) {
-            return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+            emptyList<ROSIdentifier>()
         }
 
         val publishedROSes = try {
@@ -71,13 +72,13 @@ class GithubConnector(@Value("\${github.repository.ros-folder-path}") private va
                 accessToken
             )
         } catch (e: Exception) {
-            return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+            emptyList<ROSIdentifier>()
         }
 
         val rosSentForApproval = try {
             fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
         } catch (e: Exception) {
-            return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+            emptyList<ROSIdentifier>()
         }
 
 

@@ -27,6 +27,12 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("net.pwall.json:json-kotlin-schema:0.44")
     implementation("org.apache.commons:commons-lang3:3.0")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.12")
+
+    implementation("com.google.code.gson:gson:2.8.5")
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
 }

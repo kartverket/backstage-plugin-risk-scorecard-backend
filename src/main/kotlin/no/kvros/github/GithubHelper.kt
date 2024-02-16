@@ -47,6 +47,22 @@ data class GithubCreateNewPullRequestPayload(
         "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$rosId\", \"base\": \"$baseBranch\" }"
 }
 
+data class GithubCreateNewAccessTokenForRepository(
+    val repositoryName: String,
+    val permissions: Map<String, String> = mapOf(
+        "contents" to "write",
+        "pull_requests" to "write"
+    )
+) {
+    fun toContentBody(): String {
+        return "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
+            permissions.map {
+                "\"${it.key}\":\"${it.value}\""
+            }.joinToString(",")
+        }}}"
+    }
+}
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubPullRequestObject(
     @JsonProperty("html_url")
@@ -137,4 +153,14 @@ object GithubHelper {
         rosId: String,
         latestShaAtMain: String
     ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/${rosId}", latestShaAtMain)
+
+
+    fun uriToFindAppInstallation(): String = "/installations"
+
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
+        "/installations/$installationId/access_tokens"
+
+    fun bodyToCreateAccessTokenForRepository(
+        repositoryName: String,
+    ): GithubCreateNewAccessTokenForRepository = GithubCreateNewAccessTokenForRepository(repositoryName)
 }
