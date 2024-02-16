@@ -107,12 +107,11 @@ class ROSService(
 
         val roses = githubConnector.fetchAllRosIdentifiersInRepository(owner, repository, accessToken).let { ids ->
             ids.ids.map { identifier ->
-                if (identifier.status == ROSStatus.Published) {
-                    githubConnector.fetchPublishedROS(owner, repository, identifier.id, accessToken)
-                        .responseToRosResult(identifier.id, identifier.status)
-                } else {
-                    githubConnector.fetchDraftedROSContent(owner, repository, identifier.id, accessToken)
-                        .responseToRosResult(identifier.id, identifier.status)
+                when(identifier.status) {
+                    ROSStatus.Published -> githubConnector.fetchPublishedROS(owner, repository, identifier.id, accessToken).responseToRosResult(identifier.id, identifier.status)
+
+                    ROSStatus.SentForApproval,
+                    ROSStatus.Draft -> githubConnector.fetchDraftedROSContent(owner, repository, identifier.id, accessToken) .responseToRosResult(identifier.id, identifier.status)
                 }
             }
         }
