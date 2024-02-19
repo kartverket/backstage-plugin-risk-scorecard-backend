@@ -3,14 +3,16 @@ package no.kvros.github
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
+import no.kvros.infra.connector.GcpClientConnector
+import no.kvros.infra.connector.UserContext
 import no.kvros.infra.connector.WebClientConnector
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
@@ -26,47 +28,64 @@ class GithubAppSignedJwt(
 
 class GithubAppAccessToken(
     val value: String?
-)
+) {
+    fun isValid(): Boolean = true // TODO -- sjekk med public key fra github
+    fun accessToken(): String = value!!
+}
 
 class GithubAppIdentifier(
     val appId: Int,
     val installationId: Int
 )
 
-class GithubAppConnector(val appIdentifier: GithubAppIdentifier) : WebClientConnector("https://api.github.com/app") {
-    private val filePath =
-        "/Users/maren/Documents/ros/kv-ros-backend/src/main/kotlin/no/kvros/github/backstage-testis.2024-02-16.private-key.pem" // TODO: lagre denne i gcp eller noe
+@Component
+class GithubAppConnector(
+    @Value("githubAppIdentifier.appId") appId: Int,
+    @Value("githubAppIdentifier.installationId") installationId: Int,
+    @Value("githubAppIdentifier.privateKeySecretName") val privateKeySecretName: String,
+) :
+    WebClientConnector("https://api.github.com/app") {
 
-    fun getGithubAppSignedJWT(backstageToken: String): GithubAppSignedJwt {
-        if (backstageToken.isBlank()) return GithubAppSignedJwt(null) // TODO: gjør en ordentlig sjekk her
+    private val gcpClientConnector = GcpClientConnector()
+    private val appIdentifier = GithubAppIdentifier(appId, installationId)
 
-        return GithubAppSignedJwt(
-            PemUtils.getSignedJWT(
-                privateKey = File(filePath).readBytes(),
-                appId = appIdentifier.appId
-            )
-        )
+    internal fun getAccessTokenFromApp(userContext: UserContext, repositoryName: String): GithubAppAccessToken {
+        if (!userContext.isValid()) GithubAppAccessToken(null)
+        val jwt = getGithubAppSignedJWT()
+        return getGithubAppAccessToken(jwt, repositoryName = repositoryName)
     }
 
-    fun getGithubAppAccessToken(jwt: GithubAppSignedJwt): GithubAppAccessToken {
+
+    private fun getGithubAppSignedJWT(): GithubAppSignedJwt = GithubAppSignedJwt(
+        PemUtils.getSignedJWT(
+            privateKey = gcpClientConnector.getSecretValue(privateKeySecretName).toByteArray(),
+            appId = appIdentifier.appId
+        )
+    )
+
+    private fun getGithubAppAccessToken(jwt: GithubAppSignedJwt, repositoryName: String): GithubAppAccessToken {
         val accessTokenBody: GithubAccessTokenBody? =
-            webClient
-                .post()
-                .uri(GithubHelper.uriToGetAccessTokenFromInstallation(appIdentifier.installationId.toString()))
-                .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .body(
-                    Mono.just(GithubHelper.bodyToCreateAccessTokenForRepository("kv-ros-test-2").toContentBody()),
-                    String::class.java
-                )
-                .retrieve()
-                .bodyToMono<GithubAccessTokenBody>()
-                .block()
+            try {
+                webClient
+                    .post()
+                    .uri(GithubHelper.uriToGetAccessTokenFromInstallation(appIdentifier.installationId.toString()))
+                    .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
+                    .header("X-GitHub-Api-Version", "2022-11-28")
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .body(
+                        Mono.just(GithubHelper.bodyToCreateAccessTokenForRepository(repositoryName).toContentBody()),
+                        String::class.java
+                    )
+                    .retrieve()
+                    .bodyToMono<GithubAccessTokenBody>()
+                    .block()
+            } catch (e: Exception) {
+                println(e.stackTrace)
+                null
+            }
 
         return GithubAppAccessToken(accessTokenBody?.token)
-
     }
 
 
@@ -74,18 +93,6 @@ class GithubAppConnector(val appIdentifier: GithubAppIdentifier) : WebClientConn
     data class GithubAccessTokenBody(
         val token: String,
     )
-
-
-    private fun getGithubResponse(
-        uri: String,
-        accessToken: String,
-    ): WebClient.ResponseSpec =
-        webClient.get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
-            .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
 }
 
 object PemUtils {
@@ -93,7 +100,7 @@ object PemUtils {
 
     fun getSignedJWT(privateKey: ByteArray, appId: Int): String {
         val pemContent = String(privateKey, StandardCharsets.UTF_8)
-        val privateKey = PemUtils.readPrivateKey(pemContent)
+        val privateKey = readPrivateKey(pemContent)
 
         return Jwts
             .builder()
@@ -122,7 +129,7 @@ object PemUtils {
                 }
             }
 
-    fun readPrivateKey(pem: String): PrivateKey {
+    private fun readPrivateKey(pem: String): PrivateKey {
         val pkcs8Key = if (pem.isPKCS1()) convertToPkcs8(pem) else pem
 
         val decodedKey = pkcs8Key

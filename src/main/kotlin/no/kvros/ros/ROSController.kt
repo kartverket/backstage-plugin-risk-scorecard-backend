@@ -1,5 +1,9 @@
 package no.kvros.ros
 
+import no.kvros.infra.connector.Email
+import no.kvros.infra.connector.MicrosoftIdentifier
+import no.kvros.infra.connector.User
+import no.kvros.infra.connector.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -19,7 +23,11 @@ class ROSController(
         val result = rosService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
-            accessToken = githubAccessToken,
+            userContext = UserContext(
+                MicrosoftIdentifier("", ""),
+                User(Email(""), emptyList()),
+                null
+            ),
         )
 
         return when (result.status) {

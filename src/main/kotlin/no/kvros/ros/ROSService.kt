@@ -1,10 +1,8 @@
 package no.kvros.ros
 
 import no.kvros.encryption.*
-import no.kvros.github.GithubConnector
-import no.kvros.github.GithubContentResponse
-import no.kvros.github.GithubPullRequestObject
-import no.kvros.github.GithubStatus
+import no.kvros.github.*
+import no.kvros.infra.connector.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
@@ -75,6 +73,7 @@ enum class ROSStatus(val description: String) {
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
+    private val githubAppConnector: GithubAppConnector,
     @Value("\${sops.rosKeyResourcePath}")
     private val gcpKeyResourcePath: String,
     @Value("\${sops.agePublicKey}")
@@ -98,9 +97,18 @@ class ROSService(
     fun fetchROSFilenames(
         owner: String,
         repository: String,
-        accessToken: String,
+        userContext: UserContext
     ): ROSIdentifiersResultDTO {
-        val githubResponse = githubConnector.fetchAllRosIdentifiersInRepository(owner, repository, accessToken)
+        val githubAppAccessToken =
+            userContext.githubAccessToken ?: githubAppConnector.getAccessTokenFromApp(userContext, repository)
+
+        if (!githubAppAccessToken.isValid()) return ROSIdentifiersResultDTO(
+            SimpleStatus.Failure,
+            emptyList()
+        )
+
+        val githubResponse =
+            githubConnector.fetchAllRosIdentifiersInRepository(owner, repository, githubAppAccessToken.accessToken())
 
         return when (githubResponse.status) {
             GithubStatus.Success -> ROSIdentifiersResultDTO(SimpleStatus.Success, githubResponse.ids)

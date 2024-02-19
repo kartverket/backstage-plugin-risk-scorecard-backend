@@ -29,7 +29,11 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.0")
     implementation("com.nimbusds:nimbus-jose-jwt:9.12")
 
-    implementation("com.google.code.gson:gson:2.8.5")
+    implementation("com.google.code.gson:gson:2.9.1")
+    implementation("com.google.cloud:google-cloud-secretmanager:2.35.0")
+    implementation("com.google.auth:google-auth-library-credentials:1.23.0")
+
+
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
@@ -46,5 +50,10 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     environment["SOPS_AGE_KEY"] = "AGE-SECRET-KEY-12ZJZ9F3SSUGHTZMPMRX32R7MUT0C5JHWVND65643K8HDTMXQ0HZS4AHC08"
+    environment["GCP_KMS_RESOURCE_PATH"] = "projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"
+    environment["GITHUB_APP_ID"] = "828331"
+    environment["GITHUB_APP_INSTALLATION_ID"] = "47304902"
+    environment["PRIVATE_KEY_SECRET_NAME"] = "projects/spire-ros-5lmr/secrets/GITHUB_APP_PRIVATE_KEY/versions/1"
+    environment["ROS_URL"] = ".security/ros"
     useJUnitPlatform()
 }

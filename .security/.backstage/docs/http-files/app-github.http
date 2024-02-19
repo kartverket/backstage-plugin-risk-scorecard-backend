@@ -1,0 +1,30 @@
+GET https://api.github.com/app
+Accept: application/vnd.github+json
+Authorization: Bearer {{githubAppJwt}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+
+POST https://api.github.com/app/installations/47304902/access_tokens
+Accept: application/vnd.github+json
+Authorization: Bearer {{githubAppJwt}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/x-www-form-urlencoded
+
+###
+POST https://api.github.com/app/installations/47304902/access_tokens
+Accept: application/vnd.github+json
+Authorization: Bearer {{githubAppJwt}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"permissions": {
+		"issues": "write",
+		"contents": "write"
+	}
+}
+
+###
+
