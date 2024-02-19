@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import no.kvros.infra.connector.GcpClientConnector
-import no.kvros.infra.connector.UserContext
 import no.kvros.infra.connector.WebClientConnector
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
@@ -49,12 +48,10 @@ class GithubAppConnector(
     private val gcpClientConnector = GcpClientConnector()
     private val appIdentifier = GithubAppIdentifier(appId, installationId)
 
-    internal fun getAccessTokenFromApp(userContext: UserContext, repositoryName: String): GithubAppAccessToken {
-        if (!userContext.isValid()) GithubAppAccessToken(null)
+    internal fun getAccessTokenFromApp(repositoryName: String): GithubAppAccessToken {
         val jwt = getGithubAppSignedJWT()
         return getGithubAppAccessToken(jwt, repositoryName = repositoryName)
     }
-
 
     private fun getGithubAppSignedJWT(): GithubAppSignedJwt = GithubAppSignedJwt(
         PemUtils.getSignedJWT(
@@ -116,7 +113,6 @@ object PemUtils {
             .signWith(privateKey, SignatureAlgorithm.RS256)
             .compact()
     }
-
 
     private fun convertToPkcs8(pemKey: String): String =
         ProcessBuilder("openssl", "pkcs8", "-topk8", "-inform", "PEM", "-outform", "PEM", "-nocrypt").start()

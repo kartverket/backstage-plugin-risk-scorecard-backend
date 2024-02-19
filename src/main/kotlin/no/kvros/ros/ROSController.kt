@@ -1,8 +1,8 @@
 package no.kvros.ros
 
-import no.kvros.infra.connector.Email
-import no.kvros.infra.connector.MicrosoftIdentifier
-import no.kvros.infra.connector.User
+import no.kvros.github.GithubAppAccessToken
+import no.kvros.github.GithubAppConnector
+import no.kvros.infra.connector.MicrosoftAccessToken
 import no.kvros.infra.connector.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import org.springframework.http.MediaType
@@ -13,21 +13,22 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/ros")
 class ROSController(
     private val rosService: ROSService,
+    private val githubAppConnector: GithubAppConnector
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
     fun getROSFilenames(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
+        @RequestHeader("Github-Access-Token") githubAccessToken: String?,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): ResponseEntity<ROSIdentifiersResultDTO> {
+        val userContext = generateUserContext(microsoftAccessToken, githubAccessToken, repositoryName)
+            ?: return ResponseEntity.status(401).build()
+
         val result = rosService.fetchROSFilenames(
             owner = repositoryOwner,
             repository = repositoryName,
-            userContext = UserContext(
-                MicrosoftIdentifier("", ""),
-                User(Email(""), emptyList()),
-                null
-            ),
+            userContext = userContext,
         )
 
         return when (result.status) {
@@ -39,6 +40,7 @@ class ROSController(
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
     fun fetchROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
@@ -59,6 +61,7 @@ class ROSController(
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
     fun createNewROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
@@ -92,6 +95,7 @@ class ROSController(
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
     fun editROS(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
         @PathVariable repositoryName: String,
@@ -127,6 +131,7 @@ class ROSController(
     @GetMapping("/{repositoryOwner}/{repositoryName}/sentToPublication")
     fun fetchAllDraftsSentToPublication(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): ResponseEntity<ROSIdentifiersResultDTO> {
@@ -141,6 +146,7 @@ class ROSController(
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendROSForPublishing(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String
@@ -153,4 +159,36 @@ class ROSController(
         }
     }
 
+    private fun generateUserContext(
+        microsoftAccessToken: String,
+        githubAccessToken: String?,
+        repositoryName: String
+    ): UserContext? {
+        val microsoftValidationStatus = validateMicrosoftAccessToken(microsoftAccessToken)
+
+        when {
+            !microsoftValidationStatus -> return null
+            githubAccessToken == null -> {
+                val accessTokenFromGithubApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
+
+                return UserContext(MicrosoftAccessToken(microsoftAccessToken), accessTokenFromGithubApp)
+            }
+
+            !githubAccessTokenIsPresent(githubAccessToken) -> return UserContext(
+                MicrosoftAccessToken(microsoftAccessToken),
+                GithubAppAccessToken(githubAccessToken)
+            )
+
+            else -> return null
+        }
+    }
+
+    private fun validateMicrosoftAccessToken(microsoftAccessToken: String): Boolean =
+        true // Denne må valideres opp mot spire-test app
+
+    private fun githubAccessTokenIsPresent(githubAccessToken: String?): Boolean = githubAccessToken != null
+
+    private fun generateGithubAccessToken(repositoryName: String): GithubAppAccessToken {
+        return githubAppConnector.getAccessTokenFromApp(repositoryName)
+    }
 }
