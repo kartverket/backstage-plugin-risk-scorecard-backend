@@ -9,16 +9,15 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.*
 
-
 class ProcessROSResultDTO(
     val status: ProcessingStatus,
-    val statusMessage: String
+    val statusMessage: String,
 )
 
 class ROSContentResultDTO(
     val status: ContentStatus,
     val rosContent: String?,
-    val rosId: String
+    val rosId: String,
 )
 
 class ROSIdentifiersResultDTO(
@@ -29,7 +28,7 @@ class ROSIdentifiersResultDTO(
 class ROSPublishedObjectResultDTO(
     val pendingApproval: PendingApprovalDTO?,
     val rosId: String,
-    val status: SimpleStatus
+    val status: SimpleStatus,
 )
 
 class PendingApprovalDTO(
@@ -41,12 +40,12 @@ enum class ContentStatus {
     Success,
     FileNotFound,
     DecryptionFailed,
-    Failure
+    Failure,
 }
 
 enum class SimpleStatus {
     Success,
-    Failure
+    Failure,
 }
 
 enum class ProcessingStatus(val message: String) {
@@ -59,15 +58,14 @@ enum class ProcessingStatus(val message: String) {
 
 data class ROSIdentifier(
     val id: String,
-    val status: ROSStatus
+    val status: ROSStatus,
 )
 
 enum class ROSStatus(val description: String) {
     Draft("Kladd"),
     SentForApproval("Sendt til godkjenning"),
-    Published("Publisert")
+    Published("Publisert"),
 }
-
 
 @Service
 class ROSService(
@@ -80,16 +78,16 @@ class ROSService(
     private val sopsEncryptorHelper =
         SopsEncryptorHelper(
             sopsProvidersAndCredentials =
-            listOf(
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
-                    publicKeyOrPath = gcpKeyResourcePath,
+                listOf(
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
+                        publicKeyOrPath = gcpKeyResourcePath,
+                    ),
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.AGE,
+                        publicKeyOrPath = agePublicKey,
+                    ),
                 ),
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.AGE,
-                    publicKeyOrPath = agePublicKey,
-                ),
-            ),
         )
 
     fun fetchROSFilenames(
@@ -112,12 +110,14 @@ class ROSService(
         accessToken: String,
     ): ROSContentResultDTO {
         val draftedROS = fetchDraftedROS(owner, repository, rosId, accessToken)
-        if (draftedROS.status == ContentStatus.FileNotFound) return fetchPublishedROS(
-            owner,
-            repository,
-            rosId,
-            accessToken
-        )
+        if (draftedROS.status == ContentStatus.FileNotFound) {
+            return fetchPublishedROS(
+                owner,
+                repository,
+                rosId,
+                accessToken,
+            )
+        }
 
         return draftedROS
     }
@@ -126,49 +126,54 @@ class ROSService(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: String
-    ): ROSContentResultDTO =
-        githubConnector.fetchDraftedROSContent(owner, repository, rosId, accessToken).responseToRosResult(rosId)
+        accessToken: String,
+    ): ROSContentResultDTO = githubConnector.fetchDraftedROSContent(owner, repository, rosId, accessToken).responseToRosResult(rosId)
 
     fun fetchPublishedROS(
         owner: String,
         repository: String,
         id: String,
         accessToken: String,
-    ): ROSContentResultDTO =
-        githubConnector.fetchPublishedROS(owner, repository, id, accessToken).responseToRosResult(id)
+    ): ROSContentResultDTO = githubConnector.fetchPublishedROS(owner, repository, id, accessToken).responseToRosResult(id)
 
-    private fun GithubContentResponse.responseToRosResult(
-        rosId: String
-    ): ROSContentResultDTO {
+    private fun GithubContentResponse.responseToRosResult(rosId: String): ROSContentResultDTO {
         return when (this.status) {
-            GithubStatus.Success -> try {
-                ROSContentResultDTO(ContentStatus.Success, this.decryptContent(), rosId)
-            } catch (e: Exception) {
-                when (e) {
-                    is SOPSDecryptionException -> ROSContentResultDTO(
-                        ContentStatus.DecryptionFailed,
-                        this.decryptContent(),
-                        rosId
-                    )
+            GithubStatus.Success ->
+                try {
+                    ROSContentResultDTO(ContentStatus.Success, this.decryptContent(), rosId)
+                } catch (e: Exception) {
+                    when (e) {
+                        is SOPSDecryptionException ->
+                            ROSContentResultDTO(
+                                ContentStatus.DecryptionFailed,
+                                this.decryptContent(),
+                                rosId,
+                            )
 
-                    else -> ROSContentResultDTO(ContentStatus.Failure, this.decryptContent(), rosId)
+                        else ->
+                            ROSContentResultDTO(
+                                ContentStatus.Failure,
+                                this.decryptContent(),
+                                rosId,
+                            )
+                    }
                 }
-            }
 
-            GithubStatus.NotFound -> ROSContentResultDTO(
-                ContentStatus.FileNotFound,
-                null,
-                rosId
-            )
+            GithubStatus.NotFound ->
+                ROSContentResultDTO(
+                    ContentStatus.FileNotFound,
+                    null,
+                    rosId,
+                )
 
             else -> ROSContentResultDTO(ContentStatus.Failure, this.decryptContent(), rosId)
         }
     }
 
-    fun GithubContentResponse.decryptContent(): String = this.data()
-        .let { Base64.getMimeDecoder().decode(it).decodeToString() }
-        .let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+    fun GithubContentResponse.decryptContent(): String =
+        this.data()
+            .let { Base64.getMimeDecoder().decode(it).decodeToString() }
+            .let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
 
     fun updateROS(
         owner: String,
@@ -182,7 +187,7 @@ class ROSService(
             repository = repository,
             rosId = rosId,
             content = content,
-            accessToken = accessToken
+            accessToken = accessToken,
         )
     }
 
@@ -198,7 +203,7 @@ class ROSService(
             repository = repository,
             rosId = "ros-$uniqueROSId",
             content = content,
-            accessToken = accessToken
+            accessToken = accessToken,
         )
     }
 
@@ -210,19 +215,22 @@ class ROSService(
         accessToken: String,
     ): ProcessROSResultDTO {
         val validationStatus = JSONValidator.validateJSON(content.ros)
-        if (!validationStatus.valid)
+        if (!validationStatus.valid) {
+            System.err.println("Validation failed with errors: ${validationStatus.errors?.joinToString("\n") { it.error }}")
             return ProcessROSResultDTO(
                 ProcessingStatus.ROSNotValid,
-                validationStatus.errors?.joinToString("\n") { it.error }.toString()
+                validationStatus.errors?.joinToString("\n") { it.error }.toString(),
             )
+        }
 
         val encryptedData =
             try {
                 SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                System.err.println("Failed to encrypt ROS with error: ${e.message}")
                 return ProcessROSResultDTO(
                     ProcessingStatus.EncrptionFailed,
-                    "Klarte ikke kryptere ROS"
+                    "Klarte ikke kryptere ROS",
                 )
             }
 
@@ -232,14 +240,15 @@ class ROSService(
                 repository = repository,
                 rosId = rosId,
                 fileContent = encryptedData,
-                accessToken = accessToken
+                accessToken = accessToken,
             )
 
             return ProcessROSResultDTO(ProcessingStatus.UpdatedROS, "")
         } catch (e: Exception) {
+            System.err.println("Failed to update ROS with error: ${e.message}")
             return ProcessROSResultDTO(
                 ProcessingStatus.ErrorWhenUpdatingROS,
-                "Feilet med feilemelding ${e.message} for ros med id $rosId"
+                "Feilet med feilemelding ${e.message} for ros med id $rosId",
             )
         }
     }
@@ -247,11 +256,11 @@ class ROSService(
     fun fetchAllROSDraftsSentToPublication(
         owner: String,
         repository: String,
-        accessToken: String
+        accessToken: String,
     ): ROSIdentifiersResultDTO =
         ROSIdentifiersResultDTO(
             SimpleStatus.Success,
-            githubConnector.fetchAllPullRequestsForROS(owner, repository, accessToken).toRosIdentifiersResultDTO()
+            githubConnector.fetchAllPullRequestsForROS(owner, repository, accessToken).toRosIdentifiersResultDTO(),
         )
 
     private fun List<GithubPullRequestObject>.toRosIdentifiersResultDTO(): List<ROSIdentifier> =
@@ -261,14 +270,15 @@ class ROSService(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: String
+        accessToken: String,
     ): ROSPublishedObjectResultDTO {
-        val pullRequestObject = githubConnector.createPullRequestForPublishingROS(
-            owner,
-            repository,
-            rosId,
-            accessToken
-        )
+        val pullRequestObject =
+            githubConnector.createPullRequestForPublishingROS(
+                owner,
+                repository,
+                rosId,
+                accessToken,
+            )
 
         return when (pullRequestObject != null) {
             true -> ROSPublishedObjectResultDTO(pullRequestObject.toPendingApprovalDTO(), rosId, SimpleStatus.Success)
@@ -276,9 +286,9 @@ class ROSService(
         }
     }
 
-    private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO = PendingApprovalDTO(
-        pullRequestUrl = this.url,
-        pullRequestName = this.head.ref
-    )
-
+    private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =
+        PendingApprovalDTO(
+            pullRequestUrl = this.url,
+            pullRequestName = this.head.ref,
+        )
 }
