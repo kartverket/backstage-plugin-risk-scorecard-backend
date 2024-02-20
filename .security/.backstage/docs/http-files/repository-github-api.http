@@ -1,0 +1,67 @@
+###
+
+# Hent innhold fra en gitt path: i dette tilfellet en ros fra dette repoet
+GET https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/contents/.sikkerhet/ros/{{rosId}}.ros.yaml
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+# Legg til en fil
+PUT https://api.github.com/repos/{{repositoryOwner}}/{{repositoryOwner}}/contents/{{newFileName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"message": "Commit-melding rett i main: legger til fil {{newFileName}}",
+	"committer": {
+		"name": "Navn Navnesen",
+		"email": "navnerito@bekk.no"
+	},
+	"content": "aGVpIHDDpSBkZWcgZGluIGdhbWxlIHNuZWkK="
+}
+
+###
+
+# Oppdater en fil
+# - samme som den over, men man må sende med sha for nåværende fil
+# - den kan du finne ved å bruke den øverste spørringen for filen du vil oppdatere
+PUT https://api.github.com/repos/{{repositoryOwner}}/{{repositoryOwner}}/contents/{{newFileName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"message": "Commit-melding rett i main: endrer fil {{newFileName}}",
+	"committer": {
+		"name": "Navn Navnesen",
+		"email": "navnerito@bekk.no"
+	},
+	"content": "aGVpIHDDpSBkZWcgZGluIGdhbWxlIHNuZWkgLSBkZW5uZSBlciBvcHBkYXRlcnQK=",
+	"sha": "<her må du legge til filens sha>"
+}
+
+###
+
+# Slett en fil, på samme måte som med endring av innhold må siste sha også sendes med
+DELETE https://api.github.com/repos/{{repositoryOwner}}/{{repositoryOwner}}/contents/{{newFileName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+    "message": "Commit-melding rett i main: sletter fil {{newFileName}}",
+	"committer": {
+		"name": "Navn Navnesen",
+		"email": "navnerito@bekk.no"
+	},
+	"sha": "<her må du legge til filens sha>"
+}
+
+###
+

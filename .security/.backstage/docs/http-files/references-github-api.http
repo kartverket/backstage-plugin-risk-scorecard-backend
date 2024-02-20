@@ -1,0 +1,82 @@
+# Lag en ny branch fra main
+# Steg 1. finn siste sha for main-branch
+
+GET https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/commits/main/status
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+# Steg 2. bruk sha og legg til ny referanse i github-databasen
+POST https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/git/refs
+Accept: application/vnd.github+json
+Authorization: Bearer {accessToken}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/x-www-form-urlencoded
+
+{"ref":"refs/heads/{{newReferenceName}}","sha":"<sha fra steg 1>"}
+
+###
+
+# Finn alle refereneces/branches med navn som matcher
+GET https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/git/matching-refs/heads/{{matchingReferenceQueryName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+# Hent informasjon om en reference/branch
+GET https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/git/ref/{{newReferenceName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+
+###
+
+
+# Legg til en ny fil i en reference/branch - på samme måte som ved å lage fra main,
+# men vi legger til query parameter "ref" med navn på referansen/branchen vi vil dytte til (og vi bruker POST)
+POST https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/contents/.security/ros/{{newFileName}}?
+    ref={{newReferenceName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"message": "Commit-melding rett i main: legger til fil {{newFileName}}",
+	"committer": {
+		"name": "Navn Navnesen",
+		"email": "navnerito@bekk.no"
+	},
+	"content": "aGVpIHDDpSBkZWcgZGluIGdhbWxlIHNuZWkK="
+}
+
+###
+
+# Endre fil i reference/branch - på samme måte som ved å endre i main,
+# men vi legger til query parameter "ref" med navn på referansen/branchen vi vil dytte til (og vi bruker POST)
+POST https://api.github.com/repos/{{repositoryOwner}}/{{repositoryName}}/contents/.security/ros/{{newFileName}}?
+    ref={{newReferenceName}}
+Accept: application/vnd.github+json
+Authorization: Bearer {{accessToken}}
+X-GitHub-Api-Version: 2022-11-28
+Content-Type: application/json
+
+{
+	"message": "Commit-melding rett i main: legger til fil {{newFileName}}",
+	"committer": {
+		"name": "Navn Navnesen",
+		"email": "navnerito@bekk.no"
+	},
+	"content": "aGVpIHDDpSBkZWcgZGluIGdhbWxlIHNuZWkK=",
+	"sha": "<din sha>"
+}
+
+
+
+
+
+

@@ -53,6 +53,10 @@ enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
     AGE("--age"),
 }
 
+class SOPSDecryptionException(message: String) : Exception(message)
+class SOPSEncryptionException(message: String) : Exception(message)
+
+
 object SopsEncryptorForYaml {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
@@ -60,51 +64,35 @@ object SopsEncryptorForYaml {
     fun decrypt(
         ciphertext: String,
         sopsEncryptorHelper: SopsEncryptorHelper,
-    ): String? =
-        try {
-            processBuilder
-                .command(sopsEncryptorHelper.toDecryptionCommand())
-                .start()
-                .run {
-                    outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
-                    val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                    when (waitFor()) {
-                        EXECUTION_STATUS_OK -> result
+    ): String =
+        processBuilder
+            .command(sopsEncryptorHelper.toDecryptionCommand())
+            .start()
+            .run {
+                outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
+                val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                when (waitFor()) {
+                    EXECUTION_STATUS_OK -> result
 
-                        else -> {
-                            System.err.println("IOException from decrypting yaml with error code ${exitValue()}: $result")
-                            null
-                        }
-                    }
+                    else ->
+                        throw SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
                 }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+            }
 
     fun encrypt(
         text: String,
         sopsEncryptorHelper: SopsEncryptorHelper,
-    ): String? =
-        try {
-            println(sopsEncryptorHelper.toEncryptionCommand())
-            processBuilder
-                .command(sopsEncryptorHelper.toEncryptionCommand())
-                .start()
-                .run {
-                    outputStream.buffered().also { it.write(text.toByteArray()) }.close()
-                    val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                    when (waitFor()) {
-                        EXECUTION_STATUS_OK -> result
+    ): String =
+        processBuilder
+            .command(sopsEncryptorHelper.toEncryptionCommand())
+            .start()
+            .run {
+                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
+                val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                when (waitFor()) {
+                    EXECUTION_STATUS_OK -> result
 
-                        else -> {
-                            System.err.println("IOException from encrypting json with error code ${exitValue()}: $result")
-                            null
-                        }
-                    }
+                    else -> throw SOPSEncryptionException("IOException from encrypting json with error code ${exitValue()}: $result")
                 }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
+            }
 }
