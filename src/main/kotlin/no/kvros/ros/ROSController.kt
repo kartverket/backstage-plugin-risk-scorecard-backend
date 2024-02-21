@@ -1,6 +1,5 @@
 package no.kvros.ros
 
-import no.kvros.github.GithubAccessToken
 import no.kvros.github.GithubAppConnector
 import no.kvros.infra.connector.models.MicrosoftIdToken
 import no.kvros.infra.connector.models.UserContext
@@ -164,14 +163,5 @@ class ROSController(
             SimpleStatus.Success -> ResponseEntity.ok().body(result)
             SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
         }
-    }
-
-    private fun validateMicrosoftAccessToken(microsoftAccessToken: String): Boolean =
-        true // Denne må valideres opp mot spire-test app
-
-    private fun githubAccessTokenIsPresent(githubAccessToken: String?): Boolean = githubAccessToken != null
-
-    private fun generateGithubAccessToken(repositoryName: String): GithubAccessToken {
-        return githubAppConnector.getAccessTokenFromApp(repositoryName)
     }
 }
