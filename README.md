@@ -1,6 +1,31 @@
 # kv-ros-backend
+## High level components
 
-### JSON Schema validation
+```mermaid
+flowchart TD
+     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/ros| C[(GitHub)]
+     style B fill:#FFBF00,color:black
+```
+
+## Simplified Git ROS-flow
+
+```mermaid
+%%{init: { 'logLevel': 'debug', 'theme': 'base' } }%%
+gitGraph
+   commit
+   commit
+   branch ROS-xyz12
+   checkout ROS-xyz12
+   commit id: "Lagt til scenarier"
+   commit id: "Justert konsekvens"
+   commit id: "Godkjent av risikoeier"
+   checkout main
+   merge ROS-xyz12
+   commit
+   commit
+```
+
+## JSON Schema validation
 
 The JSON schema validation is done using the [json-kotlin-schema](https://github.com/pwall567/json-kotlin-schema)
 library version 0.44.  
@@ -9,7 +34,7 @@ It does not fully support the latest JSON Schema draft.
 It covers our need regarding the JSON Schema validation.  
 If the version of the schema is updated, ensure that the library supports it.
 
-### Docker
+## Docker
 
 To build the docker image, run:
 
