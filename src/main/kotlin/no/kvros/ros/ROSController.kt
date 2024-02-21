@@ -1,10 +1,11 @@
 package no.kvros.ros
 
-import no.kvros.github.GithubAppAccessToken
+import no.kvros.github.GithubAccessToken
 import no.kvros.github.GithubAppConnector
-import no.kvros.infra.connector.MicrosoftAccessToken
-import no.kvros.infra.connector.UserContext
+import no.kvros.infra.connector.models.MicrosoftIdToken
+import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
+import no.kvros.security.TokenService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -13,17 +14,21 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/ros")
 class ROSController(
     private val rosService: ROSService,
-    private val githubAppConnector: GithubAppConnector
+    private val githubAppConnector: GithubAppConnector,
+    private val tokenService: TokenService
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
     fun getROSFilenames(
-        @RequestHeader("Microsoft-Access-Token") microsoftAccessToken: String,
-        @RequestHeader("Github-Access-Token") githubAccessToken: String?,
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): ResponseEntity<ROSIdentifiersResultDTO> {
-        val userContext = generateUserContext(microsoftAccessToken, githubAccessToken, repositoryName)
-            ?: return ResponseEntity.status(401).build()
+        val validatedMicrosoftUser =
+            tokenService.validateUser(microsoftIdToken) ?: return ResponseEntity.status(401).build()
+        val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
+
+        val userContext =
+            UserContext(MicrosoftIdToken(microsoftIdToken), githubAccessTokenFromApp, validatedMicrosoftUser.email)
 
         val result = rosService.fetchROSFilenames(
             owner = repositoryOwner,
@@ -159,36 +164,12 @@ class ROSController(
         }
     }
 
-    private fun generateUserContext(
-        microsoftAccessToken: String,
-        githubAccessToken: String?,
-        repositoryName: String
-    ): UserContext? {
-        val microsoftValidationStatus = validateMicrosoftAccessToken(microsoftAccessToken)
-
-        when {
-            !microsoftValidationStatus -> return null
-            githubAccessToken == null -> {
-                val accessTokenFromGithubApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
-
-                return UserContext(MicrosoftAccessToken(microsoftAccessToken), accessTokenFromGithubApp)
-            }
-
-            !githubAccessTokenIsPresent(githubAccessToken) -> return UserContext(
-                MicrosoftAccessToken(microsoftAccessToken),
-                GithubAppAccessToken(githubAccessToken)
-            )
-
-            else -> return null
-        }
-    }
-
     private fun validateMicrosoftAccessToken(microsoftAccessToken: String): Boolean =
         true // Denne må valideres opp mot spire-test app
 
     private fun githubAccessTokenIsPresent(githubAccessToken: String?): Boolean = githubAccessToken != null
 
-    private fun generateGithubAccessToken(repositoryName: String): GithubAppAccessToken {
+    private fun generateGithubAccessToken(repositoryName: String): GithubAccessToken {
         return githubAppConnector.getAccessTokenFromApp(repositoryName)
     }
 }

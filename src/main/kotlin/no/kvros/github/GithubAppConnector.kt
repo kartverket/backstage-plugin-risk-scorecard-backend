@@ -10,7 +10,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
@@ -25,12 +24,9 @@ class GithubAppSignedJwt(
     val value: String?
 )
 
-class GithubAppAccessToken(
-    val value: String?
-) {
-    fun isValid(): Boolean = true // TODO -- sjekk med public key fra github
-    fun accessToken(): String = value!!
-}
+class GithubAccessToken(
+    val value: String
+)
 
 class GithubAppIdentifier(
     val appId: Int,
@@ -39,16 +35,16 @@ class GithubAppIdentifier(
 
 @Component
 class GithubAppConnector(
-    @Value("githubAppIdentifier.appId") appId: Int,
-    @Value("githubAppIdentifier.installationId") installationId: Int,
-    @Value("githubAppIdentifier.privateKeySecretName") val privateKeySecretName: String,
+    @Value("\${githubAppIdentifier.appId}") appId: Int,
+    @Value("\${githubAppIdentifier.installationId}") installationId: Int,
+    @Value("\${githubAppIdentifier.privateKeySecretName}") val privateKeySecretName: String,
 ) :
     WebClientConnector("https://api.github.com/app") {
 
     private val gcpClientConnector = GcpClientConnector()
     private val appIdentifier = GithubAppIdentifier(appId, installationId)
 
-    internal fun getAccessTokenFromApp(repositoryName: String): GithubAppAccessToken {
+    internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
         val jwt = getGithubAppSignedJWT()
         return getGithubAppAccessToken(jwt, repositoryName = repositoryName)
     }
@@ -60,8 +56,8 @@ class GithubAppConnector(
         )
     )
 
-    private fun getGithubAppAccessToken(jwt: GithubAppSignedJwt, repositoryName: String): GithubAppAccessToken {
-        val accessTokenBody: GithubAccessTokenBody? =
+    private fun getGithubAppAccessToken(jwt: GithubAppSignedJwt, repositoryName: String): GithubAccessToken {
+        val accessTokenBody: GithubAccessTokenBody =
             try {
                 webClient
                     .post()
@@ -70,19 +66,15 @@ class GithubAppConnector(
                     .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
                     .header("X-GitHub-Api-Version", "2022-11-28")
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .body(
-                        Mono.just(GithubHelper.bodyToCreateAccessTokenForRepository(repositoryName).toContentBody()),
-                        String::class.java
-                    )
                     .retrieve()
                     .bodyToMono<GithubAccessTokenBody>()
-                    .block()
+                    .block() ?: throw Exception("Access token is null.")
             } catch (e: Exception) {
                 println(e.stackTrace)
-                null
+                throw Exception("Could not create access token with error message: ${e.message}.")
             }
 
-        return GithubAppAccessToken(accessTokenBody?.token)
+        return GithubAccessToken(accessTokenBody.token)
     }
 
 
