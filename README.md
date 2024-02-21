@@ -3,7 +3,7 @@
 
 ```mermaid
 flowchart TD
-     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.sikkerhet/ros| C[(GitHub)]
+     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/ros| C[(GitHub)]
      style B fill:#FFBF00,color:black
 ```
 
