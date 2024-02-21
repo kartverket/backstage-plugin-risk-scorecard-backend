@@ -25,7 +25,7 @@ class ROSContentResultDTO(
     val rosId: String
 )
 
-class ROSIdentifiersResultDTO(
+data class ROSIdentifiersResultDTO(
     val status: SimpleStatus,
     val rosIds: List<ROSIdentifier>,
 )

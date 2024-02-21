@@ -24,7 +24,9 @@ class ROSController(
         @PathVariable repositoryName: String,
     ): ResponseEntity<ROSIdentifiersResultDTO> {
         val validatedMicrosoftUser =
-            tokenService.validateUser(microsoftIdToken) ?: return ResponseEntity.status(401).build()
+            tokenService.validateUser(microsoftIdToken) ?: return ResponseEntity.status(401).body(
+                ROSIdentifiersResultDTO(SimpleStatus.Failure, emptyList())
+            )
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
 
         val userContext =

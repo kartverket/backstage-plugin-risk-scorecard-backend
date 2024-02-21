@@ -3,6 +3,7 @@ package no.kvros.security
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory
+import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.SignedJWT
 import io.jsonwebtoken.JwtException
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service
 import java.net.URL
 import java.security.cert.CertificateFactory
 import java.security.interfaces.RSAPublicKey
+import java.time.Instant
 import java.util.*
 
 @Service
@@ -28,8 +30,9 @@ class TokenService {
             val verifyerFactory = DefaultJWSVerifierFactory()
             val jwsVerifier = verifyerFactory.createJWSVerifier(signedJwt.header, key)
 
-            signedJwt.verify(jwsVerifier)
-            MicrosoftUser(Email(signedJwt.jwtClaimsSet.getStringClaim("email")))
+            if (signedJwt.verify(jwsVerifier) && tokenIsValid(parsedToken))
+                MicrosoftUser(Email(signedJwt.jwtClaimsSet.getStringClaim("email")))
+            else null
         } catch (e: JwtException) {
             logger.error("Failed to validate token with error message: ${e.message}")
             null
@@ -43,6 +46,13 @@ class TokenService {
 
             else -> null
         }
+    }
+
+    private fun tokenIsValid(jwt: JWT): Boolean {
+        val expirationDate = jwt.jwtClaimsSet.expirationTime
+
+
+        return expirationDate.after(Date.from(Instant.now()))
     }
 
     private fun azureAuthPublicKey(kid: String, tenantId: String): RSAPublicKey {
