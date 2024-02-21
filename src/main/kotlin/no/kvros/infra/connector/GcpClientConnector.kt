@@ -3,18 +3,19 @@ package no.kvros.infra.connector
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient
 
 class GcpClientConnector {
-
     val client = SecretManagerServiceClient.create()
-
-    fun getSecretValue(secretName: String): String = try {
-        val clientResponse = client.accessSecretVersion(secretName)
-        val payload = clientResponse.payload.data.toStringUtf8()
-        payload
-    } catch (e: Exception) {
-        println(e)
-        throw e
-    } finally {
-        client.close()
+    fun getSecretValue(secretName: String): String {
+        return try {
+            val clientResponse = client.accessSecretVersion(secretName)
+            val payload = clientResponse.payload.data.toStringUtf8()
+            client.close()
+            payload
+        } catch (e: Exception) {
+            println(e)
+            throw e
+        } finally {
+            client.close()
+        }
     }
 
 }
