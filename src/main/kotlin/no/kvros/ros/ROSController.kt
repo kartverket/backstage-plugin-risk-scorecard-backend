@@ -10,40 +10,19 @@ import org.springframework.web.bind.annotation.*
 class ROSController(
     private val rosService: ROSService,
 ) {
-    @GetMapping("/{repositoryOwner}/{repositoryName}/ids")
-    fun getROSFilenames(
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/all")
+    fun fetchAllROSes(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<ROSIdentifiersResultDTO> {
-        val result = rosService.fetchROSFilenames(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            accessToken = githubAccessToken,
-        )
+    ): ResponseEntity<List<ROSResultDTO>> {
+        val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, githubAccessToken)
 
-        return when (result.status) {
-            SimpleStatus.Success -> ResponseEntity.ok().body(result)
-            else -> ResponseEntity.internalServerError().body(result)
-        }
-    }
+        val successResults = result.filter { it.status == ContentStatus.Success }
 
-    @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
-    fun fetchROS(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-        @PathVariable id: String,
-    ): ResponseEntity<ROSContentResultDTO> {
-        val result = rosService.fetchROSContent(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            rosId = id,
-            accessToken = githubAccessToken,
-        )
-
-        return when (result.status) {
-            ContentStatus.Success -> ResponseEntity.ok().body(result)
+        return when {
+            successResults.isNotEmpty() -> ResponseEntity.ok().body(successResults)
             else -> ResponseEntity.internalServerError().body(result)
         }
     }
@@ -144,5 +123,4 @@ class ROSController(
             SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
         }
     }
-
 }

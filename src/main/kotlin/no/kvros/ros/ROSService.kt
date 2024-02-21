@@ -24,6 +24,13 @@ class ROSContentResultDTO(
     val rosId: String,
 )
 
+class ROSResultDTO(
+    val status: ContentStatus,
+    val rosStatus: ROSStatus,
+    val rosContent: String?,
+    val rosId: String
+)
+
 class ROSIdentifiersResultDTO(
     val status: SimpleStatus,
     val rosIds: List<ROSIdentifier>,
@@ -94,86 +101,56 @@ class ROSService(
                 ),
         )
 
-    fun fetchROSFilenames(
+    fun fetchAllROSes(
         owner: String,
         repository: String,
         accessToken: String,
-    ): ROSIdentifiersResultDTO {
-        val githubResponse = githubConnector.fetchAllRosIdentifiersInRepository(owner, repository, accessToken)
+    ): List<ROSResultDTO> {
 
-        return when (githubResponse.status) {
-            GithubStatus.Success -> ROSIdentifiersResultDTO(SimpleStatus.Success, githubResponse.ids)
-            else -> ROSIdentifiersResultDTO(SimpleStatus.Failure, emptyList())
-        }
-    }
+        val roses = githubConnector.fetchAllRosIdentifiersInRepository(owner, repository, accessToken).let { ids ->
+            ids.ids.map { identifier ->
+                when(identifier.status) {
+                    ROSStatus.Published -> githubConnector.fetchPublishedROS(owner, repository, identifier.id, accessToken).responseToRosResult(identifier.id, identifier.status)
 
-    fun fetchROSContent(
-        owner: String,
-        repository: String,
-        rosId: String,
-        accessToken: String,
-    ): ROSContentResultDTO {
-        val draftedROS = fetchDraftedROS(owner, repository, rosId, accessToken)
-        if (draftedROS.status == ContentStatus.FileNotFound) {
-            return fetchPublishedROS(
-                owner,
-                repository,
-                rosId,
-                accessToken,
-            )
-        }
-
-        return draftedROS
-    }
-
-    private fun fetchDraftedROS(
-        owner: String,
-        repository: String,
-        rosId: String,
-        accessToken: String,
-    ): ROSContentResultDTO = githubConnector.fetchDraftedROSContent(owner, repository, rosId, accessToken).responseToRosResult(rosId)
-
-    fun fetchPublishedROS(
-        owner: String,
-        repository: String,
-        id: String,
-        accessToken: String,
-    ): ROSContentResultDTO = githubConnector.fetchPublishedROS(owner, repository, id, accessToken).responseToRosResult(id)
-
-    private fun GithubContentResponse.responseToRosResult(rosId: String): ROSContentResultDTO {
-        return when (this.status) {
-            GithubStatus.Success ->
-                try {
-                    ROSContentResultDTO(ContentStatus.Success, this.decryptContent(), rosId)
-                } catch (e: Exception) {
-                    when (e) {
-                        is SOPSDecryptionException ->
-                            ROSContentResultDTO(
-                                ContentStatus.DecryptionFailed,
-                                this.decryptContent(),
-                                rosId,
-                            )
-
-                        else ->
-                            ROSContentResultDTO(
-                                ContentStatus.Failure,
-                                this.decryptContent(),
-                                rosId,
-                            )
-                    }
+                    ROSStatus.SentForApproval,
+                    ROSStatus.Draft -> githubConnector.fetchDraftedROSContent(owner, repository, identifier.id, accessToken) .responseToRosResult(identifier.id, identifier.status)
                 }
-
-            GithubStatus.NotFound ->
-                ROSContentResultDTO(
-                    ContentStatus.FileNotFound,
-                    null,
-                    rosId,
-                )
-
-            else -> ROSContentResultDTO(ContentStatus.Failure, this.decryptContent(), rosId)
+            }
         }
+
+        return roses
     }
 
+    private fun GithubContentResponse.responseToRosResult(
+        rosId: String,
+        rosStatus: ROSStatus,
+    ): ROSResultDTO {
+        return when (this.status) {
+            GithubStatus.Success -> try {
+                ROSResultDTO(ContentStatus.Success, rosStatus, this.decryptContent(), rosId)
+            } catch (e: Exception) {
+                when (e) {
+                    is SOPSDecryptionException -> ROSResultDTO(
+                        ContentStatus.DecryptionFailed,
+                        rosStatus,
+                        this.decryptContent(),
+                        rosId
+                    )
+
+                    else -> ROSResultDTO(ContentStatus.Failure, rosStatus, this.decryptContent(), rosId)
+                }
+            }
+
+            GithubStatus.NotFound -> ROSResultDTO(
+                ContentStatus.FileNotFound,
+                rosStatus,
+                null,
+                rosId
+            )
+
+            else -> ROSResultDTO(ContentStatus.Failure, rosStatus, this.decryptContent(), rosId)
+        }
+    }
     fun GithubContentResponse.decryptContent(): String =
         this.data()
             .let { Base64.getMimeDecoder().decode(it).decodeToString() }
