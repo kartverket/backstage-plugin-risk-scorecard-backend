@@ -22,7 +22,7 @@ class ROSController(
         @RequestHeader("Github-Access-Token") githubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<List<ROSResultDTO>> {
+    ): ResponseEntity<List<ROSContentResultDTO>> {
         val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, githubAccessToken)
 
         val successResults = result.filter { it.status == ContentStatus.Success }
@@ -49,21 +49,17 @@ class ROSController(
             )
 
         return when (response.status) {
-            ProcessingStatus.ROSNotValid,
-            ProcessingStatus.EncryptionFailed,
-            ProcessingStatus.CouldNotCreateBranch,
-            ProcessingStatus.ErrorWhenUpdatingROS,
-            ->
-                ResponseEntity
-                    .internalServerError()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(response)
-
             ProcessingStatus.CreatedROS,
             ProcessingStatus.UpdatedROS,
             ->
                 ResponseEntity
                     .ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(response)
+
+            else ->
+                ResponseEntity
+                    .internalServerError()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(response)
         }
@@ -87,16 +83,6 @@ class ROSController(
             )
 
         return when (editResult.status) {
-            ProcessingStatus.ROSNotValid,
-            ProcessingStatus.EncryptionFailed,
-            ProcessingStatus.CouldNotCreateBranch,
-            ProcessingStatus.ErrorWhenUpdatingROS,
-            ->
-                ResponseEntity
-                    .internalServerError()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(editResult)
-
             ProcessingStatus.CreatedROS,
             ProcessingStatus.UpdatedROS,
             ->
@@ -104,20 +90,12 @@ class ROSController(
                     .ok()
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(editResult)
-        }
-    }
 
-    @GetMapping("/{repositoryOwner}/{repositoryName}/sentToPublication")
-    fun fetchAllDraftsSentToPublication(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-    ): ResponseEntity<ROSIdentifiersResultDTO> {
-        val result = rosService.fetchAllROSDraftsSentToPublication(repositoryOwner, repositoryName, githubAccessToken)
-
-        return when (result.status) {
-            SimpleStatus.Success -> ResponseEntity.ok().body(result)
-            SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
+            else ->
+                ResponseEntity
+                    .internalServerError()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(editResult)
         }
     }
 
@@ -127,12 +105,12 @@ class ROSController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-    ): ResponseEntity<ROSPublishedObjectResultDTO> {
+    ): ResponseEntity<PublishROSResultDTO> {
         val result = rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken)
 
         return when (result.status) {
-            SimpleStatus.Success -> ResponseEntity.ok().body(result)
-            SimpleStatus.Failure -> ResponseEntity.internalServerError().body(result)
+            ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
+            else -> ResponseEntity.internalServerError().body(result)
         }
     }
 }
