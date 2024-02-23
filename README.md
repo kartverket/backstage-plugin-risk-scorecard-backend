@@ -29,6 +29,15 @@ Eller bruk .run-config
 📦 Containerized Server
 ```
 
+For å kjøre containerized lokalt må vi også sette credentials - dette settes automatisk via Cloud Run-konfigurasjonen
+i "produksjon":
+Legg til dette i Dockerfilen:
+
+```Dockerfile
+RUN echo "$(cat ~/.config/gcloud/application_default_credentials.json)" > ./credentials_file.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=credentials_file.json
+```
+
 ### Kjør lokalt
 
 Kan kjøres opp med .run-config.

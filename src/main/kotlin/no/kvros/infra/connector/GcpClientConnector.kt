@@ -13,8 +13,6 @@ class GcpClientConnector {
         } catch (e: Exception) {
             println(e)
             throw e
-        } finally {
-            client.close()
         }
     }
 
