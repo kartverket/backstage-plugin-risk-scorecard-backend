@@ -51,7 +51,8 @@ class GithubAppConnector(
 
     private fun getGithubAppSignedJWT(): GithubAppSignedJwt = GithubAppSignedJwt(
         PemUtils.getSignedJWT(
-            privateKey = gcpClientConnector.getSecretValue(privateKeySecretName).toByteArray(),
+            privateKey = gcpClientConnector.getSecretValue(privateKeySecretName)?.toByteArray()
+                ?: throw Exception("Kunne ikke hente github app private key"),
             appId = appIdentifier.appId
         )
     )

@@ -14,7 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import java.util.Base64
+import java.util.*
 
 data class GithubContentResponse(
     val data: String?,
@@ -84,11 +84,11 @@ class GithubConnector(
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRosList = draftROSes,
-                    sentForApprovalList = rosSentForApproval,
-                    publishedRosList = publishedROSes,
-                ),
+            combinePublishedDraftAndSentForApproval(
+                draftRosList = draftROSes,
+                sentForApprovalList = rosSentForApproval,
+                publishedRosList = publishedROSes,
+            ),
         )
     }
 
@@ -204,24 +204,24 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
-        accessToken: String,
+        accessToken: GithubAccessToken,
     ): String? {
-        if (!branchForROSDraftExists(owner, repository, rosId, accessToken)) {
+        if (!branchForROSDraftExists(owner, repository, rosId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
                 repository = repository,
                 rosId = rosId,
-                accessToken = accessToken,
+                accessToken = accessToken.value,
             )
         }
 
-        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken)
+        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
         val commitMessage = if (latestShaForROS != null) "refactor: Oppdater ROS" else "feat: Lag ny ROS"
 
         return putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
-            accessToken,
+            accessToken.value,
             GithubWriteToFilePayload(
                 message = commitMessage,
                 content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
@@ -316,11 +316,11 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: String,
+        accessToken: GithubAccessToken,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
-            accessToken,
+            accessToken.value,
             GithubHelper.bodyToCreateNewPullRequest(owner, rosId),
         ).pullRequestResponseDTO()
     }
@@ -376,7 +376,8 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<ROSFilenameDTO>>().block()
