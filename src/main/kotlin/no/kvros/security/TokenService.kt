@@ -31,7 +31,10 @@ class TokenService {
             val jwsVerifier = verifyerFactory.createJWSVerifier(signedJwt.header, key)
 
             if (signedJwt.verify(jwsVerifier) && tokenIsValid(parsedToken))
-                MicrosoftUser(Email(signedJwt.jwtClaimsSet.getStringClaim("email")))
+                MicrosoftUser(
+                    email = Email(signedJwt.jwtClaimsSet.getStringClaim("email")),
+                    name = signedJwt.jwtClaimsSet.getStringClaim("name")
+                )
             else null
         } catch (e: JwtException) {
             logger.error("Failed to validate token with error message: ${e.message}")
@@ -80,4 +83,5 @@ class TokenService {
 
 data class MicrosoftUser(
     val email: Email,
+    val name: String
 )

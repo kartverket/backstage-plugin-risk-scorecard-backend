@@ -1,18 +1,15 @@
 package no.kvros.infra.connector.models
 
 import no.kvros.github.GithubAccessToken
+import no.kvros.security.MicrosoftUser
 
 data class UserContext(
     val microsoftIdToken: MicrosoftIdToken,
     val githubAccessToken: GithubAccessToken,
-    val email: Email
+    val microsoftUser: MicrosoftUser
 ) {
-    companion object {
-        val INVALID_USER_CONTEXT = UserContext(MicrosoftIdToken(""), GithubAccessToken(""), Email(""))
-    }
-
     fun isValid(): Boolean =
-        !microsoftIdToken.value.isBlank() && !githubAccessToken.value.isBlank() && !email.value.isBlank()
+        microsoftIdToken.value.isNotBlank() && githubAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
 }
 
 data class MicrosoftIdToken(val value: String)

@@ -191,14 +191,14 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        accessToken: GithubAccessToken,
+        userContext: UserContext
     ): ProcessROSResultDTO {
         return updateOrCreateROS(
             owner = owner,
             repository = repository,
             rosId = rosId,
             content = content,
-            accessToken = accessToken,
+            userContext = userContext
         )
     }
 
@@ -206,7 +206,7 @@ class ROSService(
         owner: String,
         repository: String,
         content: ROSWrapperObject,
-        accessToken: GithubAccessToken,
+        userContext: UserContext
     ): ProcessROSResultDTO {
         val uniqueROSId = "ros-${RandomStringUtils.randomAlphanumeric(5)}"
 
@@ -216,7 +216,7 @@ class ROSService(
                 repository = repository,
                 rosId = uniqueROSId,
                 content = content,
-                accessToken = accessToken,
+                userContext = userContext
             )
 
         return when (result.status) {
@@ -236,7 +236,7 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        accessToken: GithubAccessToken,
+        userContext: UserContext
     ): ProcessROSResultDTO {
         val validationStatus = JSONValidator.validateJSON(content.ros)
         if (!validationStatus.valid) {
@@ -264,7 +264,7 @@ class ROSService(
                 repository = repository,
                 rosId = rosId,
                 fileContent = encryptedData,
-                accessToken = accessToken,
+                userContext = userContext,
             )
 
             return ProcessROSResultDTO(rosId, ProcessingStatus.UpdatedROS, "ROS ble oppdatert")

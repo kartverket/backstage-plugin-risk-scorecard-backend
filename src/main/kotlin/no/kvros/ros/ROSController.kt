@@ -79,7 +79,7 @@ class ROSController(
             rosService.createROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                accessToken = userContext.githubAccessToken,
+                userContext = userContext,
                 content = ros,
             )
 
@@ -100,7 +100,7 @@ class ROSController(
         }
     }
 
-    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
+    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     fun editROS(
         @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
@@ -119,7 +119,7 @@ class ROSController(
                 repository = repositoryName,
                 content = ros,
                 rosId = id,
-                accessToken = userContext.githubAccessToken,
+                userContext = userContext
             )
 
         return when (editResult.status) {
@@ -169,10 +169,10 @@ class ROSController(
         repositoryName: String
     ): UserContext {
         val validatedMicrosoftUser =
-            tokenService.validateUser(microsoftIdToken) ?: return UserContext.INVALID_USER_CONTEXT
+            tokenService.validateUser(microsoftIdToken) ?: throw Exception("Kunne ikke validere id-token")
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val userContext =
-            UserContext(MicrosoftIdToken(microsoftIdToken), githubAccessTokenFromApp, validatedMicrosoftUser.email)
+            UserContext(MicrosoftIdToken(microsoftIdToken), githubAccessTokenFromApp, validatedMicrosoftUser)
         return userContext
     }
 }

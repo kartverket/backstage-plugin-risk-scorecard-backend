@@ -2,6 +2,8 @@ package no.kvros.github
 
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
+import no.kvros.infra.connector.models.Email
+import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.ROSIdentifier
 import no.kvros.ros.ROSStatus
 import no.kvros.ros.models.ContentResponseDTO
@@ -14,6 +16,8 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.*
 
 data class GithubContentResponse(
@@ -42,12 +46,17 @@ data class GithubWriteToFilePayload(
     val content: String,
     val sha: String? = null,
     val branchName: String,
+    val author: Author
 ) {
     fun toContentBody(): String =
         when (sha) {
-            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\"}"
+            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}, \"author\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }}"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"author\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }}"
         }
+}
+
+data class Author(val name: String, val email: Email, val date: Date) {
+    fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
 @Component
@@ -204,8 +213,11 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
-        accessToken: GithubAccessToken,
+        userContext: UserContext
     ): String? {
+        val accessToken = userContext.githubAccessToken
+        val githubAuthor =
+            Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
         if (!branchForROSDraftExists(owner, repository, rosId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
@@ -227,6 +239,7 @@ class GithubConnector(
                 content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
                 sha = latestShaForROS,
                 branchName = rosId,
+                author = githubAuthor
             ),
         ).bodyToMono<String>().block()
     }
