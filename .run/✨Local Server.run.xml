@@ -5,10 +5,10 @@
       <env name="GCP_KMS_RESOURCE_PATH" value="projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code" />
       <env name="GITHUB_APP_ID" value="828331" />
       <env name="GITHUB_INSTALLATION_ID" value="47304902" />
+      <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY/versions/1" />
       <env name="ROS_URL" value=".security/ros" />
       <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1PS3J6CETZ2HV35UDL3CWCGX9QFMR3CDTA9U9EMTWTQEG6SD7ZDMS5M9NUH" />
       <env name="SOPS_AGE_PUBLIC_KEY" value="age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf" />
-      <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="&quot;projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY/versions/1&quot;" />
     </envs>
     <module name="kv-ros-backend.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication" />
