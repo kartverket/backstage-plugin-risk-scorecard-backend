@@ -27,10 +27,7 @@ class ROSController(
 
         val successResults = result.filter { it.status == ContentStatus.Success }
 
-        return when {
-            successResults.isNotEmpty() -> ResponseEntity.ok().body(successResults)
-            else -> ResponseEntity.internalServerError().body(result)
-        }
+        return ResponseEntity.ok().body(successResults)
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
