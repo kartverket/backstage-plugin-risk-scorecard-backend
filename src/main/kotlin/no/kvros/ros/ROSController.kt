@@ -1,29 +1,58 @@
 package no.kvros.ros
 
+import no.kvros.github.GithubAppConnector
+import no.kvros.infra.connector.models.MicrosoftIdToken
+import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
+import no.kvros.security.TokenService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/ros")
 class ROSController(
     private val rosService: ROSService,
+    private val githubAppConnector: GithubAppConnector,
+    private val tokenService: TokenService
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
-    fun fetchAllROSes(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+    fun getROSFilenames(
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): ResponseEntity<List<ROSContentResultDTO>> {
-        val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, githubAccessToken)
+        val userContext =
+            getUserContext(microsoftIdToken, repositoryName)
+
+        if (!userContext.isValid()) return ResponseEntity.status(401)
+            .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
+
+
+        val result = rosService.fetchAllROSes(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            userContext = userContext,
+        )
+
+        return ResponseEntity.ok().body(result)
+    }
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
+    fun fetchROS(
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable id: String,
+    ): ResponseEntity<List<ROSContentResultDTO>> {
+        val userContext =
+            getUserContext(microsoftIdToken, repositoryName)
+
+        if (!userContext.isValid()) return ResponseEntity.status(401)
+            .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
+
+
+        val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, userContext)
 
         val successResults = result.filter { it.status == ContentStatus.Success }
 
@@ -32,16 +61,22 @@ class ROSController(
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
     fun createNewROS(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<ProcessROSResultDTO> {
+        val userContext =
+            getUserContext(microsoftIdToken, repositoryName)
+
+        if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessROSResultDTO.INVALID_USER_CONTEXT)
+
+
         val response =
             rosService.createROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                accessToken = githubAccessToken,
+                userContext = userContext,
                 content = ros,
             )
 
@@ -62,21 +97,26 @@ class ROSController(
         }
     }
 
-    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["text/plain"])
+    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     fun editROS(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody ros: ROSWrapperObject,
     ): ResponseEntity<ProcessROSResultDTO> {
+        val userContext =
+            getUserContext(microsoftIdToken, repositoryName)
+
+        if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessROSResultDTO.INVALID_USER_CONTEXT)
+
         val editResult =
             rosService.updateROS(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 content = ros,
                 rosId = id,
-                accessToken = githubAccessToken,
+                userContext = userContext
             )
 
         return when (editResult.status) {
@@ -98,16 +138,38 @@ class ROSController(
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendROSForPublishing(
-        @RequestHeader("Github-Access-Token") githubAccessToken: String,
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
     ): ResponseEntity<PublishROSResultDTO> {
-        val result = rosService.publishROS(repositoryOwner, repositoryName, id, githubAccessToken)
+        val userContext =
+            getUserContext(microsoftIdToken, repositoryName)
+
+        if (!userContext.isValid()) return ResponseEntity.status(401).body(PublishROSResultDTO.INVALID_USER_CONTEXT)
+
+        val result = rosService.publishROS(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            rosId = id,
+            accessToken = userContext.githubAccessToken
+        )
 
         return when (result.status) {
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
             else -> ResponseEntity.internalServerError().body(result)
         }
+    }
+
+    private fun getUserContext(
+        microsoftIdToken: String,
+        repositoryName: String
+    ): UserContext {
+        val validatedMicrosoftUser =
+            tokenService.validateUser(microsoftIdToken) ?: throw Exception("Kunne ikke validere id-token")
+        val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
+        val userContext =
+            UserContext(MicrosoftIdToken(microsoftIdToken), githubAccessTokenFromApp, validatedMicrosoftUser)
+        return userContext
     }
 }

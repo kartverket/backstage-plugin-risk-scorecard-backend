@@ -6,7 +6,7 @@ import org.springframework.web.reactive.function.client.WebClient
 abstract class WebClientConnector(
     baseURL: String,
 ) {
-    protected val webClient = WebClient.create(baseURL)
+    val webClient = WebClient.create(baseURL)
 
     protected inline fun <reified T> typeReference() = object : ParameterizedTypeReference<T>() {}
 }

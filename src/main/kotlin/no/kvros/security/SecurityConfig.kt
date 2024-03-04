@@ -9,6 +9,7 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
+
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
@@ -37,7 +38,7 @@ class SecurityConfig {
                 "contenttype",
                 "Content-Type",
                 "Authorization",
-                "Github-Access-Token",
+                "Microsoft-Id-Token",
             )
         configuration.exposedHeaders = mutableListOf("x-auth-token")
         val source = UrlBasedCorsConfigurationSource()

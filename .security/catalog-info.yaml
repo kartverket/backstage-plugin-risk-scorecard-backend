@@ -2,6 +2,8 @@ apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
   name: kv-ros
+  annotations:
+    backstage.io/techdocs-ref: dir:.backstage
 spec:
   type: url
   targets:
