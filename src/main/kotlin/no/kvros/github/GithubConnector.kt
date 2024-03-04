@@ -1,12 +1,11 @@
-package no.kvros.ros
+package no.kvros.github
 
-import no.kvros.github.GithubCreateNewBranchPayload
-import no.kvros.github.GithubCreateNewPullRequestPayload
-import no.kvros.github.GithubHelper
 import no.kvros.github.GithubHelper.toReferenceObjects
-import no.kvros.github.GithubPullRequestObject
-import no.kvros.github.GithubReferenceObject
 import no.kvros.infra.connector.WebClientConnector
+import no.kvros.infra.connector.models.Email
+import no.kvros.infra.connector.models.UserContext
+import no.kvros.ros.ROSIdentifier
+import no.kvros.ros.ROSStatus
 import no.kvros.ros.models.ContentResponseDTO
 import no.kvros.ros.models.ROSContentDTO
 import no.kvros.ros.models.ROSFilenameDTO
@@ -17,7 +16,9 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import java.util.Base64
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.*
 
 data class GithubContentResponse(
     val data: String?,
@@ -45,12 +46,17 @@ data class GithubWriteToFilePayload(
     val content: String,
     val sha: String? = null,
     val branchName: String,
+    val author: Author
 ) {
     fun toContentBody(): String =
         when (sha) {
-            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\"}"
+            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}, \"author\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }}"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"author\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }}"
         }
+}
+
+data class Author(val name: String, val email: Email, val date: Date) {
+    fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
 @Component
@@ -67,31 +73,31 @@ class GithubConnector(
             try {
                 fetchROSIdentifiersDrafted(owner, repository, accessToken)
             } catch (e: Exception) {
-                return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+                emptyList<ROSIdentifier>()
             }
 
         val publishedROSes =
             try {
                 fetchPublishedROSIdentifiers(owner, repository, accessToken)
             } catch (e: Exception) {
-                return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+                emptyList<ROSIdentifier>()
             }
 
         val rosSentForApproval =
             try {
                 fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
             } catch (e: Exception) {
-                return GithubRosIdentifiersResponse(emptyList(), mapWebClientExceptionToGithubStatus(e))
+                emptyList<ROSIdentifier>()
             }
 
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRosList = draftROSes,
-                    sentForApprovalList = rosSentForApproval,
-                    publishedRosList = publishedROSes,
-                ),
+            combinePublishedDraftAndSentForApproval(
+                draftRosList = draftROSes,
+                sentForApprovalList = rosSentForApproval,
+                publishedRosList = publishedROSes,
+            ),
         )
     }
 
@@ -207,29 +213,33 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
-        accessToken: String,
+        userContext: UserContext
     ): String? {
-        if (!branchForROSDraftExists(owner, repository, rosId, accessToken)) {
+        val accessToken = userContext.githubAccessToken
+        val githubAuthor =
+            Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
+        if (!branchForROSDraftExists(owner, repository, rosId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
                 repository = repository,
                 rosId = rosId,
-                accessToken = accessToken,
+                accessToken = accessToken.value,
             )
         }
 
-        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken)
+        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
         val commitMessage = if (latestShaForROS != null) "refactor: Oppdater ROS" else "feat: Lag ny ROS"
 
         return putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
-            accessToken,
+            accessToken.value,
             GithubWriteToFilePayload(
                 message = commitMessage,
                 content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
                 sha = latestShaForROS,
                 branchName = rosId,
+                author = githubAuthor
             ),
         ).bodyToMono<String>().block()
     }
@@ -319,11 +329,11 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: String,
+        accessToken: GithubAccessToken,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
-            accessToken,
+            accessToken.value,
             GithubHelper.bodyToCreateNewPullRequest(owner, rosId),
         ).pullRequestResponseDTO()
     }
@@ -379,7 +389,8 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<ROSFilenameDTO>>().block()
