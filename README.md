@@ -1,4 +1,5 @@
 # kv-ros-backend
+
 ## High level components
 
 ```mermaid
@@ -45,7 +46,7 @@ docker image build -t kv-ros-backend .
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e SOPS_AGE_KEY=${SOPS_AGE_PRIVATE_KEY} kv-ros-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_SECRET_NAME=${GITHUB_PRIVATE_KEY_SECRET_NAME} kv-ros-backend
 ```
 
 Eller bruk .run-config
@@ -66,9 +67,8 @@ ENV GOOGLE_APPLICATION_CREDENTIALS=credentials_file.json
 ### Kjør lokalt
 
 Kan kjøres opp med .run-config.
-Husk å sette miljøvariabel: ```SOPS_AGE_KEY``` 🪄
 
 ```
-✨ Lokal Server
+✨ Local Server
 ```
 

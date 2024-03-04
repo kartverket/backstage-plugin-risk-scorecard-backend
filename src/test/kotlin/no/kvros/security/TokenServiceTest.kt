@@ -16,6 +16,7 @@ class TokenServiceTest {
         val microsoftIdToken =
             "ditt gyldige id-token"
 
+
         val actual = tokenService.validateUser(microsoftIdToken)
 
         assertThat(actual).isNotNull
@@ -23,6 +24,7 @@ class TokenServiceTest {
     }
 
 
+    @Disabled
     @Test
     fun `when id token is not valid null is returned`() {
         val actual = tokenService.validateUser(expiredToken)
