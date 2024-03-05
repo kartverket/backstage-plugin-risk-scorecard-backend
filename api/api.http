@@ -8,17 +8,16 @@ Authorization: token {{GITHUB_TOKEN}}
 
 ### GET /ros/ids
 GET http://localhost:8080/api/ros/spire-test/kv-ros-test-2/ids
-#Github-Access-Token: {{GITHUB_TOKEN}}
 Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 
 
 ### GET /ros/{id}
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-1/kryptert
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 
 ### POST /ros
 POST http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 Content-Type: application/json
 
 {
@@ -27,16 +26,25 @@ Content-Type: application/json
 
 ###
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 
 ### GET /ros/all
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-2/all
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 
 ### GET /ros/{id}
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-2/ros-124151
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
 
 ### GET /ros/allofit
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3/allofit
-Github-Access-Token: {{GITHUB_TOKEN}}
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
+
+### GET /ros/{id}
+GET https://api.github.com/repos/bekk/kv-ros-example-repository-1/contents/.security/ros/.sops.yaml
+Accept: application/vnd.github+json
+Authorization: token {{GITHUB_TOKEN}}
+
+### GET sops config
+GET http://localhost:8080/api/ros/spire-test/kv-ros-test-1/sops-config
+Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}

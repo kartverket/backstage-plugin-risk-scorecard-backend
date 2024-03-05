@@ -1,14 +1,23 @@
 package no.kvros.ros
 
-import no.kvros.encryption.*
-import no.kvros.github.*
+import no.kvros.encryption.SOPSDecryptionException
+import no.kvros.encryption.SopsEncryptionKeyProvider
+import no.kvros.encryption.SopsEncryptorForYaml
+import no.kvros.encryption.SopsEncryptorHelper
+import no.kvros.encryption.SopsProviderAndCredentials
+import no.kvros.github.GithubAccessToken
+import no.kvros.github.GithubConnector
+import no.kvros.github.GithubContentResponse
+import no.kvros.github.GithubPullRequestObject
+import no.kvros.github.GithubStatus
+import no.kvros.github.KeyGroup
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.Base64
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -16,11 +25,12 @@ data class ProcessROSResultDTO(
     val statusMessage: String,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = ProcessROSResultDTO(
-            "",
-            ProcessingStatus.InvalidUserContext,
-            "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
-        )
+        val INVALID_USER_CONTEXT =
+            ProcessROSResultDTO(
+                "",
+                ProcessingStatus.InvalidUserContext,
+                "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
+            )
     }
 }
 
@@ -31,12 +41,13 @@ data class ROSContentResultDTO(
     val rosContent: String?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = ROSContentResultDTO(
-            rosId = "",
-            status = ContentStatus.Failure,
-            rosStatus = null,
-            rosContent = ""
-        )
+        val INVALID_USER_CONTEXT =
+            ROSContentResultDTO(
+                rosId = "",
+                status = ContentStatus.Failure,
+                rosStatus = null,
+                rosContent = "",
+            )
     }
 }
 
@@ -47,12 +58,13 @@ data class PublishROSResultDTO(
     val pendingApproval: PendingApprovalDTO?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = PublishROSResultDTO(
-            "",
-            ProcessingStatus.InvalidUserContext,
-            "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
-            null
-        )
+        val INVALID_USER_CONTEXT =
+            PublishROSResultDTO(
+                "",
+                ProcessingStatus.InvalidUserContext,
+                "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
+                null,
+            )
     }
 }
 
@@ -107,28 +119,40 @@ class ROSService(
     private val sopsEncryptorHelper =
         SopsEncryptorHelper(
             sopsProvidersAndCredentials =
-            listOf(
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
-                    publicKeyOrPath = gcpKeyResourcePath,
+                listOf(
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
+                        publicKeyOrPath = gcpKeyResourcePath,
+                    ),
+                    SopsProviderAndCredentials(
+                        provider = SopsEncryptionKeyProvider.AGE,
+                        publicKeyOrPath = agePublicKey,
+                    ),
                 ),
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.AGE,
-                    publicKeyOrPath = agePublicKey,
-                ),
-            ),
         )
+
+    fun fetchSopsConfig(
+        owner: String,
+        repository: String,
+        userContext: UserContext,
+    ): List<KeyGroup> {
+        return githubConnector.fetchSopsConfig(
+            owner = owner,
+            repository = repository,
+            accessToken = userContext.githubAccessToken.value,
+        )
+    }
 
     fun fetchAllROSes(
         owner: String,
         repository: String,
-        userContext: UserContext
+        userContext: UserContext,
     ): List<ROSContentResultDTO> {
         val roses =
             githubConnector.fetchAllRosIdentifiersInRepository(
                 owner,
                 repository,
-                userContext.githubAccessToken.value
+                userContext.githubAccessToken.value,
             ).let { ids ->
                 ids.ids.mapNotNull { identifier ->
                     when (identifier.status) {
@@ -191,14 +215,14 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         return updateOrCreateROS(
             owner = owner,
             repository = repository,
             rosId = rosId,
             content = content,
-            userContext = userContext
+            userContext = userContext,
         )
     }
 
@@ -206,7 +230,7 @@ class ROSService(
         owner: String,
         repository: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         val uniqueROSId = "ros-${RandomStringUtils.randomAlphanumeric(5)}"
 
@@ -216,7 +240,7 @@ class ROSService(
                 repository = repository,
                 rosId = uniqueROSId,
                 content = content,
-                userContext = userContext
+                userContext = userContext,
             )
 
         return when (result.status) {
@@ -236,7 +260,7 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         val validationStatus = JSONValidator.validateJSON(content.ros)
         if (!validationStatus.valid) {

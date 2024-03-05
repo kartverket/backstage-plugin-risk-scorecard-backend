@@ -10,7 +10,7 @@ data class GithubReferenceObjectDTO(
     val ref: String,
     val url: String,
     @JsonProperty("object")
-    val shaObject: GithubRefShaDTO
+    val shaObject: GithubRefShaDTO,
 ) {
     fun toInternal(): GithubReferenceObject = GithubReferenceObject(ref, url, shaObject.sha)
 }
@@ -18,16 +18,14 @@ data class GithubReferenceObjectDTO(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubRefShaDTO(
     val sha: String,
-    val url: String
+    val url: String,
 )
-
 
 data class GithubReferenceObject(
     val ref: String,
     val url: String,
-    val sha: String
+    val sha: String,
 )
-
 
 data class GithubCreateNewBranchPayload(
     val nameOfNewBranch: String,
@@ -41,7 +39,7 @@ data class GithubCreateNewPullRequestPayload(
     val body: String,
     val repositoryOwner: String,
     val rosId: String,
-    val baseBranch: String
+    val baseBranch: String,
 ) {
     fun toContentBody(): String =
         "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$rosId\", \"base\": \"$baseBranch\" }"
@@ -49,10 +47,11 @@ data class GithubCreateNewPullRequestPayload(
 
 data class GithubCreateNewAccessTokenForRepository(
     val repositoryName: String,
-    val permissions: Map<String, String> = mapOf(
-        "contents" to "write",
-        "pull_requests" to "write"
-    )
+    val permissions: Map<String, String> =
+        mapOf(
+            "contents" to "write",
+            "pull_requests" to "write",
+        ),
 ) {
     fun toContentBody(): String {
         return "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
@@ -67,23 +66,27 @@ data class GithubCreateNewAccessTokenForRepository(
 data class GithubPullRequestObject(
     @JsonProperty("html_url")
     val url: String,
-    val head: GithubPullRequestHead
+    val head: GithubPullRequestHead,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubPullRequestHead(
-    val ref: String
+    val ref: String,
 )
-
 
 object GithubHelper {
     private const val rosPostfixForFiles = ".ros.yaml"
     private const val defaultPathToROSDirectory = ".security/ros"
 
+    fun uriToFindSopsConfig(
+        owner: String,
+        repository: String,
+    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/.sops.yaml"
+
     fun uriToFindRosFiles(
         owner: String,
         repository: String,
-        rosPath: String
+        rosPath: String,
     ): String = "/$owner/$repository/contents/$rosPath"
 
     fun uriToFindAllRosBranches(
@@ -94,8 +97,8 @@ object GithubHelper {
     fun uriToFindExistingBranchForROS(
         owner: String,
         repository: String,
-        rosId: String
-    ): String = "/$owner/$repository/git/matching-refs/heads/${rosId}"
+        rosId: String,
+    ): String = "/$owner/$repository/git/matching-refs/heads/$rosId"
 
     fun WebClient.ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
         this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
@@ -104,22 +107,20 @@ object GithubHelper {
         owner: String,
         repository: String,
         rosId: String,
-        draftBranch: String = rosId
-    ): String =
-        "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}${rosPostfixForFiles}?ref=$draftBranch"
+        draftBranch: String = rosId,
+    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}$rosPostfixForFiles?ref=$draftBranch"
 
     fun uriToPostContentOfFileOnDraftBranch(
         owner: String,
         repository: String,
         rosId: String,
-        draftBranch: String = rosId
-    ): String =
-        "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}${rosPostfixForFiles}?ref=$draftBranch"
+        draftBranch: String = rosId,
+    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}$rosPostfixForFiles?ref=$draftBranch"
 
     fun uriToGetCommitStatus(
         owner: String,
         repository: String,
-        branchName: String
+        branchName: String,
     ): String = "/$owner/$repository/commits/$branchName/status"
 
     fun uriToCreateNewBranchForROS(
@@ -127,10 +128,9 @@ object GithubHelper {
         repository: String,
     ): String = "/$owner/$repository/git/refs"
 
-
     fun uriToFetchAllPullRequests(
         owner: String,
-        repository: String
+        repository: String,
     ): String = "/$owner/$repository/pulls"
 
     fun uriToCreatePullRequest(
@@ -141,26 +141,24 @@ object GithubHelper {
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         rosId: String,
-    ): GithubCreateNewPullRequestPayload = GithubCreateNewPullRequestPayload(
-        title = "Branch for ros $rosId",
-        body = "ROS body",
-        repositoryOwner,
-        rosId,
-        baseBranch = "main"
-    )
+    ): GithubCreateNewPullRequestPayload =
+        GithubCreateNewPullRequestPayload(
+            title = "Branch for ros $rosId",
+            body = "ROS body",
+            repositoryOwner,
+            rosId,
+            baseBranch = "main",
+        )
 
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,
-        latestShaAtMain: String
-    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/${rosId}", latestShaAtMain)
-
+        latestShaAtMain: String,
+    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$rosId", latestShaAtMain)
 
     fun uriToFindAppInstallation(): String = "/installations"
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
-        "/installations/$installationId/access_tokens"
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 
-    fun bodyToCreateAccessTokenForRepository(
-        repositoryName: String,
-    ): GithubCreateNewAccessTokenForRepository = GithubCreateNewAccessTokenForRepository(repositoryName)
+    fun bodyToCreateAccessTokenForRepository(repositoryName: String): GithubCreateNewAccessTokenForRepository =
+        GithubCreateNewAccessTokenForRepository(repositoryName)
 }

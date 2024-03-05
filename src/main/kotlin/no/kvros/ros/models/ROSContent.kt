@@ -3,6 +3,6 @@ package no.kvros.ros.models
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class ROSContentDTO(
+data class FileContentDTO(
     val content: String,
 )

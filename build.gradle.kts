@@ -28,6 +28,7 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:9.37")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("net.pwall.json:json-kotlin-schema:0.44")
     implementation("org.apache.commons:commons-lang3:3.0")
 

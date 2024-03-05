@@ -1,6 +1,7 @@
 package no.kvros.ros
 
 import no.kvros.github.GithubAppConnector
+import no.kvros.github.KeyGroup
 import no.kvros.infra.connector.models.MicrosoftIdToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 class ROSController(
     private val rosService: ROSService,
     private val githubAppConnector: GithubAppConnector,
-    private val tokenService: TokenService
+    private val tokenService: TokenService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     fun getROSFilenames(
@@ -25,17 +26,34 @@ class ROSController(
         val userContext =
             getUserContext(microsoftIdToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401)
-            .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
+        if (!userContext.isValid()) {
+            return ResponseEntity.status(401)
+                .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
+        }
 
+        val result =
+            rosService.fetchAllROSes(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                userContext = userContext,
+            )
 
-        val result = rosService.fetchAllROSes(
+        return ResponseEntity.ok().body(result)
+    }
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/sops-config")
+    fun fetchSopsConfig(
+        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): List<KeyGroup> {
+        val userContext = getUserContext(microsoftIdToken, repositoryName)
+
+        return rosService.fetchSopsConfig(
             owner = repositoryOwner,
             repository = repositoryName,
             userContext = userContext,
         )
-
-        return ResponseEntity.ok().body(result)
     }
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
@@ -48,9 +66,10 @@ class ROSController(
         val userContext =
             getUserContext(microsoftIdToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401)
-            .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
-
+        if (!userContext.isValid()) {
+            return ResponseEntity.status(401)
+                .body(listOf(ROSContentResultDTO.INVALID_USER_CONTEXT))
+        }
 
         val result = rosService.fetchAllROSes(repositoryOwner, repositoryName, userContext)
 
@@ -70,7 +89,6 @@ class ROSController(
             getUserContext(microsoftIdToken, repositoryName)
 
         if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessROSResultDTO.INVALID_USER_CONTEXT)
-
 
         val response =
             rosService.createROS(
@@ -116,7 +134,7 @@ class ROSController(
                 repository = repositoryName,
                 content = ros,
                 rosId = id,
-                userContext = userContext
+                userContext = userContext,
             )
 
         return when (editResult.status) {
@@ -148,12 +166,13 @@ class ROSController(
 
         if (!userContext.isValid()) return ResponseEntity.status(401).body(PublishROSResultDTO.INVALID_USER_CONTEXT)
 
-        val result = rosService.publishROS(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            rosId = id,
-            accessToken = userContext.githubAccessToken
-        )
+        val result =
+            rosService.publishROS(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                rosId = id,
+                accessToken = userContext.githubAccessToken,
+            )
 
         return when (result.status) {
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
@@ -163,7 +182,7 @@ class ROSController(
 
     private fun getUserContext(
         microsoftIdToken: String,
-        repositoryName: String
+        repositoryName: String,
     ): UserContext {
         val validatedMicrosoftUser =
             tokenService.validateUser(microsoftIdToken) ?: throw Exception("Kunne ikke validere id-token")
