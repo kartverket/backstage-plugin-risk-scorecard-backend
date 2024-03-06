@@ -7,7 +7,7 @@ import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.ROSIdentifier
 import no.kvros.ros.ROSStatus
 import no.kvros.ros.models.FileContentDTO
-import no.kvros.ros.models.ROSFilenameDTO
+import no.kvros.ros.models.FileNameDTO
 import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -72,7 +72,7 @@ class GithubConnector(
         return try {
             getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), accessToken)
                 .fileContent()
-                ?.content
+                ?.value
                 ?.decodeBase64()
         } catch (e: Exception) {
             null
@@ -143,7 +143,7 @@ class GithubConnector(
                 getGithubResponse(
                     "/$owner/$repository/contents/$defaultROSPath/$id.ros.yaml",
                     accessToken,
-                ).fileContent()?.content
+                ).fileContent()?.value
 
             if (fileContent == null) {
                 GithubContentResponse(null, GithubStatus.ContentIsEmpty)
@@ -168,7 +168,7 @@ class GithubConnector(
                 getGithubResponse(
                     uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id),
                     accessToken = accessToken,
-                ).fileContent()?.content
+                ).fileContent()?.value
 
             if (fileContent == null) {
                 GithubContentResponse(null, GithubStatus.ContentIsEmpty)
@@ -407,7 +407,7 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
-        this.bodyToMono<List<ROSFilenameDTO>>().block()
+        this.bodyToMono<List<FileNameDTO>>().block()
             ?.filter { it.name.endsWith(".ros.yaml") }
             ?.map { ROSIdentifier(it.name.substringBefore('.'), ROSStatus.Published) } ?: emptyList()
 
