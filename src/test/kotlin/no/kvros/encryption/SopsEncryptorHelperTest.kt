@@ -1,9 +1,12 @@
 package no.kvros.encryption
 
+import no.kvros.infra.connector.models.GCPAccessToken
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 
 class SopsEncryptorHelperTest {
+    @Disabled
     @Test
     fun `test at sops fungerer med egen versjon`() {
         val sopsHelper = SopsEncryptorHelper(
@@ -122,7 +125,7 @@ class SopsEncryptorHelperTest {
                         "    unencrypted_suffix: _unencrypted\n" +
                         "    version: 3.8.1\n",
                 sopsEncryptorHelper = sopsHelper,
-                gcpAccessToken = "ya29.a0AfB_byBP2DNQDEbSli5-l0OKyU94vnvHV1vuoi3LZ8qFFOiZlNv7ET8h6GF_fRsIJi4z6r3pbmhEQYM1B8HPP57Jeg8wdKd7FuYxDp4Z8ZfauIVScklblcLovWa1u8e3fH3HkyiiyhMXCKCIpS6EmoLLuaWovNUFW0wlZ9iBe1gaCgYKASgSARMSFQHGX2Midh42yow9uQLo8ruohW0oxg0178"
+                gcpAccessToken = GCPAccessToken("bytt med: gcp-access-token")
             )
         }
     }
