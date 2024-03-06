@@ -1,8 +1,5 @@
 package no.kvros.github
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.infra.connector.models.Email
@@ -67,8 +64,6 @@ class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
-    private val mapper = ObjectMapper(YAMLFactory()).registerModule(KotlinModule.Builder().build())
-
     fun fetchSopsConfig(
         owner: String,
         repository: String,
