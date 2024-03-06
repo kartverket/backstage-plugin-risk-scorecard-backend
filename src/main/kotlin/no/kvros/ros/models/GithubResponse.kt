@@ -17,5 +17,6 @@ data class ShaResponseDTO(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FileNameDTO(
-    val name: String,
+    @JsonProperty("name")
+    val value: String,
 )

@@ -408,8 +408,8 @@ class GithubConnector(
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()
-            ?.filter { it.name.endsWith(".ros.yaml") }
-            ?.map { ROSIdentifier(it.name.substringBefore('.'), ROSStatus.Published) } ?: emptyList()
+            ?.filter { it.value.endsWith(".ros.yaml") }
+            ?.map { ROSIdentifier(it.value.substringBefore('.'), ROSStatus.Published) } ?: emptyList()
 
     fun List<GithubPullRequestObject>.rosIdentifiersSentForApproval(): List<ROSIdentifier> =
         this.map { ROSIdentifier(it.head.ref.split("/").last(), ROSStatus.SentForApproval) }
