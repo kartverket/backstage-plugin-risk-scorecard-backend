@@ -11,17 +11,22 @@ data class SopsProviderAndCredentials(
 data class SopsEncryptorHelper(
     val sopsProvidersAndCredentials: List<SopsProviderAndCredentials>,
 ) {
+    private val sopsCmd = listOf("./our-sops")
+    private val encrypt = listOf("encrypt")
+    private val decrypt = listOf("decrypt")
     private val inputTypeYaml = listOf("--input-type", "yaml")
     private val inputTypeJson = listOf("--input-type", "json")
     private val outputTypeYaml = listOf("--output-type", "yaml")
     private val outputTypeJson = listOf("--output-type", "json")
-    private val sopsCmd = listOf("sops")
+    private val encryptConfig = listOf("--encrypt-config")
+    private val inputFile = listOf("/dev/stdin")
 
-    fun toEncryptionCommand(): List<String> =
-        sopsCmd + inputTypeJson + outputTypeYaml + encryptWithGcpAndAge() + listOf("--encrypt", "/dev/stdin")
+    fun toEncryptionCommandWithConfig(config: String): List<String> =
+        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
-    fun toDecryptionCommand(): List<String> =
-        sopsCmd + inputTypeYaml + outputTypeJson + decryptWithGcp() + listOf("--decrypt", "/dev/stdin")
+    fun toEncryptionCommand(): List<String> = sopsCmd + decrypt + inputTypeJson + outputTypeYaml + encryptWithGcpAndAge() + inputFile
+
+    fun toDecryptionCommand(): List<String> = sopsCmd + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun encryptWithGcpAndAge(): List<String> {
         val providersAndCredentials = mutableListOf<String>()
@@ -54,8 +59,8 @@ enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
 }
 
 class SOPSDecryptionException(message: String) : Exception(message)
-class SOPSEncryptionException(message: String) : Exception(message)
 
+class SOPSEncryptionException(message: String) : Exception(message)
 
 object SopsEncryptorForYaml {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
@@ -76,6 +81,24 @@ object SopsEncryptorForYaml {
 
                     else ->
                         throw SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
+                }
+            }
+
+    fun encryptWithConfig(
+        text: String,
+        config: String,
+        sopsEncryptorHelper: SopsEncryptorHelper,
+    ): String =
+        processBuilder
+            .command(sopsEncryptorHelper.toEncryptionCommandWithConfig(config))
+            .start()
+            .run {
+                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
+                val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                when (waitFor()) {
+                    EXECUTION_STATUS_OK -> result
+
+                    else -> throw SOPSEncryptionException("IOException from encrypting json with error code ${exitValue()}: $result")
                 }
             }
 

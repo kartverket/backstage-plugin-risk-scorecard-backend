@@ -95,21 +95,14 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): List<KeyGroup> {
+    ): String? {
         return try {
-            val fileContent =
-                getGithubResponse(
-                    GithubHelper.uriToFindSopsConfig(owner, repository),
-                    accessToken,
-                ).fileContent() ?: return emptyList()
-
-            fileContent
-                .content
-                .decodeBase64()
-                .parseYaml<SopsConfig>()
-                .getKeyGroups()
+            getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), accessToken)
+                .fileContent()
+                ?.content
+                ?.decodeBase64()
         } catch (e: Exception) {
-            emptyList()
+            null
         }
     }
 

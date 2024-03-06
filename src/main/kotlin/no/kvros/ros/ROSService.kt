@@ -10,7 +10,6 @@ import no.kvros.github.GithubConnector
 import no.kvros.github.GithubContentResponse
 import no.kvros.github.GithubPullRequestObject
 import no.kvros.github.GithubStatus
-import no.kvros.github.KeyGroup
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
@@ -130,18 +129,6 @@ class ROSService(
                     ),
                 ),
         )
-
-    fun fetchSopsConfig(
-        owner: String,
-        repository: String,
-        userContext: UserContext,
-    ): List<KeyGroup> {
-        return githubConnector.fetchSopsConfig(
-            owner = owner,
-            repository = repository,
-            accessToken = userContext.githubAccessToken.value,
-        )
-    }
 
     fun fetchAllROSes(
         owner: String,
@@ -271,9 +258,17 @@ class ROSService(
             )
         }
 
+        val sopsConfig =
+            githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken.value)
+                ?: return ProcessROSResultDTO(
+                    rosId,
+                    ProcessingStatus.ErrorWhenUpdatingROS,
+                    "Kunne ikke hente sops-config",
+                )
+
         val encryptedData =
             try {
-                SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
+                SopsEncryptorForYaml.encryptWithConfig(content.ros, sopsConfig, sopsEncryptorHelper)
             } catch (e: Exception) {
                 return ProcessROSResultDTO(
                     rosId,

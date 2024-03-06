@@ -1,7 +1,6 @@
 package no.kvros.ros
 
 import no.kvros.github.GithubAppConnector
-import no.kvros.github.KeyGroup
 import no.kvros.infra.connector.models.MicrosoftIdToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
@@ -39,21 +38,6 @@ class ROSController(
             )
 
         return ResponseEntity.ok().body(result)
-    }
-
-    @GetMapping("/{repositoryOwner}/{repositoryName}/sops-config")
-    fun fetchSopsConfig(
-        @RequestHeader("Microsoft-Id-Token") microsoftIdToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-    ): List<KeyGroup> {
-        val userContext = getUserContext(microsoftIdToken, repositoryName)
-
-        return rosService.fetchSopsConfig(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            userContext = userContext,
-        )
     }
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")

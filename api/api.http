@@ -47,4 +47,4 @@ Authorization: token {{GITHUB_TOKEN}}
 
 ### GET sops config
 GET http://localhost:8080/api/ros/spire-test/kv-ros-test-1/sops-config
-Microsoft-Id-Token: {{ENTRA_ID_TOKEN}}
+Github-Access-Token: {{GITHUB_TOKEN}}
