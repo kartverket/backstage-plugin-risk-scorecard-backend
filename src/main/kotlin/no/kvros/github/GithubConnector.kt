@@ -1,6 +1,5 @@
 package no.kvros.github
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -63,27 +62,6 @@ data class Author(val name: String, val email: Email, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class SopsConfig(
-    val creation_rules: List<CreationRules>,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class CreationRules(
-    val key_groups: List<KeyGroup>,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class KeyGroup(
-    val age: List<String>?,
-    val gcp_kms: List<ResourceId>?,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class ResourceId(
-    val resource_id: String,
-)
-
 @Component
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
@@ -106,11 +84,7 @@ class GithubConnector(
         }
     }
 
-    private inline fun <reified T> String.parseYaml(): T = mapper.readValue(this, T::class.java)
-
     private fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(this).decodeToString()
-
-    private fun SopsConfig.getKeyGroups(): List<KeyGroup> = this.creation_rules.first().key_groups
 
     fun fetchAllRosIdentifiersInRepository(
         owner: String,

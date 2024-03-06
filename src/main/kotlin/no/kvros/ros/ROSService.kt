@@ -268,7 +268,7 @@ class ROSService(
 
         val encryptedData =
             try {
-                SopsEncryptorForYaml.encryptWithConfig(content.ros, sopsConfig, sopsEncryptorHelper)
+                SopsEncryptorForYaml.encrypt(content.ros, sopsConfig, sopsEncryptorHelper)
             } catch (e: Exception) {
                 return ProcessROSResultDTO(
                     rosId,

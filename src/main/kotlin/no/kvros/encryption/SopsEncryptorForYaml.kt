@@ -21,10 +21,8 @@ data class SopsEncryptorHelper(
     private val encryptConfig = listOf("--encrypt-config")
     private val inputFile = listOf("/dev/stdin")
 
-    fun toEncryptionCommandWithConfig(config: String): List<String> =
+    fun toEncryptionCommand(config: String): List<String> =
         sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
-
-    fun toEncryptionCommand(): List<String> = sopsCmd + decrypt + inputTypeJson + outputTypeYaml + encryptWithGcpAndAge() + inputFile
 
     fun toDecryptionCommand(): List<String> = sopsCmd + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
@@ -84,30 +82,13 @@ object SopsEncryptorForYaml {
                 }
             }
 
-    fun encryptWithConfig(
+    fun encrypt(
         text: String,
         config: String,
         sopsEncryptorHelper: SopsEncryptorHelper,
     ): String =
         processBuilder
-            .command(sopsEncryptorHelper.toEncryptionCommandWithConfig(config))
-            .start()
-            .run {
-                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
-                val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                when (waitFor()) {
-                    EXECUTION_STATUS_OK -> result
-
-                    else -> throw SOPSEncryptionException("IOException from encrypting json with error code ${exitValue()}: $result")
-                }
-            }
-
-    fun encrypt(
-        text: String,
-        sopsEncryptorHelper: SopsEncryptorHelper,
-    ): String =
-        processBuilder
-            .command(sopsEncryptorHelper.toEncryptionCommand())
+            .command(sopsEncryptorHelper.toEncryptionCommand(config))
             .start()
             .run {
                 outputStream.buffered().also { it.write(text.toByteArray()) }.close()
