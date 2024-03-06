@@ -1,10 +1,7 @@
 package no.kvros.ros
 
+import no.kvros.encryption.SOPS
 import no.kvros.encryption.SOPSDecryptionException
-import no.kvros.encryption.SopsEncryptionKeyProvider
-import no.kvros.encryption.SopsEncryptorForYaml
-import no.kvros.encryption.SopsEncryptorHelper
-import no.kvros.encryption.SopsProviderAndCredentials
 import no.kvros.github.GithubAccessToken
 import no.kvros.github.GithubConnector
 import no.kvros.github.GithubContentResponse
@@ -14,7 +11,6 @@ import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Base64
 
@@ -110,26 +106,7 @@ enum class ROSStatus(val description: String) {
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
-    @Value("\${sops.rosKeyResourcePath}")
-    private val gcpKeyResourcePath: String,
-    @Value("\${sops.agePublicKey}")
-    private val agePublicKey: String,
 ) {
-    private val sopsEncryptorHelper =
-        SopsEncryptorHelper(
-            sopsProvidersAndCredentials =
-                listOf(
-                    SopsProviderAndCredentials(
-                        provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
-                        publicKeyOrPath = gcpKeyResourcePath,
-                    ),
-                    SopsProviderAndCredentials(
-                        provider = SopsEncryptionKeyProvider.AGE,
-                        publicKeyOrPath = agePublicKey,
-                    ),
-                ),
-        )
-
     fun fetchAllROSes(
         owner: String,
         repository: String,
@@ -141,7 +118,7 @@ class ROSService(
                 repository,
                 userContext.githubAccessToken.value,
             ).let { ids ->
-                ids.ids.mapNotNull { identifier ->
+                ids.ids.map { identifier ->
                     when (identifier.status) {
                         ROSStatus.Published ->
                             githubConnector.fetchPublishedROS(
@@ -195,7 +172,7 @@ class ROSService(
     fun GithubContentResponse.decryptContent(): String =
         this.data()
             .let { Base64.getMimeDecoder().decode(it).decodeToString() }
-            .let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+            .let { SOPS.decrypt(it) }
 
     fun updateROS(
         owner: String,
@@ -268,7 +245,7 @@ class ROSService(
 
         val encryptedData =
             try {
-                SopsEncryptorForYaml.encrypt(content.ros, sopsConfig, sopsEncryptorHelper)
+                SOPS.encrypt(content.ros, sopsConfig)
             } catch (e: Exception) {
                 return ProcessROSResultDTO(
                     rosId,

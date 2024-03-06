@@ -90,21 +90,21 @@ class GithubConnector(
             try {
                 fetchROSIdentifiersDrafted(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         val publishedROSes =
             try {
                 fetchPublishedROSIdentifiers(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         val rosSentForApproval =
             try {
                 fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         return GithubRosIdentifiersResponse(
