@@ -1,5 +1,6 @@
 package no.kvros.encryption
 
+import no.kvros.infra.connector.models.GCPAccessToken
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -15,13 +16,14 @@ data class SopsEncryptorHelper(
     private val inputTypeJson = listOf("--input-type", "json")
     private val outputTypeYaml = listOf("--output-type", "yaml")
     private val outputTypeJson = listOf("--output-type", "json")
-    private val sopsCmd = listOf("sops")
+    private val sopsCmd = listOf("./our-sops")
+
 
     fun toEncryptionCommand(): List<String> =
         sopsCmd + inputTypeJson + outputTypeYaml + encryptWithGcpAndAge() + listOf("--encrypt", "/dev/stdin")
 
-    fun toDecryptionCommand(): List<String> =
-        sopsCmd + inputTypeYaml + outputTypeJson + decryptWithGcp() + listOf("--decrypt", "/dev/stdin")
+    fun toDecryptionCommand(gcpAccessToken: String): List<String> =
+        sopsCmd + inputTypeYaml + outputTypeJson + decryptWithGcp(gcpAccessToken) + listOf("--decrypt", "/dev/stdin")
 
     private fun encryptWithGcpAndAge(): List<String> {
         val providersAndCredentials = mutableListOf<String>()
@@ -34,7 +36,7 @@ data class SopsEncryptorHelper(
         return providersAndCredentials
     }
 
-    private fun decryptWithGcp(): List<String> {
+    private fun decryptWithGcp(accessToken: String): List<String> {
         val providersAndCredentials = mutableListOf<String>()
 
         sopsProvidersAndCredentials.map {
@@ -44,8 +46,12 @@ data class SopsEncryptorHelper(
             }
         }
 
-        return providersAndCredentials
+        return providersAndCredentials + gcpAccessToken(accessToken)
     }
+
+
+    private fun gcpAccessToken(accessToken: String): List<String> =
+        listOf("--gcp-access-token", accessToken)
 }
 
 enum class SopsEncryptionKeyProvider(val sopsCommand: String) {
@@ -64,9 +70,10 @@ object SopsEncryptorForYaml {
     fun decrypt(
         ciphertext: String,
         sopsEncryptorHelper: SopsEncryptorHelper,
+        gcpAccessToken: GCPAccessToken
     ): String =
         processBuilder
-            .command(sopsEncryptorHelper.toDecryptionCommand())
+            .command(sopsEncryptorHelper.toDecryptionCommand(gcpAccessToken.value))
             .start()
             .run {
                 outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
