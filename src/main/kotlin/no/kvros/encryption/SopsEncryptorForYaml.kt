@@ -16,7 +16,7 @@ data class SopsEncryptorHelper(
     private val inputTypeJson = listOf("--input-type", "json")
     private val outputTypeYaml = listOf("--output-type", "yaml")
     private val outputTypeJson = listOf("--output-type", "json")
-    private val sopsCmd = listOf("./our-sops")
+    private val sopsCmd = listOf("sops")
 
 
     fun toEncryptionCommand(): List<String> =
