@@ -2,6 +2,7 @@ package no.kvros.ros
 
 import no.kvros.encryption.*
 import no.kvros.github.*
+import no.kvros.infra.connector.models.GCPAccessToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
@@ -130,7 +131,7 @@ class ROSService(
                 repository,
                 userContext.githubAccessToken.value
             ).let { ids ->
-                ids.ids.mapNotNull { identifier ->
+                ids.ids.map { identifier ->
                     when (identifier.status) {
                         ROSStatus.Published ->
                             githubConnector.fetchPublishedROS(
@@ -138,7 +139,7 @@ class ROSService(
                                 repository,
                                 identifier.id,
                                 userContext.githubAccessToken.value,
-                            ).responseToRosResult(identifier.id, identifier.status)
+                            ).responseToRosResult(identifier.id, identifier.status, userContext.gcpAccessToken)
 
                         ROSStatus.SentForApproval,
                         ROSStatus.Draft,
@@ -148,7 +149,7 @@ class ROSService(
                                 repository,
                                 identifier.id,
                                 userContext.githubAccessToken.value,
-                            ).responseToRosResult(identifier.id, identifier.status)
+                            ).responseToRosResult(identifier.id, identifier.status, userContext.gcpAccessToken)
                     }
                 }
             }
@@ -159,32 +160,43 @@ class ROSService(
     private fun GithubContentResponse.responseToRosResult(
         rosId: String,
         rosStatus: ROSStatus,
+        gcpAccessToken: GCPAccessToken
     ): ROSContentResultDTO {
         return when (status) {
             GithubStatus.Success ->
                 try {
-                    ROSContentResultDTO(rosId, ContentStatus.Success, rosStatus, decryptContent())
+                    ROSContentResultDTO(rosId, ContentStatus.Success, rosStatus, decryptContent(gcpAccessToken))
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
-                            ROSContentResultDTO(rosId, ContentStatus.DecryptionFailed, rosStatus, decryptContent())
+                            ROSContentResultDTO(
+                                rosId, ContentStatus.DecryptionFailed, rosStatus, decryptContent(
+                                    gcpAccessToken
+                                )
+                            )
 
                         else ->
-                            ROSContentResultDTO(rosId, ContentStatus.Failure, rosStatus, decryptContent())
+                            ROSContentResultDTO(rosId, ContentStatus.Failure, rosStatus, decryptContent(gcpAccessToken))
                     }
                 }
 
             GithubStatus.NotFound ->
                 ROSContentResultDTO(rosId, ContentStatus.FileNotFound, rosStatus, null)
 
-            else -> ROSContentResultDTO(rosId, ContentStatus.Failure, rosStatus, decryptContent())
+            else -> ROSContentResultDTO(rosId, ContentStatus.Failure, rosStatus, decryptContent(gcpAccessToken))
         }
     }
 
-    fun GithubContentResponse.decryptContent(): String =
+    fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
         this.data()
             .let { Base64.getMimeDecoder().decode(it).decodeToString() }
-            .let { SopsEncryptorForYaml.decrypt(ciphertext = it, sopsEncryptorHelper) }
+            .let {
+                SopsEncryptorForYaml.decrypt(
+                    ciphertext = it,
+                    sopsEncryptorHelper = sopsEncryptorHelper,
+                    gcpAccessToken = gcpAccessToken
+                )
+            }
 
     fun updateROS(
         owner: String,

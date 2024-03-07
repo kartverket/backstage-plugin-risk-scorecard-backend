@@ -1,5 +1,6 @@
 package no.kvros.encryption
 
+import no.kvros.infra.connector.models.GCPAccessToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -26,7 +27,8 @@ class SopsEncryptorForYamlTest {
                             publicKeyOrPath = testAgePublicKey
                         )
                     )
-                )
+                ),
+                GCPAccessToken("")
             )
         }
     }
@@ -37,14 +39,16 @@ class SopsEncryptorForYamlTest {
             File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
 
         val actual = SopsEncryptorForYaml.decrypt(
-            ciphertextThatIsYaml, SopsEncryptorHelper(
+            ciphertext = ciphertextThatIsYaml,
+            sopsEncryptorHelper = SopsEncryptorHelper(
                 listOf(
                     SopsProviderAndCredentials(
                         provider = SopsEncryptionKeyProvider.AGE,
-                        publicKeyOrPath = testAgePublicKey
-                    )
-                )
-            )
+                        publicKeyOrPath = testAgePublicKey,
+                    ),
+                ),
+            ),
+            gcpAccessToken = GCPAccessToken("")
         )
 
         assertThat(actual).isEqualTo(decryptedROS)

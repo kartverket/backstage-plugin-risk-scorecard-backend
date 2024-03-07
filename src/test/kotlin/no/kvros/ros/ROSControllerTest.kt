@@ -31,7 +31,12 @@ class ROSControllerTest {
 
         every { tokenService.validateUser(any()) } returns null
 
-        val actual = rosController.getROSFilenames(microsoftIdToken = "", repositoryOwner = "", repositoryName = "")
+        val actual = rosController.getROSFilenames(
+            microsoftIdToken = "",
+            gcpAccessToken = "",
+            repositoryOwner = "",
+            repositoryName = ""
+        )
 
         assertThat(actual.statusCode.value()).isEqualTo(401)
         assertThat(actual.body).isEqualTo(expected)
@@ -56,6 +61,7 @@ class ROSControllerTest {
 
         val actual = rosController.getROSFilenames(
             microsoftIdToken = arbitraryValidatedMicrosoftId.value,
+            gcpAccessToken = "",
             repositoryOwner = "",
             repositoryName = ""
         )
@@ -73,6 +79,7 @@ class ROSControllerTest {
         assertThrows<Exception> {
             rosController.getROSFilenames(
                 microsoftIdToken = "",
+                gcpAccessToken = "",
                 repositoryOwner = "",
                 repositoryName = ""
             )
