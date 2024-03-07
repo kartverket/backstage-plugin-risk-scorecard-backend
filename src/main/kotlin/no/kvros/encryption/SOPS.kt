@@ -22,8 +22,10 @@ object SOPS {
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
 
-    private fun toEncryptionCommand(config: String): List<String> =
-        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
+    private fun toEncryptionCommand(
+        config: String,
+        accessToken: String,
+    ): List<String> = sopsCmd + encrypt + inputTypeJson + outputTypeYaml + gcpAccessToken(accessToken) + encryptConfig + config + inputFile
 
     private fun toDecryptionCommand(accessToken: String): List<String> =
         sopsCmd + decrypt + inputTypeYaml + outputTypeJson + gcpAccessToken(accessToken) + inputFile
@@ -51,9 +53,10 @@ object SOPS {
     fun encrypt(
         text: String,
         config: String,
+        gcpAccessToken: GCPAccessToken,
     ): String =
         processBuilder
-            .command(toEncryptionCommand(config))
+            .command(toEncryptionCommand(config, gcpAccessToken.value))
             .start()
             .run {
                 outputStream.buffered().also { it.write(text.toByteArray()) }.close()

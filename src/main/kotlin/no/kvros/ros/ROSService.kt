@@ -7,13 +7,13 @@ import no.kvros.github.GithubConnector
 import no.kvros.github.GithubContentResponse
 import no.kvros.github.GithubPullRequestObject
 import no.kvros.github.GithubStatus
+import no.kvros.infra.connector.models.GCPAccessToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.stereotype.Service
 import java.util.Base64
-import no.kvros.infra.connector.models.GCPAccessToken
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -148,7 +148,7 @@ class ROSService(
     private fun GithubContentResponse.responseToRosResult(
         rosId: String,
         rosStatus: ROSStatus,
-        gcpAccessToken: GCPAccessToken
+        gcpAccessToken: GCPAccessToken,
     ): ROSContentResultDTO {
         return when (status) {
             GithubStatus.Success ->
@@ -158,9 +158,12 @@ class ROSService(
                     when (e) {
                         is SOPSDecryptionException ->
                             ROSContentResultDTO(
-                                rosId, ContentStatus.DecryptionFailed, rosStatus, decryptContent(
-                                    gcpAccessToken
-                                )
+                                rosId,
+                                ContentStatus.DecryptionFailed,
+                                rosStatus,
+                                decryptContent(
+                                    gcpAccessToken,
+                                ),
                             )
 
                         else ->
@@ -178,9 +181,10 @@ class ROSService(
     fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
         this.data()
             .let { Base64.getMimeDecoder().decode(it).decodeToString() }
-            .let { SOPS.decrypt(
+            .let {
+                SOPS.decrypt(
                     ciphertext = it,
-                    gcpAccessToken = gcpAccessToken
+                    gcpAccessToken = gcpAccessToken,
                 )
             }
 
@@ -246,7 +250,7 @@ class ROSService(
         }
 
         val sopsConfig =
-            githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken.value)
+            githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken)
                 ?: return ProcessROSResultDTO(
                     rosId,
                     ProcessingStatus.ErrorWhenUpdatingROS,
@@ -255,7 +259,7 @@ class ROSService(
 
         val encryptedData =
             try {
-                SOPS.encrypt(content.ros, sopsConfig)
+                SOPS.encrypt(content.ros, sopsConfig, userContext.gcpAccessToken)
             } catch (e: Exception) {
                 return ProcessROSResultDTO(
                     rosId,

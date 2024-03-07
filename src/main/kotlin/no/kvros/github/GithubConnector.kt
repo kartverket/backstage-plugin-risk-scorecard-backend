@@ -67,10 +67,10 @@ class GithubConnector(
     fun fetchSopsConfig(
         owner: String,
         repository: String,
-        accessToken: String,
+        githubAccessToken: GithubAccessToken,
     ): String? {
         return try {
-            getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), accessToken)
+            getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), githubAccessToken.value)
                 .fileContent()
                 ?.value
                 ?.decodeBase64()
