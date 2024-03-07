@@ -1,5 +1,6 @@
 package no.kvros.encryption
 
+import no.kvros.infra.connector.models.GCPAccessToken
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -24,11 +25,17 @@ object SOPS {
     private fun toEncryptionCommand(config: String): List<String> =
         sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
-    private fun toDecryptionCommand(): List<String> = sopsCmd + decrypt + inputTypeYaml + outputTypeJson + inputFile
+    private fun toDecryptionCommand(accessToken: String): List<String> =
+        sopsCmd + decrypt + inputTypeYaml + outputTypeJson + gcpAccessToken(accessToken) + inputFile
 
-    fun decrypt(ciphertext: String): String =
+    private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
+
+    fun decrypt(
+        ciphertext: String,
+        gcpAccessToken: GCPAccessToken,
+    ): String =
         processBuilder
-            .command(toDecryptionCommand())
+            .command(toDecryptionCommand(gcpAccessToken.value))
             .start()
             .run {
                 outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()

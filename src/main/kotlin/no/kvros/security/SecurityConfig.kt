@@ -39,6 +39,7 @@ class SecurityConfig {
                 "Content-Type",
                 "Authorization",
                 "Microsoft-Id-Token",
+                "GCP-Access-Token",
             )
         configuration.exposedHeaders = mutableListOf("x-auth-token")
         val source = UrlBasedCorsConfigurationSource()
