@@ -25,10 +25,10 @@ object SOPS {
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> = sopsCmd + encrypt + inputTypeJson + outputTypeYaml + gcpAccessToken(accessToken) + encryptConfig + config + inputFile
+    ): List<String> = sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
     private fun toDecryptionCommand(accessToken: String): List<String> =
-        sopsCmd + decrypt + inputTypeYaml + outputTypeJson + gcpAccessToken(accessToken) + inputFile
+        sopsCmd + gcpAccessToken(accessToken) + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
