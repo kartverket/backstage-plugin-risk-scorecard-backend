@@ -1,15 +1,19 @@
 package no.kvros.ros
 
-import no.kvros.encryption.*
-import no.kvros.github.*
+import no.kvros.encryption.SOPS
+import no.kvros.encryption.SOPSDecryptionException
+import no.kvros.github.GithubAccessToken
+import no.kvros.github.GithubConnector
+import no.kvros.github.GithubContentResponse
+import no.kvros.github.GithubPullRequestObject
+import no.kvros.github.GithubStatus
 import no.kvros.infra.connector.models.GCPAccessToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.*
+import java.util.Base64
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -17,11 +21,12 @@ data class ProcessROSResultDTO(
     val statusMessage: String,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = ProcessROSResultDTO(
-            "",
-            ProcessingStatus.InvalidUserContext,
-            "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
-        )
+        val INVALID_USER_CONTEXT =
+            ProcessROSResultDTO(
+                "",
+                ProcessingStatus.InvalidUserContext,
+                "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
+            )
     }
 }
 
@@ -32,12 +37,13 @@ data class ROSContentResultDTO(
     val rosContent: String?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = ROSContentResultDTO(
-            rosId = "",
-            status = ContentStatus.Failure,
-            rosStatus = null,
-            rosContent = ""
-        )
+        val INVALID_USER_CONTEXT =
+            ROSContentResultDTO(
+                rosId = "",
+                status = ContentStatus.Failure,
+                rosStatus = null,
+                rosContent = "",
+            )
     }
 }
 
@@ -48,12 +54,13 @@ data class PublishROSResultDTO(
     val pendingApproval: PendingApprovalDTO?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT = PublishROSResultDTO(
-            "",
-            ProcessingStatus.InvalidUserContext,
-            "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
-            null
-        )
+        val INVALID_USER_CONTEXT =
+            PublishROSResultDTO(
+                "",
+                ProcessingStatus.InvalidUserContext,
+                "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
+                null,
+            )
     }
 }
 
@@ -100,36 +107,17 @@ enum class ROSStatus(val description: String) {
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
-    @Value("\${sops.rosKeyResourcePath}")
-    private val gcpKeyResourcePath: String,
-    @Value("\${sops.agePublicKey}")
-    private val agePublicKey: String,
 ) {
-    private val sopsEncryptorHelper =
-        SopsEncryptorHelper(
-            sopsProvidersAndCredentials =
-            listOf(
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.GoogleCloudPlatform,
-                    publicKeyOrPath = gcpKeyResourcePath,
-                ),
-                SopsProviderAndCredentials(
-                    provider = SopsEncryptionKeyProvider.AGE,
-                    publicKeyOrPath = agePublicKey,
-                ),
-            ),
-        )
-
     fun fetchAllROSes(
         owner: String,
         repository: String,
-        userContext: UserContext
+        userContext: UserContext,
     ): List<ROSContentResultDTO> {
         val roses =
             githubConnector.fetchAllRosIdentifiersInRepository(
                 owner,
                 repository,
-                userContext.githubAccessToken.value
+                userContext.githubAccessToken.value,
             ).let { ids ->
                 ids.ids.map { identifier ->
                     when (identifier.status) {
@@ -160,7 +148,7 @@ class ROSService(
     private fun GithubContentResponse.responseToRosResult(
         rosId: String,
         rosStatus: ROSStatus,
-        gcpAccessToken: GCPAccessToken
+        gcpAccessToken: GCPAccessToken,
     ): ROSContentResultDTO {
         return when (status) {
             GithubStatus.Success ->
@@ -170,9 +158,12 @@ class ROSService(
                     when (e) {
                         is SOPSDecryptionException ->
                             ROSContentResultDTO(
-                                rosId, ContentStatus.DecryptionFailed, rosStatus, decryptContent(
-                                    gcpAccessToken
-                                )
+                                rosId,
+                                ContentStatus.DecryptionFailed,
+                                rosStatus,
+                                decryptContent(
+                                    gcpAccessToken,
+                                ),
                             )
 
                         else ->
@@ -191,10 +182,9 @@ class ROSService(
         this.data()
             .let { Base64.getMimeDecoder().decode(it).decodeToString() }
             .let {
-                SopsEncryptorForYaml.decrypt(
+                SOPS.decrypt(
                     ciphertext = it,
-                    sopsEncryptorHelper = sopsEncryptorHelper,
-                    gcpAccessToken = gcpAccessToken
+                    gcpAccessToken = gcpAccessToken,
                 )
             }
 
@@ -203,14 +193,14 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         return updateOrCreateROS(
             owner = owner,
             repository = repository,
             rosId = rosId,
             content = content,
-            userContext = userContext
+            userContext = userContext,
         )
     }
 
@@ -218,7 +208,7 @@ class ROSService(
         owner: String,
         repository: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         val uniqueROSId = "ros-${RandomStringUtils.randomAlphanumeric(5)}"
 
@@ -228,7 +218,7 @@ class ROSService(
                 repository = repository,
                 rosId = uniqueROSId,
                 content = content,
-                userContext = userContext
+                userContext = userContext,
             )
 
         return when (result.status) {
@@ -248,7 +238,7 @@ class ROSService(
         repository: String,
         rosId: String,
         content: ROSWrapperObject,
-        userContext: UserContext
+        userContext: UserContext,
     ): ProcessROSResultDTO {
         val validationStatus = JSONValidator.validateJSON(content.ros)
         if (!validationStatus.valid) {
@@ -259,9 +249,17 @@ class ROSService(
             )
         }
 
+        val sopsConfig =
+            githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken)
+                ?: return ProcessROSResultDTO(
+                    rosId,
+                    ProcessingStatus.ErrorWhenUpdatingROS,
+                    "Kunne ikke hente sops-config",
+                )
+
         val encryptedData =
             try {
-                SopsEncryptorForYaml.encrypt(content.ros, sopsEncryptorHelper)
+                SOPS.encrypt(content.ros, sopsConfig, userContext.gcpAccessToken)
             } catch (e: Exception) {
                 return ProcessROSResultDTO(
                     rosId,

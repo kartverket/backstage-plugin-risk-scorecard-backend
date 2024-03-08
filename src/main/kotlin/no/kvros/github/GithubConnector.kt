@@ -6,9 +6,8 @@ import no.kvros.infra.connector.models.Email
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.ROSIdentifier
 import no.kvros.ros.ROSStatus
-import no.kvros.ros.models.ContentResponseDTO
-import no.kvros.ros.models.ROSContentDTO
-import no.kvros.ros.models.ROSFilenameDTO
+import no.kvros.ros.models.FileContentDTO
+import no.kvros.ros.models.FileNameDTO
 import no.kvros.ros.models.ShaResponseDTO
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -18,7 +17,8 @@ import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.util.*
+import java.util.Base64
+import java.util.Date
 
 data class GithubContentResponse(
     val data: String?,
@@ -46,7 +46,7 @@ data class GithubWriteToFilePayload(
     val content: String,
     val sha: String? = null,
     val branchName: String,
-    val author: Author
+    val author: Author,
 ) {
     fun toContentBody(): String =
         when (sha) {
@@ -64,6 +64,23 @@ class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
+    fun fetchSopsConfig(
+        owner: String,
+        repository: String,
+        githubAccessToken: GithubAccessToken,
+    ): String? {
+        return try {
+            getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), githubAccessToken.value)
+                .fileContent()
+                ?.value
+                ?.decodeBase64()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(this).decodeToString()
+
     fun fetchAllRosIdentifiersInRepository(
         owner: String,
         repository: String,
@@ -73,31 +90,31 @@ class GithubConnector(
             try {
                 fetchROSIdentifiersDrafted(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         val publishedROSes =
             try {
                 fetchPublishedROSIdentifiers(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         val rosSentForApproval =
             try {
                 fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
             } catch (e: Exception) {
-                emptyList<ROSIdentifier>()
+                emptyList()
             }
 
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-            combinePublishedDraftAndSentForApproval(
-                draftRosList = draftROSes,
-                sentForApprovalList = rosSentForApproval,
-                publishedRosList = publishedROSes,
-            ),
+                combinePublishedDraftAndSentForApproval(
+                    draftRosList = draftROSes,
+                    sentForApprovalList = rosSentForApproval,
+                    publishedRosList = publishedROSes,
+                ),
         )
     }
 
@@ -108,11 +125,11 @@ class GithubConnector(
     ): List<ROSIdentifier> {
         val draftIds = draftRosList.map { it.id }
         val sentForApprovalsIds = sentForApprovalList.map { it.id }
-        val publisedROSIdentifiersNotInDraftList =
+        val publishedROSIdentifiersNotInDraftList =
             publishedRosList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
         val draftROSIdentifiersNotInSentForApprovalsList = draftRosList.filter { it.id !in sentForApprovalsIds }
 
-        return sentForApprovalList + publisedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
+        return sentForApprovalList + publishedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
     }
 
     fun fetchPublishedROS(
@@ -126,7 +143,7 @@ class GithubConnector(
                 getGithubResponse(
                     "/$owner/$repository/contents/$defaultROSPath/$id.ros.yaml",
                     accessToken,
-                ).rosContent()?.content
+                ).fileContent()?.value
 
             if (fileContent == null) {
                 GithubContentResponse(null, GithubStatus.ContentIsEmpty)
@@ -151,7 +168,7 @@ class GithubConnector(
                 getGithubResponse(
                     uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id),
                     accessToken = accessToken,
-                ).rosContent()?.content
+                ).fileContent()?.value
 
             if (fileContent == null) {
                 GithubContentResponse(null, GithubStatus.ContentIsEmpty)
@@ -196,7 +213,7 @@ class GithubConnector(
         getGithubResponse(
             GithubHelper.uriToFetchAllPullRequests(owner, repository),
             accessToken,
-        ).pullRequestResponseDTOs().rosIdentifiersSentForApproval().filter { it.id.startsWith("ros-") }
+        ).pullRequestResponseDTOs().rosIdentifiersSentForApproval()
 
     private fun fetchROSIdentifiersDrafted(
         owner: String,
@@ -213,7 +230,7 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
-        userContext: UserContext
+        userContext: UserContext,
     ): String? {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
@@ -239,7 +256,7 @@ class GithubConnector(
                 content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
                 sha = latestShaForROS,
                 branchName = rosId,
-                author = githubAuthor
+                author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
     }
@@ -253,7 +270,7 @@ class GithubConnector(
         getGithubResponse(
             GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId),
             accessToken,
-        ).contentReponseDTO()?.sha
+        ).shaReponseDTO()?.value
     } catch (e: Exception) {
         null
     }
@@ -380,25 +397,23 @@ class GithubConnector(
         .body(Mono.just(writePayload.toContentBody()), String::class.java)
         .retrieve()
 
-    private fun ResponseSpec.rosContent(): ROSContentDTO? = this.bodyToMono<ROSContentDTO>().block()
+    private fun ResponseSpec.fileContent(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
 
-    private fun ResponseSpec.contentReponseDTO(): ContentResponseDTO? = this.bodyToMono<ContentResponseDTO>().block()
-
-    fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? = this.bodyToMono<ShaResponseDTO>().block()
+    private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? = this.bodyToMono<ShaResponseDTO>().block()
 
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
-        this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
-        this.bodyToMono<List<ROSFilenameDTO>>().block()
-            ?.filter { it.name.endsWith(".ros.yaml") }
-            ?.map { ROSIdentifier(it.name.substringBefore('.'), ROSStatus.Published) } ?: emptyList()
+        this.bodyToMono<List<FileNameDTO>>().block()
+            ?.filter { it.value.endsWith(".ros.yaml") }
+            ?.map { ROSIdentifier(it.value.substringBefore('.'), ROSStatus.Published) } ?: emptyList()
 
     fun List<GithubPullRequestObject>.rosIdentifiersSentForApproval(): List<ROSIdentifier> =
         this.map { ROSIdentifier(it.head.ref.split("/").last(), ROSStatus.SentForApproval) }
+            .filter { it.id.startsWith("ros-") }
 
     fun List<GithubReferenceObject>.rosIdentifiersDrafted(): List<ROSIdentifier> =
         this.map { ROSIdentifier(it.ref.split("/").last(), ROSStatus.Draft) }

@@ -3,16 +3,20 @@ package no.kvros.ros.models
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class ContentResponseDTO(
-    val name: String,
-    val path: String,
-    val sha: String,
+data class FileContentDTO(
+    @JsonProperty("content")
+    val value: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class ShaResponseDTO(
     @JsonProperty("sha")
-    val value: String
+    val value: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FileNameDTO(
+    @JsonProperty("name")
+    val value: String,
 )
