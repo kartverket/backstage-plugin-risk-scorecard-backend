@@ -9,7 +9,7 @@ class SOPSDecryptionException(message: String) : Exception(message)
 class SOPSEncryptionException(message: String) : Exception(message)
 
 object SOPS {
-    private val sopsCmd = listOf("./our-sops") // TODO: Sett riktig path til sops
+    private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
     private val decrypt = listOf("decrypt")
     private val inputTypeYaml = listOf("--input-type", "yaml")
