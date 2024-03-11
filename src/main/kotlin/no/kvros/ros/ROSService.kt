@@ -1,5 +1,6 @@
 package no.kvros.ros
 
+import java.util.Base64
 import no.kvros.encryption.SOPS
 import no.kvros.encryption.SOPSDecryptionException
 import no.kvros.github.GithubAccessToken
@@ -12,8 +13,8 @@ import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.Base64
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -76,15 +77,9 @@ enum class ContentStatus {
     Failure,
 }
 
-enum class SimpleStatus {
-    Success,
-    Failure,
-}
-
 enum class ProcessingStatus(val message: String) {
     ROSNotValid("ROS is not valid according to JSON-Schema"),
     EncryptionFailed("Failed to encrypt ROS"),
-    CouldNotCreateBranch("Could not create new branch for ROS"),
     ErrorWhenUpdatingROS("Error when updating ROS"),
     CreatedROS("Created new ROS successfully"),
     UpdatedROS("Updated ROS successfully"),
@@ -98,15 +93,16 @@ data class ROSIdentifier(
     val status: ROSStatus,
 )
 
-enum class ROSStatus(val description: String) {
-    Draft("Kladd"),
-    SentForApproval("Sendt til godkjenning"),
-    Published("Publisert"),
+enum class ROSStatus() {
+    Draft,
+    SentForApproval,
+    Published,
 }
 
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
+    @Value("\${sops.ageKey}") val ageKey: String,
 ) {
     fun fetchAllROSes(
         owner: String,
@@ -185,6 +181,7 @@ class ROSService(
                 SOPS.decrypt(
                     ciphertext = it,
                     gcpAccessToken = gcpAccessToken,
+                    agePrivateKey = ageKey
                 )
             }
 
@@ -286,9 +283,6 @@ class ROSService(
             )
         }
     }
-
-    private fun List<GithubPullRequestObject>.toRosIdentifiersResultDTO(): List<ROSIdentifier> =
-        this.map { ROSIdentifier(it.head.ref.split("/").last(), ROSStatus.Published) }
 
     fun publishROS(
         owner: String,

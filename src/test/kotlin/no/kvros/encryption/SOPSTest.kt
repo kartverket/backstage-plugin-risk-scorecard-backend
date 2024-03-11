@@ -21,6 +21,7 @@ class SOPSTest {
             SOPS.decrypt(
                 ciphertext = ciphertextThatIsJustAString,
                 gcpAccessToken = GCPAccessToken(""),
+                System.getenv("SOPS_AGE_KEY")
             )
         }
     }
@@ -34,6 +35,7 @@ class SOPSTest {
             SOPS.decrypt(
                 ciphertext = ciphertextThatIsYaml,
                 gcpAccessToken = GCPAccessToken(""),
+                System.getenv("SOPS_AGE_KEY")
             )
 
         assertThat(actual).isEqualTo(decryptedROS)
@@ -45,7 +47,7 @@ class SOPSTest {
         assertDoesNotThrow {
             SOPS.decrypt(
                 ciphertext =
-                    "skjemaVersjon: ENC[AES256_GCM,data:QkZw9vG+w0wy,iv:k5AuVA4WuMhq8h7ipr4oJFyX7N83tU88EBVPipD2cvc=,tag:Xw8BCVH/Qh22GeRCdGlgMA==,type:str]\n" +
+                "skjemaVersjon: ENC[AES256_GCM,data:QkZw9vG+w0wy,iv:k5AuVA4WuMhq8h7ipr4oJFyX7N83tU88EBVPipD2cvc=,tag:Xw8BCVH/Qh22GeRCdGlgMA==,type:str]\n" +
                         "tittel: ENC[AES256_GCM,data:/0jTxa0dpwEqkpmj7wPgoroO/hWRcTzr0FhxDQ==,iv:39PCh5ATh5OcuTt6HLNWz7Pi6tMZ4JxVD9oKgV+sxzc=,tag:QYH2fy3NjZZcnb5UQWyCjQ==,type:str]\n" +
                         "omfang: ENC[AES256_GCM,data:nQjREPYRRnSursdXhIJcJuQWeRpln5N8zZr49Krl3eLzZkf/5SxA1hjDnfhcWJU/aRPURFpBnFQJ7Hzptvk1nQHXzAGuGFjQ885Cb9tv/HZv33tNfTVxEwmfyBdlF/rTsQJ+tEdyt1+53ifewA==,iv:52nV5S9XTVnEeF0PsFEPGqAbYt8CEaBSsw3c7jXmS7E=,tag:s0KvFz3+eMlJkNXfLp2L6w==,type:str]\n" +
                         "scenarier:\n" +
@@ -150,6 +152,7 @@ class SOPSTest {
                         "    unencrypted_suffix: _unencrypted\n" +
                         "    version: 3.8.1\n",
                 gcpAccessToken = GCPAccessToken("bytt med: gcp-access-token"),
+                System.getenv("SOPS_AGE_KEY")
             )
         }
     }
