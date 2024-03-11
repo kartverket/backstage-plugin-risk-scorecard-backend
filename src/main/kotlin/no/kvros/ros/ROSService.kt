@@ -1,5 +1,6 @@
 package no.kvros.ros
 
+import java.util.Base64
 import no.kvros.encryption.SOPS
 import no.kvros.encryption.SOPSDecryptionException
 import no.kvros.github.GithubAccessToken
@@ -12,8 +13,8 @@ import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
 import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.Base64
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -107,6 +108,7 @@ enum class ROSStatus(val description: String) {
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
+    @Value("\${sops.ageKey}") val ageKey: String,
 ) {
     fun fetchAllROSes(
         owner: String,
@@ -185,6 +187,7 @@ class ROSService(
                 SOPS.decrypt(
                     ciphertext = it,
                     gcpAccessToken = gcpAccessToken,
+                    agePrivateKey = ageKey
                 )
             }
 

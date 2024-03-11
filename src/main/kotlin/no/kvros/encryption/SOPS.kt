@@ -25,19 +25,22 @@ object SOPS {
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> = sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
+    ): List<String> =
+        sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
-    private fun toDecryptionCommand(accessToken: String): List<String> =
-        sopsCmd + gcpAccessToken(accessToken) + decrypt + inputTypeYaml + outputTypeJson + inputFile
+    private fun toDecryptionCommand(accessToken: String, sopsPrivateKey: String): List<String> =
+        sopsCmd + gcpAccessToken(accessToken) + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
+    private fun ageSecret(sopsPrivateKey: String): List<String> = listOf("--age", sopsPrivateKey)
 
     fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
+        agePrivateKey: String
     ): String =
         processBuilder
-            .command(toDecryptionCommand(gcpAccessToken.value))
+            .command(toDecryptionCommand(gcpAccessToken.value, agePrivateKey))
             .start()
             .run {
                 outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
