@@ -77,15 +77,9 @@ enum class ContentStatus {
     Failure,
 }
 
-enum class SimpleStatus {
-    Success,
-    Failure,
-}
-
 enum class ProcessingStatus(val message: String) {
     ROSNotValid("ROS is not valid according to JSON-Schema"),
     EncryptionFailed("Failed to encrypt ROS"),
-    CouldNotCreateBranch("Could not create new branch for ROS"),
     ErrorWhenUpdatingROS("Error when updating ROS"),
     CreatedROS("Created new ROS successfully"),
     UpdatedROS("Updated ROS successfully"),
@@ -99,10 +93,10 @@ data class ROSIdentifier(
     val status: ROSStatus,
 )
 
-enum class ROSStatus(val description: String) {
-    Draft("Kladd"),
-    SentForApproval("Sendt til godkjenning"),
-    Published("Publisert"),
+enum class ROSStatus() {
+    Draft,
+    SentForApproval,
+    Published,
 }
 
 @Service
@@ -289,9 +283,6 @@ class ROSService(
             )
         }
     }
-
-    private fun List<GithubPullRequestObject>.toRosIdentifiersResultDTO(): List<ROSIdentifier> =
-        this.map { ROSIdentifier(it.head.ref.split("/").last(), ROSStatus.Published) }
 
     fun publishROS(
         owner: String,
