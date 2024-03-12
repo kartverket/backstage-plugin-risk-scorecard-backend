@@ -1,5 +1,9 @@
 package no.kvros.github
 
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Base64
+import java.util.Date
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.infra.connector.models.Email
@@ -15,10 +19,6 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.util.Base64
-import java.util.Date
 
 data class GithubContentResponse(
     val data: String?,
@@ -110,11 +110,11 @@ class GithubConnector(
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRosList = draftROSes,
-                    sentForApprovalList = rosSentForApproval,
-                    publishedRosList = publishedROSes,
-                ),
+            combinePublishedDraftAndSentForApproval(
+                draftRosList = draftROSes,
+                sentForApprovalList = rosSentForApproval,
+                publishedRosList = publishedROSes,
+            ),
         )
     }
 
@@ -246,7 +246,8 @@ class GithubConnector(
 
         val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
-        val commitMessage = if (latestShaForROS != null) "refactor: Oppdater ROS" else "feat: Lag ny ROS"
+        val commitMessage =
+            if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
         return putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
@@ -346,12 +347,12 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: GithubAccessToken,
+        userContext: UserContext,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
-            accessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, rosId),
+            userContext.githubAccessToken.value,
+            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, userContext.microsoftUser),
         ).pullRequestResponseDTO()
     }
 
@@ -404,7 +405,8 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()

@@ -2,6 +2,7 @@ package no.kvros.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import no.kvros.security.MicrosoftUser
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
@@ -141,10 +142,11 @@ object GithubHelper {
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         rosId: String,
+        rosRisikoEier: MicrosoftUser
     ): GithubCreateNewPullRequestPayload =
         GithubCreateNewPullRequestPayload(
             title = "Branch for ros $rosId",
-            body = "ROS body",
+            body = "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert",
             repositoryOwner,
             rosId,
             baseBranch = "main",
@@ -157,7 +159,8 @@ object GithubHelper {
 
     fun uriToFindAppInstallation(): String = "/installations"
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
+        "/installations/$installationId/access_tokens"
 
     fun bodyToCreateAccessTokenForRepository(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)
