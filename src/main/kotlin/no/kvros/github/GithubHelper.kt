@@ -67,6 +67,7 @@ data class GithubPullRequestObject(
     @JsonProperty("html_url")
     val url: String,
     val head: GithubPullRequestHead,
+    val number: Int,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -137,6 +138,15 @@ object GithubHelper {
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/pulls"
+
+    fun uriToEditPullRequest(
+        owner: String,
+        repository: String,
+        pullRequestNumber: Int,
+    ): String = "/$owner/$repository/pulls/$pullRequestNumber"
+
+    fun bodyToClosePullRequest(): String = "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
+            "oppdatert. Skaff ny godkjenning av risikoeier.\",  \"state\": \"closed\", \"base\": \"main\" }"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
