@@ -168,7 +168,7 @@ class ROSController(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 rosId = id,
-                accessToken = userContext.githubAccessToken,
+                userContext = userContext,
             )
 
         return when (result.status) {

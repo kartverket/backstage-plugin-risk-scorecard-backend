@@ -3,7 +3,6 @@ package no.kvros.ros
 import java.util.Base64
 import no.kvros.encryption.SOPS
 import no.kvros.encryption.SOPSDecryptionException
-import no.kvros.github.GithubAccessToken
 import no.kvros.github.GithubConnector
 import no.kvros.github.GithubContentResponse
 import no.kvros.github.GithubPullRequestObject
@@ -288,14 +287,14 @@ class ROSService(
         owner: String,
         repository: String,
         rosId: String,
-        accessToken: GithubAccessToken,
+        userContext: UserContext,
     ): PublishROSResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForPublishingROS(
                 owner,
                 repository,
                 rosId,
-                accessToken,
+                userContext,
             )
 
         return when (pullRequestObject) {
