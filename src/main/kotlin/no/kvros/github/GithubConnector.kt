@@ -129,6 +129,7 @@ class GithubConnector(
             publishedRosList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
         val draftROSIdentifiersNotInSentForApprovalsList = draftRosList.filter { it.id !in sentForApprovalsIds }
 
+
         return sentForApprovalList + publishedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
     }
 
@@ -231,7 +232,7 @@ class GithubConnector(
         rosId: String,
         fileContent: String,
         userContext: UserContext,
-    ): String? {
+    ): Boolean {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
             Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
@@ -243,13 +244,18 @@ class GithubConnector(
                 accessToken = accessToken.value,
             )
         }
+        var hasClosedPR = false
+        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+            closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
+            hasClosedPR = true
+        }
 
         val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
         val commitMessage =
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
-        return putFileRequestToGithub(
+         putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
             accessToken.value,
             GithubWriteToFilePayload(
@@ -260,7 +266,32 @@ class GithubConnector(
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
+        return hasClosedPR
     }
+
+    private fun closeExistingPullRequestForROS(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String,
+    ): String? {
+        val pullRequestsForROS = fetchAllPullRequestsForROS(owner, repository, accessToken)
+        val matchingPullRequest = pullRequestsForROS.find { it.head.ref == rosId }
+        if (matchingPullRequest != null) {
+            try {
+                return closePullRequest(
+                    uri = GithubHelper.uriToEditPullRequest(owner, repository, matchingPullRequest.number),
+                    accessToken = accessToken,
+                    closePullRequestBody = GithubHelper.bodyToClosePullRequest(),
+                ).bodyToMono<String>().block()
+            } catch (e: Exception) {
+                println(e)
+            }
+
+        }
+        return null
+    }
+
 
     private fun getSHAForExistingROSDraftOrNull(
         owner: String,
@@ -282,6 +313,16 @@ class GithubConnector(
         rosId: String,
         accessToken: String,
     ): Boolean = fetchBranchForROS(owner, repository, rosId, accessToken).isNotEmpty()
+
+    private fun pullRequestForROSExists(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String,
+    ): Boolean {
+       val rosesSentForApproval =  fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
+        return rosesSentForApproval.any { it.id == rosId }
+    }
 
     private fun fetchBranchForROS(
         owner: String,
@@ -368,6 +409,20 @@ class GithubConnector(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .header("Content-Type", "application/json")
         .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java)
+        .retrieve()
+
+    private fun closePullRequest(
+        uri: String,
+        accessToken: String,
+        closePullRequestBody: String
+    ) = webClient
+        .patch()
+        .uri(uri)
+        .header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json")
+        .body(Mono.just(closePullRequestBody), String::class.java)
         .retrieve()
 
     private fun postNewBranchToGithub(
