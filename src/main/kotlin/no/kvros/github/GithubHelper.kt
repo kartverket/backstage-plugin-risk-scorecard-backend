@@ -146,7 +146,7 @@ object GithubHelper {
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
     fun bodyToClosePullRequest(): String = "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
-            "oppdatert. Skaff ny godkjenning av risikoeier.\",  \"state\": \"closed\", \"base\": \"main\" }"
+            "oppdatert. Ny godkjenning av risikoeier kreves.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,

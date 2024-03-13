@@ -266,7 +266,7 @@ class ROSService(
             }
 
         try {
-            githubConnector.updateOrCreateDraft(
+           val hasClosedPR = githubConnector.updateOrCreateDraft(
                 owner = owner,
                 repository = repository,
                 rosId = rosId,
@@ -274,7 +274,7 @@ class ROSService(
                 userContext = userContext,
             )
 
-            return ProcessROSResultDTO(rosId, ProcessingStatus.UpdatedROS, "ROS ble oppdatert")
+            return ProcessROSResultDTO(rosId, ProcessingStatus.UpdatedROS, "ROS ble oppdatert" + if (hasClosedPR) " og må godkjennes av risikoeier på nytt" else "")
         } catch (e: Exception) {
             return ProcessROSResultDTO(
                 rosId,

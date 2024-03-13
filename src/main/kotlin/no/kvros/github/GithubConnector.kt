@@ -232,7 +232,7 @@ class GithubConnector(
         rosId: String,
         fileContent: String,
         userContext: UserContext,
-    ): String? {
+    ): Boolean {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
             Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
@@ -244,16 +244,17 @@ class GithubConnector(
                 accessToken = accessToken.value,
             )
         }
-
+        var hasClosedPR = false
         if (pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
             closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
+            hasClosedPR = true
         }
 
         val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
         val commitMessage = if (latestShaForROS != null) "refactor: Oppdater ROS" else "feat: Lag ny ROS"
 
-        return putFileRequestToGithub(
+         putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
             accessToken.value,
             GithubWriteToFilePayload(
@@ -264,6 +265,7 @@ class GithubConnector(
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
+        return hasClosedPR
     }
 
     private fun closeExistingPullRequestForROS(
@@ -282,7 +284,7 @@ class GithubConnector(
                     closePullRequestBody = GithubHelper.bodyToClosePullRequest(),
                 ).bodyToMono<String>().block()
             } catch (e: Exception) {
-                null
+                println(e)
             }
 
         }
