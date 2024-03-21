@@ -68,3 +68,13 @@ kubectl apply -f kv-ros-backend-config.yaml
 kubectl apply -f kv-ros-backend.yaml
 ````
 
+#### Minikube lokalt for testing
+
+````sh
+gcloud auth configure-docker
+# for å kunne hente gcp-secret i appen (legg til )
+minikube addons enable gcp-auth
+# for å kunne pulle image fra gcp
+minikube addons configure registry-creds && minikube addons enable registry-creds
+````
+
