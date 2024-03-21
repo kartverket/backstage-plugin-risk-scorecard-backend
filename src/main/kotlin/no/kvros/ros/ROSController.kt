@@ -190,7 +190,7 @@ class ROSController(
                 MicrosoftIdToken(microsoftIdToken),
                 githubAccessTokenFromApp,
                 GCPAccessToken(gcpAccessToken),
-                validatedMicrosoftUser
+                validatedMicrosoftUser,
             )
         return userContext
     }

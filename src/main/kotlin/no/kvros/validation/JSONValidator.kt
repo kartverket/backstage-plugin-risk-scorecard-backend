@@ -7,7 +7,5 @@ object JSONValidator {
     fun validateJSON(
         schema: String,
         json: String,
-    ): BasicOutput =
-        // JSONSchema.parseFile(".security/ros_schema_no_v1_0.json").validateBasic(decryptedJson)
-        JSONSchema.parse(schema).validateBasic(json)
+    ): BasicOutput = JSONSchema.parse(schema).validateBasic(json)
 }

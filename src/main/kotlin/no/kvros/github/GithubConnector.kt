@@ -67,7 +67,6 @@ class GithubConnector(
     WebClientConnector("https://api.github.com/repos") {
     fun fetchJSONSchema(
         owner: String,
-        repository: String,
         githubAccessToken: GithubAccessToken,
     ): String? {
         return try {

@@ -243,11 +243,11 @@ class ROSService(
         userContext: UserContext,
     ): ProcessROSResultDTO {
         val jsonSchema =
-            githubConnector.fetchJSONSchema(owner, repository, userContext.githubAccessToken)
+            githubConnector.fetchJSONSchema(owner, userContext.githubAccessToken)
                 ?: return ProcessROSResultDTO(
                     rosId,
                     ProcessingStatus.ErrorWhenUpdatingROS,
-                    "Kunne ikke hente JSON-schema",
+                    "Kunne ikke hente JSON Schema",
                 )
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema, content.ros)
