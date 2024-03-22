@@ -3,13 +3,13 @@ creation_rules:
     shamir_threshold: 2
     key_groups:
       - age:
-          - "age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf"
+          - "age1dgayu4uqy5w43579ymwjhyk3ette45g3v36zeqkuxqercx0wq56qfxwhcr"
       - gcp_kms:
           - resource_id: projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code
   # Copy of previous group, without path_regex. This is required.
   - shamir_threshold: 2
     key_groups:
       - age:
-          - "age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf"
+          - "age1dgayu4uqy5w43579ymwjhyk3ette45g3v36zeqkuxqercx0wq56qfxwhcr"
       - gcp_kms:
           - resource_id: projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code
