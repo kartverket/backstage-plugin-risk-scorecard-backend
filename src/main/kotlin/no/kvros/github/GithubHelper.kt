@@ -152,15 +152,23 @@ object GithubHelper {
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         rosId: String,
+        requiresNewApproval: Boolean,
         rosRisikoEier: MicrosoftUser
-    ): GithubCreateNewPullRequestPayload =
-        GithubCreateNewPullRequestPayload(
+    ): GithubCreateNewPullRequestPayload {
+        val body = if (requiresNewApproval) {
+            "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
+        } else {
+            "ROS-analysen krever ikke ny godkjenning som følge av endringene som er gjort."
+        }
+
+        return GithubCreateNewPullRequestPayload(
             title = "Branch for ros $rosId",
-            body = "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert",
+            body = body,
             repositoryOwner,
             rosId,
             baseBranch = "main",
         )
+    }
 
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,

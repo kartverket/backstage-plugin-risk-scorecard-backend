@@ -231,6 +231,7 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
     ): Boolean {
         val accessToken = userContext.githubAccessToken
@@ -245,7 +246,7 @@ class GithubConnector(
             )
         }
         var hasClosedPR = false
-        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value) and requiresNewApproval) {
             closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
             hasClosedPR = true
         }
@@ -254,6 +255,8 @@ class GithubConnector(
 
         val commitMessage =
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
+
+
 
          putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
@@ -266,6 +269,10 @@ class GithubConnector(
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
+
+        if (!requiresNewApproval and !pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+            createPullRequestForPublishingROS(owner, repository, rosId, requiresNewApproval, userContext)
+        }
         return hasClosedPR
     }
 
@@ -388,12 +395,13 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
             userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, userContext.microsoftUser),
+            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, requiresNewApproval, userContext.microsoftUser),
         ).pullRequestResponseDTO()
     }
 
