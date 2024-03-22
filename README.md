@@ -72,3 +72,6 @@ Kan kjøres opp med .run-config.
 ✨ Local Server
 ```
 
+## Setup SOPS for doing ROS locally
+
+See [SOPS.md](SOPS.md)
