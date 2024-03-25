@@ -12,8 +12,6 @@
             <env name="ROS_URL" value=".security/ros"/>
             <env name="ROS_SCHEMA_REPO" value="kv-ros-json-schema"/>
             <env name="SOPS_AGE_PUBLIC_KEY" value="age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf"/>
-            <env name="SOPS_AGE_KEY"
-                 value="AGE-SECRET-KEY-1EA6MRXX94NQYSWD6ZCFZEYZV4XAE57U9FU4XKC5TCKNU62PNC85S6G87KU"/>
         </envs>
         <module name="kv-ros-backend.main"/>
         <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication"/>
