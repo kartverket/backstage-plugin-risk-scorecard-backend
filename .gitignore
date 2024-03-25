@@ -16,4 +16,3 @@ http-client.private.env.json
 .DS_Store
 .security/.DS_Store
 *.private.env.jsons
-.run/localServer.run.xml
