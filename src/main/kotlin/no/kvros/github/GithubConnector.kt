@@ -70,7 +70,7 @@ class GithubConnector(
         githubAccessToken: GithubAccessToken,
     ): String? {
         return try {
-            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, "1_0"), githubAccessToken.value)
+            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, "3_1"), githubAccessToken.value)
                 .fileContent()
                 ?.value
                 ?.decodeBase64()
