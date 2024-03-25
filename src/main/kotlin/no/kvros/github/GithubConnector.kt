@@ -70,6 +70,7 @@ class GithubConnector(
         githubAccessToken: GithubAccessToken,
     ): String? {
         return try {
+            // TODO: Fetch schema version dynamically
             getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, "3_1"), githubAccessToken.value)
                 .fileContent()
                 ?.value
