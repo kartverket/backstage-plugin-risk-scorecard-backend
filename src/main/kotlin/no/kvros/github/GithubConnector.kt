@@ -271,9 +271,7 @@ class GithubConnector(
         val commitMessage =
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
-
-
-         putFileRequestToGithub(
+        putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
             accessToken.value,
             GithubWriteToFilePayload(
