@@ -80,6 +80,12 @@ object GithubHelper {
     private const val rosPostfixForFiles = ".ros.yaml"
     private const val defaultPathToROSDirectory = ".security/ros"
 
+    fun uriToFindJSONSchema(
+        owner: String,
+        repository: String,
+        version: String,
+    ): String = "/$owner/$repository/contents/schemas/ros_schema_no_v$version.json"
+
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,
@@ -146,14 +152,15 @@ object GithubHelper {
         pullRequestNumber: Int,
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
-    fun bodyToClosePullRequest(): String = "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
+    fun bodyToClosePullRequest(): String =
+        "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
             "oppdatert. Ny godkjenning av risikoeier kreves.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         rosId: String,
         requiresNewApproval: Boolean,
-        rosRisikoEier: MicrosoftUser
+        rosRisikoEier: MicrosoftUser,
     ): GithubCreateNewPullRequestPayload {
         val body = if (requiresNewApproval) {
             "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
@@ -177,8 +184,7 @@ object GithubHelper {
 
     fun uriToFindAppInstallation(): String = "/installations"
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
-        "/installations/$installationId/access_tokens"
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 
     fun bodyToCreateAccessTokenForRepository(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)

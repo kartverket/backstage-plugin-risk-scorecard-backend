@@ -1,9 +1,5 @@
 package no.kvros.github
 
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.util.Base64
-import java.util.Date
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.infra.connector.models.Email
@@ -19,6 +15,10 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Base64
+import java.util.Date
 
 data class GithubContentResponse(
     val data: String?,
@@ -62,8 +62,24 @@ data class Author(val name: String, val email: Email, val date: Date) {
 @Component
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
+    @Value("\${github.repository.json-schema-repo}") private val jsonSchemaRepo: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
+    fun fetchJSONSchema(
+        owner: String,
+        githubAccessToken: GithubAccessToken,
+    ): String? {
+        return try {
+            // TODO: Fetch schema version dynamically
+            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, "3_1"), githubAccessToken.value)
+                .fileContent()
+                ?.value
+                ?.decodeBase64()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -110,11 +126,11 @@ class GithubConnector(
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-            combinePublishedDraftAndSentForApproval(
-                draftRosList = draftROSes,
-                sentForApprovalList = rosSentForApproval,
-                publishedRosList = publishedROSes,
-            ),
+                combinePublishedDraftAndSentForApproval(
+                    draftRosList = draftROSes,
+                    sentForApprovalList = rosSentForApproval,
+                    publishedRosList = publishedROSes,
+                ),
         )
     }
 
@@ -128,7 +144,6 @@ class GithubConnector(
         val publishedROSIdentifiersNotInDraftList =
             publishedRosList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
         val draftROSIdentifiersNotInSentForApprovalsList = draftRosList.filter { it.id !in sentForApprovalsIds }
-
 
         return sentForApprovalList + publishedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
     }
@@ -294,11 +309,9 @@ class GithubConnector(
             } catch (e: Exception) {
                 println(e)
             }
-
         }
         return null
     }
-
 
     private fun getSHAForExistingROSDraftOrNull(
         owner: String,
@@ -327,7 +340,7 @@ class GithubConnector(
         rosId: String,
         accessToken: String,
     ): Boolean {
-       val rosesSentForApproval =  fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
+        val rosesSentForApproval = fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
         return rosesSentForApproval.any { it.id == rosId }
     }
 
@@ -422,7 +435,7 @@ class GithubConnector(
     private fun closePullRequest(
         uri: String,
         accessToken: String,
-        closePullRequestBody: String
+        closePullRequestBody: String,
     ) = webClient
         .patch()
         .uri(uri)
@@ -468,8 +481,7 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
-        this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()
