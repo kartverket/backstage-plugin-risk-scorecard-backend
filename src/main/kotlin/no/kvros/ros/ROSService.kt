@@ -285,9 +285,9 @@ class ROSService(
                     repository = repository,
                     rosId = rosId,
                     fileContent = encryptedData,
-                    requiresNewApproval = content.isRequiresNewApproval!!,
-                userContext = userContext,
-            )
+                    requiresNewApproval = content.isRequiresNewApproval,
+                    userContext = userContext,
+                )
 
             return ProcessROSResultDTO(
                 rosId,
