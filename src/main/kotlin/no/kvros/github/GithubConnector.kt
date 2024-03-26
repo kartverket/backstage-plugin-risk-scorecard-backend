@@ -246,6 +246,7 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
     ): Boolean {
         val accessToken = userContext.githubAccessToken
@@ -260,7 +261,7 @@ class GithubConnector(
             )
         }
         var hasClosedPR = false
-        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value) and requiresNewApproval) {
             closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
             hasClosedPR = true
         }
@@ -281,6 +282,10 @@ class GithubConnector(
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
+
+        if (!requiresNewApproval and !pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+            createPullRequestForPublishingROS(owner, repository, rosId, requiresNewApproval, userContext)
+        }
         return hasClosedPR
     }
 
@@ -401,12 +406,13 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
             userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, userContext.microsoftUser),
+            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, requiresNewApproval, userContext.microsoftUser),
         ).pullRequestResponseDTO()
     }
 

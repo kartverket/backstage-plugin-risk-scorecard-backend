@@ -285,8 +285,9 @@ class ROSService(
                     repository = repository,
                     rosId = rosId,
                     fileContent = encryptedData,
-                    userContext = userContext,
-                )
+                    requiresNewApproval = content.isRequiresNewApproval!!,
+                userContext = userContext,
+            )
 
             return ProcessROSResultDTO(
                 rosId,
@@ -297,7 +298,7 @@ class ROSService(
             return ProcessROSResultDTO(
                 rosId,
                 ProcessingStatus.ErrorWhenUpdatingROS,
-                "Feilet med feilemelding ${e.message} for ros med id $rosId",
+                "Feilet med feilmelding ${e.message} for ros med id $rosId",
             )
         }
     }
@@ -313,6 +314,7 @@ class ROSService(
                 owner,
                 repository,
                 rosId,
+                requiresNewApproval = true,
                 userContext,
             )
 
