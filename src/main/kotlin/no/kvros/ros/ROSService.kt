@@ -243,7 +243,7 @@ class ROSService(
         userContext: UserContext,
     ): ProcessROSResultDTO {
         val jsonSchema =
-            githubConnector.fetchJSONSchema(owner, userContext.githubAccessToken)
+            githubConnector.fetchJSONSchema(owner, userContext.githubAccessToken, content.schemaVersion)
                 ?: return ProcessROSResultDTO(
                     rosId,
                     ProcessingStatus.ErrorWhenUpdatingROS,
