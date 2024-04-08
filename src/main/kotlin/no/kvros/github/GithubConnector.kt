@@ -68,10 +68,10 @@ class GithubConnector(
     fun fetchJSONSchema(
         owner: String,
         githubAccessToken: GithubAccessToken,
+        schemaVersion: String
     ): String? {
         return try {
-            // TODO: Fetch schema version dynamically
-            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, "3_1"), githubAccessToken.value)
+            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, schemaVersion), githubAccessToken.value)
                 .fileContent()
                 ?.value
                 ?.decodeBase64()
