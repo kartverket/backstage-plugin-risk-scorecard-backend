@@ -1,10 +1,13 @@
 package no.kvros.ros
 
+import no.kvros.github.GithubAccessToken
 import no.kvros.github.GithubAppConnector
+import no.kvros.infra.connector.models.Email
 import no.kvros.infra.connector.models.GCPAccessToken
 import no.kvros.infra.connector.models.MicrosoftIdToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
+import no.kvros.security.MicrosoftUser
 import no.kvros.security.TokenService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -183,7 +186,13 @@ class ROSController(
         repositoryName: String,
     ): UserContext {
         val validatedMicrosoftUser =
-            tokenService.validateUser(microsoftIdToken) ?: throw Exception("Kunne ikke validere id-token")
+            tokenService.validateUser(microsoftIdToken) ?: return UserContext(
+                MicrosoftIdToken(""),
+                GithubAccessToken(""),
+                GCPAccessToken(""),
+                MicrosoftUser(Email(""), ""),
+            )
+        //throw Exception("Kunne ikke validere id-token")
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val userContext =
             UserContext(
