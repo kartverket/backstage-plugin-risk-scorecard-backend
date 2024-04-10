@@ -3,15 +3,6 @@ package no.kvros.github
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.nio.charset.StandardCharsets
-import java.security.KeyFactory
-import java.security.PrivateKey
-import java.security.spec.PKCS8EncodedKeySpec
-import java.time.Instant
-import java.util.Base64
-import java.util.Date
 import no.kvros.infra.connector.GcpClientConnector
 import no.kvros.infra.connector.WebClientConnector
 import org.springframework.beans.factory.annotation.Value
@@ -19,6 +10,14 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+import java.security.KeyFactory
+import java.security.PrivateKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.time.Instant
+import java.util.*
 
 class GithubAppSignedJwt(
     val value: String?
@@ -77,6 +76,7 @@ class GithubAppConnector(
 
         return GithubAccessToken(accessTokenBody.token)
     }
+
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class GithubAccessTokenBody(

@@ -9,7 +9,7 @@ data class UserContext(
     val microsoftUser: MicrosoftUser
 ) {
     fun isValid(): Boolean =
-        githubAccessToken.value.isNotBlank() && gcpAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
+        gcpAccessToken.value.isNotBlank() && githubAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
 }
 
 data class GCPAccessToken(val value: String)
