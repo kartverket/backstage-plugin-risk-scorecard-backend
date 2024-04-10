@@ -1,12 +1,11 @@
 package no.kvros.security
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.jwt.JwtDecoder
-import org.springframework.security.oauth2.jwt.JwtDecoders
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
@@ -15,14 +14,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
+class SecurityConfig(
+    @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val issuerUri: String
+) {
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("api/**").authenticated() }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.decoder(jwtDecoder()) } }
@@ -31,9 +30,7 @@ class SecurityConfig {
     }
 
     @Bean
-    fun jwtDecoder(): JwtDecoder {
-        return NimbusJwtDecoder.withPublicKey(this.key).build()
-    }
+    fun jwtDecoder(): JwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build()
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource? {

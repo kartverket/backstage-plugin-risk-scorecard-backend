@@ -4,16 +4,14 @@ import no.kvros.github.GithubAccessToken
 import no.kvros.security.MicrosoftUser
 
 data class UserContext(
-    val microsoftIdToken: MicrosoftIdToken,
     val githubAccessToken: GithubAccessToken,
     val gcpAccessToken: GCPAccessToken,
     val microsoftUser: MicrosoftUser
 ) {
     fun isValid(): Boolean =
-        microsoftIdToken.value.isNotBlank() && githubAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
+        githubAccessToken.value.isNotBlank() && gcpAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
 }
 
-data class MicrosoftIdToken(val value: String)
 data class GCPAccessToken(val value: String)
 
 data class Email(
