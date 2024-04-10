@@ -175,13 +175,13 @@ class ROSController(
         gcpAccessToken: String,
         repositoryName: String,
     ): UserContext {
-        val microsoftUser = AuthService.getMicrosoftUser()
+        val validatedMicrosoftUser = AuthService.getMicrosoftUser()
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val userContext =
             UserContext(
                 githubAccessTokenFromApp,
                 GCPAccessToken(gcpAccessToken),
-                microsoftUser,
+                validatedMicrosoftUser,
             )
         return userContext
     }
