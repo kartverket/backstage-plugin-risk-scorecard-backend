@@ -68,6 +68,7 @@ data class GithubPullRequestObject(
     @JsonProperty("html_url")
     val url: String,
     val head: GithubPullRequestHead,
+    val number: Int,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -78,6 +79,12 @@ data class GithubPullRequestHead(
 object GithubHelper {
     private const val rosPostfixForFiles = ".ros.yaml"
     private const val defaultPathToROSDirectory = ".security/ros"
+
+    fun uriToFindJSONSchema(
+        owner: String,
+        repository: String,
+        version: String,
+    ): String = "/$owner/$repository/contents/schemas/ros_schema_no_v$version.json"
 
     fun uriToFindSopsConfig(
         owner: String,
@@ -139,18 +146,36 @@ object GithubHelper {
         repository: String,
     ): String = "/$owner/$repository/pulls"
 
+    fun uriToEditPullRequest(
+        owner: String,
+        repository: String,
+        pullRequestNumber: Int,
+    ): String = "/$owner/$repository/pulls/$pullRequestNumber"
+
+    fun bodyToClosePullRequest(): String =
+        "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
+            "oppdatert. Ny godkjenning av risikoeier kreves.\",  \"state\": \"closed\"}"
+
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         rosId: String,
-        rosRisikoEier: MicrosoftUser
-    ): GithubCreateNewPullRequestPayload =
-        GithubCreateNewPullRequestPayload(
+        requiresNewApproval: Boolean,
+        rosRisikoEier: MicrosoftUser,
+    ): GithubCreateNewPullRequestPayload {
+        val body = if (requiresNewApproval) {
+            "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
+        } else {
+            "ROS-analysen krever ikke ny godkjenning som følge av endringene som er gjort."
+        }
+
+        return GithubCreateNewPullRequestPayload(
             title = "Branch for ros $rosId",
-            body = "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert",
+            body = body,
             repositoryOwner,
             rosId,
             baseBranch = "main",
         )
+    }
 
     fun bodyToCreateNewBranchForROSFromMain(
         rosId: String,
@@ -159,8 +184,7 @@ object GithubHelper {
 
     fun uriToFindAppInstallation(): String = "/installations"
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
-        "/installations/$installationId/access_tokens"
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 
     fun bodyToCreateAccessTokenForRepository(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)

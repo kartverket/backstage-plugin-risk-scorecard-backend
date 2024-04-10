@@ -1,9 +1,5 @@
 package no.kvros.github
 
-import java.text.SimpleDateFormat
-import java.time.Instant
-import java.util.Base64
-import java.util.Date
 import no.kvros.github.GithubHelper.toReferenceObjects
 import no.kvros.infra.connector.WebClientConnector
 import no.kvros.infra.connector.models.Email
@@ -19,6 +15,10 @@ import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Base64
+import java.util.Date
 
 data class GithubContentResponse(
     val data: String?,
@@ -62,8 +62,24 @@ data class Author(val name: String, val email: Email, val date: Date) {
 @Component
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
+    @Value("\${github.repository.json-schema-repo}") private val jsonSchemaRepo: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
+    fun fetchJSONSchema(
+        owner: String,
+        githubAccessToken: GithubAccessToken,
+        schemaVersion: String
+    ): String? {
+        return try {
+            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, schemaVersion), githubAccessToken.value)
+                .fileContent()
+                ?.value
+                ?.decodeBase64()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -110,11 +126,11 @@ class GithubConnector(
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-            combinePublishedDraftAndSentForApproval(
-                draftRosList = draftROSes,
-                sentForApprovalList = rosSentForApproval,
-                publishedRosList = publishedROSes,
-            ),
+                combinePublishedDraftAndSentForApproval(
+                    draftRosList = draftROSes,
+                    sentForApprovalList = rosSentForApproval,
+                    publishedRosList = publishedROSes,
+                ),
         )
     }
 
@@ -230,8 +246,9 @@ class GithubConnector(
         repository: String,
         rosId: String,
         fileContent: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
-    ): String? {
+    ): Boolean {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
             Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
@@ -243,13 +260,18 @@ class GithubConnector(
                 accessToken = accessToken.value,
             )
         }
+        var hasClosedPR = false
+        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value) and requiresNewApproval) {
+            closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
+            hasClosedPR = true
+        }
 
         val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
 
         val commitMessage =
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
-        return putFileRequestToGithub(
+        putFileRequestToGithub(
             uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
             accessToken.value,
             GithubWriteToFilePayload(
@@ -260,6 +282,33 @@ class GithubConnector(
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
+
+        if (!requiresNewApproval and !pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
+            createPullRequestForPublishingROS(owner, repository, rosId, requiresNewApproval, userContext)
+        }
+        return hasClosedPR
+    }
+
+    private fun closeExistingPullRequestForROS(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String,
+    ): String? {
+        val pullRequestsForROS = fetchAllPullRequestsForROS(owner, repository, accessToken)
+        val matchingPullRequest = pullRequestsForROS.find { it.head.ref == rosId }
+        if (matchingPullRequest != null) {
+            try {
+                return closePullRequest(
+                    uri = GithubHelper.uriToEditPullRequest(owner, repository, matchingPullRequest.number),
+                    accessToken = accessToken,
+                    closePullRequestBody = GithubHelper.bodyToClosePullRequest(),
+                ).bodyToMono<String>().block()
+            } catch (e: Exception) {
+                println(e)
+            }
+        }
+        return null
     }
 
     private fun getSHAForExistingROSDraftOrNull(
@@ -282,6 +331,16 @@ class GithubConnector(
         rosId: String,
         accessToken: String,
     ): Boolean = fetchBranchForROS(owner, repository, rosId, accessToken).isNotEmpty()
+
+    private fun pullRequestForROSExists(
+        owner: String,
+        repository: String,
+        rosId: String,
+        accessToken: String,
+    ): Boolean {
+        val rosesSentForApproval = fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
+        return rosesSentForApproval.any { it.id == rosId }
+    }
 
     private fun fetchBranchForROS(
         owner: String,
@@ -347,12 +406,13 @@ class GithubConnector(
         owner: String,
         repository: String,
         rosId: String,
+        requiresNewApproval: Boolean,
         userContext: UserContext,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
             userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, userContext.microsoftUser),
+            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, requiresNewApproval, userContext.microsoftUser),
         ).pullRequestResponseDTO()
     }
 
@@ -368,6 +428,20 @@ class GithubConnector(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .header("Content-Type", "application/json")
         .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java)
+        .retrieve()
+
+    private fun closePullRequest(
+        uri: String,
+        accessToken: String,
+        closePullRequestBody: String,
+    ) = webClient
+        .patch()
+        .uri(uri)
+        .header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json")
+        .body(Mono.just(closePullRequestBody), String::class.java)
         .retrieve()
 
     private fun postNewBranchToGithub(
@@ -405,8 +479,7 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
-        this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()

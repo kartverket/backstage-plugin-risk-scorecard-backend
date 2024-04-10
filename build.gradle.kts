@@ -25,15 +25,19 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.security:spring-security-oauth2-jose")
-    implementation("com.nimbusds:nimbus-jose-jwt:9.37")
+    implementation("org.springframework.security:spring-security-oauth2-resource-server")
+
+    implementation("io.netty:netty-all:4.1.100.Final")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("net.pwall.json:json-kotlin-schema:0.44")
     implementation("org.apache.commons:commons-lang3:3.0")
 
     implementation("com.google.code.gson:gson:2.9.1")
-    implementation("com.google.cloud:google-cloud-secretmanager:2.35.0")
     implementation("com.google.auth:google-auth-library-credentials:1.23.0")
+    implementation("com.google.cloud:google-cloud-secretmanager:2.35.0") {
+        exclude(group = "commons-logging", module = "commons-logging")
+    }
 
     implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")

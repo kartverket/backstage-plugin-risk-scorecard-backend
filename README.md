@@ -78,3 +78,6 @@ minikube addons enable gcp-auth
 minikube addons configure registry-creds && minikube addons enable registry-creds
 ````
 
+## Setup SOPS for doing ROS locally
+
+See [SOPS.md](SOPS.md)

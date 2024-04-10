@@ -1,6 +1,5 @@
 package no.kvros.ros
 
-import java.util.Base64
 import no.kvros.encryption.SOPS
 import no.kvros.encryption.SOPSDecryptionException
 import no.kvros.github.GithubConnector
@@ -14,6 +13,7 @@ import no.kvros.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.util.Base64
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -92,7 +92,7 @@ data class ROSIdentifier(
     val status: ROSStatus,
 )
 
-enum class ROSStatus() {
+enum class ROSStatus {
     Draft,
     SentForApproval,
     Published,
@@ -169,7 +169,13 @@ class ROSService(
             GithubStatus.NotFound ->
                 ROSContentResultDTO(rosId, ContentStatus.FileNotFound, rosStatus, null)
 
-            else -> ROSContentResultDTO(rosId, ContentStatus.Failure, rosStatus, decryptContent(gcpAccessToken))
+            else ->
+                ROSContentResultDTO(
+                    rosId,
+                    ContentStatus.Failure,
+                    rosStatus,
+                    decryptContent(gcpAccessToken),
+                )
         }
     }
 
@@ -180,7 +186,7 @@ class ROSService(
                 SOPS.decrypt(
                     ciphertext = it,
                     gcpAccessToken = gcpAccessToken,
-                    agePrivateKey = ageKey
+                    agePrivateKey = ageKey,
                 )
             }
 
@@ -236,7 +242,15 @@ class ROSService(
         content: ROSWrapperObject,
         userContext: UserContext,
     ): ProcessROSResultDTO {
-        val validationStatus = JSONValidator.validateJSON(content.ros)
+        val jsonSchema =
+            githubConnector.fetchJSONSchema(owner, userContext.githubAccessToken, content.schemaVersion)
+                ?: return ProcessROSResultDTO(
+                    rosId,
+                    ProcessingStatus.ErrorWhenUpdatingROS,
+                    "Kunne ikke hente JSON Schema",
+                )
+
+        val validationStatus = JSONValidator.validateJSON(jsonSchema, content.ros)
         if (!validationStatus.valid) {
             return ProcessROSResultDTO(
                 rosId,
@@ -265,20 +279,26 @@ class ROSService(
             }
 
         try {
-            githubConnector.updateOrCreateDraft(
-                owner = owner,
-                repository = repository,
-                rosId = rosId,
-                fileContent = encryptedData,
-                userContext = userContext,
-            )
+            val hasClosedPR =
+                githubConnector.updateOrCreateDraft(
+                    owner = owner,
+                    repository = repository,
+                    rosId = rosId,
+                    fileContent = encryptedData,
+                    requiresNewApproval = content.isRequiresNewApproval,
+                    userContext = userContext,
+                )
 
-            return ProcessROSResultDTO(rosId, ProcessingStatus.UpdatedROS, "ROS ble oppdatert")
+            return ProcessROSResultDTO(
+                rosId,
+                ProcessingStatus.UpdatedROS,
+                "ROS ble oppdatert" + if (hasClosedPR) " og må godkjennes av risikoeier på nytt" else "",
+            )
         } catch (e: Exception) {
             return ProcessROSResultDTO(
                 rosId,
                 ProcessingStatus.ErrorWhenUpdatingROS,
-                "Feilet med feilemelding ${e.message} for ros med id $rosId",
+                "Feilet med feilmelding ${e.message} for ros med id $rosId",
             )
         }
     }
@@ -294,6 +314,7 @@ class ROSService(
                 owner,
                 repository,
                 rosId,
+                requiresNewApproval = true,
                 userContext,
             )
 
