@@ -63,6 +63,7 @@ data class Author(val name: String, val email: Email, val date: Date) {
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
     @Value("\${github.repository.json-schema-repo}") private val jsonSchemaRepo: String,
+    @Value("\${filename.descriptor}") private val filenameDescriptor: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
     fun fetchJSONSchema(
@@ -157,7 +158,7 @@ class GithubConnector(
         try {
             val fileContent =
                 getGithubResponse(
-                    "/$owner/$repository/contents/$defaultROSPath/$id.ros.yaml",
+                    "/$owner/$repository/contents/$defaultROSPath/$id.$filenameDescriptor.yaml",
                     accessToken,
                 ).fileContent()?.value
 

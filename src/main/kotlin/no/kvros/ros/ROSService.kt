@@ -102,6 +102,7 @@ enum class ROSStatus {
 class ROSService(
     private val githubConnector: GithubConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
+    @Value("\${filename.prefix}") val filenamePrefix: String,
 ) {
     fun fetchAllROSes(
         owner: String,
@@ -212,7 +213,7 @@ class ROSService(
         content: ROSWrapperObject,
         userContext: UserContext,
     ): ProcessROSResultDTO {
-        val uniqueROSId = "ros-${RandomStringUtils.randomAlphanumeric(5)}"
+        val uniqueROSId = "${filenamePrefix}-${RandomStringUtils.randomAlphanumeric(5)}"
 
         val result =
             updateOrCreateROS(
