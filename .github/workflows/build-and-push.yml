@@ -3,6 +3,8 @@ name: Build and push image to GCP
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
 
 jobs:
   docker_build_push_gcp:

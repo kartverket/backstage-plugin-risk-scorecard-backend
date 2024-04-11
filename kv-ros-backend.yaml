@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kv-ros-backend
-  namespace: bekk-spire
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -13,6 +13,8 @@ spec:
       labels:
         app: kv-ros-backend
     spec:
+      imagePullSecrets:
+        - name: gcp-auth
       containers:
         - name: kv-ros-backend
           image: europe-north1-docker.pkg.dev/spire-ros-5lmr/kv-ros/backend:latest
@@ -24,16 +26,6 @@ spec:
               mountPath: /etc/sops-secrets
               readOnly: true
           env:
-            - name: SOPS_AGE_PUBLIC_KEY
-              valueFrom:
-                configMapKeyRef:
-                  name: kv-ros-backend
-                  key: SOPS_AGE_PUBLIC_KEY
-            - name: GCP_KMS_RESOURCE_PATH
-              valueFrom:
-                configMapKeyRef:
-                  name: kv-ros-backend
-                  key: GCP_KMS_RESOURCE_PATH
             - name: GITHUB_APP_ID
               valueFrom:
                 configMapKeyRef:
@@ -54,6 +46,16 @@ spec:
                 configMapKeyRef:
                   name: kv-ros-backend
                   key: ROS_URL
+            - name: ROS_SCHEMA_REPO
+              valueFrom:
+                configMapKeyRef:
+                  name: kv-ros-backend
+                  key: ROS_SCHEMA_REPO
+            - name: ENTRA_ID_TENANT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: kv-ros-backend
+                  key: ENTRA_ID_TENANT_ID
             - name: SOPS_AGE_KEY
               valueFrom:
                 secretKeyRef:

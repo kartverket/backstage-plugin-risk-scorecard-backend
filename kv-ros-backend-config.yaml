@@ -2,12 +2,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kv-ros-backend
-  namespace: bekk-spire
+  namespace: default
 data:
-  GCP_KMS_RESOURCE_PATH: "projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"
   GITHUB_APP_ID: "827078"
   GITHUB_INSTALLATION_ID: "48036152"
   GITHUB_PRIVATE_KEY_SECRET_NAME: "projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1"
   ROS_URL: ".security/ros"
+  ROS_SCHEMA_REPO: "kv-ros-json-schema"
+  ENTRA_ID_TENANT_ID: "c6ea0b0b-e867-46d4-a70b-4c05887e7f6f"
   SOPS_AGE_KEY: "secret key"
-  SOPS_AGE_PUBLIC_KEY: "age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf"

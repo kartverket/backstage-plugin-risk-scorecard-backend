@@ -8,12 +8,9 @@ ARG SOPS_AMD64="https://github.com/MagnusTonnessen/sops/releases/download/v1.0/s
 ARG SOPS_ARM64="https://github.com/MagnusTonnessen/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
 ARG TARGETARCH
-RUN echo "Target architecture: $TARGETARCH"
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      echo "Downloading sops for amd64"; \
       curl -L $SOPS_AMD64 -o /usr/local/bin/sops; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-      echo "Downloading sops for arm64"; \
       curl -L $SOPS_ARM64 -o /usr/local/bin/sops; \
     else \
       echo "Unsupported architecture"; \
