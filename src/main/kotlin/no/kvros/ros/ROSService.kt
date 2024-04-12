@@ -245,7 +245,7 @@ class ROSService(
         userContext: UserContext,
     ): ProcessROSResultDTO {
         val jsonSchema =
-            JSONSchemaConnector.fetchJSONSchema(content.schemaVersion)
+            JSONSchemaConnector.fetchJSONSchema(content.schemaVersion.replace('.', '_'))
                 ?: return ProcessROSResultDTO(
                     rosId,
                     ProcessingStatus.ErrorWhenUpdatingROS,
