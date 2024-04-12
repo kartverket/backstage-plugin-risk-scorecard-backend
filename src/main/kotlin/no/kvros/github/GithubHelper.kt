@@ -79,12 +79,6 @@ data class GithubPullRequestHead(
 object GithubHelper {
     private const val defaultPathToROSDirectory = ".security/ros"
 
-    fun uriToFindJSONSchema(
-        owner: String,
-        repository: String,
-        version: String,
-    ): String = "/$owner/$repository/contents/schemas/ros_schema_no_v$version.json"
-
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,

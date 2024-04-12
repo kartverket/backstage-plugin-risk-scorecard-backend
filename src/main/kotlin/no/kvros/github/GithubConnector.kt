@@ -62,24 +62,9 @@ data class Author(val name: String, val email: Email, val date: Date) {
 @Component
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
-    @Value("\${github.repository.json-schema-repo}") private val jsonSchemaRepo: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
-    fun fetchJSONSchema(
-        owner: String,
-        githubAccessToken: GithubAccessToken,
-        schemaVersion: String
-    ): String? {
-        return try {
-            getGithubResponse(GithubHelper.uriToFindJSONSchema(owner, jsonSchemaRepo, schemaVersion), githubAccessToken.value)
-                .fileContent()
-                ?.value
-                ?.decodeBase64()
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     fun fetchSopsConfig(
         owner: String,
