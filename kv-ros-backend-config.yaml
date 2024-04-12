@@ -8,6 +8,6 @@ data:
   GITHUB_INSTALLATION_ID: "48036152"
   GITHUB_PRIVATE_KEY_SECRET_NAME: "projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1"
   ROS_URL: ".security/ros"
-  ROS_SCHEMA_REPO: "kv-ros-json-schema"
+  JSON_SCHEMA_BASE_URL: "https://bekk.github.io/kv-ros-backend"
   ENTRA_ID_TENANT_ID: "c6ea0b0b-e867-46d4-a70b-4c05887e7f6f"
   SOPS_AGE_KEY: "secret key"
