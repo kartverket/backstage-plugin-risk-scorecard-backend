@@ -14,6 +14,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Base64
+import no.kvros.infra.connector.JSONSchemaConnector
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -101,6 +102,7 @@ enum class ROSStatus {
 @Service
 class ROSService(
     private val githubConnector: GithubConnector,
+    private val JSONSchemaConnector: JSONSchemaConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
 ) {
     fun fetchAllROSes(
@@ -243,7 +245,7 @@ class ROSService(
         userContext: UserContext,
     ): ProcessROSResultDTO {
         val jsonSchema =
-            githubConnector.fetchJSONSchema(owner, userContext.githubAccessToken, content.schemaVersion)
+            JSONSchemaConnector.fetchJSONSchema(content.schemaVersion)
                 ?: return ProcessROSResultDTO(
                     rosId,
                     ProcessingStatus.ErrorWhenUpdatingROS,
