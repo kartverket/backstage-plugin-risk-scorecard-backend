@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/spire-test/kv-ros-json-schema/main/schemas/ros_schema_no_v3_2.json",
+  "title": "ROS",
+  "description": "Skjema for risiko- og sårbarhetsanalyser",
+  "type": "object",
+  "properties": {
+    "skjemaVersjon": {
+      "description": "Versjon av skjema",
+      "type": "string",
+      "default": "'3.2'"
+    },
+    "tittel": {
+      "description": "Tittel på analysen",
+      "type": "string"
+    },
+    "omfang": {
+      "description": "Omfang av analysen",
+      "type": "string"
+    },
+    "verdivurderinger": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "beskrivelse": {
+            "type": "string"
+          },
+          "konfidensialitet": {
+            "type": "string",
+            "enum": [
+              "Åpen",
+              "Intern",
+              "Fortrolig",
+              "Strengt fortrolig"
+            ]
+          },
+          "integritet": {
+            "type": "string",
+            "enum": [
+              "Ingen betydning",
+              "Forventet",
+              "Avhengig",
+              "Kritisk"
+            ]
+          },
+          "tilgjengelighet": {
+            "type": "string",
+            "enum": [
+              "Ingen betydning",
+              "2 dager",
+              "4 timer",
+              "Umiddelbar"
+            ]
+          }
+        },
+        "required": [
+          "beskrivelse",
+          "konfidensialitet",
+          "integritet",
+          "tilgjengelighet"
+        ],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "scenarier": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tittel": {
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/$defs/scenario"
+          }
+        },
+        "required": [
+          "tittel",
+          "scenario"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "sops": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "skjemaVersjon",
+    "tittel",
+    "omfang",
+    "scenarier"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "risiko": {
+      "type": "object",
+      "properties": {
+        "oppsummering": {
+          "type": "string"
+        },
+        "sannsynlighet": {
+          "description": "Antall hendelser/dag",
+          "type": "number",
+          "anyOf": [
+            {
+              "type": "number",
+              "enum": [
+                0.01,
+                0.1,
+                1,
+                50,
+                300
+              ]
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "konsekvens": {
+          "description": "Beløp i kroner/hendelse",
+          "anyOf": [
+            {
+              "type": "number",
+              "enum": [
+                1000,
+                30000,
+                1000000,
+                30000000,
+                1000000000
+              ]
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        }
+      },
+      "required": [
+        "sannsynlighet",
+        "konsekvens"
+      ],
+      "additionalProperties": false
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "scenario": {
+      "type": "object",
+      "properties": {
+        "ID": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9]{5,}$"
+        },
+        "beskrivelse": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/url"
+        },
+        "trusselaktører": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Datasnok",
+              "Hacktivist",
+              "Uheldig ansatt",
+              "Innside-aktør",
+              "Organiserte kriminelle",
+              "Terroristorganisasjon",
+              "Nasjon/stat"
+            ]
+          }
+        },
+        "sårbarheter": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Kompromittert adminbruker",
+              "Sårbarhet i avhengighet",
+              "Lekket hemmelighet",
+              "Feilkonfigurering",
+              "Klussing med input",
+              "Benekte brukerhandling",
+              "Informasjonslekkasje",
+              "Tjenestenekt",
+              "Rettighetseskalering"
+            ]
+          }
+        },
+        "risiko": {
+          "$ref": "#/$defs/risiko"
+        },
+        "eksisterendeTiltak": {
+          "type": "string"
+        },
+        "tiltak": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tittel": {
+                "type": "string"
+              },
+              "oppgave": {
+                "$ref": "#/$defs/tiltak"
+              }
+            },
+            "required": [
+              "tittel",
+              "oppgave"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "restrisiko": {
+          "$ref": "#/$defs/risiko"
+        }
+      },
+      "required": [
+        "ID",
+        "beskrivelse",
+        "trusselaktører",
+        "sårbarheter",
+        "risiko",
+        "tiltak",
+        "restrisiko"
+      ],
+      "additionalProperties": false
+    },
+    "tiltak": {
+      "type": "object",
+      "properties": {
+        "ID": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9]{5,}$"
+        },
+        "beskrivelse": {
+          "type": "string"
+        },
+        "tiltakseier": {
+          "type": "string"
+        },
+        "frist": {
+          "type": "string",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Ikke startet",
+            "Startet",
+            "På vent",
+            "Fullført",
+            "Avbrutt"
+          ]
+        }
+      },
+      "required": [
+        "ID",
+        "beskrivelse",
+        "tiltakseier",
+        "frist",
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
