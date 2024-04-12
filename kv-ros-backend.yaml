@@ -46,11 +46,11 @@ spec:
                 configMapKeyRef:
                   name: kv-ros-backend
                   key: ROS_URL
-            - name: ROS_SCHEMA_REPO
+            - name: JSON_SCHEMA_BASE_URL
               valueFrom:
                 configMapKeyRef:
                   name: kv-ros-backend
-                  key: ROS_SCHEMA_REPO
+                  key: JSON_SCHEMA_BASE_URL
             - name: ENTRA_ID_TENANT_ID
               valueFrom:
                 configMapKeyRef:
