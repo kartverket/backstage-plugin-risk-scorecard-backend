@@ -10,6 +10,9 @@
             <env name="ROS_URL" value=".security/ros"/>
             <env name="ROS_SCHEMA_REPO" value="kv-ros-json-schema"/>
             <env name="SOPS_AGE_KEY" value=""/>
+            <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f"/>
+            <env name="FILENAME_PREFIX" value="ros"/>
+            <env name="FILENAME_DESCRIPTOR" value="ros"/>
         </envs>
         <module name="kv-ros-backend.main"/>
         <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication"/>
