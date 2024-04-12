@@ -4,8 +4,8 @@ RUN ./gradlew build -x test
 
 FROM eclipse-temurin:21
 
-ARG SOPS_AMD64="https://github.com/MagnusTonnessen/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
-ARG SOPS_ARM64="https://github.com/MagnusTonnessen/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
+ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
+ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
 ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
