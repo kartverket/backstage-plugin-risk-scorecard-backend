@@ -63,7 +63,7 @@ data class Author(val name: String, val email: Email, val date: Date) {
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
     @Value("\${github.repository.json-schema-repo}") private val jsonSchemaRepo: String,
-    @Value("\${filename.descriptor}") private val filenameDescriptor: String,
+    @Value("\${filename.postfix}") private val filenamePostfix: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
     fun fetchJSONSchema(
@@ -158,7 +158,7 @@ class GithubConnector(
         try {
             val fileContent =
                 getGithubResponse(
-                    "/$owner/$repository/contents/$defaultROSPath/$id.$filenameDescriptor.yaml",
+                    "/$owner/$repository/contents/$defaultROSPath/$id.$filenamePostfix.yaml",
                     accessToken,
                 ).fileContent()?.value
 
@@ -183,7 +183,7 @@ class GithubConnector(
         try {
             val fileContent =
                 getGithubResponse(
-                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id),
+                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id, filenamePostfix=filenamePostfix),
                     accessToken = accessToken,
                 ).fileContent()?.value
 
@@ -273,7 +273,7 @@ class GithubConnector(
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
         putFileRequestToGithub(
-            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId),
+            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix = filenamePostfix),
             accessToken.value,
             GithubWriteToFilePayload(
                 message = commitMessage,
@@ -319,7 +319,7 @@ class GithubConnector(
         accessToken: String,
     ) = try {
         getGithubResponse(
-            GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId),
+            GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix=filenamePostfix),
             accessToken,
         ).shaReponseDTO()?.value
     } catch (e: Exception) {

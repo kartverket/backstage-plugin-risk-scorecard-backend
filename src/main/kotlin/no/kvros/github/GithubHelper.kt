@@ -77,7 +77,6 @@ data class GithubPullRequestHead(
 )
 
 object GithubHelper {
-    private const val rosPostfixForFiles = ".ros.yaml"
     private const val defaultPathToROSDirectory = ".security/ros"
 
     fun uriToFindJSONSchema(
@@ -116,14 +115,16 @@ object GithubHelper {
         repository: String,
         rosId: String,
         draftBranch: String = rosId,
-    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}$rosPostfixForFiles?ref=$draftBranch"
+        filenamePostfix: String,
+    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/$rosId.$filenamePostfix.yaml?ref=$draftBranch"
 
     fun uriToPostContentOfFileOnDraftBranch(
         owner: String,
         repository: String,
         rosId: String,
         draftBranch: String = rosId,
-    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/${rosId}$rosPostfixForFiles?ref=$draftBranch"
+        filenamePostfix: String,
+    ): String = "/$owner/$repository/contents/$defaultPathToROSDirectory/$rosId.$filenamePostfix.yaml?ref=$draftBranch"
 
     fun uriToGetCommitStatus(
         owner: String,
