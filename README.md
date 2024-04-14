@@ -8,7 +8,7 @@ flowchart TD
      style B fill:#FFBF00,color:black
 ```
 
-## Simplified Git RiSC-flow
+## Simplified Git RiSc-flow
 
 ```mermaid
 %%{init: { 'logLevel': 'debug', 'theme': 'base' } }%%

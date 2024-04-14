@@ -1,0 +1,27 @@
+# nonk8s
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: backstage-risc-plugin-backend
+spec:
+  type: service
+  owner: IT
+  system: kartverket.dev
+  lifecycle: production
+  providesApis:
+    - backstage-risc-plugin-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: backstage-risc-plugin-api
+  tags: [ internal ]
+spec:
+  type: openapi
+  lifecycle: production
+  owner: IT
+  system: kartverket.dev
+  definition: |
+    openapi: "3.0.0"
+    info:
+    paths:
