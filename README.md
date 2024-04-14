@@ -1,14 +1,14 @@
-# Risk Scorecard (RiSC) backend
+# Risk Scorecard (RiSc) backend
 
 ## High level components
 
 ```mermaid
 flowchart TD
-     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/risc| C[(GitHub)]
+     A[Backstage RiSc-plugin] --> B{RiSc-backend/API} -->|.security/risc| C[(GitHub)]
      style B fill:#FFBF00,color:black
 ```
 
-## Simplified Git ROS-flow
+## Simplified Git RiSC-flow
 
 ```mermaid
 %%{init: { 'logLevel': 'debug', 'theme': 'base' } }%%
@@ -40,7 +40,7 @@ If the version of the schema is updated, ensure that the library supports it.
 To build the docker image, run:
 
 ```sh
-docker image build -t kv-ros-backend .
+docker image build -t backstage-plugin-risk-scorecard-backend .
 ```
 
 ### Run the application using Docker
@@ -62,10 +62,10 @@ The same applies for the gcp application credentials here, so be sure to add a p
 
 ````sh
 # configmap 
-kubectl apply -f kv-ros-backend-config.yaml
+kubectl apply -f backstage-plugin-risk-scorecard-backend-config.yaml
 
 # app deployment
-kubectl apply -f kv-ros-backend.yaml
+kubectl apply -f backstage-plugin-risk-scorecard-backend.yaml
 ````
 
 #### Minikube for local testing
