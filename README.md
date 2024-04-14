@@ -1,10 +1,10 @@
-# kv-ros-backend
+# Risk Scorecard (RiSC) backend
 
 ## High level components
 
 ```mermaid
 flowchart TD
-     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/ros| C[(GitHub)]
+     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/risc| C[(GitHub)]
      style B fill:#FFBF00,color:black
 ```
 
@@ -15,13 +15,13 @@ flowchart TD
 gitGraph
    commit
    commit
-   branch ROS-xyz12
-   checkout ROS-xyz12
+   branch RISC-xyz12
+   checkout RISC-xyz12
    commit id: "Lagt til scenarier"
    commit id: "Justert konsekvens"
    commit id: "Godkjent av risikoeier"
    checkout main
-   merge ROS-xyz12
+   merge RISC-xyz12
    commit
    commit
 ```
@@ -78,6 +78,6 @@ minikube addons enable gcp-auth
 minikube addons configure registry-creds && minikube addons enable registry-creds
 ````
 
-## Setup SOPS for doing ROS locally
+## Setup SOPS for doing RiSc locally
 
 See [SOPS.md](SOPS.md)
