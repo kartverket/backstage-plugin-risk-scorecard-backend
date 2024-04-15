@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage-plugin-risk-scorecard-backend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backstage-plugin-risk-scorecard-backend
+  template:
+    metadata:
+      labels:
+        app: backstage-plugin-risk-scorecard-backend
+    spec:
+      imagePullSecrets:
+        - name: gcp-auth
+      containers:
+        - name: backstage-plugin-risk-scorecard-backend
+          image: europe-north1-docker.pkg.dev/spire-ros-5lmr/kv-ros/backend:latest
+          ports:
+            - name: http1
+              containerPort: 8080
+          volumeMounts:
+            - name: sops-age-key
+              mountPath: /etc/sops-secrets
+              readOnly: true
+          env:
+            - name: GITHUB_APP_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: GITHUB_APP_ID
+            - name: GITHUB_INSTALLATION_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: GITHUB_INSTALLATION_ID
+            - name: GITHUB_PRIVATE_KEY_SECRET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: GITHUB_PRIVATE_KEY_SECRET_NAME
+            - name: RISC_FOLDER_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: RISC_FOLDER_PATH
+            - name: JSON_SCHEMA_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: JSON_SCHEMA_BASE_URL
+            - name: ENTRA_ID_TENANT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: backstage-plugin-risk-scorecard-backend
+                  key: ENTRA_ID_TENANT_ID
+            - name: SOPS_AGE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sops-age-private-key
+                  key: SOPS_AGE_KEY
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+      volumes:
+        - name: sops-age-key
+          secret:
+            secretName: sops-age-private-key

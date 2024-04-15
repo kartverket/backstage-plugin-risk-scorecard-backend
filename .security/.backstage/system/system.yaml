@@ -1,8 +1,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
-  name: kv-ros
+  name: backstage-plugin-risk-scorecard
   annotations:
-    github.com/project-slug: bekk/kv-ros-backend
+    github.com/project-slug: bekk/backstage-plugin-risk-scorecard-backend
 spec:
   owner: rosene
