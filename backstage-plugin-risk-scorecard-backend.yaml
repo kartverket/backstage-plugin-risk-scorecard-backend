@@ -61,6 +61,16 @@ spec:
                 secretKeyRef:
                   name: sops-age-private-key
                   key: SOPS_AGE_KEY
+            - name: FILENAME_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: kv-ros-backend
+                  key: FILENAME_PREFIX
+            - name: FILENAME_POSTFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: kv-ros-backend
+                  key: FILENAME_POSTFIX
           resources:
             limits:
               cpu: 1000m
