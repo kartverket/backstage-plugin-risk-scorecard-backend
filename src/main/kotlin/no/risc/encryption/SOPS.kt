@@ -9,6 +9,7 @@ class SOPSDecryptionException(message: String) : Exception(message)
 class SOPSEncryptionException(message: String) : Exception(message)
 
 object SOPS {
+
     private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
     private val decrypt = listOf("decrypt")
@@ -26,12 +27,12 @@ object SOPS {
         config: String,
         accessToken: String,
     ): List<String> =
-        no.risc.encryption.SOPS.sopsCmd + no.risc.encryption.SOPS.gcpAccessToken(accessToken) + no.risc.encryption.SOPS.encrypt + no.risc.encryption.SOPS.inputTypeJson + no.risc.encryption.SOPS.outputTypeYaml + no.risc.encryption.SOPS.encryptConfig + config + no.risc.encryption.SOPS.inputFile
+        sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
     private fun toDecryptionCommand(accessToken: String, sopsPrivateKey: String): List<String> =
-        no.risc.encryption.SOPS.sopsCmd + no.risc.encryption.SOPS.gcpAccessToken(accessToken) + no.risc.encryption.SOPS.ageSecret(
+        sopsCmd + gcpAccessToken(accessToken) + ageSecret(
             sopsPrivateKey
-        ) + no.risc.encryption.SOPS.decrypt + no.risc.encryption.SOPS.inputTypeYaml + no.risc.encryption.SOPS.outputTypeJson + no.risc.encryption.SOPS.inputFile
+        ) + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
     private fun ageSecret(sopsPrivateKey: String): List<String> = listOf("--age", sopsPrivateKey)
@@ -41,17 +42,17 @@ object SOPS {
         gcpAccessToken: GCPAccessToken,
         agePrivateKey: String
     ): String =
-        no.risc.encryption.SOPS.processBuilder
-            .command(no.risc.encryption.SOPS.toDecryptionCommand(gcpAccessToken.value, agePrivateKey))
+        processBuilder
+            .command(toDecryptionCommand(gcpAccessToken.value, agePrivateKey))
             .start()
             .run {
                 outputStream.buffered().also { it.write(ciphertext.toByteArray()) }.close()
                 val result = BufferedReader(InputStreamReader(inputStream)).readText()
                 when (waitFor()) {
-                    no.risc.encryption.SOPS.EXECUTION_STATUS_OK -> result
+                    EXECUTION_STATUS_OK -> result
 
                     else                                        ->
-                        throw no.risc.encryption.SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
+                        throw SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
                 }
             }
 
@@ -60,16 +61,16 @@ object SOPS {
         config: String,
         gcpAccessToken: GCPAccessToken,
     ): String =
-        no.risc.encryption.SOPS.processBuilder
-            .command(no.risc.encryption.SOPS.toEncryptionCommand(config, gcpAccessToken.value))
+        processBuilder
+            .command(toEncryptionCommand(config, gcpAccessToken.value))
             .start()
             .run {
                 outputStream.buffered().also { it.write(text.toByteArray()) }.close()
                 val result = BufferedReader(InputStreamReader(inputStream)).readText()
                 when (waitFor()) {
-                    no.risc.encryption.SOPS.EXECUTION_STATUS_OK -> result
+                    EXECUTION_STATUS_OK -> result
 
-                    else                                        -> throw no.risc.encryption.SOPSEncryptionException(
+                    else                                        -> throw SOPSEncryptionException(
                         "IOException from encrypting json with error code ${exitValue()}: $result"
                     )
                 }

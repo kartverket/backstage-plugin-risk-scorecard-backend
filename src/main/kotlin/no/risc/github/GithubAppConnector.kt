@@ -85,7 +85,7 @@ class GithubAppConnector(
 }
 
 object PemUtils {
-    class PEM_CONVERSION_EXCEPTION() : Exception()
+    class PEM_CONVERSION_EXCEPTION : Exception()
 
     fun getSignedJWT(privateKey: ByteArray, appId: Int): String {
         val pemContent = String(privateKey, StandardCharsets.UTF_8)

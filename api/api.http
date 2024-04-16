@@ -2,9 +2,8 @@
 GET http://localhost:8080/actuator/health
 
 ### Github API
-GET https://api.github.com/repos/bekk/kv-ros-backend/contents/.security/ros
+GET https://api.github.com/repos/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs
 Accept: application/vnd.github+json
-Authorization: token {{GITHUB_TOKEN}}
 
 ### GET /ros/ids
 GET http://localhost:8080/api/ros/spire-test/kv-ros-test-2/ids

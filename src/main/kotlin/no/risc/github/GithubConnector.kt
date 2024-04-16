@@ -1,11 +1,5 @@
 package no.risc.github
 
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
-import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.bodyToMono
-import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Base64
@@ -19,15 +13,22 @@ import no.risc.risc.RiScStatus
 import no.risc.risc.models.FileContentDTO
 import no.risc.risc.models.FileNameDTO
 import no.risc.risc.models.ShaResponseDTO
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
+import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.Mono
 
 data class GithubContentResponse(
     val data: String?,
     val status: GithubStatus,
 ) {
+
     fun data(): String = data!!
 }
 
-data class GithubRosIdentifiersResponse(
+data class GithubRiScIdentifiersResponse(
     val ids: List<RiScIdentifier>,
     val status: GithubStatus,
 )
@@ -48,6 +49,7 @@ data class GithubWriteToFilePayload(
     val branchName: String,
     val author: Author,
 ) {
+
     fun toContentBody(): String =
         when (sha) {
             null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }"
@@ -56,13 +58,15 @@ data class GithubWriteToFilePayload(
 }
 
 data class Author(val name: String, val email: Email, val date: Date) {
+
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
 @Component
 class GithubConnector(
-    @Value("\${github.repository.ros-folder-path}") private val riScFolderPath: String,
+    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
+    @Value("\${filename.prefix}") val filenamePrefix: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
 
@@ -72,7 +76,10 @@ class GithubConnector(
         githubAccessToken: GithubAccessToken,
     ): String? {
         return try {
-            getGithubResponse(GithubHelper.uriToFindSopsConfig(owner, repository), githubAccessToken.value)
+            getGithubResponse(
+                GithubHelper.uriToFindSopsConfig(owner, repository, riScFolderPath),
+                githubAccessToken.value
+            )
                 .fileContent()
                 ?.value
                 ?.decodeBase64()
@@ -87,51 +94,51 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): GithubRosIdentifiersResponse {
-        val draftROSes =
+    ): GithubRiScIdentifiersResponse {
+        val draftRiScs =
             try {
-                fetchROSIdentifiersDrafted(owner, repository, accessToken)
+                fetchRiScIdentifiersDrafted(owner, repository, accessToken)
             } catch (e: Exception) {
                 emptyList()
             }
 
-        val publishedROSes =
+        val publishedRiScs =
             try {
-                fetchPublishedROSIdentifiers(owner, repository, accessToken)
+                fetchPublishedRiScIdentifiers(owner, repository, accessToken)
             } catch (e: Exception) {
                 emptyList()
             }
 
-        val rosSentForApproval =
+        val riScsSentForApproval =
             try {
-                fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
+                fetchRiScIdentifiersSentForApproval(owner, repository, accessToken)
             } catch (e: Exception) {
                 emptyList()
             }
 
-        return GithubRosIdentifiersResponse(
+        return GithubRiScIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRosList = draftROSes,
-                    sentForApprovalList = rosSentForApproval,
-                    publishedRosList = publishedROSes,
-                ),
+            combinePublishedDraftAndSentForApproval(
+                draftRiScList = draftRiScs,
+                sentForApprovalList = riScsSentForApproval,
+                publishedRiScList = publishedRiScs,
+            ),
         )
     }
 
     fun combinePublishedDraftAndSentForApproval(
-        draftRosList: List<RiScIdentifier>,
+        draftRiScList: List<RiScIdentifier>,
         sentForApprovalList: List<RiScIdentifier>,
-        publishedRosList: List<RiScIdentifier>,
+        publishedRiScList: List<RiScIdentifier>,
     ): List<RiScIdentifier> {
-        val draftIds = draftRosList.map { it.id }
+        val draftIds = draftRiScList.map { it.id }
         val sentForApprovalsIds = sentForApprovalList.map { it.id }
-        val publishedROSIdentifiersNotInDraftList =
-            publishedRosList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
-        val draftROSIdentifiersNotInSentForApprovalsList = draftRosList.filter { it.id !in sentForApprovalsIds }
+        val publishedRiScIdentifiersNotInDraftList =
+            publishedRiScList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
+        val draftRiScIdentifiersNotInSentForApprovalsList = draftRiScList.filter { it.id !in sentForApprovalsIds }
 
-        return sentForApprovalList + publishedROSIdentifiersNotInDraftList + draftROSIdentifiersNotInSentForApprovalsList
+        return sentForApprovalList + publishedRiScIdentifiersNotInDraftList + draftRiScIdentifiersNotInSentForApprovalsList
     }
 
     fun fetchPublishedRiSc(
@@ -168,7 +175,13 @@ class GithubConnector(
         try {
             val fileContent =
                 getGithubResponse(
-                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id, filenamePostfix=filenamePostfix),
+                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(
+                        owner,
+                        repository,
+                        id,
+                        filenamePostfix = filenamePostfix,
+                        riScFolderPath = riScFolderPath
+                    ),
                     accessToken = accessToken,
                 ).fileContent()?.value
 
@@ -188,16 +201,16 @@ class GithubConnector(
         when (e) {
             is WebClientResponseException ->
                 when (e) {
-                    is WebClientResponseException.NotFound -> GithubStatus.NotFound
-                    is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
+                    is WebClientResponseException.NotFound            -> GithubStatus.NotFound
+                    is WebClientResponseException.Unauthorized        -> GithubStatus.Unauthorized
                     is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                    else -> GithubStatus.InternalError
+                    else                                              -> GithubStatus.InternalError
                 }
 
-            else -> GithubStatus.InternalError
+            else                          -> GithubStatus.InternalError
         }
 
-    private fun fetchPublishedROSIdentifiers(
+    private fun fetchPublishedRiScIdentifiers(
         owner: String,
         repository: String,
         accessToken: String,
@@ -205,9 +218,9 @@ class GithubConnector(
         getGithubResponse(
             GithubHelper.uriToFindRiScFiles(owner, repository, riScFolderPath),
             accessToken,
-        ).rosIdentifiersPublished()
+        ).riScIdentifiersPublished()
 
-    private fun fetchROSIdentifiersSentForApproval(
+    private fun fetchRiScIdentifiersSentForApproval(
         owner: String,
         repository: String,
         accessToken: String,
@@ -215,22 +228,22 @@ class GithubConnector(
         getGithubResponse(
             GithubHelper.uriToFetchAllPullRequests(owner, repository),
             accessToken,
-        ).pullRequestResponseDTOs().rosIdentifiersSentForApproval()
+        ).pullRequestResponseDTOs().riScIdentifiersSentForApproval()
 
-    private fun fetchROSIdentifiersDrafted(
+    private fun fetchRiScIdentifiersDrafted(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         getGithubResponse(
-            uri = GithubHelper.uriToFindAllRiScBranches(owner, repository),
+            uri = GithubHelper.uriToFindAllRiScBranches(owner, repository, riScFolderPath),
             accessToken = accessToken,
-        ).toReferenceObjects().rosIdentifiersDrafted()
+        ).toReferenceObjects().riScIdentifiersDrafted()
 
     internal fun updateOrCreateDraft(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         fileContent: String,
         requiresNewApproval: Boolean,
         userContext: UserContext,
@@ -238,51 +251,57 @@ class GithubConnector(
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
             Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
-        if (!branchForROSDraftExists(owner, repository, rosId, accessToken.value)) {
+        if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
                 repository = repository,
-                rosId = rosId,
+                riScId = riScId,
                 accessToken = accessToken.value,
             )
         }
         var hasClosedPR = false
-        if (pullRequestForROSExists(owner, repository, rosId, accessToken.value) and requiresNewApproval) {
-            closeExistingPullRequestForROS(owner, repository, rosId, accessToken.value)
+        if (pullRequestForRiScExists(owner, repository, riScId, accessToken.value) and requiresNewApproval) {
+            closeExistingPullRequestForRiSc(owner, repository, riScId, accessToken.value)
             hasClosedPR = true
         }
 
-        val latestShaForROS = getSHAForExistingROSDraftOrNull(owner, repository, rosId, accessToken.value)
+        val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken.value)
 
         val commitMessage =
-            if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
+            if (latestShaForRiSc != null) "refactor: Update RiSc with id: $riScId" else "feat: Create new RiSc with id: $riScId"
 
         putFileRequestToGithub(
-            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix = filenamePostfix),
+            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(
+                owner,
+                repository,
+                riScId,
+                filenamePostfix = filenamePostfix,
+                riScFolderPath = riScFolderPath,
+            ),
             accessToken.value,
             GithubWriteToFilePayload(
                 message = commitMessage,
                 content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
-                sha = latestShaForROS,
-                branchName = rosId,
+                sha = latestShaForRiSc,
+                branchName = riScId,
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
 
-        if (!requiresNewApproval and !pullRequestForROSExists(owner, repository, rosId, accessToken.value)) {
-            createPullRequestForPublishingROS(owner, repository, rosId, requiresNewApproval, userContext)
+        if (!requiresNewApproval and !pullRequestForRiScExists(owner, repository, riScId, accessToken.value)) {
+            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, userContext)
         }
         return hasClosedPR
     }
 
-    private fun closeExistingPullRequestForROS(
+    private fun closeExistingPullRequestForRiSc(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
     ): String? {
-        val pullRequestsForROS = fetchAllPullRequestsForROS(owner, repository, accessToken)
-        val matchingPullRequest = pullRequestsForROS.find { it.head.ref == rosId }
+        val pullRequestsForRiSc = fetchAllPullRequestsForRiSc(owner, repository, accessToken)
+        val matchingPullRequest = pullRequestsForRiSc.find { it.head.ref == riScId }
         if (matchingPullRequest != null) {
             try {
                 return closePullRequest(
@@ -297,45 +316,51 @@ class GithubConnector(
         return null
     }
 
-    private fun getSHAForExistingROSDraftOrNull(
+    private fun getSHAForExistingRiScDraftOrNull(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
     ) = try {
         getGithubResponse(
-            GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix=filenamePostfix),
+            GithubHelper.uriToFindContentOfFileOnDraftBranch(
+                owner,
+                repository,
+                riScId,
+                filenamePostfix = filenamePostfix,
+                riScFolderPath = riScFolderPath
+            ),
             accessToken,
         ).shaReponseDTO()?.value
     } catch (e: Exception) {
         null
     }
 
-    private fun branchForROSDraftExists(
+    private fun branchForRiScDraftExists(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
-    ): Boolean = fetchBranchForROS(owner, repository, rosId, accessToken).isNotEmpty()
+    ): Boolean = fetchBranchForRiSc(owner, repository, riScId, accessToken).isNotEmpty()
 
-    private fun pullRequestForROSExists(
+    private fun pullRequestForRiScExists(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
     ): Boolean {
-        val rosesSentForApproval = fetchROSIdentifiersSentForApproval(owner, repository, accessToken)
-        return rosesSentForApproval.any { it.id == rosId }
+        val riScsSentForApproval = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken)
+        return riScsSentForApproval.any { it.id == riScId }
     }
 
-    private fun fetchBranchForROS(
+    private fun fetchBranchForRiSc(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
     ) = try {
         getGithubResponse(
-            GithubHelper.uriToFindExistingBranchForRiSc(owner, repository, rosId),
+            GithubHelper.uriToFindExistingBranchForRiSc(owner, repository, riScId),
             accessToken,
         ).toReferenceObjects()
     } catch (e: Exception) {
@@ -355,7 +380,7 @@ class GithubConnector(
     fun createNewBranch(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         accessToken: String,
     ): String? {
         val latestShaForMainBranch =
@@ -364,13 +389,13 @@ class GithubConnector(
         return postNewBranchToGithub(
             GithubHelper.uriToCreateNewBranchForRiSc(owner, repository),
             accessToken,
-            GithubHelper.bodyToCreateNewBranchForROSFromMain(rosId, latestShaForMainBranch),
+            GithubHelper.bodyToCreateNewBranchForRiScFromMain(riScId, latestShaForMainBranch),
         )
             .bodyToMono<String>()
             .block()
     }
 
-    fun fetchAllPullRequestsForROS(
+    fun fetchAllPullRequestsForRiSc(
         owner: String,
         repository: String,
         accessToken: String,
@@ -388,17 +413,17 @@ class GithubConnector(
         return githubResponse
     }
 
-    fun createPullRequestForPublishingROS(
+    fun createPullRequestForPublishingRiSc(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         requiresNewApproval: Boolean,
         userContext: UserContext,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
             userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, rosId, requiresNewApproval, userContext.microsoftUser),
+            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userContext.microsoftUser),
         ).pullRequestResponseDTO()
     }
 
@@ -465,18 +490,19 @@ class GithubConnector(
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
-    private fun ResponseSpec.rosIdentifiersPublished(): List<RiScIdentifier> =
+    private fun ResponseSpec.riScIdentifiersPublished(): List<RiScIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()
-            ?.filter { it.value.endsWith(".ros.yaml") }
+            ?.filter { it.value.endsWith(".$filenamePostfix.yaml") }
             ?.map { RiScIdentifier(it.value.substringBefore('.'), RiScStatus.Published) } ?: emptyList()
 
-    fun List<GithubPullRequestObject>.rosIdentifiersSentForApproval(): List<RiScIdentifier> =
+    fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval) }
-            .filter { it.id.startsWith("ros-") }
+            .filter { it.id.startsWith("$filenamePrefix-") }
 
-    fun List<GithubReferenceObject>.rosIdentifiersDrafted(): List<RiScIdentifier> =
+    fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
     private fun getGithubResponse(

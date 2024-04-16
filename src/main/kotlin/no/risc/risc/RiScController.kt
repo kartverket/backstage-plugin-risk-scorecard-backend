@@ -24,7 +24,7 @@ class RiScController(
 ) {
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
-    fun getROSFilenames(
+    fun getRiScFilenames(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -48,7 +48,7 @@ class RiScController(
     }
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
-    fun fetchROS(
+    fun fetchRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -70,11 +70,11 @@ class RiScController(
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
-    fun createNewROS(
+    fun createNewRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @RequestBody ros: RiScWrapperObject,
+        @RequestBody riSc: RiScWrapperObject,
     ): ResponseEntity<ProcessRiScResultDTO> {
         val userContext =
             getUserContext(gcpAccessToken, repositoryName)
@@ -82,11 +82,11 @@ class RiScController(
         if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
 
         val response =
-            riScService.createROS(
+            riScService.createRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 userContext = userContext,
-                content = ros,
+                content = riSc,
             )
 
         return when (response.status) {
@@ -107,12 +107,12 @@ class RiScController(
     }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
-    fun editROS(
+    fun editRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
         @PathVariable repositoryName: String,
-        @RequestBody ros: RiScWrapperObject,
+        @RequestBody riSc: RiScWrapperObject,
     ): ResponseEntity<ProcessRiScResultDTO> {
         val userContext =
             getUserContext(gcpAccessToken, repositoryName)
@@ -120,10 +120,10 @@ class RiScController(
         if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
 
         val editResult =
-            riScService.updateROS(
+            riScService.updateRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                content = ros,
+                content = riSc,
                 riScId = id,
                 userContext = userContext,
             )
@@ -146,22 +146,22 @@ class RiScController(
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
-    fun sendROSForPublishing(
+    fun sendRiScForPublishing(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-    ): ResponseEntity<PublishROSResultDTO> {
+    ): ResponseEntity<PublishRiScResultDTO> {
         val userContext =
             getUserContext(gcpAccessToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401).body(PublishROSResultDTO.INVALID_USER_CONTEXT)
+        if (!userContext.isValid()) return ResponseEntity.status(401).body(PublishRiScResultDTO.INVALID_USER_CONTEXT)
 
         val result =
-            riScService.publishROS(
+            riScService.publishRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                rosId = id,
+                riScId = id,
                 userContext = userContext,
             )
 

@@ -18,7 +18,7 @@ class SOPSTest {
             "ENC[AES256_GCM,data:dYo75pR4EvbtULEJ926/tm9qZns2n8LHkNg78GpYk41gZGd6awrZ3NVtWVFeu4ns,iv:pjcpGaqDfU0vy76PgF6ZdMOriXNfeANOoYyda8Mq9EA=,tag:Rcv+ZgI1n2fgKy8DSep4jQ==,type:str]"
 
         assertThrows<Exception> {
-            no.risc.encryption.SOPS.decrypt(
+            SOPS.decrypt(
                 ciphertext = ciphertextThatIsJustAString,
                 gcpAccessToken = GCPAccessToken(""),
                 System.getenv("SOPS_AGE_KEY")
@@ -32,7 +32,7 @@ class SOPSTest {
             File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
 
         val actual =
-            no.risc.encryption.SOPS.decrypt(
+            SOPS.decrypt(
                 ciphertext = ciphertextThatIsYaml,
                 gcpAccessToken = GCPAccessToken(""),
                 System.getenv("SOPS_AGE_KEY")
@@ -45,7 +45,7 @@ class SOPSTest {
     @Test
     fun `test at sops fungerer med egen versjon`() {
         assertDoesNotThrow {
-            no.risc.encryption.SOPS.decrypt(
+            SOPS.decrypt(
                 ciphertext =
                 "skjemaVersjon: ENC[AES256_GCM,data:QkZw9vG+w0wy,iv:k5AuVA4WuMhq8h7ipr4oJFyX7N83tU88EBVPipD2cvc=,tag:Xw8BCVH/Qh22GeRCdGlgMA==,type:str]\n" +
                         "tittel: ENC[AES256_GCM,data:/0jTxa0dpwEqkpmj7wPgoroO/hWRcTzr0FhxDQ==,iv:39PCh5ATh5OcuTt6HLNWz7Pi6tMZ4JxVD9oKgV+sxzc=,tag:QYH2fy3NjZZcnb5UQWyCjQ==,type:str]\n" +

@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 data class ProcessRiScResultDTO(
-    val rosId: String,
+    val riScId: String,
     val status: ProcessingStatus,
     val statusMessage: String,
 ) {
@@ -34,7 +34,7 @@ data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
-    val rosContent: String?,
+    val riScContent: String?,
 ) {
     companion object {
         val INVALID_USER_CONTEXT =
@@ -42,23 +42,23 @@ data class RiScContentResultDTO(
                 riScId = "",
                 status = ContentStatus.Failure,
                 riScStatus = null,
-                rosContent = "",
+                riScContent = "",
             )
     }
 }
 
-data class PublishROSResultDTO(
-    val rosId: String,
+data class PublishRiScResultDTO(
+    val riScId: String,
     val status: ProcessingStatus,
     val statusMessage: String,
     val pendingApproval: PendingApprovalDTO?,
 ) {
     companion object {
         val INVALID_USER_CONTEXT =
-            PublishROSResultDTO(
+            PublishRiScResultDTO(
                 "",
                 ProcessingStatus.InvalidUserContext,
-                "Ugyldig ROS-resultat: ${ProcessingStatus.InvalidUserContext.message}",
+                "Invalid RiSc result: ${ProcessingStatus.InvalidUserContext.message}",
                 null,
             )
     }
@@ -79,7 +79,7 @@ enum class ContentStatus {
 enum class ProcessingStatus(val message: String) {
     RiScNotValid("RiSc is not valid according to JSON-Schema"),
     EncryptionFailed("Failed to encrypt RiSc"),
-    ErrorWhenUpdatingROS("Error when updating RiSc"),
+    ErrorWhenUpdatingRiSc("Error when updating RiSc"),
     CreatedRiSc("Created new RiSc successfully"),
     UpdatedRiSc("Updated RiSc successfully"),
     CreatedPullRequest("Created pull request for RiSc"),
@@ -192,14 +192,14 @@ class RiScService(
                 )
             }
 
-    fun updateROS(
+    fun updateRiSc(
         owner: String,
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
         userContext: UserContext,
     ): ProcessRiScResultDTO {
-        return updateOrCreateROS(
+        return updateOrCreateRiSc(
             owner = owner,
             repository = repository,
             riScId = riScId,
@@ -208,7 +208,7 @@ class RiScService(
         )
     }
 
-    fun createROS(
+    fun createRiSc(
         owner: String,
         repository: String,
         content: RiScWrapperObject,
@@ -217,7 +217,7 @@ class RiScService(
         val uniqueRiScId = "${filenamePrefix}-${RandomStringUtils.randomAlphanumeric(5)}"
 
         val result =
-            updateOrCreateROS(
+            updateOrCreateRiSc(
                 owner = owner,
                 repository = repository,
                 riScId = uniqueRiScId,
@@ -230,14 +230,14 @@ class RiScService(
                 ProcessRiScResultDTO(
                     uniqueRiScId,
                     ProcessingStatus.CreatedRiSc,
-                    "Ny ROS ble opprettet",
+                    "New RiSc was created",
                 )
 
             else -> result
         }
     }
 
-    private fun updateOrCreateROS(
+    private fun updateOrCreateRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -248,8 +248,8 @@ class RiScService(
             JSONSchemaConnector.fetchJSONSchema(content.schemaVersion.replace('.', '_'))
                 ?: return ProcessRiScResultDTO(
                     riScId,
-                    ProcessingStatus.ErrorWhenUpdatingROS,
-                    "Kunne ikke hente JSON Schema",
+                    ProcessingStatus.ErrorWhenUpdatingRiSc,
+                    "Could not fetch JSON Schema",
                 )
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema, content.riSc)
@@ -265,8 +265,8 @@ class RiScService(
             githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken)
                 ?: return ProcessRiScResultDTO(
                     riScId,
-                    ProcessingStatus.ErrorWhenUpdatingROS,
-                    "Kunne ikke hente sops-config",
+                    ProcessingStatus.ErrorWhenUpdatingRiSc,
+                    "Could not fetch SOPS config",
                 )
 
         val encryptedData =
@@ -276,7 +276,7 @@ class RiScService(
                 return ProcessRiScResultDTO(
                     riScId,
                     ProcessingStatus.EncryptionFailed,
-                    "Klarte ikke kryptere ROS",
+                    "Could not encrypt RiSc",
                 )
             }
 
@@ -285,7 +285,7 @@ class RiScService(
                 githubConnector.updateOrCreateDraft(
                     owner = owner,
                     repository = repository,
-                    rosId = riScId,
+                    riScId = riScId,
                     fileContent = encryptedData,
                     requiresNewApproval = content.isRequiresNewApproval,
                     userContext = userContext,
@@ -294,46 +294,46 @@ class RiScService(
             return ProcessRiScResultDTO(
                 riScId,
                 ProcessingStatus.UpdatedRiSc,
-                "ROS ble oppdatert" + if (hasClosedPR) " og må godkjennes av risikoeier på nytt" else "",
+                "RiSc was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
             )
         } catch (e: Exception) {
             return ProcessRiScResultDTO(
                 riScId,
-                ProcessingStatus.ErrorWhenUpdatingROS,
-                "Feilet med feilmelding ${e.message} for ros med id $riScId",
+                ProcessingStatus.ErrorWhenUpdatingRiSc,
+                "Failed with with error ${e.message} for RiSc with id $riScId",
             )
         }
     }
 
-    fun publishROS(
+    fun publishRiSc(
         owner: String,
         repository: String,
-        rosId: String,
+        riScId: String,
         userContext: UserContext,
-    ): PublishROSResultDTO {
+    ): PublishRiScResultDTO {
         val pullRequestObject =
-            githubConnector.createPullRequestForPublishingROS(
+            githubConnector.createPullRequestForPublishingRiSc(
                 owner,
                 repository,
-                rosId,
+                riScId,
                 requiresNewApproval = true,
                 userContext,
             )
 
         return when (pullRequestObject) {
             null ->
-                PublishROSResultDTO(
-                    rosId,
+                PublishRiScResultDTO(
+                    riScId,
                     ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    "Kunne ikke opprette pull request",
+                    "Could not create pull request",
                     null,
                 )
 
             else ->
-                PublishROSResultDTO(
-                    rosId,
+                PublishRiScResultDTO(
+                    riScId,
                     ProcessingStatus.CreatedPullRequest,
-                    "Pull request ble opprettet",
+                    "Pull request was created",
                     pullRequestObject.toPendingApprovalDTO(),
                 )
         }

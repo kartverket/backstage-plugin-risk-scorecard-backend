@@ -151,23 +151,22 @@ object GithubHelper {
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
     fun bodyToClosePullRequest(): String =
-        "{ \"title\":\"Closed\", \"body\": \"PR'en ble lukket da ROS ble " +
-            "oppdatert. Ny godkjenning av risikoeier kreves.\",  \"state\": \"closed\"}"
+        "{ \"title\":\"Closed\", \"body\": \"The PR was closed when RiSc was updated updated. New approval from risk owner is required.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        rosRisikoEier: MicrosoftUser,
+        riScRiskOwner: MicrosoftUser,
     ): GithubCreateNewPullRequestPayload {
         val body = if (requiresNewApproval) {
-            "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
+            "${riScRiskOwner.name}(${riScRiskOwner.email.value}) has approved the RiSc. Merge the PR to include the changes in the main branch."
         } else {
-            "ROS-analysen krever ikke ny godkjenning som følge av endringene som er gjort."
+            "The RiSc has been updated, but does not require new approval."
         }
 
         return GithubCreateNewPullRequestPayload(
-            title = "Branch for ros $riScId",
+            title = "Branch for RiSc $riScId",
             body = body,
             repositoryOwner,
             riScId,
@@ -175,7 +174,7 @@ object GithubHelper {
         )
     }
 
-    fun bodyToCreateNewBranchForROSFromMain(
+    fun bodyToCreateNewBranchForRiScFromMain(
         riScId: String,
         latestShaAtMain: String,
     ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$riScId", latestShaAtMain)
