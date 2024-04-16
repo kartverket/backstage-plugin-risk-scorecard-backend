@@ -1,12 +1,12 @@
 package no.risc.encryption
 
-import no.kvros.infra.connector.models.GCPAccessToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.io.File
+import no.risc.infra.connector.models.GCPAccessToken
 
 class SOPSTest {
     private val decryptedROS =
