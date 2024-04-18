@@ -1,9 +1,0 @@
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: kv-ros-api
-spec:
-  type: PublicApi
-  lifecycle: production
-  owner: rosene
-  system: kv-ros
