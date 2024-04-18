@@ -52,6 +52,7 @@ data class GithubCreateNewAccessTokenForRepository(
         mapOf(
             "contents" to "write",
             "pull_requests" to "write",
+            "statuses" to "read",
         ),
 ) {
     fun toContentBody(): String {
@@ -157,11 +158,12 @@ object GithubHelper {
         requiresNewApproval: Boolean,
         rosRisikoEier: MicrosoftUser,
     ): GithubCreateNewPullRequestPayload {
-        val body = if (requiresNewApproval) {
-            "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
-        } else {
-            "ROS-analysen krever ikke ny godkjenning som følge av endringene som er gjort."
-        }
+        val body =
+            if (requiresNewApproval) {
+                "${rosRisikoEier.name}(${rosRisikoEier.email.value}) har godkjent ROS-analysen, noen må merge for at det skal bli registrert"
+            } else {
+                "ROS-analysen krever ikke ny godkjenning som følge av endringene som er gjort."
+            }
 
         return GithubCreateNewPullRequestPayload(
             title = "Branch for ros $rosId",
