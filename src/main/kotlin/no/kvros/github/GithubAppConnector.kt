@@ -17,20 +17,20 @@ import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
-import java.util.*
-
+import java.util.Base64
+import java.util.Date
 
 class GithubAppSignedJwt(
-    val value: String?
+    val value: String?,
 )
 
 class GithubAccessToken(
-    val value: String
+    val value: String,
 )
 
 class GithubAppIdentifier(
     val appId: Int,
-    val installationId: Int
+    val installationId: Int,
 )
 
 @Component
@@ -40,7 +40,6 @@ class GithubAppConnector(
     @Value("\${githubAppIdentifier.privateKeySecretName}") val privateKeySecretName: String,
 ) :
     WebClientConnector("https://api.github.com/app") {
-
     private val gcpClientConnector = GcpClientConnector()
     private val appIdentifier = GithubAppIdentifier(appId, installationId)
 
@@ -49,15 +48,20 @@ class GithubAppConnector(
         return getGithubAppAccessToken(jwt, repositoryName = repositoryName)
     }
 
-    private fun getGithubAppSignedJWT(): GithubAppSignedJwt = GithubAppSignedJwt(
-        PemUtils.getSignedJWT(
-            privateKey = gcpClientConnector.getSecretValue(privateKeySecretName)?.toByteArray()
-                ?: throw Exception("Kunne ikke hente github app private key"),
-            appId = appIdentifier.appId
+    private fun getGithubAppSignedJWT(): GithubAppSignedJwt =
+        GithubAppSignedJwt(
+            PemUtils.getSignedJWT(
+                privateKey =
+                    gcpClientConnector.getSecretValue(privateKeySecretName)?.toByteArray()
+                        ?: throw Exception("Kunne ikke hente github app private key"),
+                appId = appIdentifier.appId,
+            ),
         )
-    )
 
-    private fun getGithubAppAccessToken(jwt: GithubAppSignedJwt, repositoryName: String): GithubAccessToken {
+    private fun getGithubAppAccessToken(
+        jwt: GithubAppSignedJwt,
+        repositoryName: String,
+    ): GithubAccessToken {
         val accessTokenBody: GithubAccessTokenBody =
             try {
                 webClient
@@ -67,6 +71,7 @@ class GithubAppConnector(
                     .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
                     .header("X-GitHub-Api-Version", "2022-11-28")
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .bodyValue(GithubHelper.bodyToCreateAccessTokenForRepository(repositoryName).toContentBody())
                     .retrieve()
                     .bodyToMono<GithubAccessTokenBody>()
                     .block() ?: throw Exception("Access token is null.")
@@ -78,7 +83,6 @@ class GithubAppConnector(
         return GithubAccessToken(accessTokenBody.token)
     }
 
-
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class GithubAccessTokenBody(
         val token: String,
@@ -88,7 +92,10 @@ class GithubAppConnector(
 object PemUtils {
     class PEM_CONVERSION_EXCEPTION() : Exception()
 
-    fun getSignedJWT(privateKey: ByteArray, appId: Int): String {
+    fun getSignedJWT(
+        privateKey: ByteArray,
+        appId: Int,
+    ): String {
         val pemContent = String(privateKey, StandardCharsets.UTF_8)
         val privateKey = readPrivateKey(pemContent)
 
@@ -100,8 +107,8 @@ object PemUtils {
             .setHeader(
                 mapOf(
                     "typ" to "JWT",
-                    "alg" to "RS256"
-                )
+                    "alg" to "RS256",
+                ),
             )
             .signWith(privateKey, SignatureAlgorithm.RS256)
             .compact()
@@ -121,9 +128,10 @@ object PemUtils {
     private fun readPrivateKey(pem: String): PrivateKey {
         val pkcs8Key = if (pem.isPKCS1()) convertToPkcs8(pem) else pem
 
-        val decodedKey = pkcs8Key
-            .stripToOnlyPrivateKey()
-            .base64Decode()
+        val decodedKey =
+            pkcs8Key
+                .stripToOnlyPrivateKey()
+                .base64Decode()
 
         val keySpec = PKCS8EncodedKeySpec(decodedKey)
         val keyFactory = KeyFactory.getInstance("RSA")
@@ -132,11 +140,11 @@ object PemUtils {
 
     private fun String.isPKCS1(): Boolean = this.contains("RSA")
 
-    private fun String.stripToOnlyPrivateKey(): String = this
-        .replace("-----BEGIN PRIVATE KEY-----", "")
-        .replace("-----END PRIVATE KEY-----", "")
-        .replace("\n", "")
-
+    private fun String.stripToOnlyPrivateKey(): String =
+        this
+            .replace("-----BEGIN PRIVATE KEY-----", "")
+            .replace("-----END PRIVATE KEY-----", "")
+            .replace("\n", "")
 
     private fun String.base64Decode(): ByteArray = Base64.getDecoder().decode(this)
 }
