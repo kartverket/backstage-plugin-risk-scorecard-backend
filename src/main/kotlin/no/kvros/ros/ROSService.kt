@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Base64
 import no.kvros.infra.connector.JSONSchemaConnector
+import java.io.File
 
 data class ProcessROSResultDTO(
     val rosId: String,
@@ -345,4 +346,8 @@ class ROSService(
             pullRequestUrl = this.url,
             pullRequestName = this.head.ref,
         )
+
+    fun fetchLatestJSONSchema(): GithubContentResponse {
+        return githubConnector.fetchJSONSchemas()
+    }
 }

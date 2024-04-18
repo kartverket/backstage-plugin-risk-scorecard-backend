@@ -14,6 +14,7 @@
             <env name="FILENAME_PREFIX" value="ros"/>
             <env name="FILENAME_POSTFIX" value="ros"/>
             <env name="JSON_SCHEMA_BASE_URL" value="https://bekk.github.io/kv-ros-backend"/>
+            <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
         </envs>
         <module name="kv-ros-backend.main"/>
         <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication"/>

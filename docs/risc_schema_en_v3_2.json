@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v3_2.json",
-  ",title": "Risk Scorecard (RiSc)",
+  "title": "Risk Scorecard (RiSc)",
   "description": "Schema for risk scorecard",
   "type": "object",
   "properties": {
