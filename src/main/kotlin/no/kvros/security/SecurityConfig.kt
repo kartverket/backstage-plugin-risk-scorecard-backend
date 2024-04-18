@@ -23,6 +23,7 @@ class SecurityConfig(
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("/api/ros/schemas/latest").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("api/**").authenticated() }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.decoder(jwtDecoder()) } }
 

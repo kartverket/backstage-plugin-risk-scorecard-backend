@@ -40,3 +40,7 @@ Github-Access-Token: {{GITHUB_TOKEN}}
 ### GET /ros/allofit
 GET http://localhost:8080/api/ros/bekk/kv-ros-example-repository-3/allofit
 Github-Access-Token: {{GITHUB_TOKEN}}
+
+### GET /ros/schemas/latest
+GET http://localhost:8080/api/ros/schemas/latest
+### Add Authorization: Bearer

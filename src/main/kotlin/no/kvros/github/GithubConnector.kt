@@ -9,6 +9,7 @@ import no.kvros.ros.ROSStatus
 import no.kvros.ros.models.FileContentDTO
 import no.kvros.ros.models.FileNameDTO
 import no.kvros.ros.models.ShaResponseDTO
+import no.kvros.utils.getFileNameWithHighestVersion
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
@@ -63,6 +64,7 @@ data class Author(val name: String, val email: Email, val date: Date) {
 class GithubConnector(
     @Value("\${github.repository.ros-folder-path}") private val defaultROSPath: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
+    @Value("\${json.schema.path}") private val jsonSchemaPath: String,
 ) :
     WebClientConnector("https://api.github.com/repos") {
 
@@ -112,11 +114,11 @@ class GithubConnector(
         return GithubRosIdentifiersResponse(
             status = GithubStatus.Success,
             ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRosList = draftROSes,
-                    sentForApprovalList = rosSentForApproval,
-                    publishedRosList = publishedROSes,
-                ),
+            combinePublishedDraftAndSentForApproval(
+                draftRosList = draftROSes,
+                sentForApprovalList = rosSentForApproval,
+                publishedRosList = publishedROSes,
+            ),
         )
     }
 
@@ -159,6 +161,47 @@ class GithubConnector(
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
 
+    fun fetchJSONSchemas(): GithubContentResponse =
+        try {
+            val schemas =
+                getGithubResponseNoAuth(
+                    jsonSchemaPath
+                ).schemaContent()
+            if (schemas == null) {
+                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+            } else {
+                val latestVersion = getFileNameWithHighestVersion(schemas)
+                val latestContent = fetchLatestJSONSchemaContent(latestVersion!!)
+
+                GithubContentResponse(
+                    latestContent.data,
+                    GithubStatus.Success,
+                )
+            }
+
+        } catch (e: Exception) {
+            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
+        }
+
+    private fun fetchLatestJSONSchemaContent(schemaVersion: String) =
+        try {
+            val fileContent =
+                getGithubResponseNoAuth(
+                    "$jsonSchemaPath/$schemaVersion"
+                ).rawFileContent()
+
+            if (fileContent == null) {
+                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+            } else {
+                GithubContentResponse(
+                    fileContent,
+                    GithubStatus.Success,
+                )
+            }
+        } catch (e: Exception) {
+            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
+        }
+
     fun fetchDraftedROSContent(
         owner: String,
         repository: String,
@@ -168,7 +211,12 @@ class GithubConnector(
         try {
             val fileContent =
                 getGithubResponse(
-                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, id, filenamePostfix=filenamePostfix),
+                    uri = GithubHelper.uriToFindContentOfFileOnDraftBranch(
+                        owner,
+                        repository,
+                        id,
+                        filenamePostfix = filenamePostfix
+                    ),
                     accessToken = accessToken,
                 ).fileContent()?.value
 
@@ -258,7 +306,12 @@ class GithubConnector(
             if (latestShaForROS != null) "refactor: Oppdater ROS med id: $rosId" else "feat: Lag ny ROS med id: $rosId"
 
         putFileRequestToGithub(
-            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix = filenamePostfix),
+            uri = GithubHelper.uriToPostContentOfFileOnDraftBranch(
+                owner,
+                repository,
+                rosId,
+                filenamePostfix = filenamePostfix
+            ),
             accessToken.value,
             GithubWriteToFilePayload(
                 message = commitMessage,
@@ -304,7 +357,12 @@ class GithubConnector(
         accessToken: String,
     ) = try {
         getGithubResponse(
-            GithubHelper.uriToFindContentOfFileOnDraftBranch(owner, repository, rosId, filenamePostfix=filenamePostfix),
+            GithubHelper.uriToFindContentOfFileOnDraftBranch(
+                owner,
+                repository,
+                rosId,
+                filenamePostfix = filenamePostfix
+            ),
             accessToken,
         ).shaReponseDTO()?.value
     } catch (e: Exception) {
@@ -459,13 +517,15 @@ class GithubConnector(
         .retrieve()
 
     private fun ResponseSpec.fileContent(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
+    private fun ResponseSpec.rawFileContent(): String? = this.bodyToMono<String>().block()
 
     private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? = this.bodyToMono<ShaResponseDTO>().block()
 
     fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
+        this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.rosIdentifiersPublished(): List<ROSIdentifier> =
         this.bodyToMono<List<FileNameDTO>>().block()
@@ -479,6 +539,8 @@ class GithubConnector(
     fun List<GithubReferenceObject>.rosIdentifiersDrafted(): List<ROSIdentifier> =
         this.map { ROSIdentifier(it.ref.split("/").last(), ROSStatus.Draft) }
 
+    fun ResponseSpec.schemaContent(): List<FileNameDTO>? = this.bodyToMono<List<FileNameDTO>>().block()
+
     private fun getGithubResponse(
         uri: String,
         accessToken: String,
@@ -487,6 +549,15 @@ class GithubConnector(
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .retrieve()
+
+    private fun getGithubResponseNoAuth(
+        uri: String,
+    ): ResponseSpec =
+        webClient.get()
+            .uri(uri)
+            .header("Accept", "application/vnd.github.raw+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
 }

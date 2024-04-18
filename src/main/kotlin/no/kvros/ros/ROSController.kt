@@ -1,6 +1,8 @@
 package no.kvros.ros
 
 import no.kvros.github.GithubAppConnector
+import no.kvros.github.GithubContentResponse
+import no.kvros.github.GithubStatus
 import no.kvros.infra.connector.models.GCPAccessToken
 import no.kvros.infra.connector.models.UserContext
 import no.kvros.ros.models.ROSWrapperObject
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.io.File
 
 @RestController
 @RequestMapping("/api/ros")
@@ -92,7 +95,7 @@ class ROSController(
         return when (response.status) {
             ProcessingStatus.CreatedROS,
             ProcessingStatus.UpdatedROS,
-                 ->
+            ->
                 ResponseEntity
                     .ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -131,7 +134,7 @@ class ROSController(
         return when (editResult.status) {
             ProcessingStatus.CreatedROS,
             ProcessingStatus.UpdatedROS,
-                 ->
+            ->
                 ResponseEntity
                     .ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +170,17 @@ class ROSController(
 
         return when (result.status) {
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
-            else                                -> ResponseEntity.internalServerError().body(result)
+            else -> ResponseEntity.internalServerError().body(result)
+        }
+    }
+
+    @GetMapping("/schemas/latest")
+    fun fetchLatestJSONSchema(
+    ): ResponseEntity<String> {
+        val result = rosService.fetchLatestJSONSchema()
+        return when (result.status) {
+            GithubStatus.Success -> ResponseEntity.ok().body(result.data)
+            else -> ResponseEntity.internalServerError().body(result.status.toString())
         }
     }
 
