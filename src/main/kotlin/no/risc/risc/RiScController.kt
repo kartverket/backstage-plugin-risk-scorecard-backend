@@ -1,6 +1,7 @@
 package no.risc.risc
 
 import no.risc.github.GithubAppConnector
+import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.UserContext
 import no.risc.risc.models.RiScWrapperObject
@@ -92,7 +93,7 @@ class RiScController(
         return when (response.status) {
             ProcessingStatus.CreatedRiSc,
             ProcessingStatus.UpdatedRiSc,
-                 ->
+            ->
                 ResponseEntity
                     .ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -131,7 +132,7 @@ class RiScController(
         return when (editResult.status) {
             ProcessingStatus.CreatedRiSc,
             ProcessingStatus.UpdatedRiSc,
-                 ->
+            ->
                 ResponseEntity
                     .ok()
                     .contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +168,17 @@ class RiScController(
 
         return when (result.status) {
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
-            else                                -> ResponseEntity.internalServerError().body(result)
+            else -> ResponseEntity.internalServerError().body(result)
+        }
+    }
+
+    @GetMapping("/schemas/latest")
+    fun fetchLatestJSONSchema(
+    ): ResponseEntity<String> {
+        val result = riScService.fetchLatestJSONSchema()
+        return when (result.status) {
+            GithubStatus.Success -> ResponseEntity.ok().body(result.data)
+            else -> ResponseEntity.internalServerError().body(result.status.toString())
         }
     }
 

@@ -52,6 +52,7 @@ data class GithubCreateNewAccessTokenForRepository(
         mapOf(
             "contents" to "write",
             "pull_requests" to "write",
+            "statuses" to "read",
         ),
 ) {
     fun toContentBody(): String {
@@ -159,11 +160,12 @@ object GithubHelper {
         requiresNewApproval: Boolean,
         riScRiskOwner: MicrosoftUser,
     ): GithubCreateNewPullRequestPayload {
-        val body = if (requiresNewApproval) {
-            "${riScRiskOwner.name}(${riScRiskOwner.email.value}) has approved the RiSc. Merge the PR to include the changes in the main branch."
-        } else {
-            "The RiSc has been updated, but does not require new approval."
-        }
+        val body =
+            if (requiresNewApproval) {
+                "${riScRiskOwner.name}(${riScRiskOwner.email.value}) has approved the RiSc. Merge the PR to include the changes in the main branch."
+            } else {
+                "The RiSc has been updated, but does not require new approval."
+            }
 
         return GithubCreateNewPullRequestPayload(
             title = "Branch for RiSc $riScId",

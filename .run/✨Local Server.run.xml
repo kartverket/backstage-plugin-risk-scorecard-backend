@@ -10,6 +10,7 @@
       <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f" />
       <env name="FILENAME_PREFIX" value="risc" />
       <env name="FILENAME_POSTFIX" value="risc" />
+      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
       <env name="JSON_SCHEMA_BASE_URL" value="https://kartverket.github.io/backstage-plugin-risk-scorecard-backend" />
     </envs>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
