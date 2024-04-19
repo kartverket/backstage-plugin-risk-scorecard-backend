@@ -1,11 +1,11 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: kv-ros-backend
+  name: backstage-plugin-risk-scorecard-backend
   annotations:
-    github.com/project-slug: bekk/kv-ros-backend
+    github.com/project-slug: bekk/backstage-plugin-risk-scorecard-backend
 spec:
   type: service
   owner: rosene
-  system: kv-ros
+  system: backstage-plugin-risk-scorecard
   lifecycle: production

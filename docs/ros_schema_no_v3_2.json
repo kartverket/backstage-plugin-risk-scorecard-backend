@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/spire-test/kv-ros-json-schema/main/schemas/ros_schema_no_v3_2.json",
+  "$id": "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/ros_schema_no_v3_2.json",
   "title": "ROS",
   "description": "Skjema for risiko- og sårbarhetsanalyser",
   "type": "object",

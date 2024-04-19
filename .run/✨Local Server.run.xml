@@ -1,25 +1,22 @@
 <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType"
-                   factoryName="Spring Boot">
-        <option name="ACTIVE_PROFILES" value="dev"/>
-        <envs>
-            <env name="GITHUB_APP_ID" value="827078"/>
-            <env name="GITHUB_INSTALLATION_ID" value="48036152"/>
-            <env name="GITHUB_PRIVATE_KEY_SECRET_NAME"
-                 value="projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1"/>
-            <env name="ROS_URL" value=".security/ros"/>
-            <env name="ROS_SCHEMA_REPO" value="kv-ros-json-schema"/>
-            <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1X5DH3RVJ83CK3TJNGGC5QA277NRC9JDK2W5DUG8DY5P05CVL88WS8FT049"/>
-            <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f" />
-            <env name="FILENAME_PREFIX" value="ros"/>
-            <env name="FILENAME_POSTFIX" value="ros"/>
-            <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
-            <env name="JSON_SCHEMA_BASE_URL" value="https://kartverket.github.io/backstage-plugin-risk-scorecard-backend"/>
-        </envs>
-        <module name="kv-ros-backend.main"/>
-        <option name="SPRING_BOOT_MAIN_CLASS" value="no.kvros.KvRosApplication"/>
-        <method v="2">
-            <option name="Make" enabled="true"/>
-        </method>
-    </configuration>
+  <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ACTIVE_PROFILES" value="dev" />
+    <envs>
+      <env name="GITHUB_APP_ID" value="827078" />
+      <env name="GITHUB_INSTALLATION_ID" value="48036152" />
+      <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1" />
+      <env name="RISC_FOLDER_PATH" value=".security/risc" />
+      <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1X5DH3RVJ83CK3TJNGGC5QA277NRC9JDK2W5DUG8DY5P05CVL88WS8FT049" />
+      <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f" />
+      <env name="FILENAME_PREFIX" value="risc" />
+      <env name="FILENAME_POSTFIX" value="risc" />
+      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
+      <env name="JSON_SCHEMA_BASE_URL" value="https://kartverket.github.io/backstage-plugin-risk-scorecard-backend" />
+    </envs>
+    <module name="backstage-plugin-risk-scorecard-backend.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
 </component>

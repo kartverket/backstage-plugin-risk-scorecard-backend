@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kv-ros-backend
+  name: backstage-plugin-risk-scorecard-backend
   namespace: default
 data:
   GITHUB_APP_ID: "827078"
   GITHUB_INSTALLATION_ID: "48036152"
   GITHUB_PRIVATE_KEY_SECRET_NAME: "projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1"
-  ROS_URL: ".security/ros"
+  RISC_FOLDER_PATH: ".security/risc"
   JSON_SCHEMA_BASE_URL: "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend"
   ENTRA_ID_TENANT_ID: "c6ea0b0b-e867-46d4-a70b-4c05887e7f6f"
   SOPS_AGE_KEY: "secret key"
-  FILENAME_PREFIX: "ros"
-  FILENAME_POSTFIX: "ros"
+  FILENAME_PREFIX: "risc"
+  FILENAME_POSTFIX: "risc"

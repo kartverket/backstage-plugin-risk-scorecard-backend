@@ -14,10 +14,10 @@ If you prefer IntelliJ/Rider you can use install and use the [Simple sops edit](
 
 #### Visual Studio Code (vscode)
 
-NOTE: For vscode it is highly recommended to add a pattern for the tmp files (**/*.ros.tmp.yaml) to your `.gitignore` file, to ensure a decrypted (plaintext) file is never ever committed. This is because vscode plugins opens a temp file when the file is decrypted so there is a risk that this will be checked in to source control if it is not closed (and encrypted) correctly
+NOTE: For vscode it is highly recommended to add a pattern for the tmp files (**/*.risc.tmp.yaml) to your `.gitignore` file, to ensure a decrypted (plaintext) file is never ever committed. This is because vscode plugins opens a temp file when the file is decrypted so there is a risk that this will be checked in to source control if it is not closed (and encrypted) correctly
 
 [SOPS easy edit](https://marketplace.visualstudio.com/items?itemName=ShipitSmarter.sops-edit)
-This plugin will look for a `.sops.yaml` file and offer en "Encrypt" button in the right hand corner when it recognize a file with the correct `.ros.yaml` extension
+This plugin will look for a `.sops.yaml` file and offer en "Encrypt" button in the right hand corner when it recognize a file with the correct `.risc.yaml` extension
 
 [@signageos/vscode-sops](https://github.com/signageos/vscode-sops)
 
@@ -27,10 +27,10 @@ This plugin will look for a `.sops.yaml` file and offer en "Encrypt" button in t
 
 I `IntelliJ/Rider > Settings > Languages & Frameworks > Schemas and DTDs > JSON Schema Mappings` create new schema:
 
-* `Name`: Write name, i.e. `ROS-validation`
-* `Schema file or URL:` Put in URL to the latest ROS-schema, [ros_schema_no_v2_1.json](https://kartverket.github.io/ros-as-code/schema/ros_schema_no_v2_1.json)
+* `Name`: Write name, i.e. `RiSc-validation`
+* `Schema file or URL:` Put in URL to the latest RiSc-schema, [risc_schema_en_v3_2.json](https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v3_2.json)
 * `Schema version:` `JSON Schema version 4`
-* Add `File path pattern:` `*.ros.yaml`
+* Add `File path pattern:` `*.risc.yaml`
 
 Now you will get context-help and validation of the content.
 
@@ -62,7 +62,7 @@ Create a file called `.sops.yaml` in the `.security/ros`-catalog. This should in
 
 ```
 creation_rules:
-  - path_regex: \.ros\.yaml$
+  - path_regex: \.risc\.yaml$
     shamir_threshold: 2
     key_groups:
       - age:
