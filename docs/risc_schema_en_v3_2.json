@@ -211,13 +211,13 @@
               "title": {
                 "type": "string"
               },
-              "task": {
-                "$ref": "#/$defs/task"
+              "action": {
+                "$ref": "#/$defs/action"
               }
             },
             "required": [
               "title",
-              "task"
+              "action"
             ],
             "additionalProperties": false
           }
@@ -237,7 +237,7 @@
       ],
       "additionalProperties": false
     },
-    "actions": {
+    "action": {
       "type": "object",
       "properties": {
         "ID": {
