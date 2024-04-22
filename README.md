@@ -17,9 +17,9 @@ gitGraph
    commit
    branch RISC-xyz12
    checkout RISC-xyz12
-   commit id: "Lagt til scenarier"
-   commit id: "Justert konsekvens"
-   commit id: "Godkjent av risikoeier"
+   commit id: "Added scenarios"
+   commit id: "Edited consequence"
+   commit id: "Approved by risk owner"
    checkout main
    merge RISC-xyz12
    commit
