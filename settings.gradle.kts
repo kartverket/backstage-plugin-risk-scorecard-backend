@@ -1,1 +1,1 @@
-rootProject.name = "kv-ros-backend"
+rootProject.name = "backstage-plugin-risk-scorecard-backend"

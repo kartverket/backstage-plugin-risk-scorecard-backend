@@ -60,6 +60,6 @@ tasks.withType<Test> {
     environment["GITHUB_APP_ID"] = "828331"
     environment["GITHUB_APP_INSTALLATION_ID"] = "47304902"
     environment["PRIVATE_KEY_SECRET_NAME"] = "projects/spire-ros-5lmr/secrets/GITHUB_APP_PRIVATE_KEY/versions/1"
-    environment["ROS_URL"] = ".security/ros"
+    environment["RISC_PATH"] = ".sikkerhet/risc"
     useJUnitPlatform()
 }

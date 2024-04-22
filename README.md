@@ -1,27 +1,27 @@
-# kv-ros-backend
+# Risk Scorecard (RiSc) backend
 
 ## High level components
 
 ```mermaid
 flowchart TD
-     A[Backstage ROS-plugin] --> B{ROS-backend/API} -->|.security/ros| C[(GitHub)]
+     A[Backstage RiSc-plugin] --> B{RiSc-backend/API} -->|.security/risc| C[(GitHub)]
      style B fill:#FFBF00,color:black
 ```
 
-## Simplified Git ROS-flow
+## Simplified Git RiSC-flow
 
 ```mermaid
 %%{init: { 'logLevel': 'debug', 'theme': 'base' } }%%
 gitGraph
    commit
    commit
-   branch ROS-xyz12
-   checkout ROS-xyz12
-   commit id: "Lagt til scenarier"
-   commit id: "Justert konsekvens"
-   commit id: "Godkjent av risikoeier"
+   branch RISC-xyz12
+   checkout RISC-xyz12
+   commit id: "Added scenarios"
+   commit id: "Edited consequence"
+   commit id: "Approved by risk owner"
    checkout main
-   merge ROS-xyz12
+   merge RISC-xyz12
    commit
    commit
 ```
@@ -40,7 +40,7 @@ If the version of the schema is updated, ensure that the library supports it.
 To build the docker image, run:
 
 ```sh
-docker image build -t kv-ros-backend .
+docker image build -t backstage-plugin-risk-scorecard-backend .
 ```
 
 ### Run the application using Docker
@@ -53,7 +53,7 @@ account or by impersonating a service account.
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_SECRET_NAME=${GITHUB_PRIVATE_KEY_SECRET_NAME} kv-ros-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_SECRET_NAME=${GITHUB_PRIVATE_KEY_SECRET_NAME} backstage-plugin-risk-scorecard-backend
 ```
 
 ### Run the application using kubernetes
@@ -62,22 +62,22 @@ The same applies for the gcp application credentials here, so be sure to add a p
 
 ````sh
 # configmap 
-kubectl apply -f kv-ros-backend-config.yaml
+kubectl apply -f backstage-plugin-risk-scorecard-backend-config.yaml
 
 # app deployment
-kubectl apply -f kv-ros-backend.yaml
+kubectl apply -f backstage-plugin-risk-scorecard-backend.yaml
 ````
 
-#### Minikube lokalt for testing
+#### Minikube for local testing
 
 ````sh
 gcloud auth configure-docker
-# for å kunne hente gcp-secret i appen (legg til )
+# to be able to fetch gcp-secret in the app (add)
 minikube addons enable gcp-auth
-# for å kunne pulle image fra gcp
+# to be able to pull image from gcp
 minikube addons configure registry-creds && minikube addons enable registry-creds
 ````
 
-## Setup SOPS for doing ROS locally
+## Setup SOPS for doing RiSc locally
 
 See [SOPS.md](SOPS.md)
