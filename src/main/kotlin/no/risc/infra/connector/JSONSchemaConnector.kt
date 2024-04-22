@@ -10,7 +10,7 @@ class JSONSchemaConnector(
     fun fetchJSONSchema(schemaVersion: String): String? {
         return try {
             webClient.get()
-                .uri("/ros_schema_no_v$schemaVersion.json")
+                .uri("/risc_schema_en_v$schemaVersion.json")
                 .header("Accept", "application/vnd.github.json")
                 .retrieve()
                 .bodyToMono(String::class.java)
