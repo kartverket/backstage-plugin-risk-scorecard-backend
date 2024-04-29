@@ -19,7 +19,7 @@ class AccessLogger : OncePerRequestFilter() {
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        accessLogger.info("${request.method.padEnd(4)} ${AuthService.getName()} ${request.requestURI}")
+        accessLogger.info("${request.method.padEnd(4)} ${request.requestURI}")
         filterChain.doFilter(request, response)
     }
 }

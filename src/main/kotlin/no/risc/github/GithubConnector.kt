@@ -2,7 +2,6 @@ package no.risc.github
 
 import no.risc.github.GithubHelper.toReferenceObjects
 import no.risc.infra.connector.WebClientConnector
-import no.risc.infra.connector.models.Email
 import no.risc.infra.connector.models.UserContext
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
@@ -51,12 +50,12 @@ data class GithubWriteToFilePayload(
 ) {
     fun toContentBody(): String =
         when (sha) {
-            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }"
+            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
         }
 }
 
-data class Author(val name: String, val email: Email, val date: Date) {
+data class Author(val name: String, val email: String, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
@@ -289,7 +288,7 @@ class GithubConnector(
     ): Boolean {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
-            Author(userContext.user.name, userContext.user.email, Date.from(Instant.now()))
+            Author(userContext.user.email, userContext.user.email, Date.from(Instant.now()))
         if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,

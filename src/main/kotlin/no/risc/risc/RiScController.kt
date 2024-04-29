@@ -2,10 +2,10 @@ package no.risc.risc
 
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubStatus
+import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.UserContext
 import no.risc.risc.models.RiScWrapperObject
-import no.risc.security.AuthService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 class RiScController(
     private val riScService: RiScService,
     private val githubAppConnector: GithubAppConnector,
+    private val googleApiConnector: GoogleApiConnector,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     fun getRiScFilenames(
@@ -114,6 +115,7 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
     ): ResponseEntity<ProcessRiScResultDTO> {
+        println("Edit RiSc")
         val userContext =
             getUserContext(gcpAccessToken, repositoryName)
 
@@ -184,7 +186,7 @@ class RiScController(
         gcpAccessToken: String,
         repositoryName: String,
     ): UserContext {
-        val user = AuthService.getUser()
+        val user = googleApiConnector.fetchTokenInfo(gcpAccessToken) ?: throw IllegalArgumentException("Invalid GCP access token")
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val userContext =
             UserContext(

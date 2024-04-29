@@ -1,16 +1,14 @@
 package no.risc.encryption
 
-import no.risc.infra.connector.GoogleApiConnector
+import no.risc.infra.connector.models.GCPAccessToken
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import no.risc.infra.connector.models.GCPAccessToken
 
 class SOPSDecryptionException(message: String) : Exception(message)
 
 class SOPSEncryptionException(message: String) : Exception(message)
 
 object SOPS {
-
     private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
     private val decrypt = listOf("decrypt")
@@ -23,31 +21,30 @@ object SOPS {
 
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
-    private val googleApiConnector: GoogleApiConnector = GoogleApiConnector()
 
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> =
-        sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
+    ): List<String> = sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
 
-    private fun toDecryptionCommand(accessToken: String, sopsPrivateKey: String): List<String> =
-        sopsCmd + gcpAccessToken(accessToken) + ageSecret(
-            sopsPrivateKey
-        ) + decrypt + inputTypeYaml + outputTypeJson + inputFile
+    private fun toDecryptionCommand(
+        accessToken: String,
+        sopsPrivateKey: String,
+    ): List<String> =
+        sopsCmd + gcpAccessToken(accessToken) +
+            ageSecret(
+                sopsPrivateKey,
+            ) + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
+
     private fun ageSecret(sopsPrivateKey: String): List<String> = listOf("--age", sopsPrivateKey)
 
     fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
-        agePrivateKey: String
+        agePrivateKey: String,
     ): String {
-        val isValidAccessToken = googleApiConnector.validateAccessToken(gcpAccessToken.value)
-        if (!isValidAccessToken) {
-            throw SOPSEncryptionException("Invalid GCP access token")
-        }
         return processBuilder
             .command(toDecryptionCommand(gcpAccessToken.value, agePrivateKey))
             .start()
@@ -68,10 +65,6 @@ object SOPS {
         config: String,
         gcpAccessToken: GCPAccessToken,
     ): String {
-        val isValidAccessToken = googleApiConnector.validateAccessToken(gcpAccessToken.value)
-        if (!isValidAccessToken) {
-            throw SOPSEncryptionException("Invalid GCP access token")
-        }
         return processBuilder
             .command(toEncryptionCommand(config, gcpAccessToken.value))
             .start()
@@ -82,7 +75,7 @@ object SOPS {
                     EXECUTION_STATUS_OK -> result
 
                     else -> throw SOPSEncryptionException(
-                        "IOException from encrypting json with error code ${exitValue()}: $result"
+                        "IOException from encrypting json with error code ${exitValue()}: $result",
                     )
                 }
             }

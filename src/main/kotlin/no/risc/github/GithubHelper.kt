@@ -2,7 +2,7 @@ package no.risc.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.risc.security.User
+import no.risc.infra.connector.User
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
@@ -161,7 +161,7 @@ object GithubHelper {
     ): GithubCreateNewPullRequestPayload {
         val body =
             if (requiresNewApproval) {
-                "${riScRiskOwner.name}(${riScRiskOwner.email.value}) has approved the RiSc. Merge the PR to include the changes in the main branch."
+                "${riScRiskOwner.email} has approved the RiSc. Merge the PR to include the changes in the main branch."
             } else {
                 "The RiSc has been updated, but does not require new approval."
             }
