@@ -18,5 +18,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     && chmod +x /usr/local/bin/sops
 
 COPY --from=build /build/libs/*.jar backend.jar
+USER 150
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "backend.jar"]

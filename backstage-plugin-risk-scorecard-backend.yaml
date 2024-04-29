@@ -75,6 +75,10 @@ spec:
             limits:
               cpu: 1000m
               memory: 512Mi
+          securityContext:
+            runAsUser: 150
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
       volumes:
         - name: sops-age-key
           secret:
