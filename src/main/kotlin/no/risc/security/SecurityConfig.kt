@@ -15,6 +15,7 @@ class SecurityConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
+            .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("/api/**").permitAll() }
