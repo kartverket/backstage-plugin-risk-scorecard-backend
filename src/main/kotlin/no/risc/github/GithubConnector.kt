@@ -1,8 +1,9 @@
 package no.risc.github
 
 import no.risc.github.GithubHelper.toReferenceObjects
+import no.risc.infra.connector.UserInfo
 import no.risc.infra.connector.WebClientConnector
-import no.risc.infra.connector.models.UserContext
+import no.risc.infra.connector.models.AccessTokens
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.FileContentDTO
@@ -284,11 +285,12 @@ class GithubConnector(
         riScId: String,
         fileContent: String,
         requiresNewApproval: Boolean,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
     ): Boolean {
-        val accessToken = userContext.githubAccessToken
+        val accessToken = accessTokens.githubAccessToken
         val githubAuthor =
-            Author(userContext.user.email, userContext.user.email, Date.from(Instant.now()))
+            Author(userInfo.email, userInfo.email, Date.from(Instant.now()))
         if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
@@ -328,7 +330,7 @@ class GithubConnector(
         ).bodyToMono<String>().block()
 
         if (!requiresNewApproval and !pullRequestForRiScExists(owner, repository, riScId, accessToken.value)) {
-            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, userContext)
+            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
         }
         return hasClosedPR
     }
@@ -457,12 +459,13 @@ class GithubConnector(
         repository: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
-            userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userContext.user),
+            accessTokens.githubAccessToken.value,
+            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
         ).pullRequestResponseDTO()
     }
 

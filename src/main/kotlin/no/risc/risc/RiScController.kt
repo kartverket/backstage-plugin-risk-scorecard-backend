@@ -3,8 +3,9 @@ package no.risc.risc
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.GoogleApiConnector
+import no.risc.infra.connector.UserInfo
+import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.infra.connector.models.UserContext
 import no.risc.risc.models.RiScWrapperObject
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -31,7 +32,7 @@ class RiScController(
         @PathVariable repositoryName: String,
     ): ResponseEntity<List<RiScContentResultDTO>> {
         val userContext =
-            getUserContext(gcpAccessToken, repositoryName)
+            getAccessTokens(gcpAccessToken, repositoryName)
 
         if (!userContext.isValid()) {
             return ResponseEntity.status(401)
@@ -42,7 +43,7 @@ class RiScController(
             riScService.fetchAllRiScs(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                userContext = userContext,
+                accessTokens = userContext,
             )
 
         return ResponseEntity.ok().body(result)
@@ -56,7 +57,7 @@ class RiScController(
         @PathVariable id: String,
     ): ResponseEntity<List<RiScContentResultDTO>> {
         val userContext =
-            getUserContext(gcpAccessToken, repositoryName)
+            getAccessTokens(gcpAccessToken, repositoryName)
 
         if (!userContext.isValid()) {
             return ResponseEntity.status(401)
@@ -77,17 +78,18 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
     ): ResponseEntity<ProcessRiScResultDTO> {
-        val userContext =
-            getUserContext(gcpAccessToken, repositoryName)
+        val accessTokens =
+            getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
 
         val response =
             riScService.createRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                userContext = userContext,
+                accessTokens = accessTokens,
                 content = riSc,
+                userInfo = riSc.userInfo,
             )
 
         return when (response.status) {
@@ -115,11 +117,10 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
     ): ResponseEntity<ProcessRiScResultDTO> {
-        println("Edit RiSc")
-        val userContext =
-            getUserContext(gcpAccessToken, repositoryName)
+        val accessTokens =
+            getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
 
         val editResult =
             riScService.updateRiSc(
@@ -127,7 +128,7 @@ class RiScController(
                 repository = repositoryName,
                 content = riSc,
                 riScId = id,
-                userContext = userContext,
+                accessTokens = accessTokens,
             )
 
         return when (editResult.status) {
@@ -153,18 +154,20 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
+        @RequestBody userInfo: UserInfo,
     ): ResponseEntity<PublishRiScResultDTO> {
-        val userContext =
-            getUserContext(gcpAccessToken, repositoryName)
+        val accessTokens =
+            getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!userContext.isValid()) return ResponseEntity.status(401).body(PublishRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(PublishRiScResultDTO.INVALID_USER_CONTEXT)
 
         val result =
             riScService.publishRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 riScId = id,
-                userContext = userContext,
+                accessTokens = accessTokens,
+                userInfo = userInfo,
             )
 
         return when (result.status) {
@@ -182,18 +185,16 @@ class RiScController(
         }
     }
 
-    private fun getUserContext(
+    private fun getAccessTokens(
         gcpAccessToken: String,
         repositoryName: String,
-    ): UserContext {
-        val user = googleApiConnector.fetchTokenInfo(gcpAccessToken) ?: throw IllegalArgumentException("Invalid GCP access token")
+    ): AccessTokens {
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
-        val userContext =
-            UserContext(
+        val accessTokens =
+            AccessTokens(
                 githubAccessTokenFromApp,
                 GCPAccessToken(gcpAccessToken),
-                user,
             )
-        return userContext
+        return accessTokens
     }
 }

@@ -9,12 +9,12 @@ class GoogleApiConnector(
 ) : WebClientConnector(baseUrl) {
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
-    fun fetchTokenInfo(token: String): User? {
+    fun fetchTokenInfo(token: String): String? {
         return try {
             webClient.get()
                 .uri("?access_token=$token")
                 .retrieve()
-                .bodyToMono(User::class.java)
+                .bodyToMono(String::class.java)
                 .block()
         } catch (e: Exception) {
             throw Exception("Invalid access token: $e")
@@ -23,6 +23,7 @@ class GoogleApiConnector(
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class User(
+data class UserInfo(
+    val name: String,
     val email: String,
 )
