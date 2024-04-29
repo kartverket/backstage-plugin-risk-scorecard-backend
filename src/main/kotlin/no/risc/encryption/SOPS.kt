@@ -1,5 +1,6 @@
 package no.risc.encryption
 
+import no.risc.infra.connector.GoogleApiConnector
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import no.risc.infra.connector.models.GCPAccessToken
@@ -22,6 +23,7 @@ object SOPS {
 
     private val processBuilder = ProcessBuilder().redirectErrorStream(true)
     private const val EXECUTION_STATUS_OK = 0
+    private val googleApiConnector: GoogleApiConnector = GoogleApiConnector()
 
     private fun toEncryptionCommand(
         config: String,
@@ -41,8 +43,12 @@ object SOPS {
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
         agePrivateKey: String
-    ): String =
-        processBuilder
+    ): String {
+        val isValidAccessToken = googleApiConnector.validateAccessToken(gcpAccessToken.value)
+        if (!isValidAccessToken) {
+            throw SOPSEncryptionException("Invalid GCP access token")
+        }
+        return processBuilder
             .command(toDecryptionCommand(gcpAccessToken.value, agePrivateKey))
             .start()
             .run {
@@ -51,17 +57,22 @@ object SOPS {
                 when (waitFor()) {
                     EXECUTION_STATUS_OK -> result
 
-                    else                                        ->
+                    else ->
                         throw SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
                 }
             }
+    }
 
     fun encrypt(
         text: String,
         config: String,
         gcpAccessToken: GCPAccessToken,
-    ): String =
-        processBuilder
+    ): String {
+        val isValidAccessToken = googleApiConnector.validateAccessToken(gcpAccessToken.value)
+        if (!isValidAccessToken) {
+            throw SOPSEncryptionException("Invalid GCP access token")
+        }
+        return processBuilder
             .command(toEncryptionCommand(config, gcpAccessToken.value))
             .start()
             .run {
@@ -70,9 +81,10 @@ object SOPS {
                 when (waitFor()) {
                     EXECUTION_STATUS_OK -> result
 
-                    else                                        -> throw SOPSEncryptionException(
+                    else -> throw SOPSEncryptionException(
                         "IOException from encrypting json with error code ${exitValue()}: $result"
                     )
                 }
             }
+    }
 }

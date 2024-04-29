@@ -275,7 +275,7 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         getGithubResponse(
-            uri = GithubHelper.uriToFindAllRiScBranches(owner, repository, riScFolderPath),
+            uri = GithubHelper.uriToFindAllRiScBranches(owner, repository, filenamePrefix),
             accessToken = accessToken,
         ).toReferenceObjects().riScIdentifiersDrafted()
 
