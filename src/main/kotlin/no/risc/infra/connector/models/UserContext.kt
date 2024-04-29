@@ -1,15 +1,14 @@
 package no.risc.infra.connector.models
 
 import no.risc.github.GithubAccessToken
-import no.risc.security.MicrosoftUser
+import no.risc.security.User
 
 data class UserContext(
     val githubAccessToken: GithubAccessToken,
     val gcpAccessToken: GCPAccessToken,
-    val microsoftUser: MicrosoftUser
+    val user: User,
 ) {
-    fun isValid(): Boolean =
-        gcpAccessToken.value.isNotBlank() && githubAccessToken.value.isNotBlank() && microsoftUser.email.value.isNotBlank()
+    fun isValid(): Boolean = gcpAccessToken.value.isNotBlank() && githubAccessToken.value.isNotBlank() && user.email.value.isNotBlank()
 }
 
 data class GCPAccessToken(val value: String)

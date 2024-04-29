@@ -289,7 +289,7 @@ class GithubConnector(
     ): Boolean {
         val accessToken = userContext.githubAccessToken
         val githubAuthor =
-            Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
+            Author(userContext.user.name, userContext.user.email, Date.from(Instant.now()))
         if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
@@ -463,7 +463,7 @@ class GithubConnector(
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
             userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userContext.microsoftUser),
+            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userContext.user),
         ).pullRequestResponseDTO()
     }
 

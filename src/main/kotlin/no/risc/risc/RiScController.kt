@@ -23,7 +23,6 @@ class RiScController(
     private val riScService: RiScService,
     private val githubAppConnector: GithubAppConnector,
 ) {
-
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     fun getRiScFilenames(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
@@ -173,8 +172,7 @@ class RiScController(
     }
 
     @GetMapping("/schemas/latest")
-    fun fetchLatestJSONSchema(
-    ): ResponseEntity<String> {
+    fun fetchLatestJSONSchema(): ResponseEntity<String> {
         val result = riScService.fetchLatestJSONSchema()
         return when (result.status) {
             GithubStatus.Success -> ResponseEntity.ok().body(result.data)
@@ -186,13 +184,13 @@ class RiScController(
         gcpAccessToken: String,
         repositoryName: String,
     ): UserContext {
-        val validatedMicrosoftUser = AuthService.getMicrosoftUser()
+        val user = AuthService.getUser()
         val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val userContext =
             UserContext(
                 githubAccessTokenFromApp,
                 GCPAccessToken(gcpAccessToken),
-                validatedMicrosoftUser,
+                user,
             )
         return userContext
     }

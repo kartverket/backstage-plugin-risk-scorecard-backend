@@ -2,7 +2,7 @@ package no.risc.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.risc.security.MicrosoftUser
+import no.risc.security.User
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
@@ -78,7 +78,6 @@ data class GithubPullRequestHead(
 )
 
 object GithubHelper {
-
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,
@@ -158,7 +157,7 @@ object GithubHelper {
         repositoryOwner: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        riScRiskOwner: MicrosoftUser,
+        riScRiskOwner: User,
     ): GithubCreateNewPullRequestPayload {
         val body =
             if (requiresNewApproval) {
