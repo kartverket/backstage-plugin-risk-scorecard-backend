@@ -81,7 +81,11 @@ class RiScController(
         val accessTokens =
             getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
+            return ResponseEntity.status(
+                401,
+            ).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        }
 
         val response =
             riScService.createRiSc(
@@ -120,7 +124,11 @@ class RiScController(
         val accessTokens =
             getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
+            return ResponseEntity.status(
+                401,
+            ).body(ProcessRiScResultDTO.INVALID_USER_CONTEXT)
+        }
 
         val editResult =
             riScService.updateRiSc(
@@ -159,7 +167,11 @@ class RiScController(
         val accessTokens =
             getAccessTokens(gcpAccessToken, repositoryName)
 
-        if (!accessTokens.isValid()) return ResponseEntity.status(401).body(PublishRiScResultDTO.INVALID_USER_CONTEXT)
+        if (!(accessTokens.isValid() && userInfo.isValid())) {
+            return ResponseEntity.status(
+                401,
+            ).body(PublishRiScResultDTO.INVALID_USER_CONTEXT)
+        }
 
         val result =
             riScService.publishRiSc(
