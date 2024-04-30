@@ -93,7 +93,6 @@ class RiScController(
                 repository = repositoryName,
                 accessTokens = accessTokens,
                 content = riSc,
-                userInfo = riSc.userInfo,
             )
 
         return when (response.status) {

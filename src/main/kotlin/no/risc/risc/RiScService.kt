@@ -214,7 +214,6 @@ class RiScService(
         repository: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-        userInfo: UserInfo,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
 
