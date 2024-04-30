@@ -6,10 +6,10 @@ import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.JSONSchemaConnector
-import no.risc.infra.connector.UserInfo
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.UserInfo
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value

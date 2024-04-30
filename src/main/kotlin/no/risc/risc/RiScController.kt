@@ -3,10 +3,10 @@ package no.risc.risc
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.GoogleApiConnector
-import no.risc.infra.connector.UserInfo
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.UserInfo
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping

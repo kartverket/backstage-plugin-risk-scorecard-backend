@@ -1,14 +1,14 @@
 package no.risc.github
 
 import no.risc.github.GithubHelper.toReferenceObjects
-import no.risc.infra.connector.UserInfo
+import no.risc.github.models.FileContentDTO
+import no.risc.github.models.FileNameDTO
+import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
-import no.risc.risc.models.FileContentDTO
-import no.risc.risc.models.FileNameDTO
-import no.risc.risc.models.ShaResponseDTO
+import no.risc.risc.models.UserInfo
 import no.risc.utils.getFileNameWithHighestVersion
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component

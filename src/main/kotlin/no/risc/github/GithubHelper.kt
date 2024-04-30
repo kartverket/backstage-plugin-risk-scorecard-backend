@@ -2,7 +2,7 @@ package no.risc.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.risc.infra.connector.UserInfo
+import no.risc.risc.models.UserInfo
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 

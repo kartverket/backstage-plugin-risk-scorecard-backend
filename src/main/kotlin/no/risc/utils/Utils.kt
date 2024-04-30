@@ -1,6 +1,6 @@
 package no.risc.utils
 
-import no.risc.risc.models.FileNameDTO
+import no.risc.github.models.FileNameDTO
 
 fun getFileNameWithHighestVersion(files: List<FileNameDTO>): String? {
     return files.maxByOrNull { dto ->

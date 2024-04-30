@@ -1,6 +1,5 @@
 package no.risc.infra.connector
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.springframework.stereotype.Component
 
 @Component
@@ -20,12 +19,4 @@ class GoogleApiConnector(
             throw Exception("Invalid access token: $e")
         }
     }
-}
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class UserInfo(
-    val name: String,
-    val email: String,
-) {
-    fun isValid(): Boolean = name.isNotBlank() && email.isNotBlank()
 }
