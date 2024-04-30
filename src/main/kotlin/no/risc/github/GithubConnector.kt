@@ -290,7 +290,7 @@ class GithubConnector(
     ): Boolean {
         val accessToken = accessTokens.githubAccessToken
         val githubAuthor =
-            Author(userInfo.email, userInfo.email, Date.from(Instant.now()))
+            Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
