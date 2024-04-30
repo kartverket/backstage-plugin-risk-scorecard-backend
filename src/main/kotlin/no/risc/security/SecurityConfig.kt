@@ -15,16 +15,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val issuerUri: String
+    @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val issuerUri: String,
 ) {
-
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("/api/risc/schemas/latest").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("api/**").authenticated() }
+            .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
             .oauth2ResourceServer { it.jwt { jwt -> jwt.decoder(jwtDecoder()) } }
 
         return http.build()
@@ -34,7 +32,7 @@ class SecurityConfig(
     fun jwtDecoder(): JwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri).build()
 
     @Bean
-    fun corsConfigurationSource(): CorsConfigurationSource? {
+    fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
         configuration.allowedOrigins = getAllowedOrigins()
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")

@@ -1,4 +1,4 @@
-package no.risc.risc.models
+package no.risc.github.models
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty

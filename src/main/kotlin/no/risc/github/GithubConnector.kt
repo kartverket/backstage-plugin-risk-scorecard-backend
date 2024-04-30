@@ -1,14 +1,14 @@
 package no.risc.github
 
 import no.risc.github.GithubHelper.toReferenceObjects
+import no.risc.github.models.FileContentDTO
+import no.risc.github.models.FileNameDTO
+import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
-import no.risc.infra.connector.models.Email
-import no.risc.infra.connector.models.UserContext
+import no.risc.infra.connector.models.AccessTokens
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
-import no.risc.risc.models.FileContentDTO
-import no.risc.risc.models.FileNameDTO
-import no.risc.risc.models.ShaResponseDTO
+import no.risc.risc.models.UserInfo
 import no.risc.utils.getFileNameWithHighestVersion
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -51,12 +51,12 @@ data class GithubWriteToFilePayload(
 ) {
     fun toContentBody(): String =
         when (sha) {
-            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email.value}\", \"date\":\"${author.formattedDate()}\" }"
+            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
         }
 }
 
-data class Author(val name: String, val email: Email, val date: Date) {
+data class Author(val name: String, val email: String, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
@@ -285,11 +285,12 @@ class GithubConnector(
         riScId: String,
         fileContent: String,
         requiresNewApproval: Boolean,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
     ): Boolean {
-        val accessToken = userContext.githubAccessToken
+        val accessToken = accessTokens.githubAccessToken
         val githubAuthor =
-            Author(userContext.microsoftUser.name, userContext.microsoftUser.email, Date.from(Instant.now()))
+            Author(userInfo.email, userInfo.email, Date.from(Instant.now()))
         if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
             createNewBranch(
                 owner = owner,
@@ -329,7 +330,7 @@ class GithubConnector(
         ).bodyToMono<String>().block()
 
         if (!requiresNewApproval and !pullRequestForRiScExists(owner, repository, riScId, accessToken.value)) {
-            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, userContext)
+            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
         }
         return hasClosedPR
     }
@@ -458,12 +459,13 @@ class GithubConnector(
         repository: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
     ): GithubPullRequestObject? {
         return postNewPullRequestToGithub(
             GithubHelper.uriToCreatePullRequest(owner, repository),
-            userContext.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userContext.microsoftUser),
+            accessTokens.githubAccessToken.value,
+            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
         ).pullRequestResponseDTO()
     }
 

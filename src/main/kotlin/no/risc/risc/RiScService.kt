@@ -1,19 +1,20 @@
 package no.risc.risc
 
-import java.util.Base64
 import no.risc.encryption.SOPS
 import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.JSONSchemaConnector
+import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.infra.connector.models.UserContext
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.UserInfo
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.util.Base64
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -108,13 +109,13 @@ class RiScService(
     fun fetchAllRiScs(
         owner: String,
         repository: String,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
     ): List<RiScContentResultDTO> {
         val riScs =
             githubConnector.fetchAllRiScIdentifiersInRepository(
                 owner,
                 repository,
-                userContext.githubAccessToken.value,
+                accessTokens.githubAccessToken.value,
             ).let { ids ->
                 ids.ids.map { identifier ->
                     when (identifier.status) {
@@ -123,18 +124,18 @@ class RiScService(
                                 owner,
                                 repository,
                                 identifier.id,
-                                userContext.githubAccessToken.value,
-                            ).responseToRiScResult(identifier.id, identifier.status, userContext.gcpAccessToken)
+                                accessTokens.githubAccessToken.value,
+                            ).responseToRiScResult(identifier.id, identifier.status, accessTokens.gcpAccessToken)
 
                         RiScStatus.SentForApproval,
                         RiScStatus.Draft,
-                                             ->
+                        ->
                             githubConnector.fetchDraftedRiScContent(
                                 owner,
                                 repository,
                                 identifier.id,
-                                userContext.githubAccessToken.value,
-                            ).responseToRiScResult(identifier.id, identifier.status, userContext.gcpAccessToken)
+                                accessTokens.githubAccessToken.value,
+                            ).responseToRiScResult(identifier.id, identifier.status, accessTokens.gcpAccessToken)
                     }
                 }
             }
@@ -197,14 +198,14 @@ class RiScService(
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         return updateOrCreateRiSc(
             owner = owner,
             repository = repository,
             riScId = riScId,
             content = content,
-            userContext = userContext,
+            accessTokens = accessTokens,
         )
     }
 
@@ -212,9 +213,9 @@ class RiScService(
         owner: String,
         repository: String,
         content: RiScWrapperObject,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
-        val uniqueRiScId = "${filenamePrefix}-${RandomStringUtils.randomAlphanumeric(5)}"
+        val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
 
         val result =
             updateOrCreateRiSc(
@@ -222,7 +223,7 @@ class RiScService(
                 repository = repository,
                 riScId = uniqueRiScId,
                 content = content,
-                userContext = userContext,
+                accessTokens = accessTokens,
             )
 
         return when (result.status) {
@@ -242,7 +243,7 @@ class RiScService(
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val jsonSchema =
             JSONSchemaConnector.fetchJSONSchema(content.schemaVersion.replace('.', '_'))
@@ -262,7 +263,7 @@ class RiScService(
         }
 
         val sopsConfig =
-            githubConnector.fetchSopsConfig(owner, repository, userContext.githubAccessToken)
+            githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken)
                 ?: return ProcessRiScResultDTO(
                     riScId,
                     ProcessingStatus.ErrorWhenUpdatingRiSc,
@@ -271,7 +272,7 @@ class RiScService(
 
         val encryptedData =
             try {
-                SOPS.encrypt(content.riSc, sopsConfig, userContext.gcpAccessToken)
+                SOPS.encrypt(content.riSc, sopsConfig, accessTokens.gcpAccessToken)
             } catch (e: Exception) {
                 return ProcessRiScResultDTO(
                     riScId,
@@ -288,7 +289,8 @@ class RiScService(
                     riScId = riScId,
                     fileContent = encryptedData,
                     requiresNewApproval = content.isRequiresNewApproval,
-                    userContext = userContext,
+                    accessTokens = accessTokens,
+                    userInfo = content.userInfo,
                 )
 
             return ProcessRiScResultDTO(
@@ -309,15 +311,17 @@ class RiScService(
         owner: String,
         repository: String,
         riScId: String,
-        userContext: UserContext,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
     ): PublishRiScResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForPublishingRiSc(
-                owner,
-                repository,
-                riScId,
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
                 requiresNewApproval = true,
-                userContext,
+                accessTokens = accessTokens,
+                userInfo = userInfo,
             )
 
         return when (pullRequestObject) {

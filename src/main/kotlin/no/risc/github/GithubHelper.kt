@@ -2,7 +2,7 @@ package no.risc.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.risc.security.MicrosoftUser
+import no.risc.risc.models.UserInfo
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
@@ -78,7 +78,6 @@ data class GithubPullRequestHead(
 )
 
 object GithubHelper {
-
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,
@@ -158,11 +157,11 @@ object GithubHelper {
         repositoryOwner: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        riScRiskOwner: MicrosoftUser,
+        riScRiskOwner: UserInfo,
     ): GithubCreateNewPullRequestPayload {
         val body =
             if (requiresNewApproval) {
-                "${riScRiskOwner.name}(${riScRiskOwner.email.value}) has approved the RiSc. Merge the PR to include the changes in the main branch."
+                "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the RiSc. Merge the PR to include the changes in the main branch."
             } else {
                 "The RiSc has been updated, but does not require new approval."
             }
