@@ -145,7 +145,7 @@ class GithubConnector(
                 getFileNameWithHighestVersion(it)?.let { version ->
                     fetchJSONSchema(version)
                 }
-            } ?: GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+            } ?: GithubContentResponse(null, GithubStatus.NotFound)
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
