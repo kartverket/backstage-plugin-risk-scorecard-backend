@@ -79,9 +79,9 @@ data class GithubPullRequestHead(
 
 @Component
 class GithubHelper(
+    @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
-    @Value("\${filename.prefix}") private val riScFilePrefix: String,
 ) {
     fun uriToFindSopsConfig(
         owner: String,
@@ -102,7 +102,7 @@ class GithubHelper(
     fun uriToFindAllRiScBranches(
         owner: String,
         repository: String,
-    ): String = "/$owner/$repository/git/matching-refs/heads/$riScFilePrefix-"
+    ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
 
     fun uriToFindExistingBranchForRiSc(
         owner: String,
