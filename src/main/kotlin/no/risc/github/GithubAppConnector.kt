@@ -3,6 +3,10 @@ package no.risc.github
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
+import no.risc.infra.connector.GcpClientConnector
+import no.risc.infra.connector.WebClientConnector
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory.getLogger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -17,31 +21,21 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
-import no.risc.infra.connector.GcpClientConnector
-import no.risc.infra.connector.WebClientConnector
-
-class GithubAppSignedJwt(
-    val value: String?,
-)
 
 class GithubAccessToken(
     val value: String,
 )
 
-class GithubAppIdentifier(
-    val appId: Int,
-    val installationId: Int,
-)
-
 @Component
 class GithubAppConnector(
-    @Value("\${githubAppIdentifier.appId}") appId: Int,
-    @Value("\${githubAppIdentifier.installationId}") installationId: Int,
-    @Value("\${githubAppIdentifier.privateKeySecretName}") val privateKeySecretName: String,
+    @Value("\${githubAppIdentifier.appId}") private val appId: Int,
+    @Value("\${githubAppIdentifier.installationId}") private val installationId: Int,
+    @Value("\${githubAppIdentifier.privateKeySecretName}") private val privateKeySecretName: String,
+    private val githubHelper: GithubHelper,
 ) :
     WebClientConnector("https://api.github.com/app") {
+    private val logger: Logger = getLogger(GithubAppConnector::class.java)
     private val gcpClientConnector = GcpClientConnector()
-    private val appIdentifier = GithubAppIdentifier(appId, installationId)
 
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
         val jwt = getGithubAppSignedJWT()
@@ -54,7 +48,7 @@ class GithubAppConnector(
                 privateKey =
                     gcpClientConnector.getSecretValue(privateKeySecretName)?.toByteArray()
                         ?: throw Exception("Kunne ikke hente github app private key"),
-                appId = appIdentifier.appId,
+                appId = appId,
             ),
         )
 
@@ -66,17 +60,17 @@ class GithubAppConnector(
             try {
                 webClient
                     .post()
-                    .uri(GithubHelper.uriToGetAccessTokenFromInstallation(appIdentifier.installationId.toString()))
+                    .uri(githubHelper.uriToGetAccessTokenFromInstallation(installationId.toString()))
                     .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
                     .header("X-GitHub-Api-Version", "2022-11-28")
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .bodyValue(GithubHelper.bodyToCreateAccessTokenForRepository(repositoryName).toContentBody())
+                    .bodyValue(githubHelper.bodyToGetAccessToken(repositoryName).toContentBody())
                     .retrieve()
                     .bodyToMono<GithubAccessTokenBody>()
                     .block() ?: throw Exception("Access token is null.")
             } catch (e: Exception) {
-                println(e.stackTrace)
+                logger.error("Could not create access token with error message: ${e.message}.")
                 throw Exception("Could not create access token with error message: ${e.message}.")
             }
 
@@ -86,6 +80,10 @@ class GithubAppConnector(
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class GithubAccessTokenBody(
         val token: String,
+    )
+
+    private data class GithubAppSignedJwt(
+        val value: String?,
     )
 }
 

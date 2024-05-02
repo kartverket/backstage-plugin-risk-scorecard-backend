@@ -1,6 +1,7 @@
 package no.risc.utils
 
 import no.risc.github.models.FileNameDTO
+import java.util.Base64
 
 fun getFileNameWithHighestVersion(files: List<FileNameDTO>): String? {
     return files.maxByOrNull { dto ->
@@ -19,3 +20,7 @@ data class MajorMinorVersion(val major: Int, val minor: Int) : Comparable<MajorM
         }
     }
 }
+
+fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArray())
+
+fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()

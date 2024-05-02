@@ -8,7 +8,7 @@ class GoogleApiConnector(
 ) : WebClientConnector(baseUrl) {
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
-    fun fetchTokenInfo(token: String): String? {
+    private fun fetchTokenInfo(token: String): String? {
         return try {
             webClient.get()
                 .uri("?access_token=$token")

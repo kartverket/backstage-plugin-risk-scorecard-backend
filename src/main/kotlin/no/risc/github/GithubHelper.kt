@@ -3,8 +3,8 @@ package no.risc.github
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import no.risc.risc.models.UserInfo
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubReferenceObjectDTO(
@@ -77,23 +77,31 @@ data class GithubPullRequestHead(
     val ref: String,
 )
 
-object GithubHelper {
+@Component
+class GithubHelper(
+    @Value("\${filename.postfix}") private val filenamePostfix: String,
+    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
+    @Value("\${filename.prefix}") private val riScFilePrefix: String,
+) {
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,
-        riScFolderPath: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
 
     fun uriToFindRiScFiles(
         owner: String,
         repository: String,
-        riScFolderPath: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath"
+
+    fun uriToFindRiSc(
+        owner: String,
+        repository: String,
+        id: String,
+    ): String = "/$owner/$repository/contents/$riScFolderPath/$id.$filenamePostfix.yaml"
 
     fun uriToFindAllRiScBranches(
         owner: String,
         repository: String,
-        riScFilePrefix: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$riScFilePrefix-"
 
     fun uriToFindExistingBranchForRiSc(
@@ -102,25 +110,18 @@ object GithubHelper {
         riScId: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$riScId"
 
-    fun WebClient.ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
-        this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
-
-    fun uriToFindContentOfFileOnDraftBranch(
+    fun uriToFindRiScOnDraftBranch(
         owner: String,
         repository: String,
         riScId: String,
         draftBranch: String = riScId,
-        filenamePostfix: String,
-        riScFolderPath: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
-    fun uriToPostContentOfFileOnDraftBranch(
+    fun uriToPutRiScOnDraftBranch(
         owner: String,
         repository: String,
         riScId: String,
         draftBranch: String = riScId,
-        filenamePostfix: String,
-        riScFolderPath: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
     fun uriToGetCommitStatus(
@@ -151,7 +152,7 @@ object GithubHelper {
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
     fun bodyToClosePullRequest(): String =
-        "{ \"title\":\"Closed\", \"body\": \"The PR was closed when RiSc was updated updated. New approval from risk owner is required.\",  \"state\": \"closed\"}"
+        "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. New approval from risk owner is required.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
@@ -160,14 +161,13 @@ object GithubHelper {
         riScRiskOwner: UserInfo,
     ): GithubCreateNewPullRequestPayload {
         val body =
-            if (requiresNewApproval) {
-                "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the RiSc. Merge the PR to include the changes in the main branch."
-            } else {
-                "The RiSc has been updated, but does not require new approval."
+            when (requiresNewApproval) {
+                true -> "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. Merge the pull request to include the changes in the main branch."
+                false -> "The risk scorecard has been updated, but does not require new approval."
             }
 
         return GithubCreateNewPullRequestPayload(
-            title = "Branch for RiSc $riScId",
+            title = "Branch for risk scorecard $riScId",
             body = body,
             repositoryOwner,
             riScId,
@@ -180,10 +180,8 @@ object GithubHelper {
         latestShaAtMain: String,
     ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$riScId", latestShaAtMain)
 
-    fun uriToFindAppInstallation(): String = "/installations"
-
     fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 
-    fun bodyToCreateAccessTokenForRepository(repositoryName: String): GithubCreateNewAccessTokenForRepository =
+    fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)
 }
