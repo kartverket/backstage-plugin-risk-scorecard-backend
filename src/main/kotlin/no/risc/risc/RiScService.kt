@@ -25,7 +25,7 @@ data class ProcessRiScResultDTO(
             ProcessRiScResultDTO(
                 "",
                 ProcessingStatus.InvalidAccessTokens,
-                "Invalid RiSc result: ${ProcessingStatus.InvalidAccessTokens.message}",
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
             )
     }
 }
@@ -58,7 +58,7 @@ data class PublishRiScResultDTO(
             PublishRiScResultDTO(
                 "",
                 ProcessingStatus.InvalidAccessTokens,
-                "Invalid RiSc result: ${ProcessingStatus.InvalidAccessTokens.message}",
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
                 null,
             )
     }
@@ -77,7 +77,7 @@ enum class ContentStatus {
 }
 
 enum class ProcessingStatus(val message: String) {
-    RiScNotValid("Risk scorecard is not valid according to JSON-Schema"),
+    RiScNotValid("Risk scorecard is not valid according to JSON Schema"),
     EncryptionFailed("Failed to encrypt risk scorecard"),
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
@@ -255,13 +255,13 @@ class RiScService(
             return ProcessRiScResultDTO(
                 riScId,
                 ProcessingStatus.UpdatedRiSc,
-                "RiSc was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
+                "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
             )
         } catch (e: Exception) {
             return ProcessRiScResultDTO(
                 riScId,
                 ProcessingStatus.ErrorWhenUpdatingRiSc,
-                "Failed with with error ${e.message} for RiSc with id $riScId",
+                "Failed with with error ${e.message} for risk scorecard with id $riScId",
             )
         }
     }
