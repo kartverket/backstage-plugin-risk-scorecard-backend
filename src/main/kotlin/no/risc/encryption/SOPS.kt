@@ -1,6 +1,8 @@
 package no.risc.encryption
 
 import no.risc.infra.connector.models.GCPAccessToken
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory.getLogger
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -9,6 +11,8 @@ class SOPSDecryptionException(message: String) : Exception(message)
 class SOPSEncryptionException(message: String) : Exception(message)
 
 object SOPS {
+    private val logger: Logger = getLogger(SOPS::class.java)
+
     private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
     private val decrypt = listOf("decrypt")
@@ -31,10 +35,7 @@ object SOPS {
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + gcpAccessToken(accessToken) +
-            ageSecret(
-                sopsPrivateKey,
-            ) + decrypt + inputTypeYaml + outputTypeJson + inputFile
+        sopsCmd + gcpAccessToken(accessToken) + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
@@ -54,8 +55,10 @@ object SOPS {
                 when (waitFor()) {
                     EXECUTION_STATUS_OK -> result
 
-                    else ->
-                        throw SOPSDecryptionException("IOException from decrypting yaml with error code ${exitValue()}: $result")
+                    else -> {
+                        logger.error("IOException from decrypting yaml with error code ${exitValue()}: $result")
+                        throw SOPSDecryptionException(result)
+                    }
                 }
             }
     }
@@ -74,9 +77,10 @@ object SOPS {
                 when (waitFor()) {
                     EXECUTION_STATUS_OK -> result
 
-                    else -> throw SOPSEncryptionException(
-                        "IOException from encrypting json with error code ${exitValue()}: $result",
-                    )
+                    else -> {
+                        logger.error("IOException from encrypting json with error code ${exitValue()}: $result")
+                        throw SOPSEncryptionException(result)
+                    }
                 }
             }
     }

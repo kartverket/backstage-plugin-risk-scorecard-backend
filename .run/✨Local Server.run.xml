@@ -11,7 +11,6 @@
       <env name="FILENAME_PREFIX" value="risc" />
       <env name="FILENAME_POSTFIX" value="risc" />
       <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
-      <env name="JSON_SCHEMA_BASE_URL" value="https://kartverket.github.io/backstage-plugin-risk-scorecard-backend" />
     </envs>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />

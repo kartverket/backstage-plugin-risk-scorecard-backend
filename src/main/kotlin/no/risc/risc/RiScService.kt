@@ -1,11 +1,11 @@
 package no.risc.risc
 
 import no.risc.encryption.SOPS
+import no.risc.encryption.SOPSDecryptionException
 import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
-import no.risc.infra.connector.JSONSchemaConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
@@ -14,7 +14,6 @@ import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.Base64
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -22,11 +21,11 @@ data class ProcessRiScResultDTO(
     val statusMessage: String,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT =
+        val INVALID_ACCESS_TOKENS =
             ProcessRiScResultDTO(
                 "",
-                ProcessingStatus.InvalidUserContext,
-                "Invalid RiSc result: ${ProcessingStatus.InvalidUserContext.message}",
+                ProcessingStatus.InvalidAccessTokens,
+                "Invalid RiSc result: ${ProcessingStatus.InvalidAccessTokens.message}",
             )
     }
 }
@@ -38,7 +37,7 @@ data class RiScContentResultDTO(
     val riScContent: String?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT =
+        val INVALID_ACCESS_TOKENS =
             RiScContentResultDTO(
                 riScId = "",
                 status = ContentStatus.Failure,
@@ -55,11 +54,11 @@ data class PublishRiScResultDTO(
     val pendingApproval: PendingApprovalDTO?,
 ) {
     companion object {
-        val INVALID_USER_CONTEXT =
+        val INVALID_ACCESS_TOKENS =
             PublishRiScResultDTO(
                 "",
-                ProcessingStatus.InvalidUserContext,
-                "Invalid RiSc result: ${ProcessingStatus.InvalidUserContext.message}",
+                ProcessingStatus.InvalidAccessTokens,
+                "Invalid RiSc result: ${ProcessingStatus.InvalidAccessTokens.message}",
                 null,
             )
     }
@@ -78,14 +77,14 @@ enum class ContentStatus {
 }
 
 enum class ProcessingStatus(val message: String) {
-    RiScNotValid("RiSc is not valid according to JSON-Schema"),
-    EncryptionFailed("Failed to encrypt RiSc"),
-    ErrorWhenUpdatingRiSc("Error when updating RiSc"),
-    CreatedRiSc("Created new RiSc successfully"),
-    UpdatedRiSc("Updated RiSc successfully"),
-    CreatedPullRequest("Created pull request for RiSc"),
+    RiScNotValid("Risk scorecard is not valid according to JSON-Schema"),
+    EncryptionFailed("Failed to encrypt risk scorecard"),
+    ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
+    CreatedRiSc("Created new risk scorecard successfully"),
+    UpdatedRiSc("Updated risk scorecard successfully"),
+    CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
-    InvalidUserContext("Invalid user context"),
+    InvalidAccessTokens("Invalid access tokens"),
 }
 
 data class RiScIdentifier(
@@ -102,7 +101,6 @@ enum class RiScStatus {
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
-    private val JSONSchemaConnector: JSONSchemaConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
 ) {
@@ -110,62 +108,37 @@ class RiScService(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
-    ): List<RiScContentResultDTO> {
-        val riScs =
-            githubConnector.fetchAllRiScIdentifiersInRepository(
-                owner,
-                repository,
-                accessTokens.githubAccessToken.value,
-            ).let { ids ->
-                ids.ids.map { identifier ->
-                    when (identifier.status) {
-                        RiScStatus.Published ->
-                            githubConnector.fetchPublishedRiSc(
-                                owner,
-                                repository,
-                                identifier.id,
-                                accessTokens.githubAccessToken.value,
-                            ).responseToRiScResult(identifier.id, identifier.status, accessTokens.gcpAccessToken)
-
-                        RiScStatus.SentForApproval,
-                        RiScStatus.Draft,
-                        ->
-                            githubConnector.fetchDraftedRiScContent(
-                                owner,
-                                repository,
-                                identifier.id,
-                                accessTokens.githubAccessToken.value,
-                            ).responseToRiScResult(identifier.id, identifier.status, accessTokens.gcpAccessToken)
-                    }
+    ): List<RiScContentResultDTO> =
+        githubConnector.fetchAllRiScIdentifiersInRepository(
+            owner,
+            repository,
+            accessTokens.githubAccessToken.value,
+        ).ids.map { id ->
+            val fetchRisc =
+                when (id.status) {
+                    RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                    RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
                 }
-            }
-
-        return riScs
-    }
+            fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken)
+        }
 
     private fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
-    ): RiScContentResultDTO {
-        return when (status) {
+    ): RiScContentResultDTO =
+        when (status) {
             GithubStatus.Success ->
                 try {
                     RiScContentResultDTO(riScId, ContentStatus.Success, riScStatus, decryptContent(gcpAccessToken))
                 } catch (e: Exception) {
                     when (e) {
-                        is no.risc.encryption.SOPSDecryptionException ->
-                            RiScContentResultDTO(
-                                riScId,
-                                ContentStatus.DecryptionFailed,
-                                riScStatus,
-                                decryptContent(
-                                    gcpAccessToken,
-                                ),
-                            )
+                        is SOPSDecryptionException ->
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, e.message)
 
                         else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, decryptContent(gcpAccessToken))
+                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
                     }
                 }
 
@@ -173,25 +146,15 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
 
             else ->
-                RiScContentResultDTO(
-                    riScId,
-                    ContentStatus.Failure,
-                    riScStatus,
-                    decryptContent(gcpAccessToken),
-                )
+                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
-    }
 
-    fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
-        this.data()
-            .let { Base64.getMimeDecoder().decode(it).decodeToString() }
-            .let {
-                SOPS.decrypt(
-                    ciphertext = it,
-                    gcpAccessToken = gcpAccessToken,
-                    agePrivateKey = ageKey,
-                )
-            }
+    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
+        SOPS.decrypt(
+            ciphertext = data(),
+            gcpAccessToken = gcpAccessToken,
+            agePrivateKey = ageKey,
+        )
 
     fun updateRiSc(
         owner: String,
@@ -199,15 +162,7 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-    ): ProcessRiScResultDTO {
-        return updateOrCreateRiSc(
-            owner = owner,
-            repository = repository,
-            riScId = riScId,
-            content = content,
-            accessTokens = accessTokens,
-        )
-    }
+    ): ProcessRiScResultDTO = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
 
     fun createRiSc(
         owner: String,
@@ -216,15 +171,7 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-
-        val result =
-            updateOrCreateRiSc(
-                owner = owner,
-                repository = repository,
-                riScId = uniqueRiScId,
-                content = content,
-                accessTokens = accessTokens,
-            )
+        val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
 
         return when (result.status) {
             ProcessingStatus.UpdatedRiSc ->
@@ -245,15 +192,16 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
-        val jsonSchema =
-            JSONSchemaConnector.fetchJSONSchema(content.schemaVersion.replace('.', '_'))
-                ?: return ProcessRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.ErrorWhenUpdatingRiSc,
-                    "Could not fetch JSON Schema",
-                )
+        val jsonSchema = githubConnector.fetchJSONSchema("risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json")
+        if (jsonSchema.status != GithubStatus.Success) {
+            return ProcessRiScResultDTO(
+                riScId,
+                ProcessingStatus.ErrorWhenUpdatingRiSc,
+                "Could not fetch JSON schema",
+            )
+        }
 
-        val validationStatus = JSONValidator.validateJSON(jsonSchema, content.riSc)
+        val validationStatus = JSONValidator.validateJSON(jsonSchema.data(), content.riSc)
         if (!validationStatus.valid) {
             return ProcessRiScResultDTO(
                 riScId,
@@ -262,23 +210,34 @@ class RiScService(
             )
         }
 
-        val sopsConfig =
-            githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken)
-                ?: return ProcessRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.ErrorWhenUpdatingRiSc,
-                    "Could not fetch SOPS config",
-                )
+        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken)
+        if (sopsConfig.status != GithubStatus.Success) {
+            return ProcessRiScResultDTO(
+                riScId,
+                ProcessingStatus.ErrorWhenUpdatingRiSc,
+                "Could not fetch SOPS config",
+            )
+        }
 
         val encryptedData =
             try {
-                SOPS.encrypt(content.riSc, sopsConfig, accessTokens.gcpAccessToken)
+                SOPS.encrypt(content.riSc, sopsConfig.data(), accessTokens.gcpAccessToken)
             } catch (e: Exception) {
-                return ProcessRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.EncryptionFailed,
-                    "Could not encrypt RiSc",
-                )
+                return when (e) {
+                    is SOPSDecryptionException ->
+                        ProcessRiScResultDTO(
+                            riScId,
+                            ProcessingStatus.EncryptionFailed,
+                            e.message ?: "Could not encrypt RiSc",
+                        )
+
+                    else ->
+                        ProcessRiScResultDTO(
+                            riScId,
+                            ProcessingStatus.EncryptionFailed,
+                            "Could not encrypt RiSc",
+                        )
+                }
             }
 
         try {
@@ -315,7 +274,7 @@ class RiScService(
         userInfo: UserInfo,
     ): PublishRiScResultDTO {
         val pullRequestObject =
-            githubConnector.createPullRequestForPublishingRiSc(
+            githubConnector.createPullRequestForRiSc(
                 owner = owner,
                 repository = repository,
                 riScId = riScId,
@@ -325,20 +284,20 @@ class RiScService(
             )
 
         return when (pullRequestObject) {
-            null ->
-                PublishRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    "Could not create pull request",
-                    null,
-                )
-
-            else ->
+            is GithubPullRequestObject ->
                 PublishRiScResultDTO(
                     riScId,
                     ProcessingStatus.CreatedPullRequest,
                     "Pull request was created",
                     pullRequestObject.toPendingApprovalDTO(),
+                )
+
+            else ->
+                PublishRiScResultDTO(
+                    riScId,
+                    ProcessingStatus.ErrorWhenCreatingPullRequest,
+                    "Could not create pull request",
+                    null,
                 )
         }
     }
@@ -349,7 +308,5 @@ class RiScService(
             pullRequestName = this.head.ref,
         )
 
-    fun fetchLatestJSONSchema(): GithubContentResponse {
-        return githubConnector.fetchJSONSchemas()
-    }
+    fun fetchLatestJSONSchema(): GithubContentResponse = githubConnector.fetchLatestJSONSchema()
 }

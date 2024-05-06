@@ -1,6 +1,6 @@
 package no.risc.github
 
-import no.risc.github.GithubHelper.toReferenceObjects
+import net.pwall.log.getLogger
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
 import no.risc.github.models.ShaResponseDTO
@@ -9,6 +9,8 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
+import no.risc.utils.decodeBase64
+import no.risc.utils.encodeBase64
 import no.risc.utils.getFileNameWithHighestVersion
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -18,7 +20,6 @@ import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.util.Base64
 import java.util.Date
 
 data class GithubContentResponse(
@@ -52,7 +53,7 @@ data class GithubWriteToFilePayload(
     fun toContentBody(): String =
         when (sha) {
             null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"sha\":\"$sha\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, \"sha\":\"$sha\""
         }
 }
 
@@ -62,57 +63,39 @@ data class Author(val name: String, val email: String, val date: Date) {
 
 @Component
 class GithubConnector(
-    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
-    @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${json.schema.path}") private val jsonSchemaPath: String,
+    private val githubHelper: GithubHelper,
 ) :
     WebClientConnector("https://api.github.com/repos") {
     fun fetchSopsConfig(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
-    ): String? {
-        return try {
-            getGithubResponse(
-                GithubHelper.uriToFindSopsConfig(owner, repository, riScFolderPath),
-                githubAccessToken.value,
-            )
-                .fileContent()
-                ?.value
-                ?.decodeBase64()
+    ): GithubContentResponse =
+        try {
+            val fileContent =
+                getGithubResponse(
+                    githubHelper.uriToFindSopsConfig(owner, repository),
+                    githubAccessToken.value,
+                ).decodedFileContent()
+            when (fileContent) {
+                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+                else -> GithubContentResponse(fileContent, GithubStatus.Success)
+            }
         } catch (e: Exception) {
-            null
+            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
-    }
-
-    private fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(this).decodeToString()
 
     fun fetchAllRiScIdentifiersInRepository(
         owner: String,
         repository: String,
         accessToken: String,
     ): GithubRiScIdentifiersResponse {
-        val draftRiScs =
-            try {
-                fetchRiScIdentifiersDrafted(owner, repository, accessToken)
-            } catch (e: Exception) {
-                emptyList()
-            }
-
-        val publishedRiScs =
-            try {
-                fetchPublishedRiScIdentifiers(owner, repository, accessToken)
-            } catch (e: Exception) {
-                emptyList()
-            }
-
-        val riScsSentForApproval =
-            try {
-                fetchRiScIdentifiersSentForApproval(owner, repository, accessToken)
-            } catch (e: Exception) {
-                emptyList()
-            }
+        val draftRiScs = fetchRiScIdentifiersDrafted(owner, repository, accessToken)
+        val publishedRiScs = fetchPublishedRiScIdentifiers(owner, repository, accessToken)
+        val riScsSentForApproval = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken)
 
         return GithubRiScIdentifiersResponse(
             status = GithubStatus.Success,
@@ -125,7 +108,7 @@ class GithubConnector(
         )
     }
 
-    fun combinePublishedDraftAndSentForApproval(
+    private fun combinePublishedDraftAndSentForApproval(
         draftRiScList: List<RiScIdentifier>,
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
@@ -147,58 +130,31 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponse(
-                    "/$owner/$repository/contents/$riScFolderPath/$id.$filenamePostfix.yaml",
-                    accessToken,
-                ).fileContent()?.value
-
-            if (fileContent == null) {
-                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-            } else {
-                GithubContentResponse(
-                    fileContent,
-                    GithubStatus.Success,
-                )
+                getGithubResponse(githubHelper.uriToFindRiSc(owner, repository, id), accessToken).decodedFileContent()
+            when (fileContent) {
+                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+                else -> GithubContentResponse(fileContent, GithubStatus.Success)
             }
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
 
-    fun fetchJSONSchemas(): GithubContentResponse =
+    fun fetchLatestJSONSchema(): GithubContentResponse =
         try {
-            val schemas =
-                getGithubResponseNoAuth(
-                    jsonSchemaPath,
-                ).schemaContent()
-            if (schemas == null) {
-                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-            } else {
-                val latestVersion = getFileNameWithHighestVersion(schemas)
-                val latestContent = fetchLatestJSONSchemaContent(latestVersion!!)
-
-                GithubContentResponse(
-                    latestContent.data,
-                    GithubStatus.Success,
-                )
-            }
+            getGithubResponseNoAuth(jsonSchemaPath).schemaFilenames()?.let {
+                getFileNameWithHighestVersion(it)?.let { version ->
+                    fetchJSONSchema(version)
+                }
+            } ?: GithubContentResponse(null, GithubStatus.NotFound)
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
 
-    private fun fetchLatestJSONSchemaContent(schemaVersion: String) =
+    fun fetchJSONSchema(filename: String): GithubContentResponse =
         try {
-            val fileContent =
-                getGithubResponseNoAuth(
-                    "$jsonSchemaPath/$schemaVersion",
-                ).rawFileContent()
-
-            if (fileContent == null) {
-                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-            } else {
-                GithubContentResponse(
-                    fileContent,
-                    GithubStatus.Success,
-                )
+            when (val fileContent = getGithubResponseNoAuth("$jsonSchemaPath/$filename").rawFileContent()) {
+                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+                else -> GithubContentResponse(fileContent, GithubStatus.Success)
             }
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
@@ -212,41 +168,15 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponse(
-                    uri =
-                        GithubHelper.uriToFindContentOfFileOnDraftBranch(
-                            owner,
-                            repository,
-                            id,
-                            filenamePostfix = filenamePostfix,
-                            riScFolderPath = riScFolderPath,
-                        ),
-                    accessToken = accessToken,
-                ).fileContent()?.value
+                getGithubResponse(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, id), accessToken)
+                    .decodedFileContent()
 
-            if (fileContent == null) {
-                GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-            } else {
-                GithubContentResponse(
-                    fileContent,
-                    GithubStatus.Success,
-                )
+            when (fileContent) {
+                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
+                else -> GithubContentResponse(fileContent, GithubStatus.Success)
             }
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
-        }
-
-    private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
-        when (e) {
-            is WebClientResponseException ->
-                when (e) {
-                    is WebClientResponseException.NotFound -> GithubStatus.NotFound
-                    is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
-                    is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                    else -> GithubStatus.InternalError
-                }
-
-            else -> GithubStatus.InternalError
         }
 
     private fun fetchPublishedRiScIdentifiers(
@@ -254,30 +184,38 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        getGithubResponse(
-            GithubHelper.uriToFindRiScFiles(owner, repository, riScFolderPath),
-            accessToken,
-        ).riScIdentifiersPublished()
+        try {
+            getGithubResponse(githubHelper.uriToFindRiScFiles(owner, repository), accessToken)
+                .riScIdentifiersPublished()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     private fun fetchRiScIdentifiersSentForApproval(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        getGithubResponse(
-            GithubHelper.uriToFetchAllPullRequests(owner, repository),
-            accessToken,
-        ).pullRequestResponseDTOs().riScIdentifiersSentForApproval()
+        try {
+            getGithubResponse(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
+                .pullRequestResponseDTOs().riScIdentifiersSentForApproval()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     private fun fetchRiScIdentifiersDrafted(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        getGithubResponse(
-            uri = GithubHelper.uriToFindAllRiScBranches(owner, repository, filenamePrefix),
-            accessToken = accessToken,
-        ).toReferenceObjects().riScIdentifiersDrafted()
+        try {
+            getGithubResponse(
+                githubHelper.uriToFindAllRiScBranches(owner, repository),
+                accessToken,
+            ).toReferenceObjects().riScIdentifiersDrafted()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     internal fun updateOrCreateDraft(
         owner: String,
@@ -288,74 +226,61 @@ class GithubConnector(
         accessTokens: AccessTokens,
         userInfo: UserInfo,
     ): Boolean {
-        val accessToken = accessTokens.githubAccessToken
-        val githubAuthor =
-            Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
-        if (!branchForRiScDraftExists(owner, repository, riScId, accessToken.value)) {
-            createNewBranch(
-                owner = owner,
-                repository = repository,
-                riScId = riScId,
-                accessToken = accessToken.value,
-            )
-        }
-        var hasClosedPR = false
-        if (pullRequestForRiScExists(owner, repository, riScId, accessToken.value) and requiresNewApproval) {
-            closeExistingPullRequestForRiSc(owner, repository, riScId, accessToken.value)
-            hasClosedPR = true
+        val accessToken = accessTokens.githubAccessToken.value
+        val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
+        if (!branchForRiScDraftExists(owner, repository, riScId, accessToken)) {
+            createNewBranch(owner, repository, riScId, accessToken)
         }
 
-        val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken.value)
+        val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
         val commitMessage =
-            if (latestShaForRiSc != null) "refactor: Update RiSc with id: $riScId" else "feat: Create new RiSc with id: $riScId"
+            when (latestShaForRiSc) {
+                null -> "feat: Create new RiSc with id: $riScId"
+                else -> "refactor: Update RiSc with id: $riScId"
+            }
 
         putFileRequestToGithub(
-            uri =
-                GithubHelper.uriToPostContentOfFileOnDraftBranch(
-                    owner,
-                    repository,
-                    riScId,
-                    filenamePostfix = filenamePostfix,
-                    riScFolderPath = riScFolderPath,
-                ),
-            accessToken.value,
+            githubHelper.uriToPutRiScOnDraftBranch(owner, repository, riScId),
+            accessToken,
             GithubWriteToFilePayload(
                 message = commitMessage,
-                content = Base64.getEncoder().encodeToString(fileContent.toByteArray()),
+                content = fileContent.encodeBase64(),
                 sha = latestShaForRiSc,
                 branchName = riScId,
                 author = githubAuthor,
             ),
         ).bodyToMono<String>().block()
 
-        if (!requiresNewApproval and !pullRequestForRiScExists(owner, repository, riScId, accessToken.value)) {
-            createPullRequestForPublishingRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
+        val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
+        if (!requiresNewApproval and !prExists) {
+            createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
         }
-        return hasClosedPR
+        if (requiresNewApproval and prExists) {
+            closePullRequestForRiSc(owner, repository, riScId, accessToken)
+        }
+
+        return requiresNewApproval and prExists
     }
 
-    private fun closeExistingPullRequestForRiSc(
+    private fun closePullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
         accessToken: String,
-    ): String? {
-        val pullRequestsForRiSc = fetchAllPullRequestsForRiSc(owner, repository, accessToken)
-        val matchingPullRequest = pullRequestsForRiSc.find { it.head.ref == riScId }
-        if (matchingPullRequest != null) {
+    ): String? =
+        fetchAllPullRequestsForRiSc(owner, repository, accessToken).find { it.head.ref == riScId }?.let {
             try {
-                return closePullRequest(
-                    uri = GithubHelper.uriToEditPullRequest(owner, repository, matchingPullRequest.number),
+                closePullRequest(
+                    uri = githubHelper.uriToEditPullRequest(owner, repository, it.number),
                     accessToken = accessToken,
-                    closePullRequestBody = GithubHelper.bodyToClosePullRequest(),
+                    closePullRequestBody = githubHelper.bodyToClosePullRequest(),
                 ).bodyToMono<String>().block()
             } catch (e: Exception) {
-                println(e)
+                getLogger().error("Could not close pull request with error message: ${e.message}.")
+                null
             }
         }
-        return null
-    }
 
     private fun getSHAForExistingRiScDraftOrNull(
         owner: String,
@@ -363,16 +288,8 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ) = try {
-        getGithubResponse(
-            GithubHelper.uriToFindContentOfFileOnDraftBranch(
-                owner,
-                repository,
-                riScId,
-                filenamePostfix = filenamePostfix,
-                riScFolderPath = riScFolderPath,
-            ),
-            accessToken,
-        ).shaReponseDTO()?.value
+        getGithubResponse(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, riScId), accessToken)
+            .shaResponseDTO()
     } catch (e: Exception) {
         null
     }
@@ -389,34 +306,26 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ): Boolean {
-        val riScsSentForApproval = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken)
-        return riScsSentForApproval.any { it.id == riScId }
-    }
+    ): Boolean = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken).any { it.id == riScId }
 
     private fun fetchBranchForRiSc(
         owner: String,
         repository: String,
         riScId: String,
         accessToken: String,
-    ) = try {
-        getGithubResponse(
-            GithubHelper.uriToFindExistingBranchForRiSc(owner, repository, riScId),
-            accessToken,
-        ).toReferenceObjects()
-    } catch (e: Exception) {
-        emptyList()
-    }
+    ): List<GithubReferenceObject> =
+        try {
+            getGithubResponse(githubHelper.uriToFindExistingBranchForRiSc(owner, repository, riScId), accessToken)
+                .toReferenceObjects()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
     private fun fetchLatestShaForDefaultBranch(
         owner: String,
         repository: String,
         accessToken: String,
-    ): String? =
-        getGithubResponse(
-            GithubHelper.uriToGetCommitStatus(owner, repository, "main"),
-            accessToken,
-        ).shaReponseDTO()?.value
+    ): String? = getGithubResponse(githubHelper.uriToGetCommitStatus(owner, repository, "main"), accessToken).shaResponseDTO()
 
     fun createNewBranch(
         owner: String,
@@ -424,50 +333,39 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ): String? {
-        val latestShaForMainBranch =
-            fetchLatestShaForDefaultBranch(owner, repository, accessToken) ?: return null
-
+        val latestShaForMainBranch = fetchLatestShaForDefaultBranch(owner, repository, accessToken) ?: return null
         return postNewBranchToGithub(
-            GithubHelper.uriToCreateNewBranchForRiSc(owner, repository),
-            accessToken,
-            GithubHelper.bodyToCreateNewBranchForRiScFromMain(riScId, latestShaForMainBranch),
-        )
-            .bodyToMono<String>()
-            .block()
+            uri = githubHelper.uriToCreateNewBranchForRiSc(owner, repository),
+            accessToken = accessToken,
+            branchPayload = githubHelper.bodyToCreateNewBranchForRiScFromMain(riScId, latestShaForMainBranch),
+        ).bodyToMono<String>().block()
     }
 
     fun fetchAllPullRequestsForRiSc(
         owner: String,
         repository: String,
         accessToken: String,
-    ): List<GithubPullRequestObject> {
-        val githubResponse =
-            try {
-                getGithubResponse(
-                    GithubHelper.uriToFetchAllPullRequests(owner, repository),
-                    accessToken,
-                ).pullRequestResponseDTOs()
-            } catch (e: Exception) {
-                emptyList()
-            }
+    ): List<GithubPullRequestObject> =
+        try {
+            getGithubResponse(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
+                .pullRequestResponseDTOs()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
-        return githubResponse
-    }
-
-    fun createPullRequestForPublishingRiSc(
+    fun createPullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
-    ): GithubPullRequestObject? {
-        return postNewPullRequestToGithub(
-            GithubHelper.uriToCreatePullRequest(owner, repository),
-            accessTokens.githubAccessToken.value,
-            GithubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
+    ): GithubPullRequestObject? =
+        postNewPullRequestToGithub(
+            uri = githubHelper.uriToCreatePullRequest(owner, repository),
+            accessToken = accessTokens.githubAccessToken.value,
+            pullRequestPayload = githubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
         ).pullRequestResponseDTO()
-    }
 
     private fun postNewPullRequestToGithub(
         uri: String,
@@ -525,31 +423,6 @@ class GithubConnector(
         .body(Mono.just(writePayload.toContentBody()), String::class.java)
         .retrieve()
 
-    private fun ResponseSpec.fileContent(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
-
-    private fun ResponseSpec.rawFileContent(): String? = this.bodyToMono<String>().block()
-
-    private fun ResponseSpec.shaReponseDTO(): ShaResponseDTO? = this.bodyToMono<ShaResponseDTO>().block()
-
-    fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
-        this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
-
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
-
-    private fun ResponseSpec.riScIdentifiersPublished(): List<RiScIdentifier> =
-        this.bodyToMono<List<FileNameDTO>>().block()
-            ?.filter { it.value.endsWith(".$filenamePostfix.yaml") }
-            ?.map { RiScIdentifier(it.value.substringBefore('.'), RiScStatus.Published) } ?: emptyList()
-
-    fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval) }
-            .filter { it.id.startsWith("$filenamePrefix-") }
-
-    fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
-
-    fun ResponseSpec.schemaContent(): List<FileNameDTO>? = this.bodyToMono<List<FileNameDTO>>().block()
-
     private fun getGithubResponse(
         uri: String,
         accessToken: String,
@@ -567,4 +440,45 @@ class GithubConnector(
             .header("Accept", "application/vnd.github.raw+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
+
+    private fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
+        this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
+
+    private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+
+    private fun ResponseSpec.riScIdentifiersPublished(): List<RiScIdentifier> =
+        this.bodyToMono<List<FileNameDTO>>().block()
+            ?.filter { it.value.endsWith(".$filenamePostfix.yaml") }
+            ?.map { RiScIdentifier(it.value.substringBefore(".$filenamePostfix"), RiScStatus.Published) } ?: emptyList()
+
+    private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
+        this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval) }
+            .filter { it.id.startsWith("$filenamePrefix-") }
+
+    private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
+        this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
+
+    private fun ResponseSpec.schemaFilenames(): List<FileNameDTO>? = this.bodyToMono<List<FileNameDTO>>().block()
+
+    private fun ResponseSpec.decodedFileContent(): String? = this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
+
+    private fun ResponseSpec.rawFileContent(): String? = this.bodyToMono<String>().block()
+
+    private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
+
+    private fun ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
+        this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
+
+    private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
+        when (e) {
+            is WebClientResponseException ->
+                when (e) {
+                    is WebClientResponseException.NotFound -> GithubStatus.NotFound
+                    is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
+                    is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
+                    else -> GithubStatus.InternalError
+                }
+
+            else -> GithubStatus.InternalError
+        }
 }
