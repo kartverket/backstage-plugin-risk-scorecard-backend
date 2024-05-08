@@ -1,8 +1,12 @@
 FROM eclipse-temurin:21.0.2_13-jre-alpine@sha256:f153dfdd10e9846963676aa6ea8b8630f150a63c8e5fe127c93e98eb10b86766
 RUN apk update && apk upgrade
 RUN apk --no-cache add curl
-RUN mkdir /app
 EXPOSE 8080
+RUN mkdir /app && mkdir /app/sops
+RUN adduser -D user && chown -R user /app
+WORKDIR .
+COPY build/libs/backstage-plugin-risk-scorecard-backend-0.0.1-SNAPSHOT.jar /app/backend.jar
+USER user
 
 ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
 ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
@@ -17,8 +21,4 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi \
     && chmod +x /app/sops
 
-RUN adduser -D user && chown -R user /app
-WORKDIR .
-COPY build/libs/*.jar /app/backend.jar
-USER user
 ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
