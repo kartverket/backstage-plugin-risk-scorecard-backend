@@ -5,12 +5,15 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
-import java.io.File
 import no.risc.infra.connector.models.GCPAccessToken
+import org.springframework.core.io.ClassPathResource
 
 class SOPSTest {
-    private val decryptedROS =
-        File("src/test/kotlin/no/kvros/encryption/utils/ukryptert.ros.json").readText(Charsets.UTF_8)
+
+    private val decryptedROS = readResource(path = "utils/ukryptert.ros.json")
+
+    private fun readResource(path: String) = ClassPathResource(path).inputStream.bufferedReader(charset("UTF-8")).use { it.readText() }
+
 
     @Test
     fun `when ciphertext is not yaml an exception is thrown`() {
@@ -28,8 +31,7 @@ class SOPSTest {
 
     @Test
     fun `when ciphertext is yaml then the json equivalent is returned`() {
-        val ciphertextThatIsYaml =
-            File("src/test/kotlin/no/kvros/encryption/utils/kryptert.ros_test.yaml").readText(Charsets.UTF_8)
+        val ciphertextThatIsYaml = readResource(path = "utils/kryptert.ros_test.yaml")
 
         val actual =
             SOPS.decrypt(
