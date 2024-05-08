@@ -19,6 +19,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     else \
       echo "Unsupported architecture"; \
     fi \
-    && chmod +x /app/sops
+    && chmod +x -R /app/sops
 
 ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
