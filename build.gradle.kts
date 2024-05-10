@@ -54,6 +54,10 @@ tasks.withType<KotlinCompile> {
     }
 }
 
+tasks.getByName<Jar>("jar") {
+    enabled = false
+}
+
 tasks.withType<Test> {
     environment["SOPS_AGE_KEY"] = "AGE-SECRET-KEY-12ZJZ9F3SSUGHTZMPMRX32R7MUT0C5JHWVND65643K8HDTMXQ0HZS4AHC08"
     environment["GCP_KMS_RESOURCE_PATH"] = "projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"
