@@ -16,7 +16,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     else \
       echo "Unsupported architecture"; \
     fi \
-    && chmod +x -R app/sops
+    && chmod +x -R /usr/local/bin/sops
 
 RUN adduser -D user && chown -R user /app && chown -R /usr/local/bin/sops
 USER user
