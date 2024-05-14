@@ -18,6 +18,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi \
     && chmod +x -R /usr/local/bin/sops
 
-RUN adduser -D user && chown -R user /app && chown -R /usr/local/bin/sops
+RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin/sops
 USER user
 ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
