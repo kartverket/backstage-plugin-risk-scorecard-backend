@@ -88,7 +88,7 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
-      - name: "Run Pharos"
+      - name: "Run Pharos."
         uses: kartverket/pharos@v0.1.5
         with:
           image_url: ${{ needs.build.outputs.image_url }}
