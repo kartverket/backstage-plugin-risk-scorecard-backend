@@ -17,7 +17,7 @@ class SecurityConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
             .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
 
@@ -27,7 +27,7 @@ class SecurityConfig {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = getAllowedOrigins()
+        //configuration.allowedOrigins = getAllowedOrigins()
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         configuration.allowedHeaders =
             listOf(
