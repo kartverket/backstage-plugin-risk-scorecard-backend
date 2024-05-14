@@ -10,14 +10,14 @@ ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.li
 ARG TARGETARCH
 
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      curl -L $SOPS_AMD64 -o app/sops; \
+      curl -L $SOPS_AMD64 -o /usr/local/bin/sops; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-      curl -L $SOPS_ARM64 -o app/sops; \
+      curl -L $SOPS_ARM64 -o /usr/local/bin/sops; \
     else \
       echo "Unsupported architecture"; \
     fi \
     && chmod +x -R app/sops
 
-RUN adduser -D user && chown -R user /app
+RUN adduser -D user && chown -R user /app && chown -R /usr/local/bin/sops
 USER user
 ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
