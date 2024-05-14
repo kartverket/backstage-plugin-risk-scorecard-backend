@@ -13,7 +13,7 @@ class SOPSEncryptionException(message: String) : Exception(message)
 object SOPS {
     private val logger: Logger = getLogger(SOPS::class.java)
 
-    private val sopsCmd = listOf("/app/sops/sops-1.0/cmd/sops")
+    private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
     private val decrypt = listOf("decrypt")
     private val inputTypeYaml = listOf("--input-type", "yaml")
