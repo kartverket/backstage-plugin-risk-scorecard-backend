@@ -16,7 +16,7 @@ class SecurityConfig {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            //.cors { it.configurationSource(corsConfigurationSource()) }
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
             .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
@@ -50,7 +50,7 @@ class SecurityConfig {
     fun getAllowedOrigins(): List<String> {
         return listOf(
             "http://localhost:3000/",
-            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app",
+            "https://sandbox.kartverket.dev",
         )
     }
 }
