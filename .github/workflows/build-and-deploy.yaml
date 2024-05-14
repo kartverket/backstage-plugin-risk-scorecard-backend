@@ -88,7 +88,7 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
-      - name: "Run Pharos."
+      - name: "Run Pharos"
         uses: kartverket/pharos@v0.1.5
         with:
           image_url: ${{ needs.build.outputs.image_url }}
@@ -108,7 +108,7 @@ jobs:
       - name: Update version
         run: |
           env_type="dev"
-          echo "\"${{ needs.build.outputs.image_url }}\"" > "${env_type}/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
+          echo "\"${{ needs.build.outputs.image_url }}\"" > "${env_type}/ros-plugin-backend-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
           git commit -am "Update ros-backend ${{ env.ARGO_VERSION_FILE }}"
