@@ -18,7 +18,7 @@ class SecurityConfig {
         http
             //.cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
+            .authorizeHttpRequests { it.requestMatchers("/api/**").permitAll() }
             .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
 
         return http.build()
