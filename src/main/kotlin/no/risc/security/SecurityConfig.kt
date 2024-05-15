@@ -17,8 +17,7 @@ class SecurityConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .authorizeHttpRequests { it.requestMatchers("/actuator/health").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("/actuator/prometheus").permitAll() }
+            .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
             .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
             .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
 
