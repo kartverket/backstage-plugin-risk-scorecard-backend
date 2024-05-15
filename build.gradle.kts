@@ -29,6 +29,8 @@ dependencies {
 
     implementation("io.netty:netty-all:4.1.100.Final")
 
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("net.pwall.json:json-kotlin-schema:0.44")
     implementation("org.apache.commons:commons-lang3:3.0")
