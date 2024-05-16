@@ -95,7 +95,7 @@ jobs:
 
   argo:
     name: Update version in skvis-apps
-    if: github.event_name == 'push' && github.ref == 'refs/heads/add-build-deploy-workflow'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -110,7 +110,7 @@ jobs:
           env_type="dev"
           echo "\"${{ needs.build.outputs.image_url }}\"" > "${env_type}/ros-plugin-backend-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
-          git config --global user.name "Backstage-Plugin Risk Scorecard Backend CI"
+          git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
           git commit -am "Update ros-backend ${{ env.ARGO_VERSION_FILE }}"
           git push
 
