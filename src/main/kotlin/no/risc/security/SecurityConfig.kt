@@ -51,6 +51,7 @@ class SecurityConfig {
         return listOf(
             "http://localhost:3000/",
             "https://sandbox.kartverket.dev",
+            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app",
         )
     }
 }
