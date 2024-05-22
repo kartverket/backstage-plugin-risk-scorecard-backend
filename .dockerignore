@@ -8,7 +8,6 @@ httpRequests
 dataSources
 dataSources.local.xml
 
-**/build
 **/.idea
 **/*.iml
 **/.gradle
