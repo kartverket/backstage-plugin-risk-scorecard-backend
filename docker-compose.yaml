@@ -1,0 +1,19 @@
+services:
+  skip:
+    build:
+      context: .
+      dockerfile: docker/skip/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - .:/code
+
+  gcp:
+    build:
+      context: .
+      dockerfile: docker/gcp/Dockerfile
+    ports:
+      - "8082:8080"
+    volumes:
+        - .:/code
