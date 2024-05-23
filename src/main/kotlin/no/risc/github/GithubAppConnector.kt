@@ -1,6 +1,5 @@
 package no.risc.github
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import no.risc.infra.connector.GcpClientConnector
@@ -19,8 +18,7 @@ import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
-import java.util.Base64
-import java.util.Date
+import java.util.*
 
 class GithubAccessToken(
     val value: String,
@@ -32,25 +30,20 @@ class GithubAppConnector(
     @Value("\${githubAppIdentifier.installationId}") private val installationId: Int,
     @Value("\${githubAppIdentifier.privateKeySecretName}") private val privateKeySecretName: String,
     private val githubHelper: GithubHelper,
+    private val githubTokenService: GithubTokenService,
 ) :
     WebClientConnector("https://api.github.com/app") {
     private val logger: Logger = getLogger(GithubAppConnector::class.java)
     private val gcpClientConnector = GcpClientConnector()
 
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
-        val jwt = getGithubAppSignedJWT()
-        return getGithubAppAccessToken(jwt, repositoryName = repositoryName)
-    }
-
-    private fun getGithubAppSignedJWT(): GithubAppSignedJwt =
-        GithubAppSignedJwt(
-            PemUtils.getSignedJWT(
-                privateKey =
-                    gcpClientConnector.getSecretValue(privateKeySecretName)?.toByteArray()
-                        ?: throw Exception("Kunne ikke hente github app private key"),
-                appId = appId,
-            ),
+        return GithubAccessToken(
+            githubTokenService.getInstallationToken(
+                gcpClientConnector.getSecretValue(privateKeySecretName)
+                    ?: throw Exception("Kunne ikke hente github app private key")
+            )
         )
+    }
 
     private fun getGithubAppAccessToken(
         jwt: GithubAppSignedJwt,
@@ -76,11 +69,6 @@ class GithubAppConnector(
 
         return GithubAccessToken(accessTokenBody.token)
     }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    data class GithubAccessTokenBody(
-        val token: String,
-    )
 
     private data class GithubAppSignedJwt(
         val value: String?,
