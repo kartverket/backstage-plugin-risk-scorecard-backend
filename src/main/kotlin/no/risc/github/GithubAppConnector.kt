@@ -1,7 +1,13 @@
 package no.risc.github
 
-import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.jwk.JWK
+import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.SignedJWT
 import no.risc.infra.connector.GcpClientConnector
 import no.risc.infra.connector.WebClientConnector
 import org.slf4j.Logger
@@ -11,14 +17,10 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.nio.charset.StandardCharsets
-import java.security.KeyFactory
-import java.security.PrivateKey
-import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 
 class GithubAccessToken(
     val value: String,
@@ -30,107 +32,80 @@ class GithubAppConnector(
     @Value("\${githubAppIdentifier.installationId}") private val installationId: Int,
     @Value("\${githubAppIdentifier.privateKeySecretName}") private val privateKeySecretName: String,
     private val githubHelper: GithubHelper,
-    private val githubTokenService: GithubTokenService,
 ) :
     WebClientConnector("https://api.github.com/app") {
     private val logger: Logger = getLogger(GithubAppConnector::class.java)
     private val gcpClientConnector = GcpClientConnector()
 
+    private val installationTokenBody: AtomicReference<GithubAccessTokenBody> = AtomicReference()
+
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
-        return GithubAccessToken(
-            githubTokenService.getInstallationToken(
-                gcpClientConnector.getSecretValue(privateKeySecretName)
-                    ?: throw Exception("Kunne ikke hente github app private key")
+        if (installationTokenBody.get() == null || installationTokenBody.get().isExpired()) {
+            installationTokenBody.set(
+                getGithubAppAccessToken(
+                    jwt = generateJWT(
+                        gcpClientConnector.getSecretValue(privateKeySecretName)
+                            ?: throw Exception("Kunne ikke hente github app private key")
+                    ),
+                    repositoryName = repositoryName
+                )
             )
+        }
+        return GithubAccessToken(
+            installationTokenBody.get().token
         )
     }
 
     private fun getGithubAppAccessToken(
         jwt: GithubAppSignedJwt,
         repositoryName: String,
-    ): GithubAccessToken {
-        val accessTokenBody: GithubAccessTokenBody =
-            try {
-                webClient
-                    .post()
-                    .uri(githubHelper.uriToGetAccessTokenFromInstallation(installationId.toString()))
-                    .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
-                    .header("X-GitHub-Api-Version", "2022-11-28")
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .bodyValue(githubHelper.bodyToGetAccessToken(repositoryName).toContentBody())
-                    .retrieve()
-                    .bodyToMono<GithubAccessTokenBody>()
-                    .block() ?: throw Exception("Access token is null.")
-            } catch (e: Exception) {
-                logger.error("Could not create access token with error message: ${e.message}.")
-                throw Exception("Could not create access token with error message: ${e.message}.")
-            }
-
-        return GithubAccessToken(accessTokenBody.token)
+    ): GithubAccessTokenBody = try {
+        webClient
+            .post()
+            .uri(githubHelper.uriToGetAccessTokenFromInstallation(installationId.toString()))
+            .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .bodyValue(githubHelper.bodyToGetAccessToken(repositoryName).toContentBody())
+            .retrieve()
+            .bodyToMono<GithubAccessTokenBody>()
+            .block() ?: throw Exception("Access token is null.")
+    } catch (e: Exception) {
+        logger.error("Could not create access token with error message: ${e.message}.")
+        throw Exception("Could not create access token with error message: ${e.message}.")
     }
+
 
     private data class GithubAppSignedJwt(
         val value: String?,
     )
-}
 
-object PemUtils {
-    class PEM_CONVERSION_EXCEPTION : Exception()
+    private fun generateJWT(privateKey: String): GithubAppSignedJwt {
+        val jwk = JWK.parseFromPEMEncodedObjects(privateKey)
+        val signer = RSASSASigner(jwk.toRSAKey())
+        val jwtClaimSet =
+            JWTClaimsSet.Builder()
+                .issuer(appId.toString())
+                .expirationTime(Date.from(Instant.now().plusSeconds(10 * 60)))
+                .issueTime(Date.from(Instant.now().minusSeconds(60)))
+                .build()
 
-    fun getSignedJWT(
-        privateKey: ByteArray,
-        appId: Int,
-    ): String {
-        val pemContent = String(privateKey, StandardCharsets.UTF_8)
-        val privateKey = readPrivateKey(pemContent)
-
-        return Jwts
-            .builder()
-            .setIssuedAt(Date.from(Instant.now().minusSeconds(60)))
-            .setExpiration(Date.from(Instant.now().plusSeconds(600)))
-            .setIssuer(appId.toString())
-            .setHeader(
-                mapOf(
-                    "typ" to "JWT",
-                    "alg" to "RS256",
-                ),
-            )
-            .signWith(privateKey, SignatureAlgorithm.RS256)
-            .compact()
+        val signedJwt =
+            SignedJWT(JWSHeader.Builder(JWSAlgorithm.RS256).keyID(jwk.keyID).build(), jwtClaimSet)
+        signedJwt.sign(signer)
+        return GithubAppSignedJwt(signedJwt.serialize())
     }
 
-    private fun convertToPkcs8(pemKey: String): String =
-        ProcessBuilder("openssl", "pkcs8", "-topk8", "-inform", "PEM", "-outform", "PEM", "-nocrypt").start()
-            .run {
-                outputStream.buffered().also { it.write(pemKey.toByteArray()) }.close()
-                val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                when (waitFor()) {
-                    0 -> result
-                    else -> throw PEM_CONVERSION_EXCEPTION()
-                }
-            }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class GithubAccessTokenBody(
+        val token: String,
+        @JsonProperty("expires_at") val expiresAt: OffsetDateTime,
+    )
 
-    private fun readPrivateKey(pem: String): PrivateKey {
-        val pkcs8Key = if (pem.isPKCS1()) convertToPkcs8(pem) else pem
-
-        val decodedKey =
-            pkcs8Key
-                .stripToOnlyPrivateKey()
-                .base64Decode()
-
-        val keySpec = PKCS8EncodedKeySpec(decodedKey)
-        val keyFactory = KeyFactory.getInstance("RSA")
-        return keyFactory.generatePrivate(keySpec)
+    private fun GithubAccessTokenBody.isExpired(): Boolean {
+        return expiresAt.isBefore(OffsetDateTime.now())
     }
 
-    private fun String.isPKCS1(): Boolean = this.contains("RSA")
-
-    private fun String.stripToOnlyPrivateKey(): String =
-        this
-            .replace("-----BEGIN PRIVATE KEY-----", "")
-            .replace("-----END PRIVATE KEY-----", "")
-            .replace("\n", "")
-
-    private fun String.base64Decode(): ByteArray = Base64.getDecoder().decode(this)
 }
+
