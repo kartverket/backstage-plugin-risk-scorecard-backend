@@ -7,7 +7,7 @@
       <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="projects/984647225311/secrets/ros-plugin-github-private-key/versions/latest" />
       <env name="RISC_FOLDER_PATH" value=".security/risc" />
       <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1X5DH3RVJ83CK3TJNGGC5QA277NRC9JDK2W5DUG8DY5P05CVL88WS8FT049" />
-      <env name="ISSUER_URI" value="http://localhost:8080/api/auth" />
+      <env name="ISSUER_URI" value="http://localhost:7007/api/auth" />
       <env name="FILENAME_PREFIX" value="risc" />
       <env name="FILENAME_POSTFIX" value="risc" />
       <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
