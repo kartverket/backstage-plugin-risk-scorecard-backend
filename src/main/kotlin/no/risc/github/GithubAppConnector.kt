@@ -20,7 +20,6 @@ import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 
 class GithubAccessToken(
     val value: String,
@@ -37,22 +36,15 @@ class GithubAppConnector(
     private val logger: Logger = getLogger(GithubAppConnector::class.java)
     private val gcpClientConnector = GcpClientConnector()
 
-    private val installationTokenBody: AtomicReference<GithubAccessTokenBody> = AtomicReference()
-
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
-        if (installationTokenBody.get() == null || installationTokenBody.get().isExpired()) {
-            installationTokenBody.set(
-                getGithubAppAccessToken(
-                    jwt = generateJWT(
-                        gcpClientConnector.getSecretValue(privateKeySecretName)
-                            ?: throw Exception("Kunne ikke hente github app private key")
-                    ),
-                    repositoryName = repositoryName
-                )
-            )
-        }
         return GithubAccessToken(
-            installationTokenBody.get().token
+            getGithubAppAccessToken(
+                jwt = generateJWT(
+                    gcpClientConnector.getSecretValue(privateKeySecretName)
+                        ?: throw Exception("Kunne ikke hente github app private key")
+                ),
+                repositoryName = repositoryName
+            ).token
         )
     }
 

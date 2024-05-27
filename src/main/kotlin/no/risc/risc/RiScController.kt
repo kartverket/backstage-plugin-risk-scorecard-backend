@@ -33,12 +33,8 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): ResponseEntity<List<RiScContentResultDTO>> {
-        val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
-        if (!accessTokens.isValid()) {
-            return ResponseEntity.status(401).body(listOf(RiScContentResultDTO.INVALID_ACCESS_TOKENS))
-        }
-
-        val result = riScService.fetchAllRiScs(repositoryOwner, repositoryName, accessTokens)
+        val result =
+            riScService.fetchAllRiScs(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
 
         return ResponseEntity.ok().body(result)
     }
@@ -49,22 +45,12 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO {
-        val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
-
-        if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
-            throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
-            )
-        }
-
-        return riScService.createRiSc(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                accessTokens = accessTokens,
-                content = riSc,
-            )
-    }
+    ): ProcessRiScResultDTO = riScService.createRiSc(
+        owner = repositoryOwner,
+        repository = repositoryName,
+        accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+        content = riSc,
+    )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     fun editRiSc(
@@ -73,16 +59,13 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO {
-        val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
-        if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
-            throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
-            )
-        }
-
-        return riScService.updateRiSc(repositoryOwner, repositoryName, id, riSc, accessTokens)
-    }
+    ): ProcessRiScResultDTO = riScService.updateRiSc(
+        repositoryOwner,
+        repositoryName,
+        id,
+        riSc,
+        getAccessTokens(gcpAccessToken, repositoryName)
+    )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendRiScForPublishing(
@@ -92,17 +75,12 @@ class RiScController(
         @PathVariable id: String,
         @RequestBody userInfo: UserInfo,
     ): ResponseEntity<PublishRiScResultDTO> {
-        val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
-        if (!(accessTokens.isValid() && userInfo.isValid())) {
-            return ResponseEntity.status(401).body(PublishRiScResultDTO.INVALID_ACCESS_TOKENS)
-        }
-
         val result =
             riScService.publishRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 riScId = id,
-                accessTokens = accessTokens,
+                accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
                 userInfo = userInfo,
             )
 
@@ -126,15 +104,13 @@ class RiScController(
         repositoryName: String,
     ): AccessTokens {
         if (!googleApiConnector.validateAccessToken(gcpAccessToken)) {
-            return AccessTokens(
-                GithubAccessToken(""),
-                GCPAccessToken(""),
+            throw InvalidAccessTokensException(
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
             )
         }
-        val githubAccessTokenFromApp = githubAppConnector.getAccessTokenFromApp(repositoryName)
         val accessTokens =
             AccessTokens(
-                githubAccessTokenFromApp,
+                githubAppConnector.getAccessTokenFromApp(repositoryName),
                 GCPAccessToken(gcpAccessToken),
             )
         return accessTokens
