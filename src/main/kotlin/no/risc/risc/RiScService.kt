@@ -211,11 +211,12 @@ class RiScService(
             )
         }
 
-        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken)
+        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
         if (sopsConfig.status != GithubStatus.Success) {
             throw SopsConfigFetchException(
-                message = "Could not fetch SOPS config",
+                message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
                 riScId = riScId,
+                responseMessage = "Could not fetch SOPS config"
             )
         }
 

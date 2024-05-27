@@ -1,6 +1,7 @@
 package no.risc.github
 
 import net.pwall.log.getLogger
+import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
 import no.risc.github.models.ShaResponseDTO
@@ -73,19 +74,27 @@ class GithubConnector(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
+        riScId: String
     ): GithubContentResponse =
         try {
-            val fileContent =
-                getGithubResponse(
+            val sopsConfigResponse = getGithubResponse(
                     githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
-                ).decodedFileContent()
-            when (fileContent) {
-                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-                else -> GithubContentResponse(fileContent, GithubStatus.Success)
+                )
+            when (sopsConfigResponse.decodedFileContent()) {
+                null -> throw SopsConfigFetchException(
+                    message = "Failed to fetch sops config from location: ${githubHelper.uriToFindSopsConfig(owner, repository)} with the following response: $sopsConfigResponse",
+                    riScId = riScId,
+                    responseMessage = "Could not fetch SOPS config"
+                )
+                else -> GithubContentResponse(sopsConfigResponse.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
-            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
+            throw SopsConfigFetchException(
+                message = e.message ?: "Could not fetch SOPS config",
+                riScId = riScId,
+                responseMessage = "Could not fetch SOPS config"
+            )
         }
 
     fun fetchAllRiScIdentifiersInRepository(
