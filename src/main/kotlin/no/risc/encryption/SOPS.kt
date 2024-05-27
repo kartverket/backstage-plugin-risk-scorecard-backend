@@ -1,6 +1,8 @@
 package no.risc.encryption
 
+import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.infra.connector.models.sensor
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
 import java.io.BufferedReader
@@ -67,21 +69,29 @@ object SOPS {
         text: String,
         config: String,
         gcpAccessToken: GCPAccessToken,
+        riScId: String
     ): String {
-        return processBuilder
-            .command(toEncryptionCommand(config, gcpAccessToken.value))
-            .start()
-            .run {
-                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
-                val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                when (waitFor()) {
-                    EXECUTION_STATUS_OK -> result
+        return try {
+            processBuilder
+                .command(toEncryptionCommand(config, gcpAccessToken.value))
+                .start()
+                .run {
+                    outputStream.buffered().also { it.write(text.toByteArray()) }.close()
+                    val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                    when (waitFor()) {
+                        EXECUTION_STATUS_OK -> result
 
-                    else -> {
-                        logger.error("IOException from encrypting json with error code ${exitValue()}: $result")
-                        throw SOPSEncryptionException(result)
+                        else -> throw SopsEncryptionException(
+                            message = "Failed with exit code: ${exitValue()} when running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)}",
+                            riScId = riScId
+                        )
                     }
                 }
-            }
+        } catch(e: Exception) {
+            throw SopsEncryptionException(
+                message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: ${e.message}",
+                riScId = riScId
+            )
+        }
     }
 }
