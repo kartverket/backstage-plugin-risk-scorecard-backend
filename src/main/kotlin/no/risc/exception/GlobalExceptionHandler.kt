@@ -47,7 +47,7 @@ internal class GlobalExceptionHandler {
         return ProcessRiScResultDTO(
             ex.riScId,
             ProcessingStatus.ErrorWhenUpdatingRiSc,
-            "Could not fetch SOPS config",
+            ex.responseMessage,
         )
     }
 
