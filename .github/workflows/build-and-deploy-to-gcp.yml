@@ -47,6 +47,8 @@ jobs:
       - name: Push to Google Artifact Registry
         uses: docker/build-push-action@v2
         with:
+          context: .
+          file: ./docker/gcp/Dockerfile
           push: true
           tags: |
             europe-north1-docker.pkg.dev/spire-ros-5lmr/kv-ros/backend:latest
