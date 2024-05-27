@@ -1,5 +1,6 @@
 package no.risc.risc
 
+import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.github.GithubAccessToken
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubStatus
@@ -48,36 +49,21 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ResponseEntity<ProcessRiScResultDTO> {
+    ): ProcessRiScResultDTO {
         val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
 
         if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
-            return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_ACCESS_TOKENS)
+            throw InvalidAccessTokensException(
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
+            )
         }
 
-        val response =
-            riScService.createRiSc(
+        return riScService.createRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens = accessTokens,
                 content = riSc,
             )
-
-        return when (response.status) {
-            ProcessingStatus.CreatedRiSc,
-            ProcessingStatus.UpdatedRiSc,
-            ->
-                ResponseEntity
-                    .ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(response)
-
-            else ->
-                ResponseEntity
-                    .internalServerError()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(response)
-        }
     }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
@@ -87,29 +73,15 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ResponseEntity<ProcessRiScResultDTO> {
+    ): ProcessRiScResultDTO {
         val accessTokens = getAccessTokens(gcpAccessToken, repositoryName)
         if (!(accessTokens.isValid() && riSc.userInfo.isValid())) {
-            return ResponseEntity.status(401).body(ProcessRiScResultDTO.INVALID_ACCESS_TOKENS)
+            throw InvalidAccessTokensException(
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
+            )
         }
 
-        val editResult = riScService.updateRiSc(repositoryOwner, repositoryName, id, riSc, accessTokens)
-
-        return when (editResult.status) {
-            ProcessingStatus.CreatedRiSc,
-            ProcessingStatus.UpdatedRiSc,
-            ->
-                ResponseEntity
-                    .ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(editResult)
-
-            else ->
-                ResponseEntity
-                    .internalServerError()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(editResult)
-        }
+        return riScService.updateRiSc(repositoryOwner, repositoryName, id, riSc, accessTokens)
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])

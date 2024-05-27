@@ -2,6 +2,7 @@ package no.risc.risc
 
 import no.risc.encryption.SOPS
 import no.risc.encryption.SOPSDecryptionException
+import no.risc.exception.exceptions.*
 import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
@@ -194,51 +195,31 @@ class RiScService(
     ): ProcessRiScResultDTO {
         val jsonSchema = githubConnector.fetchJSONSchema("risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json")
         if (jsonSchema.status != GithubStatus.Success) {
-            return ProcessRiScResultDTO(
-                riScId,
-                ProcessingStatus.ErrorWhenUpdatingRiSc,
-                "Could not fetch JSON schema",
+            throw JSONSchemaFetchException(
+                message = "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, and error message: ${jsonSchema.data}",
+                riScId = riScId
             )
         }
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema.data(), content.riSc)
         if (!validationStatus.valid) {
-            return ProcessRiScResultDTO(
-                riScId,
-                ProcessingStatus.RiScNotValid,
-                validationStatus.errors?.joinToString("\n") { it.error }.toString(),
+            val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
+            throw RiScNotValidException(
+                message = "Failed when validating RiSc with error message: $validationError",
+                riScId = riScId,
+                validationError = validationError,
             )
         }
 
         val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken)
         if (sopsConfig.status != GithubStatus.Success) {
-            return ProcessRiScResultDTO(
-                riScId,
-                ProcessingStatus.ErrorWhenUpdatingRiSc,
-                "Could not fetch SOPS config",
+            throw SopsConfigFetchException(
+                message = "Could not fetch SOPS config",
+                riScId = riScId,
             )
         }
 
-        val encryptedData =
-            try {
-                SOPS.encrypt(content.riSc, sopsConfig.data(), accessTokens.gcpAccessToken)
-            } catch (e: Exception) {
-                return when (e) {
-                    is SOPSDecryptionException ->
-                        ProcessRiScResultDTO(
-                            riScId,
-                            ProcessingStatus.EncryptionFailed,
-                            e.message ?: "Could not encrypt RiSc",
-                        )
-
-                    else ->
-                        ProcessRiScResultDTO(
-                            riScId,
-                            ProcessingStatus.EncryptionFailed,
-                            "Could not encrypt RiSc",
-                        )
-                }
-            }
+        val encryptedData = SOPS.encrypt(content.riSc, sopsConfig.data(), accessTokens.gcpAccessToken, riScId)
 
         try {
             val hasClosedPR =
@@ -258,10 +239,9 @@ class RiScService(
                 "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
             )
         } catch (e: Exception) {
-            return ProcessRiScResultDTO(
-                riScId,
-                ProcessingStatus.ErrorWhenUpdatingRiSc,
-                "Failed with with error ${e.message} for risk scorecard with id $riScId",
+            throw UpdatingRiScException(
+                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
+                riScId = riScId,
             )
         }
     }
