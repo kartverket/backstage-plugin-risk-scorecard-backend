@@ -1,5 +1,12 @@
-FROM eclipse-temurin:21
-
+FROM eclipse-temurin:21.0.2_13-jre-alpine@sha256:f153dfdd10e9846963676aa6ea8b8630f150a63c8e5fe127c93e98eb10b86766
+# Install required packages and glibc
+RUN apk --no-cache add curl file && \
+    ALPINE_GLIBC_REPO=https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r0 && \
+    ALPINE_GLIBC_PACKAGE=glibc-2.35-r0.apk && \
+    curl -Lo /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
+    curl -Lo /tmp/$ALPINE_GLIBC_PACKAGE $ALPINE_GLIBC_REPO/$ALPINE_GLIBC_PACKAGE && \
+    apk add --no-cache /tmp/$ALPINE_GLIBC_PACKAGE && \
+    rm /tmp/$ALPINE_GLIBC_PACKAGE
 EXPOSE 8080 8081
 RUN mkdir /app
 WORKDIR .
@@ -12,8 +19,7 @@ ARG SOPS_LINUX_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v
 ARG SOPS_LINUX_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
 # Download and install SOPS based on architecture
-RUN apk --no-cache add file && \
-    ARCH=$(uname -m) && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
+RUN ARCH=$(uname -m) && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
     if [ "$OS" = "linux" ] && [ "$ARCH" = "x86_64" ]; then \
         echo "Downloading SOPS for linux amd64"; \
         curl -L $SOPS_LINUX_AMD64 -o /usr/local/bin/sops; \
