@@ -1,4 +1,5 @@
 FROM eclipse-temurin:21
+
 EXPOSE 8080 8081
 RUN mkdir /app
 WORKDIR .
@@ -30,8 +31,7 @@ RUN apk --no-cache add file && \
         exit 1; \
     fi && \
     chmod +x /usr/local/bin/sops && \
-    file /usr/local/bin/sops && \
-    ls -l /usr/local/bin/sops
+    file /usr/local/bin/sops
 
 RUN sops --version
 
