@@ -12,7 +12,7 @@ ARG SOPS_LINUX_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v
 ARG SOPS_LINUX_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
 # Download and install SOPS based on architecture
-RUN apk --no-cache add coreutils && \
+RUN apk --no-cache add file && \
     ARCH=$(uname -m) && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
     if [ "$OS" = "linux" ] && [ "$ARCH" = "x86_64" ]; then \
         echo "Downloading SOPS for linux amd64"; \
@@ -30,9 +30,9 @@ RUN apk --no-cache add coreutils && \
         echo "Unsupported architecture: $ARCH or OS: $OS"; \
         exit 1; \
     fi && \
-    chmod +x /usr/local/bin/sops
+    chmod +x /usr/local/bin/sops && \
+    file /usr/local/bin/sops
 
-RUN ls /usr/local/bin/sops
 RUN sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
