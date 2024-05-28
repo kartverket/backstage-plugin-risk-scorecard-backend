@@ -16,7 +16,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       echo "Unsupported architecture"; \
       exit 1; \
     fi \
-    && chmod +x /usr/local/bin/sops \
+    && chmod +x /usr/local/bin/sops
 
 RUN sops --version
 
