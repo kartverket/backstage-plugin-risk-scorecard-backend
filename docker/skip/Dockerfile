@@ -32,7 +32,7 @@ RUN apk --no-cache add coreutils && \
     fi && \
     chmod +x /usr/local/bin/sops
 
-RUN ls /usr/local/bin
+RUN ls /usr/local/bin/sops
 RUN sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
