@@ -30,8 +30,9 @@ RUN apk --no-cache add coreutils && \
         echo "Unsupported architecture: $ARCH or OS: $OS"; \
         exit 1; \
     fi && \
-    chmod +x /usr/local/bin/sops && \
-    sops --version
+    chmod +x /usr/local/bin/sops
+
+RUN sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
 USER user
