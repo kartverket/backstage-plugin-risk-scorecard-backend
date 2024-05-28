@@ -7,7 +7,7 @@ COPY build/libs/*.jar app/backend.jar
 
 RUN curl -L "https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64" -o /usr/local/bin/sops && \
     chmod +x /usr/local/bin/sops && \
-    /usr/local/bin/sops --version
+    sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
 USER user
