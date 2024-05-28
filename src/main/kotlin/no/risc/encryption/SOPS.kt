@@ -71,27 +71,19 @@ object SOPS {
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String {
-        return try {
-            processBuilder
-                .command(toEncryptionCommand(config, gcpAccessToken.value))
-                .start()
-                .run {
-                    outputStream.buffered().also { it.write(text.toByteArray()) }.close()
-                    val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                    when (waitFor()) {
-                        EXECUTION_STATUS_OK -> result
-
-                        else -> throw SopsEncryptionException(
-                            message = "Failed with exit code: ${exitValue()} when running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)}",
-                            riScId = riScId
-                        )
-                    }
+        return processBuilder
+            .command(toEncryptionCommand(config, gcpAccessToken.value))
+            .start()
+            .run {
+                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
+                val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                when (waitFor()) {
+                    EXECUTION_STATUS_OK -> result
+                    else -> throw SopsEncryptionException(
+                        message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: $result",
+                        riScId = riScId
+                    )
                 }
-        } catch(e: Exception) {
-            throw SopsEncryptionException(
-                message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: ${e.message}",
-                riScId = riScId
-            )
-        }
+            }
     }
 }
