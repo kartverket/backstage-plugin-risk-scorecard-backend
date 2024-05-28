@@ -32,7 +32,7 @@ RUN apk --no-cache add coreutils && \
     fi && \
     chmod +x /usr/local/bin/sops
 
-RUN /usr/local/bin/sops --version
+RUN echo "Hello"
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
 USER user
