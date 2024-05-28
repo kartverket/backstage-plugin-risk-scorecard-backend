@@ -13,7 +13,8 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     elif [ "$TARGETARCH" = "arm64" ]; then \
       curl -L $SOPS_ARM64 -o /usr/local/bin/sops; \
     else \
-      echo "Unsupported architecture" && exit 1; \
+      echo "Unsupported architecture"; \
+      exit 1; \
     fi \
     && chmod +x /usr/local/bin/sops \
 
