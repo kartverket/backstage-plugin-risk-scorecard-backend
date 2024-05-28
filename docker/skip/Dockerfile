@@ -31,9 +31,12 @@ RUN apk --no-cache add file && \
         exit 1; \
     fi && \
     chmod +x /usr/local/bin/sops && \
-    file /usr/local/bin/sops
+    file /usr/local/bin/sops && \
+    ls -l /usr/local/bin/sops
+
 
 RUN echo $PATH
+RUN /usr/local/bin/sops --version
 RUN sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
