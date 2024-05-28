@@ -12,26 +12,27 @@ ARG SOPS_LINUX_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v
 ARG SOPS_LINUX_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
 # Download and install SOPS based on architecture
-RUN set -ex && \
+RUN apk --no-cache add coreutils && \
     ARCH=$(uname -m) && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
     if [ "$OS" = "linux" ] && [ "$ARCH" = "x86_64" ]; then \
         echo "Downloading SOPS for linux amd64"; \
-        wget --progress=dot:giga -O /usr/local/bin/sops $SOPS_LINUX_AMD64; \
+        curl -L $SOPS_LINUX_AMD64 -o /usr/local/bin/sops; \
     elif [ "$OS" = "linux" ] && [ "$ARCH" = "aarch64" ]; then \
         echo "Downloading SOPS for linux arm64"; \
-        wget --progress=dot:giga -O /usr/local/bin/sops $SOPS_LINUX_ARM64; \
+        curl -L $SOPS_LINUX_ARM64 -o /usr/local/bin/sops; \
     elif [ "$OS" = "darwin" ] && [ "$ARCH" = "x86_64" ]; then \
         echo "Downloading SOPS for darwin amd64"; \
-        wget --progress=dot:giga -O /usr/local/bin/sops $SOPS_DARWIN_AMD64; \
+        curl -L $SOPS_DARWIN_AMD64 -o /usr/local/bin/sops; \
     elif [ "$OS" = "darwin" ] && [ "$ARCH" = "aarch64" ]; then \
         echo "Downloading SOPS for darwin arm64"; \
-        wget --progress=dot:giga -O /usr/local/bin/sops $SOPS_DARWIN_ARM64; \
+        curl -L $SOPS_DARWIN_ARM64 -o /usr/local/bin/sops; \
     else \
         echo "Unsupported architecture: $ARCH or OS: $OS"; \
         exit 1; \
     fi && \
     chmod +x /usr/local/bin/sops
 
+RUN ls /usr/local/bin
 RUN sops --version
 
 RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
