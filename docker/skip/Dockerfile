@@ -5,19 +5,10 @@ RUN mkdir /app
 WORKDIR .
 COPY build/libs/*.jar app/backend.jar
 
-ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
-ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
-ARG TARGETARCH
+RUN curl -L "https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64" -o /usr/local/bin/sops && \
+    chmod +x /usr/local/bin/sops && \
+    /usr/local/bin/sops --version
 
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      curl -L $SOPS_AMD64 -o /usr/local/bin/sops; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      curl -L $SOPS_ARM64 -o /usr/local/bin/sops; \
-    else \
-      echo "Unsupported architecture"; \
-    fi \
-    && chmod +x -R /usr/local/bin/sops
-
-RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin/sops
+RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
 USER user
 ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
