@@ -1,44 +1,25 @@
-FROM eclipse-temurin:21.0.2_13-jre-bullseye
+FROM eclipse-temurin:21 as build
+COPY . .
+RUN ./gradlew build -x test
 
-# Install required packages
-RUN apt-get update && apt-get install -y curl file && rm -rf /var/lib/apt/lists/*
+FROM eclipse-temurin:21
 
-EXPOSE 8080 8081
-RUN mkdir /app
-WORKDIR .
-COPY build/libs/*.jar app/backend.jar
+ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
+ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
 
-# Define the SOPS URLs
-ARG SOPS_DARWIN_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.darwin.amd64"
-ARG SOPS_DARWIN_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.darwin.arm64"
-ARG SOPS_LINUX_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
-ARG SOPS_LINUX_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
-
-# Download and install SOPS based on architecture
-RUN ARCH=$(uname -m) && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && \
-    if [ "$OS" = "linux" ] && [ "$ARCH" = "x86_64" ]; then \
-        echo "Downloading SOPS for linux amd64"; \
-        curl -L $SOPS_LINUX_AMD64 -o /usr/local/bin/sops; \
-    elif [ "$OS" = "linux" ] && [ "$ARCH" = "aarch64" ]; then \
-        echo "Downloading SOPS for linux arm64"; \
-        curl -L $SOPS_LINUX_ARM64 -o /usr/local/bin/sops; \
-    elif [ "$OS" = "darwin" ] && [ "$ARCH" = "x86_64" ]; then \
-        echo "Downloading SOPS for darwin amd64"; \
-        curl -L $SOPS_DARWIN_AMD64 -o /usr/local/bin/sops; \
-    elif [ "$OS" = "darwin" ] && [ "$ARCH" = "aarch64" ]; then \
-        echo "Downloading SOPS for darwin arm64"; \
-        curl -L $SOPS_DARWIN_ARM64 -o /usr/local/bin/sops; \
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      curl -L $SOPS_AMD64 -o /usr/local/bin/sops; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+      curl -L $SOPS_ARM64 -o /usr/local/bin/sops; \
     else \
-        echo "Unsupported architecture: $ARCH or OS: $OS"; \
-        exit 1; \
-    fi && \
-    chmod +x /usr/local/bin/sops && \
-    file /usr/local/bin/sops
+      echo "Unsupported architecture" && exit 1; \
+    fi \
+    && chmod +x /usr/local/bin/sops \
 
 RUN sops --version
 
-RUN adduser -D user && chown -R user /app && chown -R user /usr/local/bin
-USER user
-ENTRYPOINT ["java", "-jar", "/app/backend.jar"]
-
+COPY --from=build /build/libs/*.jar backend.jar
+EXPOSE 8080 8081
+ENTRYPOINT ["java", "-jar", "backend.jar"]
 
