@@ -34,7 +34,7 @@ class RiScController(
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> = riScService.fetchAllRiScs(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}", produces = ["text/plain"])
+    @PostMapping("/{repositoryOwner}/{repositoryName}")
     fun createNewRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,

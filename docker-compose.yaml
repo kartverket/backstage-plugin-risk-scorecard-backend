@@ -2,7 +2,7 @@ services:
   skip:
     build:
       context: .
-      dockerfile: docker/skip/Dockerfile
+      dockerfile: Dockerfile
     environment:
       - ISSUER_URI=${ISSUER_URI}
       - GITHUB_APP_ID=${GITHUB_APP_ID}
