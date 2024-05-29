@@ -31,13 +31,13 @@ object SOPS {
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> = sopsCmd + gcpAccessToken(accessToken) + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile
+    ): List<String> = sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(accessToken)
 
     private fun toDecryptionCommand(
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + gcpAccessToken(accessToken) + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile
+        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(accessToken)
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
