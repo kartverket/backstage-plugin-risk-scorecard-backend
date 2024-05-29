@@ -4,8 +4,8 @@ RUN ./gradlew build -x test
 
 FROM eclipse-temurin:21
 
-ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.amd64"
-ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.0/sops-v1.0.linux.arm64"
+ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.1/sops-v1.0.linux.amd64"
+ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.1/sops-v1.0.linux.arm64"
 
 ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
@@ -17,9 +17,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       exit 1; \
     fi \
     && chmod +x /usr/local/bin/sops
-
-RUN sops --version
-
 COPY --from=build /build/libs/*.jar backend.jar
 EXPOSE 8080 8081
 ENTRYPOINT ["java", "-jar", "backend.jar"]
