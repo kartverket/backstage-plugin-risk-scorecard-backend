@@ -71,19 +71,23 @@ object SOPS {
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String {
-        return processBuilder
-            .command(toEncryptionCommand(config, gcpAccessToken.value))
-            .start()
-            .run {
-                outputStream.buffered().also { it.write(text.toByteArray()) }.close()
-                val result = BufferedReader(InputStreamReader(inputStream)).readText()
-                when (waitFor()) {
-                    EXECUTION_STATUS_OK -> result
-                    else -> throw SopsEncryptionException(
-                        message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: $result",
-                        riScId = riScId
-                    )
+        return try {
+            processBuilder
+                .command(toEncryptionCommand(config, gcpAccessToken.value))
+                .start()
+                .run {
+                    outputStream.buffered().also { it.write(text.toByteArray()) }.close()
+                    val result = BufferedReader(InputStreamReader(inputStream)).readText()
+                    when (waitFor()) {
+                        EXECUTION_STATUS_OK -> result
+                        else -> throw SopsEncryptionException(
+                            message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: $result",
+                            riScId = riScId
+                        )
+                    }
                 }
-            }
+        } catch (e: Exception) {
+            throw e
+        }
     }
 }
