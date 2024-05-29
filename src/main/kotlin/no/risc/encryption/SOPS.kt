@@ -17,7 +17,7 @@ object SOPS {
 
     private val sopsCmd = listOf("sops")
     private val encrypt = listOf("encrypt")
-    private val decrypt = listOf("--decrypt")
+    private val decrypt = listOf("decrypt")
     private val inputTypeYaml = listOf("--input-type", "yaml")
     private val inputTypeJson = listOf("--input-type", "json")
     private val outputTypeYaml = listOf("--output-type", "yaml")
@@ -37,7 +37,7 @@ object SOPS {
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + ageSecret(sopsPrivateKey) + gcpAccessToken(accessToken) + decrypt + inputTypeYaml + outputTypeJson + inputFile
+        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(accessToken)
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
