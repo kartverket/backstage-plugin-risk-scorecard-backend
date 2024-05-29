@@ -1,5 +1,5 @@
 FROM eclipse-temurin:21.0.2_13-jre-alpine as build
-COPY . .
+COPY docker/skip .
 RUN ./gradlew build -x test
 
 FROM eclipse-temurin:21
