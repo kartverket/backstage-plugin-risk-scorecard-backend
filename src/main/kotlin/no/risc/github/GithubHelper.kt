@@ -167,7 +167,7 @@ class GithubHelper(
             }
 
         return GithubCreateNewPullRequestPayload(
-            title = "Branch for risk scorecard $riScId",
+            title = "Updated risk scorecard",
             body = body,
             repositoryOwner,
             riScId,
