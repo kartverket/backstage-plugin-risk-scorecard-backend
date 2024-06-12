@@ -109,7 +109,6 @@ jobs:
       - name: Update version
         run: |
           env_type="dev"
-          echo "\"${{ needs.build.outputs.image_url }}\"" > "${env_type}/ros-plugin-backend-main/${{ env.ARGO_VERSION_FILE }}"
           echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-${env_type}/ros-plugin-backend-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
