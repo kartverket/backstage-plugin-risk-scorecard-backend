@@ -462,7 +462,7 @@ class GithubConnector(
 
     private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval) }
-            .filter { it.id.startsWith("$filenamePrefix-") }
+            .filter { it.id.endsWith(".$filenamePostfix.yaml") }
 
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }

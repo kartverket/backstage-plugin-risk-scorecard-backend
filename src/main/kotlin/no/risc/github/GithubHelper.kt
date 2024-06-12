@@ -102,7 +102,7 @@ class GithubHelper(
     fun uriToFindAllRiScBranches(
         owner: String,
         repository: String,
-    ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
+    ): String = "/$owner/$repository/git/matching-refs/heads/.$filenamePostfix"
 
     fun uriToFindExistingBranchForRiSc(
         owner: String,

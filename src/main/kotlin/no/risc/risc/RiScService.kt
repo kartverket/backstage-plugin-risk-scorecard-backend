@@ -104,6 +104,7 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${filename.postfix}") val filenamePostfix: String,
 ) {
     fun fetchAllRiScs(
         owner: String,
@@ -171,7 +172,7 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
-        val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+        val uniqueRiScId = RandomStringUtils.randomAlphanumeric(5)
         val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
 
         return when (result.status) {
