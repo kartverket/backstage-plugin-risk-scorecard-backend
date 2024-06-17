@@ -8,6 +8,10 @@ flowchart TD
      style B fill:#FFBF00,color:black
 ```
 
+## Architecture (at Kartverket)
+
+![RiSc (ROS) Architecture](ROS-arkitektur.png)
+
 ## Simplified Git RiSC-flow
 
 ```mermaid
