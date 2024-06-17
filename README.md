@@ -8,9 +8,9 @@ flowchart TD
      style B fill:#FFBF00,color:black
 ```
 
-## Architecture (at Kartverket)
+## Simplified Architecture
 
-![RiSc (ROS) Architecture](ROS-arkitektur.png)
+![RiSc Architecture](RiSc-architecture.png)
 
 ## Simplified Git RiSC-flow
 
