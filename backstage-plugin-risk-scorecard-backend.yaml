@@ -75,7 +75,22 @@ spec:
             limits:
               cpu: 1000m
               memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 150
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
       volumes:
         - name: sops-age-key
           secret:
             secretName: sops-age-private-key
+        - name: app-logs
+          emptyDir: { }
+        - name: app-tmp
+          emptyDir: { }
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault

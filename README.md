@@ -8,6 +8,10 @@ flowchart TD
      style B fill:#FFBF00,color:black
 ```
 
+## Simplified Architecture
+
+![RiSc Architecture](RiSc-architecture.png)
+
 ## Simplified Git RiSC-flow
 
 ```mermaid
