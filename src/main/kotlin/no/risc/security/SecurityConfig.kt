@@ -1,19 +1,26 @@
 package no.risc.security
 
+import com.nimbusds.jose.JOSEObjectType
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
+
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
-    @Bean
+class SecurityConfig(private val environment: Environment) {
+
+@Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -45,6 +52,25 @@ class SecurityConfig {
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source
+    }
+
+    @Bean
+    fun jwtDecoder(): JwtDecoder? {
+        val issuerUri = environment.getProperty("ISSUER_URI")
+        val jwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri)
+            .jwtProcessorCustomizer { customizer ->
+                customizer.jwsTypeVerifier = DefaultJOSEObjectTypeVerifier(
+                    JOSEObjectType.JOSE_JSON,
+                    JOSEObjectType.JWT,
+                    JOSEObjectType.JOSE,
+                    JOSEObjectType("vnd.backstage.user"), // required for tokens issued by Backstage
+                    null
+                )
+            }
+            .build()
+
+
+        return JwtDecoder { token -> jwtDecoder.decode(token) }
     }
 
     fun getAllowedOrigins(): List<String> {
