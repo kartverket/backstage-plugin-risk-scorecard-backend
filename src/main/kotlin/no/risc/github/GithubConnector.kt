@@ -245,8 +245,8 @@ class GithubConnector(
 
         val commitMessage =
             when (latestShaForRiSc) {
-                null -> "feat: Create new RiSc with id: $riScId"
-                else -> "refactor: Update RiSc with id: $riScId"
+                null -> "Create new RiSc with id: $riScId"
+                else -> "Update RiSc with id: $riScId"
             }
 
         putFileRequestToGithub(
