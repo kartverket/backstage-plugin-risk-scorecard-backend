@@ -3,6 +3,7 @@ package no.risc.risc
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.github.GithubAccessToken
 import no.risc.github.GithubAppConnector
+import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -27,15 +28,22 @@ class RiScController(
     private val githubAppConnector: GithubAppConnector,
     private val googleApiConnector: GoogleApiConnector,
 ) {
+    @GetMapping("/{repositoryOwner}/{repositoryName}/filenames")
+    suspend fun getRiScNames(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): GithubRiScIdentifiersResponse = riScService.fetchAllRiScIds(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
+
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
-    fun getRiScFilenames(
+    suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> = riScService.fetchAllRiScs(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
-    fun createNewRiSc(
+    suspend fun createNewRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -48,7 +56,7 @@ class RiScController(
     )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
-    fun editRiSc(
+    suspend fun editRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
