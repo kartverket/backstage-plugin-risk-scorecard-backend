@@ -107,7 +107,8 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
-) { private val logger = LoggerFactory.getLogger(RiScService::class.java)
+) {
+    private val logger = LoggerFactory.getLogger(RiScService::class.java)
     suspend fun fetchAllRiScIds(
         owner: String,
         repository: String,
