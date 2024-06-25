@@ -1,12 +1,10 @@
 package no.risc.risc
 
+import kotlinx.coroutines.Dispatchers
 import no.risc.encryption.SOPS
 import no.risc.encryption.SOPSDecryptionException
 import no.risc.exception.exceptions.*
-import no.risc.github.GithubConnector
-import no.risc.github.GithubContentResponse
-import no.risc.github.GithubPullRequestObject
-import no.risc.github.GithubStatus
+import no.risc.github.*
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
@@ -15,6 +13,11 @@ import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import org.slf4j.LoggerFactory
+import kotlin.time.measureTimedValue
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -108,24 +111,57 @@ class RiScService(
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
 ) {
-    fun fetchAllRiScs(
+    private val logger = LoggerFactory.getLogger(RiScService::class.java)
+    suspend fun fetchAllRiScIds(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
-    ): List<RiScContentResultDTO> =
+    ): GithubRiScIdentifiersResponse =
         githubConnector.fetchAllRiScIdentifiersInRepository(
             owner,
             repository,
             accessTokens.githubAccessToken.value,
-        ).ids.map { id ->
-            val fetchRisc =
-                when (id.status) {
-                    RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                    RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                }
-            fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+        )
+
+    suspend fun fetchAllRiScs(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+    ): List<RiScContentResultDTO> = coroutineScope {
+        val msId = measureTimedValue {
+            githubConnector.fetchAllRiScIdentifiersInRepository(
+                owner,
+                repository,
+                accessTokens.githubAccessToken.value,
+            ).ids
         }
+        logger.info("Fetching risc ids took ${msId.duration}")
+
+        val msRiSc = measureTimedValue {
+            msId.value.map { id ->
+                async(Dispatchers.IO) {
+                    try {
+                        val fetchRisc = when (id.status) {
+                            RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                            RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
+                        }
+                        fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                            .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+                    } catch (e: Exception) {
+                        RiScContentResultDTO(
+                            riScId = id.id,
+                            status = ContentStatus.Failure,
+                            riScStatus = id.status,
+                            riScContent = null,
+                            pullRequestUrl = "",
+                        )
+                    }
+                }
+            }.awaitAll()
+        }
+
+        logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
+        msRiSc.value}
 
     private fun GithubContentResponse.responseToRiScResult(
         riScId: String,
@@ -161,7 +197,7 @@ class RiScService(
             agePrivateKey = ageKey,
         )
 
-    fun updateRiSc(
+    suspend fun updateRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -169,7 +205,7 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
 
-    fun createRiSc(
+    suspend fun createRiSc(
         owner: String,
         repository: String,
         content: RiScWrapperObject,
@@ -190,7 +226,7 @@ class RiScService(
         }
     }
 
-    private fun updateOrCreateRiSc(
+    private suspend fun updateOrCreateRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -294,4 +330,6 @@ class RiScService(
         )
 
     fun fetchLatestJSONSchema(): GithubContentResponse = githubConnector.fetchLatestJSONSchema()
+
+
 }

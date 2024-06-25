@@ -6,6 +6,4 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 data class UserInfo(
     val name: String,
     val email: String,
-) {
-    fun isValid(): Boolean = name.isNotBlank() && email.isNotBlank()
-}
+)
