@@ -39,6 +39,7 @@ data class RiScContentResultDTO(
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
+    val pullRequestUrl: String? = null,
 ) {
     companion object {
         val INVALID_ACCESS_TOKENS =
@@ -94,6 +95,7 @@ enum class ProcessingStatus(val message: String) {
 data class RiScIdentifier(
     val id: String,
     val status: RiScStatus,
+    val pullRequestUrl: String? = null,
 )
 
 enum class RiScStatus {
@@ -143,13 +145,14 @@ class RiScService(
                             RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
                         }
                         fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                            .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken)
+                            .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
                     } catch (e: Exception) {
                         RiScContentResultDTO(
                             riScId = id.id,
                             status = ContentStatus.Failure,
                             riScStatus = id.status,
-                            riScContent = null
+                            riScContent = null,
+                            pullRequestUrl = null,
                         )
                     }
                 }
@@ -163,11 +166,12 @@ class RiScService(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
+        pullRequestUrl: String?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
                 try {
-                    RiScContentResultDTO(riScId, ContentStatus.Success, riScStatus, decryptContent(gcpAccessToken))
+                    RiScContentResultDTO(riScId, ContentStatus.Success, riScStatus, decryptContent(gcpAccessToken), pullRequestUrl)
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
