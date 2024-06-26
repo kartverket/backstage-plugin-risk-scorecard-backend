@@ -39,7 +39,7 @@ data class RiScContentResultDTO(
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
-    val pullRequestUrl: String,
+    val pullRequestUrl: String? = null,
 ) {
     companion object {
         val INVALID_ACCESS_TOKENS =
@@ -48,7 +48,6 @@ data class RiScContentResultDTO(
                 status = ContentStatus.Failure,
                 riScStatus = null,
                 riScContent = "",
-                pullRequestUrl = "",
             )
     }
 }
@@ -96,7 +95,7 @@ enum class ProcessingStatus(val message: String) {
 data class RiScIdentifier(
     val id: String,
     val status: RiScStatus,
-    val pullRequestUrl: String = "",
+    val pullRequestUrl: String? = null,
 )
 
 enum class RiScStatus {
@@ -153,7 +152,7 @@ class RiScService(
                             status = ContentStatus.Failure,
                             riScStatus = id.status,
                             riScContent = null,
-                            pullRequestUrl = "",
+                            pullRequestUrl = null,
                         )
                     }
                 }
@@ -167,7 +166,7 @@ class RiScService(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
-        pullRequestUrl: String,
+        pullRequestUrl: String?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -176,18 +175,18 @@ class RiScService(
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, e.message, pullRequestUrl)
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, e.message)
 
                         else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, pullRequestUrl)
+                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
                     }
                 }
 
             GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null, pullRequestUrl)
+                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
 
             else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, pullRequestUrl)
+                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
     private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
