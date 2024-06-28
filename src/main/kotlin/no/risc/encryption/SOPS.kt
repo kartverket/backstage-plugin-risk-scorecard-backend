@@ -67,10 +67,19 @@ object SOPS {
 
     fun encrypt(
         text: String,
-        config: String,
+        _config: String,
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String {
+        val regex = "(?<pathregex>path_regex:.*)".toRegex()
+        val matchResult = regex.find(_config)!!
+        var config = _config
+
+        // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
+        if (matchResult.groups["pathregex"] != null) {
+            config = _config.replace(matchResult.groups["pathregex"]!!.value, "")
+        }
+
         return try {
             processBuilder
                 .command(toEncryptionCommand(config, gcpAccessToken.value))
