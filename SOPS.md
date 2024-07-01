@@ -28,7 +28,7 @@ This plugin will look for a `.sops.yaml` file and offer en "Encrypt" button in t
 I `IntelliJ/Rider > Settings > Languages & Frameworks > Schemas and DTDs > JSON Schema Mappings` create new schema:
 
 * `Name`: Write name, i.e. `RiSc-validation`
-* `Schema file or URL:` Put in URL to the latest RiSc-schema, [risc_schema_en_v3_2.json](https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v3_2.json)
+* `Schema file or URL:` Put in URL to the latest RiSc-schema, [risc_schema_en_v3_3.json](https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v3_3.json)
 * `Schema version:` `JSON Schema version 4`
 * Add `File path pattern:` `*.risc.yaml`
 
