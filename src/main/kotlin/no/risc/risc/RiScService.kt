@@ -146,6 +146,7 @@ class RiScService(
                         }
                         fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                             .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+                            .let { migrateToNewMinor(it) }
                     } catch (e: Exception) {
                         RiScContentResultDTO(
                             riScId = id.id,
@@ -161,6 +162,17 @@ class RiScService(
 
         logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
         msRiSc.value}
+
+    // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
+    // and modifications can only be made when the schemaVersion is 3.3.
+    private fun migrateToNewMinor(obj: RiScContentResultDTO): RiScContentResultDTO {
+        if (obj.riScContent == null) {
+            return obj
+        }
+
+        val migratedSchemaVersion = obj.riScContent.replace("\"schemaVersion\": \"3.2\"","\"schemaVersion\": \"3.3\"")
+        return obj.copy(riScContent = migratedSchemaVersion)
+    }
 
     private fun GithubContentResponse.responseToRiScResult(
         riScId: String,
