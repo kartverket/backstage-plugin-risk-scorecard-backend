@@ -12,7 +12,7 @@ env:
 jobs:
     deploy_cloud_run:
         name: "Deploy latest image on Cloud Run"
-        runs-on: ubuntu-latests
+        runs-on: ubuntu-latest
         permissions:
             contents: "read"
             id-token: "write"
