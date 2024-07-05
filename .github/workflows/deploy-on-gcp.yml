@@ -28,5 +28,5 @@ jobs:
             - id: "deploy"
               uses: "google-github-actions/deploy-cloudrun@v2"
               with:
-                  service: $SERVICE_NAME
-                  image: $IMAGE_URL
+                  service: ${{ env.SERVICE_NAME }}
+                  image: ${{ env.IMAGE_URL }}
