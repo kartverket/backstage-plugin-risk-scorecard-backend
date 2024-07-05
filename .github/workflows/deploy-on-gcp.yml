@@ -1,29 +1,32 @@
 name: Deploy to Cloud Run
 on:
-  workflow_run:
-    workflows: ["Build and push image to GCP"]
-    types:
-      - completed
+    workflow_run:
+        workflows: ["Build and push image to GCP"]
+        types:
+            - completed
 
 env:
-  IMAGE_URL: 'europe-north1-docker.pgk.dev/spire-ros-5lmr/kv-ros/backend:latest'
-  SERVICE_NAME: 'kv-ros-backend'
+    IMAGE_URL: "europe-north1-docker.pgk.dev/spire-ros-5lmr/kv-ros/backend:latest"
+    SERVICE_NAME: "kv-ros-backend"
 
 jobs:
-  deploy_cloud_run:
-    name: 'Deploy latest image on Cloud Run'
-    runs-on: ubuntu-latests
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-    steps:
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: ${{ secrets.GCS_ACC_KEY_JSON }}
-    - id: 'deploy'
-      uses: 'google-github-actions/deploy-cloudrun@v2'
-      with:
-        service: $SERVICE_NAME
-        image: $IMAGE_URL
-
+    deploy_cloud_run:
+        name: "Deploy latest image on Cloud Run"
+        runs-on: ubuntu-latests
+        permissions:
+            contents: "read"
+            id-token: "write"
+        steps:
+            - id: "setup node"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20.x"
+            - id: "auth"
+              uses: "google-github-actions/auth@v2"
+              with:
+                  credentials_json: ${{ secrets.GCS_ACC_KEY_JSON }}
+            - id: "deploy"
+              uses: "google-github-actions/deploy-cloudrun@v2"
+              with:
+                  service: $SERVICE_NAME
+                  image: $IMAGE_URL
