@@ -8,6 +8,7 @@ on:
 env:
     IMAGE_URL: "europe-north1-docker.pkg.dev/spire-ros-5lmr/kv-ros/backend:latest"
     SERVICE_NAME: "kv-ros-backend"
+    REGION: "europe-north1"
 
 jobs:
     deploy_cloud_run:
@@ -30,3 +31,4 @@ jobs:
               with:
                   service: ${{ env.SERVICE_NAME }}
                   image: ${{ env.IMAGE_URL }}
+                  region: ${{ env.REGION }}
