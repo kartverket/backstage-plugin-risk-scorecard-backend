@@ -6,7 +6,7 @@ on:
             - completed
 
 env:
-    IMAGE_URL: "europe-north1-docker.pgk.dev/spire-ros-5lmr/kv-ros/backend:latest"
+    IMAGE_URL: "europe-north1-docker.pkg.dev/spire-ros-5lmr/kv-ros/backend:latest"
     SERVICE_NAME: "kv-ros-backend"
 
 jobs:
