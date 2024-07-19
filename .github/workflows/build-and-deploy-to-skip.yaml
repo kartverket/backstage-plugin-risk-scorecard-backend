@@ -106,4 +106,3 @@ jobs:
       image_url: ${{ needs.build.outputs.image_url }}
       cluster: atgcp1-prod
       namespace: ros-plugin-main
-
