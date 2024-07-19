@@ -94,7 +94,7 @@ jobs:
         with:
           image_url: ${{ needs.build.outputs.image_url }}
 
-  deploy:
+  argo:
     name: Update version in skvis-apps
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
@@ -106,4 +106,3 @@ jobs:
       image_url: ${{ needs.build.outputs.image_url }}
       cluster: atgcp1-prod
       namespace: ros-plugin-main
-
