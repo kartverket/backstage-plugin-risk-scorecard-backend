@@ -94,7 +94,7 @@ jobs:
         with:
           image_url: ${{ needs.build.outputs.image_url }}
 
-  argo:
+  deploy:
     name: Update version in skvis-apps
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
