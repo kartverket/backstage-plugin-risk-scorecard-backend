@@ -12,7 +12,7 @@ class SOPSDecryptionException(message: String) : Exception(message)
 
 class SOPSEncryptionException(message: String) : Exception(message)
 
-object SOPS {
+object SOPS : ISopsEncryption{
     private val logger: Logger = getLogger(SOPS::class.java)
 
     private val sopsCmd = listOf("sops")
@@ -43,7 +43,7 @@ object SOPS {
 
     private fun ageSecret(sopsPrivateKey: String): List<String> = listOf("--age", sopsPrivateKey)
 
-    fun decrypt(
+    override fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
         agePrivateKey: String,
@@ -65,7 +65,7 @@ object SOPS {
             }
     }
 
-    fun encrypt(
+    override fun encrypt(
         text: String,
         _config: String,
         gcpAccessToken: GCPAccessToken,
