@@ -5,7 +5,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 interface ISopsEncryption {
     fun encrypt(
         text: String,
-        _config: String,
+        config: String,
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String

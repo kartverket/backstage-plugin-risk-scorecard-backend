@@ -10,8 +10,6 @@ import java.io.InputStreamReader
 
 class SOPSDecryptionException(message: String) : Exception(message)
 
-class SOPSEncryptionException(message: String) : Exception(message)
-
 object SOPS : ISopsEncryption{
     private val logger: Logger = getLogger(SOPS::class.java)
 
@@ -67,19 +65,10 @@ object SOPS : ISopsEncryption{
 
     override fun encrypt(
         text: String,
-        _config: String,
+        config: String,
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String {
-        val regex = "(?<pathregex>path_regex:.*)".toRegex()
-        val matchResult = regex.find(_config)!!
-        var config = _config
-
-        // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
-        if (matchResult.groups["pathregex"] != null) {
-            config = _config.replace(matchResult.groups["pathregex"]!!.value, "")
-        }
-
         return try {
             processBuilder
                 .command(toEncryptionCommand(config, gcpAccessToken.value))

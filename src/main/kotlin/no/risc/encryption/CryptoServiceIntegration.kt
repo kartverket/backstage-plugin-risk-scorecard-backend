@@ -3,8 +3,6 @@ package no.risc.encryption
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.BodyInserter
-import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.util.UriBuilder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -23,44 +21,44 @@ class CryptoServiceIntegration(
 ) : ISopsEncryption {
 
 
-    fun encryptPost(text: String, _config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
+    fun encryptPost(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
 
         val encryptionRequest =
-            EncryptionRequest(text = text, config = _config, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
+            EncryptionRequest(text = text, config = config, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
 
-        try {
-            val encryptedFile = cryptoServiceConnector.webClient.post()
-                .uri("/encryptPost")
-                .body(BodyInserters.fromValue(encryptionRequest))
+        return try {
+            cryptoServiceConnector.webClient.post()
+                .uri("/encrypt")
+                .body(encryptionRequest, EncryptionRequest::class.java)
                 .retrieve()
                 .bodyToMono(String::class.java)
-                .block().toString()
-
-            return encryptedFile
+                .block()
+                .toString()
         } catch (e: Exception) {
-            return "Exception caught: ${e.stackTraceToString()}"
+            "Exception caught: ${e.stackTraceToString()}"
         }
     }
 
 
-    override fun encrypt(text: String, _config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
+    override fun encrypt(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
         val urltext = URLEncoder.encode(text, StandardCharsets.UTF_8.toString())
 
-        try {
-            val encryptedFile = cryptoServiceConnector.webClient.get()
+        return try {
+            cryptoServiceConnector.webClient.get()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder.path("/encrypt")
                         .queryParam("text", urltext)
-                        .queryParam("config", _config)
+                        .queryParam("config", config)
                         .queryParam("gcpAccessToken", gcpAccessToken.value)
                         .queryParam("riScId", riScId)
                         .build()
-                }.retrieve().bodyToMono(String::class.java).block().toString()
-
-
-            return encryptedFile
+                }
+                .retrieve()
+                .bodyToMono(String::class.java)
+                .block()
+                .toString()
         } catch (e: Exception) {
-            return "Exception caught: ${e.stackTraceToString()}"
+            "Exception caught: ${e.stackTraceToString()}"
         }
     }
 
