@@ -26,22 +26,15 @@ fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArr
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
 
-fun removePathRegex(_config: String, riScId: String): String {
+fun removePathRegex(config: String): String {
     val regex = "(?<pathregex>path_regex:.*)".toRegex()
 
-    try {
-        val matchResult = regex.find(_config)!!
-        var config = _config
+    val matchResult = regex.find(config)
 
-        // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
-        if (matchResult.groups["pathregex"] != null) {
-            config = _config.replace(matchResult.groups["pathregex"]!!.value, "")
-        }
-
-        return config
-
-    }
-    catch (e: Exception) {
-        throw e
+    // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
+    return if (matchResult?.groups?.get("pathregex") != null) {
+        config.replace(matchResult.groups["pathregex"]!!.value, "")
+    } else {
+        config
     }
 }
