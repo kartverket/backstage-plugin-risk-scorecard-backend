@@ -5,7 +5,7 @@ RUN ./gradlew build -x test
 FROM eclipse-temurin:21
 
 # Create application directory and subdirectories
-RUN mkdir -p /app /app/logs /app/tmp
+RUN mkdir -p /app /app/logs /app/tmp /usr/local/bin
 
 ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.2/sops-v1.2.linux.amd64"
 ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.2/sops-v1.2.linux.arm64"
@@ -23,8 +23,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
 # Add non-root user og endre rettigheter
-RUN adduser user && \
-    chown -R user:user /app /usr/local/bin /app/logs /app/tmp
+RUN adduser -D user && chown -R user:user /app /usr/local/bin /app/logs /app/tmp
 
 # Bytt til non-root user
 USER user
