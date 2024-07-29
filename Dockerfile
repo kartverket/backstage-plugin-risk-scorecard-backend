@@ -26,7 +26,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
 # Add non-root user og endre rettigheter
-RUN adduser -D user && chown -R user:user /app /usr/local/bin /app/logs /app/tmp
+RUN useradd user && chown -R user:user /app /usr/local/bin /app/logs /app/tmp
 
 # Bytt til non-root user
 USER user
