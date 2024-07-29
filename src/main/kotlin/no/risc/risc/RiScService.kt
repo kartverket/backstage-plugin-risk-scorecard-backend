@@ -286,7 +286,7 @@ class RiScService(
         val config = removePathRegex(sopsConfig.data())
 
         val encryptedData: String = if (useCryptoService) {
-            cryptoService.encryptPost(content.riSc, sopsConfig.data(), accessTokens.gcpAccessToken, riScId)
+            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
         } else {
             SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
         }

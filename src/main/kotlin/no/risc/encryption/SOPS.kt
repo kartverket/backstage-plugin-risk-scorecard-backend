@@ -10,7 +10,7 @@ import java.io.InputStreamReader
 
 class SOPSDecryptionException(message: String) : Exception(message)
 
-object SOPS : ISopsEncryption{
+object SOPS : ISopsEncryption {
     private val logger: Logger = getLogger(SOPS::class.java)
 
     private val sopsCmd = listOf("sops")
@@ -29,13 +29,18 @@ object SOPS : ISopsEncryption{
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> = sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(accessToken)
+    ): List<String> =
+        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(
+            accessToken
+        )
 
     private fun toDecryptionCommand(
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(accessToken)
+        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(
+            accessToken
+        )
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
@@ -79,7 +84,12 @@ object SOPS : ISopsEncryption{
                     when (waitFor()) {
                         EXECUTION_STATUS_OK -> result
                         else -> throw SopsEncryptionException(
-                            message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: $result",
+                            message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${
+                                toEncryptionCommand(
+                                    config,
+                                    gcpAccessToken.sensor().value
+                                )
+                            } with error message: $result",
                             riScId = riScId
                         )
                     }
