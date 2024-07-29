@@ -24,3 +24,17 @@ data class MajorMinorVersion(val major: Int, val minor: Int) : Comparable<MajorM
 fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArray())
 
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
+
+
+fun removePathRegex(config: String): String {
+    val regex = "(?<pathregex>path_regex:.*)".toRegex()
+
+    val matchResult = regex.find(config)
+
+    // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
+    return if (matchResult?.groups?.get("pathregex") != null) {
+        config.replace(matchResult.groups["pathregex"]!!.value, "")
+    } else {
+        config
+    }
+}

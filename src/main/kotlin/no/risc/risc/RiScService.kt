@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import no.risc.encryption.CryptoServiceIntegration
+import no.risc.utils.removePathRegex
 import org.slf4j.LoggerFactory
 import kotlin.time.measureTimedValue
 
@@ -109,6 +111,8 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
+    private val cryptoService: CryptoServiceIntegration,
+    @Value("\${featureToggle.useCryptoService}") val useCryptoService: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
     suspend fun fetchAllRiScIds(
@@ -161,7 +165,8 @@ class RiScService(
         }
 
         logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
-        msRiSc.value}
+        msRiSc.value
+    }
 
     // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
     // and modifications can only be made when the schemaVersion is 3.3.
@@ -170,7 +175,7 @@ class RiScService(
             return obj
         }
 
-        val migratedSchemaVersion = obj.riScContent.replace("\"schemaVersion\": \"3.2\"","\"schemaVersion\": \"3.3\"")
+        val migratedSchemaVersion = obj.riScContent.replace("\"schemaVersion\": \"3.2\"", "\"schemaVersion\": \"3.3\"")
         return obj.copy(riScContent = migratedSchemaVersion)
     }
 
@@ -183,7 +188,13 @@ class RiScService(
         when (status) {
             GithubStatus.Success ->
                 try {
-                    RiScContentResultDTO(riScId, ContentStatus.Success, riScStatus, decryptContent(gcpAccessToken), pullRequestUrl)
+                    RiScContentResultDTO(
+                        riScId,
+                        ContentStatus.Success,
+                        riScStatus,
+                        decryptContent(gcpAccessToken),
+                        pullRequestUrl
+                    )
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
@@ -244,7 +255,8 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
-        val jsonSchema = githubConnector.fetchJSONSchema("risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json")
+        val jsonSchema =
+            githubConnector.fetchJSONSchema("risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json")
         if (jsonSchema.status != GithubStatus.Success) {
             throw JSONSchemaFetchException(
                 message = "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, and error message: ${jsonSchema.data}",
@@ -271,7 +283,13 @@ class RiScService(
             )
         }
 
-        val encryptedData = SOPS.encrypt(content.riSc, sopsConfig.data(), accessTokens.gcpAccessToken, riScId)
+        val config = removePathRegex(sopsConfig.data())
+
+        val encryptedData: String = if (useCryptoService) {
+            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+        } else {
+            SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+        }
 
         try {
             val hasClosedPR =
