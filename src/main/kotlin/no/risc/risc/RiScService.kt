@@ -113,6 +113,7 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     @Value("\${featureToggle.useCryptoService}") val useCryptoService: Boolean,
+    @Value("\${featureToggle.useCryptoServiceForDecrypt}") val useCryptoServiceForDecrypt: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
     suspend fun fetchAllRiScIds(
@@ -212,12 +213,21 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String =
-        SOPS.decrypt(
-            ciphertext = data(),
-            gcpAccessToken = gcpAccessToken,
-            agePrivateKey = ageKey,
-        )
+    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String {
+        return if (useCryptoServiceForDecrypt) {
+            cryptoService.decrypt(
+                ciphertext = data(),
+                gcpAccessToken = gcpAccessToken,
+                agePrivateKey = ageKey
+            )
+        } else {
+            SOPS.decrypt(
+                ciphertext = data(),
+                gcpAccessToken = gcpAccessToken,
+                agePrivateKey = ageKey
+            )
+        }
+    }
 
     suspend fun updateRiSc(
         owner: String,

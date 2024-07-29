@@ -3,6 +3,8 @@ package no.risc.encryption
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import org.springframework.stereotype.Component
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpMethod
 import org.springframework.web.util.UriBuilder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -20,6 +22,7 @@ class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
 ) : ISopsEncryption {
 
+    private val logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
 
     fun encryptPost(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
 
@@ -64,6 +67,24 @@ class CryptoServiceIntegration(
 
 
     override fun decrypt(ciphertext: String, gcpAccessToken: GCPAccessToken, agePrivateKey: String): String {
-        TODO("Not yet implemented")
+        try {
+            val encryptedFile = cryptoServiceConnector.webClient.method(HttpMethod.GET)
+                .uri { uriBuilder: UriBuilder ->
+                    uriBuilder.path("/decrypt")
+                        .build()
+                }
+                .header("gcpAccessToken", gcpAccessToken.value)
+                .header("agePrivateKey", agePrivateKey)
+                .bodyValue(ciphertext)
+                .retrieve()
+                .bodyToMono(String::class.java)
+                .block()
+                .toString()
+
+            return encryptedFile
+        } catch (e: Exception) {
+            logger.error("Decrypting failed!", e)
+            return ""
+        }
     }
 }
