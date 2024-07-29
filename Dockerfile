@@ -22,8 +22,8 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     && chmod +x /usr/local/bin/sops
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
-# Add non-root user med id 150 og endre rettigheter
-RUN adduser --uid 150 --disabled-password --gecos "" user && \
+# Add non-root user og endre rettigheter
+RUN adduser user && \
     chown -R user:user /app /usr/local/bin /app/logs /app/tmp
 
 # Bytt til non-root user
