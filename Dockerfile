@@ -8,6 +8,8 @@ FROM eclipse-temurin:21
 # Create application directory and subdirectories
 RUN mkdir -p /app /app/logs /app/tmp /usr/local/bin
 
+RUN apk --no-cache add shadow
+
 ARG SOPS_AMD64="https://github.com/bekk/sops/releases/download/v1.2/sops-v1.2.linux.amd64"
 ARG SOPS_ARM64="https://github.com/bekk/sops/releases/download/v1.2/sops-v1.2.linux.arm64"
 
