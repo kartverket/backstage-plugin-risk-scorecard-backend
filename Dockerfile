@@ -1,6 +1,7 @@
 FROM eclipse-temurin:21.0.2_13-jre-alpine as build
 COPY . .
 RUN ./gradlew build -x test
+RUN apk update && apk upgrade
 
 FROM eclipse-temurin:21
 
