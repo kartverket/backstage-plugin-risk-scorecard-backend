@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-    <option name="ACTIVE_PROFILES" value="dev" />
+    <option name="ACTIVE_PROFILES" value="local" />
     <envs>
       <env name="GITHUB_APP_ID" value="827078" />
       <env name="GITHUB_INSTALLATION_ID" value="48036152" />
