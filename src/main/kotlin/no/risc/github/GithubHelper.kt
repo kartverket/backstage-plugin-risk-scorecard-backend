@@ -152,7 +152,8 @@ class GithubHelper(
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
     fun bodyToClosePullRequest(): String =
-        "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. New approval from risk owner is required.\",  \"state\": \"closed\"}"
+        "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. " +
+            "New approval from risk owner is required.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
@@ -162,7 +163,10 @@ class GithubHelper(
     ): GithubCreateNewPullRequestPayload {
         val body =
             when (requiresNewApproval) {
-                true -> "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. Merge the pull request to include the changes in the main branch."
+                true ->
+                    "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. " +
+                        "Merge the pull request to include the changes in the main branch."
+
                 false -> "The risk scorecard has been updated, but does not require new approval."
             }
 
