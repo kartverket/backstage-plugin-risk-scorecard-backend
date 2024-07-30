@@ -95,8 +95,4 @@ class GithubAppConnector(
         val token: String,
         @JsonProperty("expires_at") val expiresAt: OffsetDateTime,
     )
-
-    private fun GithubAccessTokenBody.isExpired(): Boolean {
-        return expiresAt.isBefore(OffsetDateTime.now())
-    }
 }
