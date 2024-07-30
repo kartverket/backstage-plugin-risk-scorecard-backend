@@ -81,7 +81,7 @@ enum class ProcessingStatus(val message: String) {
 
 data class RiScIdentifier(
     val id: String,
-    val status: RiScStatus,
+    var status: RiScStatus,
     val pullRequestUrl: String? = null,
 )
 
@@ -139,6 +139,42 @@ class RiScService(
                                         RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
                                     }
                                 fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                                    .let {
+                                        when (id.status) {
+                                            RiScStatus.Draft -> {
+                                                /*
+                                                 * Because of our unusual datastorage, this is an extra state check for Drafts.
+                                                 *
+                                                 * In case a repository does not delete branches after merging pull requests,
+                                                 * our state flowchart would go from SentForApproval (pull request) to
+                                                 * Draft (branch exists). Therefore we check if the content in Draft is equal to
+                                                 * the content on the default branch (often main). If they are equal then we
+                                                 * know we have a ros branch without changes, and therefore it should be in a
+                                                 * Published state.
+                                                 *  */
+
+                                                // Get ros content on default branch.
+                                                val published =
+                                                    githubConnector.fetchPublishedRiSc(
+                                                        owner,
+                                                        repository,
+                                                        id.id,
+                                                        accessTokens.githubAccessToken.value,
+                                                    )
+
+                                                val fileFound = published.status === GithubStatus.Success
+                                                val fileisEqual = published.data.equals(it.data)
+                                                // Check if file exists and its content is equal.
+                                                if (fileFound && fileisEqual) {
+                                                    // Set its status to Published.
+                                                    id.status = RiScStatus.Published
+                                                }
+                                                it
+                                            }
+                                            RiScStatus.SentForApproval -> it
+                                            RiScStatus.Published -> it
+                                        }
+                                    }
                                     .responseToRiScResult(
                                         id.id,
                                         id.status,
