@@ -15,12 +15,10 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
-
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(private val environment: Environment) {
-
-@Bean
+    @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -57,18 +55,20 @@ class SecurityConfig(private val environment: Environment) {
     @Bean
     fun jwtDecoder(): JwtDecoder? {
         val issuerUri = environment.getProperty("ISSUER_URI")
-        val jwtDecoder = NimbusJwtDecoder.withIssuerLocation(issuerUri)
-            .jwtProcessorCustomizer { customizer ->
-                customizer.jwsTypeVerifier = DefaultJOSEObjectTypeVerifier(
-                    JOSEObjectType.JOSE_JSON,
-                    JOSEObjectType.JWT,
-                    JOSEObjectType.JOSE,
-                    JOSEObjectType("vnd.backstage.user"), // required for tokens issued by Backstage
-                    null
-                )
-            }
-            .build()
-
+        val jwtDecoder =
+            NimbusJwtDecoder.withIssuerLocation(issuerUri)
+                .jwtProcessorCustomizer { customizer ->
+                    customizer.jwsTypeVerifier =
+                        DefaultJOSEObjectTypeVerifier(
+                            JOSEObjectType.JOSE_JSON,
+                            JOSEObjectType.JWT,
+                            JOSEObjectType.JOSE,
+                            // required for tokens issued by Backstage
+                            JOSEObjectType("vnd.backstage.user"),
+                            null,
+                        )
+                }
+                .build()
 
         return JwtDecoder { token -> jwtDecoder.decode(token) }
     }

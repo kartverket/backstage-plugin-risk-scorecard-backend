@@ -7,22 +7,23 @@ import org.springframework.web.util.UriBuilder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-
 data class EncryptionRequest(
     val text: String,
     val config: String,
     val gcpAccessToken: String,
-    val riScId: String
+    val riScId: String,
 )
 
 @Component
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
 ) : ISopsEncryption {
-
-
-    fun encryptPost(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
-
+    fun encryptPost(
+        text: String,
+        config: String,
+        gcpAccessToken: GCPAccessToken,
+        riScId: String,
+    ): String {
         val encryptionRequest =
             EncryptionRequest(text = text, config = config, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
 
@@ -39,8 +40,12 @@ class CryptoServiceIntegration(
         }
     }
 
-
-    override fun encrypt(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
+    override fun encrypt(
+        text: String,
+        config: String,
+        gcpAccessToken: GCPAccessToken,
+        riScId: String,
+    ): String {
         val urltext = URLEncoder.encode(text, StandardCharsets.UTF_8.toString())
 
         return try {
@@ -62,8 +67,11 @@ class CryptoServiceIntegration(
         }
     }
 
-
-    override fun decrypt(ciphertext: String, gcpAccessToken: GCPAccessToken, agePrivateKey: String): String {
+    override fun decrypt(
+        ciphertext: String,
+        gcpAccessToken: GCPAccessToken,
+        agePrivateKey: String,
+    ): String {
         TODO("Not yet implemented")
     }
 }
