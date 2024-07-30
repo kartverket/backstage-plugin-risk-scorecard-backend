@@ -6,6 +6,7 @@ plugins {
     kotlin("jvm") version "1.9.24"
     kotlin("plugin.spring") version "1.9.24"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
+    kotlin("plugin.serialization") version "1.9.25"
 }
 
 group = "no"
@@ -29,6 +30,8 @@ dependencies {
     implementation("org.springframework.security:spring-security-oauth2-resource-server")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
     implementation("io.netty:netty-all:4.1.112.Final")
 
