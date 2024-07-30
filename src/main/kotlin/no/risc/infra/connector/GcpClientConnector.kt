@@ -16,5 +16,4 @@ class GcpClientConnector {
             client.close()
         }
     }
-
 }

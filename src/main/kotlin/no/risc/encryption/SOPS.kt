@@ -30,17 +30,19 @@ object SOPS : ISopsEncryption {
         config: String,
         accessToken: String,
     ): List<String> =
-        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(
-            accessToken
-        )
+        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile +
+            gcpAccessToken(
+                accessToken,
+            )
 
     private fun toDecryptionCommand(
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(
-            accessToken
-        )
+        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile +
+            gcpAccessToken(
+                accessToken,
+            )
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
@@ -72,7 +74,7 @@ object SOPS : ISopsEncryption {
         text: String,
         config: String,
         gcpAccessToken: GCPAccessToken,
-        riScId: String
+        riScId: String,
     ): String {
         return try {
             processBuilder
@@ -87,10 +89,10 @@ object SOPS : ISopsEncryption {
                             message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${
                                 toEncryptionCommand(
                                     config,
-                                    gcpAccessToken.sensor().value
+                                    gcpAccessToken.sensor().value,
                                 )
                             } with error message: $result",
-                            riScId = riScId
+                            riScId = riScId,
                         )
                     }
                 }
