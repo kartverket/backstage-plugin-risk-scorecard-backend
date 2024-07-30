@@ -235,13 +235,13 @@ class RiScService(
             cryptoService.decrypt(
                 ciphertext = data(),
                 gcpAccessToken = gcpAccessToken,
-                agePrivateKey = ageKey
+                agePrivateKey = ageKey,
             )
         } else {
             SOPS.decrypt(
                 ciphertext = data(),
                 gcpAccessToken = gcpAccessToken,
-                agePrivateKey = ageKey
+                agePrivateKey = ageKey,
             )
         }
     }

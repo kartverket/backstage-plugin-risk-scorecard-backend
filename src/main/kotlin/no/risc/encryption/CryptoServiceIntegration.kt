@@ -2,9 +2,9 @@ package no.risc.encryption
 
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
-import org.springframework.stereotype.Component
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpMethod
+import org.springframework.stereotype.Component
 import org.springframework.web.util.UriBuilder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -20,11 +20,14 @@ data class EncryptionRequest(
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
 ) : ISopsEncryption {
-
     private val logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
 
-    fun encryptPost(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
-
+    fun encryptPost(
+        text: String,
+        config: String,
+        gcpAccessToken: GCPAccessToken,
+        riScId: String,
+    ): String {
         val encryptionRequest =
             EncryptionRequest(text = text, config = config, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
 
@@ -68,21 +71,25 @@ class CryptoServiceIntegration(
         }
     }
 
-
-    override fun decrypt(ciphertext: String, gcpAccessToken: GCPAccessToken, agePrivateKey: String): String {
+    override fun decrypt(
+        ciphertext: String,
+        gcpAccessToken: GCPAccessToken,
+        agePrivateKey: String,
+    ): String {
         try {
-            val encryptedFile = cryptoServiceConnector.webClient.method(HttpMethod.GET)
-                .uri { uriBuilder: UriBuilder ->
-                    uriBuilder.path("/decrypt")
-                        .build()
-                }
-                .header("gcpAccessToken", gcpAccessToken.value)
-                .header("agePrivateKey", agePrivateKey)
-                .bodyValue(ciphertext)
-                .retrieve()
-                .bodyToMono(String::class.java)
-                .block()
-                .toString()
+            val encryptedFile =
+                cryptoServiceConnector.webClient.method(HttpMethod.GET)
+                    .uri { uriBuilder: UriBuilder ->
+                        uriBuilder.path("/decrypt")
+                            .build()
+                    }
+                    .header("gcpAccessToken", gcpAccessToken.value)
+                    .header("agePrivateKey", agePrivateKey)
+                    .bodyValue(ciphertext)
+                    .retrieve()
+                    .bodyToMono(String::class.java)
+                    .block()
+                    .toString()
 
             return encryptedFile
         } catch (e: Exception) {
