@@ -198,9 +198,6 @@
         "risk": {
           "$ref": "#/$defs/risk"
         },
-        "existingActions": {
-          "type": "string"
-        },
         "actions": {
           "type": "array",
           "items": {
