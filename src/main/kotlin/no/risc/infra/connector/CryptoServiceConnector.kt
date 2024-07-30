@@ -1,10 +1,9 @@
 package no.risc.infra.connector
 
+import no.risc.config.CryptoServiceConfig
 import org.springframework.stereotype.Component
 
 @Component
 class CryptoServiceConnector(
-    baseUrl: String = "http://localhost:8084",
-) : WebClientConnector(baseUrl) {
-
-}
+    cryptoServiceConfig: CryptoServiceConfig,
+) : WebClientConnector(cryptoServiceConfig.baseUrl)

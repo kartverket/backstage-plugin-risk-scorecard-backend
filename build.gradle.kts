@@ -1,10 +1,11 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "3.2.8"
+    id("org.springframework.boot") version "3.3.2"
     id("io.spring.dependency-management") version "1.1.6"
     kotlin("jvm") version "1.9.24"
     kotlin("plugin.spring") version "1.9.24"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
 }
 
 group = "no"
@@ -26,8 +27,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.security:spring-security-oauth2-jose")
     implementation("org.springframework.security:spring-security-oauth2-resource-server")
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
 
     implementation("io.netty:netty-all:4.1.112.Final")
 

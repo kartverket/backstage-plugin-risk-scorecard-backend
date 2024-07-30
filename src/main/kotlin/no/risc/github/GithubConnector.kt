@@ -1,6 +1,8 @@
 package no.risc.github
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.github.models.FileContentDTO
@@ -18,13 +20,13 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.awaitBody
+import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
-import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.awaitBodyOrNull
 
 data class GithubContentResponse(
     val data: String?,
@@ -56,8 +58,14 @@ data class GithubWriteToFilePayload(
 ) {
     fun toContentBody(): String =
         when (sha) {
-            null -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
-            else -> "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": { \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, \"sha\":\"$sha\""
+            null ->
+                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
+                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+
+            else ->
+                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
+                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
+                    "\"sha\":\"$sha\""
         }
 }
 
@@ -77,26 +85,33 @@ class GithubConnector(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
-        riScId: String
+        riScId: String,
     ): GithubContentResponse =
         try {
-            val sopsConfigResponse = getGithubResponse(
+            val sopsConfigResponse =
+                getGithubResponse(
                     githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
                 )
             when (sopsConfigResponse.decodedFileContent()) {
                 null -> throw SopsConfigFetchException(
-                    message = "Failed to fetch sops config from location: ${githubHelper.uriToFindSopsConfig(owner, repository)} with the following response: $sopsConfigResponse",
+                    message = "Failed to fetch sops config from location: ${
+                        githubHelper.uriToFindSopsConfig(
+                            owner,
+                            repository,
+                        )
+                    } with the following response: $sopsConfigResponse",
                     riScId = riScId,
-                    responseMessage = "Could not fetch SOPS config"
+                    responseMessage = "Could not fetch SOPS config",
                 )
+
                 else -> GithubContentResponse(sopsConfigResponse.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
             throw SopsConfigFetchException(
                 message = e.message ?: "Could not fetch SOPS config",
                 riScId = riScId,
-                responseMessage = "Could not fetch SOPS config"
+                responseMessage = "Could not fetch SOPS config",
             )
         }
 
@@ -104,25 +119,27 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): GithubRiScIdentifiersResponse = coroutineScope {
-        val draftRiScsDeferred = async { fetchRiScIdentifiersDrafted(owner, repository, accessToken) }
-        val publishedRiScsDeferred = async { fetchPublishedRiScIdentifiers(owner, repository, accessToken) }
-        val riScsSentForApprovalDeferred = async { fetchRiScIdentifiersSentForApproval(owner, repository, accessToken) }
+    ): GithubRiScIdentifiersResponse =
+        coroutineScope {
+            val draftRiScsDeferred = async { fetchRiScIdentifiersDrafted(owner, repository, accessToken) }
+            val publishedRiScsDeferred = async { fetchPublishedRiScIdentifiers(owner, repository, accessToken) }
+            val riScsSentForApprovalDeferred =
+                async { fetchRiScIdentifiersSentForApproval(owner, repository, accessToken) }
 
-        val draftRiScs = draftRiScsDeferred.await()
-        val publishedRiScs = publishedRiScsDeferred.await()
-        val riScsSentForApproval = riScsSentForApprovalDeferred.await()
+            val draftRiScs = draftRiScsDeferred.await()
+            val publishedRiScs = publishedRiScsDeferred.await()
+            val riScsSentForApproval = riScsSentForApprovalDeferred.await()
 
-         GithubRiScIdentifiersResponse(
-            status = GithubStatus.Success,
-            ids =
-            combinePublishedDraftAndSentForApproval(
-                draftRiScList = draftRiScs,
-                sentForApprovalList = riScsSentForApproval,
-                publishedRiScList = publishedRiScs,
-            ),
-        )
-    }
+            GithubRiScIdentifiersResponse(
+                status = GithubStatus.Success,
+                ids =
+                    combinePublishedDraftAndSentForApproval(
+                        draftRiScList = draftRiScs,
+                        sentForApprovalList = riScsSentForApproval,
+                        publishedRiScList = publishedRiScs,
+                    ),
+            )
+        }
 
     private fun combinePublishedDraftAndSentForApproval(
         draftRiScList: List<RiScIdentifier>,
@@ -146,7 +163,10 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponseSuspend(githubHelper.uriToFindRiSc(owner, repository, id), accessToken).decodedFileContentSuspend()
+                getGithubResponseSuspend(
+                    githubHelper.uriToFindRiSc(owner, repository, id),
+                    accessToken,
+                ).decodedFileContentSuspend()
             when (fileContent) {
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
                 else -> GithubContentResponse(fileContent, GithubStatus.Success)
@@ -175,6 +195,7 @@ class GithubConnector(
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
+
     suspend fun fetchDraftedRiScContent(
         owner: String,
         repository: String,
@@ -200,10 +221,11 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response = getGithubResponseSuspend(
-                githubHelper.uriToFindRiScFiles(owner, repository),
-                accessToken
-            ).awaitBody<List<FileNameDTO>>()
+            val response =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFindRiScFiles(owner, repository),
+                    accessToken,
+                ).awaitBody<List<FileNameDTO>>()
 
             response.riScIdentifiersPublished()
         } catch (e: Exception) {
@@ -216,10 +238,11 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response = getGithubResponseSuspend(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
-                .awaitBody<List<GithubPullRequestObject>>()
+            val response =
+                getGithubResponseSuspend(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
+                    .awaitBody<List<GithubPullRequestObject>>()
 
-                response.riScIdentifiersSentForApproval()
+            response.riScIdentifiersSentForApproval()
         } catch (e: Exception) {
             emptyList()
         }
@@ -230,12 +253,13 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response = getGithubResponseSuspend(
-                githubHelper.uriToFindAllRiScBranches(owner, repository),
-                accessToken,
-            ).awaitBody<List<GithubReferenceObjectDTO>>().map { it.toInternal() }
+            val response =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFindAllRiScBranches(owner, repository),
+                    accessToken,
+                ).awaitBody<List<GithubReferenceObjectDTO>>().map { it.toInternal() }
 
-                response.riScIdentifiersDrafted()
+            response.riScIdentifiersDrafted()
         } catch (e: Exception) {
             emptyList()
         }
@@ -275,17 +299,17 @@ class GithubConnector(
             ),
         ).bodyToMono<String>().block()
 
-
-            val prExists =  runBlocking {
-             val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
-            if (!requiresNewApproval && !prExists) {
-                createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
+        val prExists =
+            runBlocking {
+                val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
+                if (!requiresNewApproval && !prExists) {
+                    createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
+                }
+                if (requiresNewApproval && prExists) {
+                    closePullRequestForRiSc(owner, repository, riScId, accessToken)
+                }
+                prExists
             }
-            if (requiresNewApproval && prExists) {
-                closePullRequestForRiSc(owner, repository, riScId, accessToken)
-            }
-            prExists
-        }
         return requiresNewApproval && prExists
     }
 
@@ -327,7 +351,7 @@ class GithubConnector(
         accessToken: String,
     ): Boolean = fetchBranchForRiSc(owner, repository, riScId, accessToken).isNotEmpty()
 
-   private suspend fun pullRequestForRiScExists(
+    private suspend fun pullRequestForRiScExists(
         owner: String,
         repository: String,
         riScId: String,
@@ -449,7 +473,6 @@ class GithubConnector(
         .body(Mono.just(writePayload.toContentBody()), String::class.java)
         .retrieve()
 
-
     private suspend fun getGithubResponseSuspend(
         uri: String,
         accessToken: String,
@@ -503,7 +526,6 @@ class GithubConnector(
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
         return fileContentDTO?.value?.decodeBase64()
     }
-
 
     private fun ResponseSpec.rawFileContent(): String? = this.bodyToMono<String>().block()
 
