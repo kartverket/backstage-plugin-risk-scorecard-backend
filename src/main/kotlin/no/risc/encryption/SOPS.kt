@@ -10,9 +10,7 @@ import java.io.InputStreamReader
 
 class SOPSDecryptionException(message: String) : Exception(message)
 
-class SOPSEncryptionException(message: String) : Exception(message)
-
-object SOPS {
+object SOPS : ISopsEncryption {
     private val logger: Logger = getLogger(SOPS::class.java)
 
     private val sopsCmd = listOf("sops")
@@ -31,19 +29,24 @@ object SOPS {
     private fun toEncryptionCommand(
         config: String,
         accessToken: String,
-    ): List<String> = sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(accessToken)
+    ): List<String> =
+        sopsCmd + encrypt + inputTypeJson + outputTypeYaml + encryptConfig + config + inputFile + gcpAccessToken(
+            accessToken
+        )
 
     private fun toDecryptionCommand(
         accessToken: String,
         sopsPrivateKey: String,
     ): List<String> =
-        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(accessToken)
+        sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile + gcpAccessToken(
+            accessToken
+        )
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
     private fun ageSecret(sopsPrivateKey: String): List<String> = listOf("--age", sopsPrivateKey)
 
-    fun decrypt(
+    override fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
         agePrivateKey: String,
@@ -65,21 +68,12 @@ object SOPS {
             }
     }
 
-    fun encrypt(
+    override fun encrypt(
         text: String,
-        _config: String,
+        config: String,
         gcpAccessToken: GCPAccessToken,
         riScId: String
     ): String {
-        val regex = "(?<pathregex>path_regex:.*)".toRegex()
-        val matchResult = regex.find(_config)!!
-        var config = _config
-
-        // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
-        if (matchResult.groups["pathregex"] != null) {
-            config = _config.replace(matchResult.groups["pathregex"]!!.value, "")
-        }
-
         return try {
             processBuilder
                 .command(toEncryptionCommand(config, gcpAccessToken.value))
@@ -90,7 +84,12 @@ object SOPS {
                     when (waitFor()) {
                         EXECUTION_STATUS_OK -> result
                         else -> throw SopsEncryptionException(
-                            message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${toEncryptionCommand(config, gcpAccessToken.sensor().value)} with error message: $result",
+                            message = "Failed when encrypting RiSc with ID: $riScId by running sops command: ${
+                                toEncryptionCommand(
+                                    config,
+                                    gcpAccessToken.sensor().value
+                                )
+                            } with error message: $result",
                             riScId = riScId
                         )
                     }
