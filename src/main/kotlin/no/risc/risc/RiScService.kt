@@ -1,24 +1,31 @@
 package no.risc.risc
 
 import kotlinx.coroutines.Dispatchers
-import no.risc.encryption.SOPS
-import no.risc.encryption.SOPSDecryptionException
-import no.risc.exception.exceptions.*
-import no.risc.github.*
-import no.risc.infra.connector.models.AccessTokens
-import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.risc.models.RiScWrapperObject
-import no.risc.risc.models.UserInfo
-import no.risc.validation.JSONValidator
-import org.apache.commons.lang3.RandomStringUtils
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.stereotype.Service
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
+import no.risc.encryption.SOPS
+import no.risc.encryption.SOPSDecryptionException
+import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.RiScNotValidException
+import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.exception.exceptions.UpdatingRiScException
+import no.risc.github.GithubConnector
+import no.risc.github.GithubContentResponse
+import no.risc.github.GithubPullRequestObject
+import no.risc.github.GithubRiScIdentifiersResponse
+import no.risc.github.GithubStatus
+import no.risc.infra.connector.models.AccessTokens
+import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.UserInfo
 import no.risc.utils.removePathRegex
+import no.risc.validation.JSONValidator
+import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Service
 import kotlin.time.measureTimedValue
 
 data class ProcessRiScResultDTO(
@@ -112,9 +119,10 @@ class RiScService(
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
-    @Value("\${featureToggle.useCryptoService}") val useCryptoService: Boolean,
+    @Value("\${featureToggle.useCryptoServiceForEncryption}") val useCryptoServiceForEncryption: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
+
     suspend fun fetchAllRiScIds(
         owner: String,
         repository: String,
@@ -130,74 +138,82 @@ class RiScService(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
-    ): List<RiScContentResultDTO> = coroutineScope {
-        val msId = measureTimedValue {
-            githubConnector.fetchAllRiScIdentifiersInRepository(
-                owner,
-                repository,
-                accessTokens.githubAccessToken.value,
-            ).ids
-        }
-        logger.info("Fetching risc ids took ${msId.duration}")
-
-        val msRiSc = measureTimedValue {
-            msId.value.map { id ->
-                async(Dispatchers.IO) {
-                    try {
-                        val fetchRisc = when (id.status) {
-                            RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                            RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                        }
-                        fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                            .let {
-                                when (id.status) {
-                                    RiScStatus.Draft -> {
-                                        /*
-                                        * Because of our unusual datastorage, this is an extra state check for Drafts.
-                                        *
-                                        * In case a repository does not delete branches after merging pull requests,
-                                        * our state flowchart would go from SentForApproval (pull request) to
-                                        * Draft (branch exists). Therefore we check if the content in Draft is equal to
-                                        * the content on the default branch (often main). If they are equal then we
-                                        * know we have a ros branch without changes, and therefore it should be in a
-                                        * Published state.
-                                        *  */
-
-                                        // Get ros content on default branch.
-                                        val published = githubConnector.fetchPublishedRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-
-                                        val fileFound = published.status === GithubStatus.Success
-                                        val fileisEqual = published.data.equals(it.data)
-                                        // Check if file exists and its content is equal.
-                                        if (fileFound && fileisEqual) {
-                                            // Set its status to Published.
-                                            id.status = RiScStatus.Published
-                                        }
-                                        it
-                                    }
-                                    RiScStatus.SentForApproval -> it
-                                    RiScStatus.Published -> it
-                                }
-                            }
-                            .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
-                            .let { migrateToNewMinor(it) }
-
-                    } catch (e: Exception) {
-                        RiScContentResultDTO(
-                            riScId = id.id,
-                            status = ContentStatus.Failure,
-                            riScStatus = id.status,
-                            riScContent = null,
-                            pullRequestUrl = null,
-                        )
-                    }
+    ): List<RiScContentResultDTO> =
+        coroutineScope {
+            val msId =
+                measureTimedValue {
+                    githubConnector.fetchAllRiScIdentifiersInRepository(
+                        owner,
+                        repository,
+                        accessTokens.githubAccessToken.value,
+                    ).ids
                 }
-            }.awaitAll()
-        }
+            logger.info("Fetching risc ids took ${msId.duration}")
 
-        logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
-        msRiSc.value
-    }
+            val msRiSc =
+                measureTimedValue {
+                    msId.value.map { id ->
+                        async(Dispatchers.IO) {
+                            try {
+                                val fetchRisc =
+                                    when (id.status) {
+                                        RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                                        RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
+                                    }
+                                fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                                    .let {
+                                        when (id.status) {
+                                            RiScStatus.Draft -> {
+                                                /*
+                                                * Because of our unusual datastorage, this is an extra state check for Drafts.
+                                                *
+                                                * In case a repository does not delete branches after merging pull requests,
+                                                * our state flowchart would go from SentForApproval (pull request) to
+                                                * Draft (branch exists). Therefore we check if the content in Draft is equal to
+                                                * the content on the default branch (often main). If they are equal then we
+                                                * know we have a ros branch without changes, and therefore it should be in a
+                                                * Published state.
+                                                *  */
+
+                                                // Get ros content on default branch.
+                                                val published = githubConnector.fetchPublishedRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+
+                                                val fileFound = published.status === GithubStatus.Success
+                                                val fileisEqual = published.data.equals(it.data)
+                                                // Check if file exists and its content is equal.
+                                                if (fileFound && fileisEqual) {
+                                                    // Set its status to Published.
+                                                    id.status = RiScStatus.Published
+                                                }
+                                                it
+                                            }
+                                            RiScStatus.SentForApproval -> it
+                                            RiScStatus.Published -> it
+                                        }
+                                    }
+                                    .responseToRiScResult(
+                                        id.id,
+                                        id.status,
+                                        accessTokens.gcpAccessToken,
+                                        id.pullRequestUrl,
+                                    )
+                                    .let { migrateToNewMinor(it) }
+                            } catch (e: Exception) {
+                                RiScContentResultDTO(
+                                    riScId = id.id,
+                                    status = ContentStatus.Failure,
+                                    riScStatus = id.status,
+                                    riScContent = null,
+                                    pullRequestUrl = null,
+                                )
+                            }
+                        }
+                    }.awaitAll()
+                }
+
+            logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
+            msRiSc.value
+        }
 
     // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
     // and modifications can only be made when the schemaVersion is 3.3.
@@ -224,7 +240,7 @@ class RiScService(
                         ContentStatus.Success,
                         riScStatus,
                         decryptContent(gcpAccessToken),
-                        pullRequestUrl
+                        pullRequestUrl,
                     )
                 } catch (e: Exception) {
                     when (e) {
@@ -290,8 +306,10 @@ class RiScService(
             githubConnector.fetchJSONSchema("risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json")
         if (jsonSchema.status != GithubStatus.Success) {
             throw JSONSchemaFetchException(
-                message = "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, and error message: ${jsonSchema.data}",
-                riScId = riScId
+                message =
+                    "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
+                        "and error message: ${jsonSchema.data}",
+                riScId = riScId,
             )
         }
 
@@ -310,17 +328,18 @@ class RiScService(
             throw SopsConfigFetchException(
                 message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
                 riScId = riScId,
-                responseMessage = "Could not fetch SOPS config"
+                responseMessage = "Could not fetch SOPS config",
             )
         }
 
         val config = removePathRegex(sopsConfig.data())
 
-        val encryptedData: String = if (useCryptoService) {
-            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-        } else {
-            SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-        }
+        val encryptedData: String =
+            if (useCryptoServiceForEncryption) {
+                cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            } else {
+                SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            }
 
         try {
             val hasClosedPR =
@@ -390,6 +409,4 @@ class RiScService(
         )
 
     fun fetchLatestJSONSchema(): GithubContentResponse = githubConnector.fetchLatestJSONSchema()
-
-
 }

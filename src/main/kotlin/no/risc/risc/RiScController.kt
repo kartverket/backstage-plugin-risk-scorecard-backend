@@ -1,7 +1,6 @@
 package no.risc.risc
 
 import no.risc.exception.exceptions.InvalidAccessTokensException
-import no.risc.github.GithubAccessToken
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
@@ -10,7 +9,6 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -33,14 +31,24 @@ class RiScController(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): GithubRiScIdentifiersResponse = riScService.fetchAllRiScIds(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
+    ): GithubRiScIdentifiersResponse =
+        riScService.fetchAllRiScIds(
+            repositoryOwner,
+            repositoryName,
+            getAccessTokens(gcpAccessToken, repositoryName),
+        )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): List<RiScContentResultDTO> = riScService.fetchAllRiScs(repositoryOwner, repositoryName, getAccessTokens(gcpAccessToken, repositoryName))
+    ): List<RiScContentResultDTO> =
+        riScService.fetchAllRiScs(
+            repositoryOwner,
+            repositoryName,
+            getAccessTokens(gcpAccessToken, repositoryName),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createNewRiSc(
@@ -48,12 +56,13 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO = riScService.createRiSc(
-        owner = repositoryOwner,
-        repository = repositoryName,
-        accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
-        content = riSc,
-    )
+    ): ProcessRiScResultDTO =
+        riScService.createRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+            content = riSc,
+        )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun editRiSc(
@@ -62,13 +71,14 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO = riScService.updateRiSc(
-        repositoryOwner,
-        repositoryName,
-        id,
-        riSc,
-        getAccessTokens(gcpAccessToken, repositoryName)
-    )
+    ): ProcessRiScResultDTO =
+        riScService.updateRiSc(
+            repositoryOwner,
+            repositoryName,
+            id,
+            riSc,
+            getAccessTokens(gcpAccessToken, repositoryName),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendRiScForPublishing(
@@ -108,7 +118,7 @@ class RiScController(
     ): AccessTokens {
         if (!googleApiConnector.validateAccessToken(gcpAccessToken)) {
             throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}"
+                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
             )
         }
         val accessTokens =

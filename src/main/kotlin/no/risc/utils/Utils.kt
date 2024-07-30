@@ -25,7 +25,6 @@ fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArr
 
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
-
 fun removePathRegex(config: String): String {
     val regex = "(?<pathregex>path_regex:.*)".toRegex()
 

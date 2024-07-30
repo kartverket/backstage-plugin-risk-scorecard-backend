@@ -7,7 +7,7 @@ interface ISopsEncryption {
         text: String,
         config: String,
         gcpAccessToken: GCPAccessToken,
-        riScId: String
+        riScId: String,
     ): String
 
     fun decrypt(
@@ -15,5 +15,4 @@ interface ISopsEncryption {
         gcpAccessToken: GCPAccessToken,
         agePrivateKey: String,
     ): String
-
 }
