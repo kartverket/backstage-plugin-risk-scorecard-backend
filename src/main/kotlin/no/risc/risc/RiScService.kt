@@ -161,7 +161,12 @@ class RiScService(
                                         RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
                                     }
                                 fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                                    .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+                                    .responseToRiScResult(
+                                        id.id,
+                                        id.status,
+                                        accessTokens.gcpAccessToken,
+                                        id.pullRequestUrl,
+                                    )
                                     .let { migrateToNewMinor(it) }
                             } catch (e: Exception) {
                                 RiScContentResultDTO(
@@ -299,11 +304,12 @@ class RiScService(
 
         val config = removePathRegex(sopsConfig.data())
 
-        val encryptedData: String = if (useCryptoServiceForEncryption) {
-            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-        } else {
-            SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-        }
+        val encryptedData: String =
+            if (useCryptoServiceForEncryption) {
+                cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            } else {
+                SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            }
 
         try {
             val hasClosedPR =
