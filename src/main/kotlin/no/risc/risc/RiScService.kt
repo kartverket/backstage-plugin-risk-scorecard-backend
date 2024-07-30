@@ -112,7 +112,7 @@ class RiScService(
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
-    @Value("\${featureToggle.useCryptoService}") val useCryptoService: Boolean,
+    @Value("\${featureToggle.useCryptoServiceForEncryption}") val useCryptoServiceForEncryption: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
     suspend fun fetchAllRiScIds(
@@ -285,7 +285,7 @@ class RiScService(
 
         val config = removePathRegex(sopsConfig.data())
 
-        val encryptedData: String = if (useCryptoService) {
+        val encryptedData: String = if (useCryptoServiceForEncryption) {
             cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
         } else {
             SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
