@@ -42,34 +42,14 @@ data class RiScContentResultDTO(
     val riScStatus: RiScStatus?,
     val riScContent: String?,
     val pullRequestUrl: String? = null,
-) {
-    companion object {
-        val INVALID_ACCESS_TOKENS =
-            RiScContentResultDTO(
-                riScId = "",
-                status = ContentStatus.Failure,
-                riScStatus = null,
-                riScContent = "",
-            )
-    }
-}
+)
 
 data class PublishRiScResultDTO(
     val riScId: String,
     val status: ProcessingStatus,
     val statusMessage: String,
     val pendingApproval: PendingApprovalDTO?,
-) {
-    companion object {
-        val INVALID_ACCESS_TOKENS =
-            PublishRiScResultDTO(
-                "",
-                ProcessingStatus.InvalidAccessTokens,
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
-                null,
-            )
-    }
-}
+)
 
 data class PendingApprovalDTO(
     val pullRequestUrl: String,
@@ -84,8 +64,6 @@ enum class ContentStatus {
 }
 
 enum class ProcessingStatus(val message: String) {
-    RiScNotValid("Risk scorecard is not valid according to JSON Schema"),
-    EncryptionFailed("Failed to encrypt risk scorecard"),
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
