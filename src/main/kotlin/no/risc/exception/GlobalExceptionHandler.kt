@@ -1,6 +1,11 @@
 package no.risc.exception
 
-import no.risc.exception.exceptions.*
+import no.risc.exception.exceptions.InvalidAccessTokensException
+import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.RiScNotValidException
+import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.exception.exceptions.SopsEncryptionException
+import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import org.slf4j.Logger
@@ -82,5 +87,4 @@ internal class GlobalExceptionHandler {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
-
 }

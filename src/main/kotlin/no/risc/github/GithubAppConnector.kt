@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.Instant
 import java.time.OffsetDateTime
-import java.util.*
+import java.util.Date
 
 class GithubAccessToken(
     val value: String,
@@ -39,35 +39,36 @@ class GithubAppConnector(
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
         return GithubAccessToken(
             getGithubAppAccessToken(
-                jwt = generateJWT(
-                    gcpClientConnector.getSecretValue(privateKeySecretName)
-                        ?: throw Exception("Kunne ikke hente github app private key")
-                ),
-                repositoryName = repositoryName
-            ).token
+                jwt =
+                    generateJWT(
+                        gcpClientConnector.getSecretValue(privateKeySecretName)
+                            ?: throw Exception("Kunne ikke hente github app private key"),
+                    ),
+                repositoryName = repositoryName,
+            ).token,
         )
     }
 
     private fun getGithubAppAccessToken(
         jwt: GithubAppSignedJwt,
         repositoryName: String,
-    ): GithubAccessTokenBody = try {
-        webClient
-            .post()
-            .uri(githubHelper.uriToGetAccessTokenFromInstallation(installationId.toString()))
-            .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            .bodyValue(githubHelper.bodyToGetAccessToken(repositoryName).toContentBody())
-            .retrieve()
-            .bodyToMono<GithubAccessTokenBody>()
-            .block() ?: throw Exception("Access token is null.")
-    } catch (e: Exception) {
-        logger.error("Could not create access token with error message: ${e.message}.")
-        throw Exception("Could not create access token with error message: ${e.message}.")
-    }
-
+    ): GithubAccessTokenBody =
+        try {
+            webClient
+                .post()
+                .uri(githubHelper.uriToGetAccessTokenFromInstallation(installationId.toString()))
+                .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${jwt.value}")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .bodyValue(githubHelper.bodyToGetAccessToken(repositoryName).toContentBody())
+                .retrieve()
+                .bodyToMono<GithubAccessTokenBody>()
+                .block() ?: throw Exception("Access token is null.")
+        } catch (e: Exception) {
+            logger.error("Could not create access token with error message: ${e.message}.")
+            throw Exception("Could not create access token with error message: ${e.message}.")
+        }
 
     private data class GithubAppSignedJwt(
         val value: String?,
@@ -98,6 +99,4 @@ class GithubAppConnector(
     private fun GithubAccessTokenBody.isExpired(): Boolean {
         return expiresAt.isBefore(OffsetDateTime.now())
     }
-
 }
-
