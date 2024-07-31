@@ -5,6 +5,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.util.UriBuilder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -34,7 +35,7 @@ class CryptoServiceIntegration(
         return try {
             cryptoServiceConnector.webClient.post()
                 .uri("/encrypt")
-                .body(encryptionRequest, EncryptionRequest::class.java)
+                .body(BodyInserters.fromValue(encryptionRequest))
                 .retrieve()
                 .bodyToMono(String::class.java)
                 .block()
