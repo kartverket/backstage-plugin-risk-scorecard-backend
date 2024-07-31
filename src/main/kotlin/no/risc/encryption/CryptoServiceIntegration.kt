@@ -85,7 +85,6 @@ class CryptoServiceIntegration(
                             .build()
                     }
                     .header("gcpAccessToken", gcpAccessToken.value)
-                    .header("agePrivateKey", agePrivateKey)
                     .bodyValue(ciphertext)
                     .retrieve()
                     .bodyToMono(String::class.java)
