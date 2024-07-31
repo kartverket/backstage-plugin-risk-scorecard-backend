@@ -36,7 +36,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("net.pwall.json:json-kotlin-schema:0.44")
-    implementation("org.apache.commons:commons-lang3:3.0")
+    implementation("org.apache.commons:commons-lang3:3.15.0")
 
     implementation("com.google.code.gson:gson:2.9.1")
     implementation("com.google.auth:google-auth-library-credentials:1.23.0")
