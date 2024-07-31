@@ -25,9 +25,9 @@ object SOPS : ISopsEncryption {
         sopsPrivateKey: String,
     ): List<String> =
         sopsCmd + ageSecret(sopsPrivateKey) + decrypt + inputTypeYaml + outputTypeJson + inputFile +
-                gcpAccessToken(
-                    accessToken,
-                )
+            gcpAccessToken(
+                accessToken,
+            )
 
     private fun gcpAccessToken(accessToken: String): List<String> = listOf("--gcp-access-token", accessToken)
 
@@ -55,7 +55,12 @@ object SOPS : ISopsEncryption {
             }
     }
 
-    override fun encrypt(text: String, config: String, gcpAccessToken: GCPAccessToken, riScId: String): String {
+    override fun encrypt(
+        text: String,
+        config: String,
+        gcpAccessToken: GCPAccessToken,
+        riScId: String,
+    ): String {
         TODO("Not yet implemented")
     }
 }
