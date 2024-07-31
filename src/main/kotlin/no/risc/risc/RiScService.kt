@@ -97,7 +97,6 @@ class RiScService(
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
-    @Value("\${featureToggle.useCryptoServiceForEncryption}") val useCryptoServiceForEncryption: Boolean,
     @Value("\${featureToggle.useCryptoServiceForDecrypt}") val useCryptoServiceForDecrypt: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -172,6 +171,7 @@ class RiScService(
                                                 }
                                                 it
                                             }
+
                                             RiScStatus.SentForApproval -> it
                                             RiScStatus.Published -> it
                                         }
@@ -301,7 +301,7 @@ class RiScService(
         if (jsonSchema.status != GithubStatus.Success) {
             throw JSONSchemaFetchException(
                 message =
-                    "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
+                "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
                         "and error message: ${jsonSchema.data}",
                 riScId = riScId,
             )
@@ -329,11 +329,7 @@ class RiScService(
         val config = removePathRegex(sopsConfig.data())
 
         val encryptedData: String =
-            if (useCryptoServiceForEncryption) {
-                cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-            } else {
-                SOPS.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-            }
+            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
             val hasClosedPR =
