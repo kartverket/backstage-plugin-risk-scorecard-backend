@@ -44,7 +44,7 @@ dependencies {
         exclude(group = "commons-logging", module = "commons-logging")
     }
 
-    implementation("com.nimbusds:nimbus-jose-jwt:9.39.1")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
 
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
