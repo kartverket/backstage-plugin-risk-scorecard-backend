@@ -39,17 +39,17 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.15.0")
 
     implementation("com.google.code.gson:gson:2.9.1")
-    implementation("com.google.auth:google-auth-library-credentials:1.23.0")
+    implementation("com.google.auth:google-auth-library-credentials:1.24.0")
     implementation("com.google.cloud:google-cloud-secretmanager:2.35.0") {
         exclude(group = "commons-logging", module = "commons-logging")
     }
 
-    implementation("com.nimbusds:nimbus-jose-jwt:9.39.1")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
 
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
