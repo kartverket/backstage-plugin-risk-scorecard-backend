@@ -44,7 +44,7 @@ class CryptoServiceIntegration(
         } catch (e: Exception) {
             throw SopsEncryptionException(
                 message = e.stackTraceToString(),
-                riScId = riScId
+                riScId = riScId,
             )
         }
     }
