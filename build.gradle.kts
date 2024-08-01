@@ -35,7 +35,7 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("net.pwall.json:json-kotlin-schema:0.44")
+    implementation("net.pwall.json:json-kotlin-schema:0.47")
     implementation("org.apache.commons:commons-lang3:3.15.0")
 
     implementation("com.google.code.gson:gson:2.11.0")
