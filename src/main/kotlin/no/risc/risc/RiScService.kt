@@ -5,10 +5,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
-import no.risc.encryption.SOPS
-import no.risc.encryption.SOPSDecryptionException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
+import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
@@ -97,7 +96,6 @@ class RiScService(
     @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
-    @Value("\${featureToggle.useCryptoServiceForDecrypt}") val useCryptoServiceForDecrypt: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
@@ -244,21 +242,12 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken): String {
-        return if (useCryptoServiceForDecrypt) {
-            cryptoService.decrypt(
-                ciphertext = data(),
-                gcpAccessToken = gcpAccessToken,
-                agePrivateKey = ageKey,
-            )
-        } else {
-            SOPS.decrypt(
-                ciphertext = data(),
-                gcpAccessToken = gcpAccessToken,
-                agePrivateKey = ageKey,
-            )
-        }
-    }
+    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
+        cryptoService.decrypt(
+            ciphertext = data(),
+            gcpAccessToken = gcpAccessToken,
+            agePrivateKey = ageKey,
+        )
 
     suspend fun updateRiSc(
         owner: String,
@@ -301,7 +290,7 @@ class RiScService(
         if (jsonSchema.status != GithubStatus.Success) {
             throw JSONSchemaFetchException(
                 message =
-                    "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
+                "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
                         "and error message: ${jsonSchema.data}",
                 riScId = riScId,
             )
