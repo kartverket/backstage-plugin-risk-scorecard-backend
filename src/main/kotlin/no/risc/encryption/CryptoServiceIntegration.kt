@@ -1,5 +1,6 @@
 package no.risc.encryption
 
+import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.LoggerFactory
@@ -41,7 +42,10 @@ class CryptoServiceIntegration(
                 .block()
                 .toString()
         } catch (e: Exception) {
-            "Exception caught: ${e.stackTraceToString()}"
+            throw SopsEncryptionException(
+                message = e.stackTraceToString(),
+                riScId = riScId
+            )
         }
     }
 
