@@ -4,6 +4,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.encryption.SOPS
 import no.risc.encryption.SOPSDecryptionException
@@ -27,8 +37,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import kotlin.time.measureTimedValue
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -44,6 +52,7 @@ data class ProcessRiScResultDTO(
             )
     }
 }
+
 @Serializable
 data class RiScContentResultDTO(
     val riScId: String,
@@ -214,8 +223,6 @@ class RiScService(
         return obj.copy(riScContent = migratedSchemaVersion)
     }
 
-
-
     /**
      * Update RiSc content from version 3.3 to 4.0. Includes breaking changes.
      *
@@ -253,65 +260,72 @@ class RiScService(
 
         // Update scenarios
         val scenarios = jsonObject["scenarios"]?.jsonArray ?: return obj.copy(riScContent = content)
-        val updatedScenarios = scenarios.map { scenario ->
-            val scenarioObject = scenario.jsonObject.toMutableMap()
+        val updatedScenarios =
+            scenarios.map { scenario ->
+                val scenarioObject = scenario.jsonObject.toMutableMap()
 
-            // Remove "existingActions"
-            val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap()
-            scenarioDetails?.remove("existingActions")
+                // Remove "existingActions"
+                val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap()
+                scenarioDetails?.remove("existingActions")
 
-            // Replace values in vulnerabilities array
-            val vulnerabilitiesArray = scenarioDetails?.get("vulnerabilities")?.jsonArray?.toMutableList()
-            if (vulnerabilitiesArray != null) {
-                val replacementMap = mapOf(
-                    "User repudiation" to "Unmonitored use",
-                    "Compromised admin user" to "Unauthorized access",
-                    "Escalation of rights" to "Unauthorized access",
-                    "Disclosed secret" to "Information leak",
-                    "Denial of service" to "Excessive use"
-                )
+                // Replace values in vulnerabilities array
+                val vulnerabilitiesArray = scenarioDetails?.get("vulnerabilities")?.jsonArray?.toMutableList()
+                if (vulnerabilitiesArray != null) {
+                    val replacementMap =
+                        mapOf(
+                            "User repudiation" to "Unmonitored use",
+                            "Compromised admin user" to "Unauthorized access",
+                            "Escalation of rights" to "Unauthorized access",
+                            "Disclosed secret" to "Information leak",
+                            "Denial of service" to "Excessive use",
+                        )
 
-                val newVulnerabilities = vulnerabilitiesArray
-                    .map { it.jsonPrimitive.content }
-                    .toMutableSet()
+                    val newVulnerabilities =
+                        vulnerabilitiesArray
+                            .map { it.jsonPrimitive.content }
+                            .toMutableSet()
 
-                replacementMap.forEach { (oldValue, newValue) ->
-                    if (newVulnerabilities.contains(oldValue)) {
-                        newVulnerabilities.remove(oldValue)
-                        newVulnerabilities.add(newValue)
+                    replacementMap.forEach { (oldValue, newValue) ->
+                        if (newVulnerabilities.contains(oldValue)) {
+                            newVulnerabilities.remove(oldValue)
+                            newVulnerabilities.add(newValue)
+                        }
                     }
+
+                    // Convert back to JsonArray
+                    val updatedVulnerabilitiesArray = JsonArray(newVulnerabilities.map { JsonPrimitive(it) })
+                    scenarioDetails["vulnerabilities"] = updatedVulnerabilitiesArray
                 }
 
-                // Convert back to JsonArray
-                val updatedVulnerabilitiesArray = JsonArray(newVulnerabilities.map { JsonPrimitive(it) })
-                scenarioDetails["vulnerabilities"] = updatedVulnerabilitiesArray
-            }
-
-            // Remove "owner" and "deadline" from actions
-            val actionsArray = scenarioDetails?.get("actions")?.jsonArray?.toMutableList()
-            actionsArray?.forEachIndexed { index, actionElement ->
-                val actionObject = actionElement.jsonObject.toMutableMap()
-                actionObject["action"]?.jsonObject?.toMutableMap()?.apply {
-                    this.remove("owner")
-                    this.remove("deadline")
-                }?.let { updatedAction ->
-                    actionObject["action"] = JsonObject(updatedAction)
+                // Remove "owner" and "deadline" from actions
+                val actionsArray = scenarioDetails?.get("actions")?.jsonArray?.toMutableList()
+                actionsArray?.forEachIndexed { index, actionElement ->
+                    val actionObject = actionElement.jsonObject.toMutableMap()
+                    actionObject["action"]?.jsonObject?.toMutableMap()?.apply {
+                        this.remove("owner")
+                        this.remove("deadline")
+                    }?.let { updatedAction ->
+                        actionObject["action"] = JsonObject(updatedAction)
+                    }
+                    actionsArray[index] = JsonObject(actionObject)
                 }
-                actionsArray[index] = JsonObject(actionObject)
-            }
-            actionsArray?.let { scenarioDetails["actions"] = JsonArray(it) }
+                actionsArray?.let { scenarioDetails["actions"] = JsonArray(it) }
 
-            scenarioDetails?.let { scenarioObject["scenario"] = JsonObject(it) }
-            JsonObject(scenarioObject)
-        }
+                scenarioDetails?.let { scenarioObject["scenario"] = JsonObject(it) }
+                JsonObject(scenarioObject)
+            }
 
         jsonObject["scenarios"] = JsonArray(updatedScenarios)
 
         // Convert the updated JSON object back to string with pretty printing
-        val prettyJson = Json { prettyPrint = true; prettyPrintIndent = "    " }
+        val prettyJson =
+            Json {
+                prettyPrint = true
+                prettyPrintIndent = "    "
+            }
         content = prettyJson.encodeToString(JsonObject(jsonObject))
 
-        return obj.copy(riScContent = content, migrationChanges = true )
+        return obj.copy(riScContent = content, migrationChanges = true)
     }
 
     private fun GithubContentResponse.responseToRiScResult(
