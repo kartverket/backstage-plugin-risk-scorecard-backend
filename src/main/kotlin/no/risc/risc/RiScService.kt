@@ -290,7 +290,7 @@ class RiScService(
         if (jsonSchema.status != GithubStatus.Success) {
             throw JSONSchemaFetchException(
                 message =
-                "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
+                    "Failed when fetching JSON schema from Github with status: ${jsonSchema.status}, " +
                         "and error message: ${jsonSchema.data}",
                 riScId = riScId,
             )
