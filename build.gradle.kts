@@ -38,7 +38,7 @@ dependencies {
     implementation("net.pwall.json:json-kotlin-schema:0.44")
     implementation("org.apache.commons:commons-lang3:3.15.0")
 
-    implementation("com.google.code.gson:gson:2.9.1")
+    implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.google.auth:google-auth-library-credentials:1.24.0")
     implementation("com.google.cloud:google-cloud-secretmanager:2.35.0") {
         exclude(group = "commons-logging", module = "commons-logging")
