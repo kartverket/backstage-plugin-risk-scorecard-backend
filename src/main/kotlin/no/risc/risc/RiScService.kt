@@ -51,6 +51,7 @@ data class RiScContentResultDTO(
     val riScStatus: RiScStatus?,
     val riScContent: String?,
     val pullRequestUrl: String? = null,
+    val migrationChanges: Boolean? = false,
 )
 
 data class PublishRiScResultDTO(
@@ -213,20 +214,39 @@ class RiScService(
         return obj.copy(riScContent = migratedSchemaVersion)
     }
 
+
+
+    /**
+     * Update RiSc content from version 3.3 to 4.0. Includes breaking changes.
+     *
+     * Changes include:
+     * - Bump schemaVersion to 4.0
+     *
+     * Replace values in vulnerabilities:
+     * - User repudiation -> Unmonitored use
+     * - Compromised admin user -> Unauthorized access
+     * - Escalation of rights -> Unauthorized access
+     * - Disclosed secret -> Information leak
+     * - Denial of service -> Excessive use
+     *
+     * Remove "owner" and "deadline" from actions
+     * Remove "existingActions" from scenarios
+     */
     @OptIn(ExperimentalSerializationApi::class)
     private fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
         if (obj.riScContent == null) {
             return obj
         }
 
-        println("--------------------------ID og gammelt content--------------------------------")
-        println(obj.riScContent)
-
         var content = obj.riScContent
 
-        // Parse the JSON content to modify the structure
         val json = Json { ignoreUnknownKeys = true }
         val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
+
+        // Check if schemaVersion is 3.3, early return the object as it is if not
+        if (jsonObject["schemaVersion"]?.jsonPrimitive?.content != "3.3") {
+            return obj
+        }
 
         // Replace schemaVersion
         jsonObject["schemaVersion"] = JsonPrimitive("4.0")
@@ -240,7 +260,7 @@ class RiScService(
             val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap()
             scenarioDetails?.remove("existingActions")
 
-            // Replace values in vulnerabilities array according to the rules
+            // Replace values in vulnerabilities array
             val vulnerabilitiesArray = scenarioDetails?.get("vulnerabilities")?.jsonArray?.toMutableList()
             if (vulnerabilitiesArray != null) {
                 val replacementMap = mapOf(
@@ -291,12 +311,7 @@ class RiScService(
         val prettyJson = Json { prettyPrint = true; prettyPrintIndent = "    " }
         content = prettyJson.encodeToString(JsonObject(jsonObject))
 
-        println("-------------------------- SLUTT - ID og gammelt content--------------------------------")
-        println("-------------------------- START - NY--------------------------------")
-        println(content)
-        println("-------------------------- SLUTT - NY--------------------------------")
-
-        return obj.copy(riScContent = content)
+        return obj.copy(riScContent = content, migrationChanges = true )
     }
 
     private fun GithubContentResponse.responseToRiScResult(
