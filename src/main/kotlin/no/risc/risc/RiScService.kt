@@ -316,7 +316,7 @@ class RiScService(
         val config = removePathRegex(sopsConfig.data())
 
         val encryptedData: String =
-            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
             val hasClosedPR =

@@ -22,7 +22,7 @@ class CryptoServiceIntegration(
 ) {
     private val logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
 
-    fun encryptPost(
+    fun encrypt(
         text: String,
         config: String,
         gcpAccessToken: GCPAccessToken,
