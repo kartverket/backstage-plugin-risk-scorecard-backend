@@ -95,7 +95,7 @@ jobs:
           image_url: ${{ needs.build.outputs.image_url }}
 
   sandbox-deploy-argo:
-    name: Update image-version in skvis-apps
+    name: Deploy to sandbox
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
@@ -122,7 +122,7 @@ jobs:
           git push
 
   prod-deploy-argo:
-    name: Update image-version in skvis-apps
+    name: Deploy to prod
     if: github.ref == 'refs/heads/main'
     needs: [build, sandbox-deploy-argo]
     runs-on: ubuntu-latest
