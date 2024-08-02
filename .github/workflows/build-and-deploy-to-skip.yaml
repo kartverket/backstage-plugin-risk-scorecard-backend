@@ -99,6 +99,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
+    environment:
+      name: sandbox
     permissions:
       id-token: write
     steps:
