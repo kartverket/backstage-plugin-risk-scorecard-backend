@@ -93,7 +93,6 @@ enum class RiScStatus {
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
-    @Value("\${sops.ageKey}") val ageKey: String,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
 ) {
@@ -246,7 +245,6 @@ class RiScService(
         cryptoService.decrypt(
             ciphertext = data(),
             gcpAccessToken = gcpAccessToken,
-            agePrivateKey = ageKey,
         )
 
     suspend fun updateRiSc(
@@ -318,7 +316,7 @@ class RiScService(
         val config = removePathRegex(sopsConfig.data())
 
         val encryptedData: String =
-            cryptoService.encryptPost(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
             val hasClosedPR =
