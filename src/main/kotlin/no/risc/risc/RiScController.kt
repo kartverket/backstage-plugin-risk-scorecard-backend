@@ -3,7 +3,6 @@ package no.risc.risc
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubRiScIdentifiersResponse
-import no.risc.github.GithubStatus
 import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
@@ -100,15 +99,6 @@ class RiScController(
         return when (result.status) {
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
             else -> ResponseEntity.internalServerError().body(result)
-        }
-    }
-
-    @GetMapping("/schemas/latest")
-    fun fetchLatestJSONSchema(): ResponseEntity<String> {
-        val result = riScService.fetchLatestJSONSchema()
-        return when (result.status) {
-            GithubStatus.Success -> ResponseEntity.ok().body(result.data)
-            else -> ResponseEntity.internalServerError().body(result.status.toString())
         }
     }
 

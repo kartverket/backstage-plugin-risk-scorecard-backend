@@ -15,7 +15,6 @@ import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
-import no.risc.utils.getFileNameWithHighestVersion
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
@@ -171,17 +170,6 @@ class GithubConnector(
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
                 else -> GithubContentResponse(fileContent, GithubStatus.Success)
             }
-        } catch (e: Exception) {
-            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
-        }
-
-    fun fetchLatestJSONSchema(): GithubContentResponse =
-        try {
-            getGithubResponseNoAuth(jsonSchemaPath).schemaFilenames()?.let {
-                getFileNameWithHighestVersion(it)?.let { version ->
-                    fetchJSONSchema(version)
-                }
-            } ?: GithubContentResponse(null, GithubStatus.NotFound)
         } catch (e: Exception) {
             GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
         }
@@ -517,8 +505,6 @@ class GithubConnector(
 
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
-
-    private fun ResponseSpec.schemaFilenames(): List<FileNameDTO>? = this.bodyToMono<List<FileNameDTO>>().block()
 
     private fun ResponseSpec.decodedFileContent(): String? = this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
 
