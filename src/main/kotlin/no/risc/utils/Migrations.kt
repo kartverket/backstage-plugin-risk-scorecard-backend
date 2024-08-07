@@ -11,6 +11,35 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.RiScContentResultDTO
 
+fun migrate(
+    obj: RiScContentResultDTO,
+    latestSupportedVersion: String,
+): RiScContentResultDTO {
+    if (obj.riScContent == null) {
+        return obj
+    }
+
+    val content = obj.riScContent
+
+    val json = Json { ignoreUnknownKeys = true }
+    val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
+
+    val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content
+
+    if (schemaVersion == null || schemaVersion == latestSupportedVersion) {
+        return obj
+    }
+
+    val nextVersionObj =
+        when (schemaVersion) {
+            "3.2" -> migrateTo32To33(obj)
+            "3.3" -> migrateFrom33To40(obj)
+            else -> return obj
+        }
+
+    return migrate(nextVersionObj, latestSupportedVersion)
+}
+
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
 // and modifications can only be made when the schemaVersion is 3.3.
 fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
@@ -39,7 +68,7 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  */
 @OptIn(ExperimentalSerializationApi::class)
-public fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
+fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     if (obj.riScContent == null) {
         return obj
     }
@@ -53,7 +82,7 @@ public fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     jsonObject["schemaVersion"] = JsonPrimitive("4.0")
 
     // Update scenarios
-    val scenarios = jsonObject["scenarios"]?.jsonArray ?: return obj.copy(riScContent = content)
+    val scenarios = jsonObject["scenarios"]?.jsonArray ?: return obj
     val updatedScenarios =
         scenarios.map { scenario ->
             val scenarioObject = scenario.jsonObject.toMutableMap()

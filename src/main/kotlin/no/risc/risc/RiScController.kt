@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -51,12 +52,12 @@ class RiScController(
             "4",
         )
 
-    @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
+    @GetMapping("/{repositoryOwner}/{repositoryName}//all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @PathVariable latestSupportedVersion: String,
+        @RequestParam latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         riScService.fetchAllRiScs(
             repositoryOwner,

@@ -5,9 +5,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
@@ -23,8 +20,7 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import no.risc.utils.migrateFrom33To40
-import no.risc.utils.migrateTo32To33
+import no.risc.utils.migrate
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
@@ -205,35 +201,6 @@ class RiScService(
             logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
             msRiSc.value
         }
-
-    private fun migrate(
-        obj: RiScContentResultDTO,
-        latestSupportedVersion: String,
-    ): RiScContentResultDTO {
-        if (obj.riScContent == null) {
-            return obj
-        }
-
-        val content = obj.riScContent
-
-        val json = Json { ignoreUnknownKeys = true }
-        val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
-
-        val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content
-
-        if (schemaVersion == null || schemaVersion == latestSupportedVersion) {
-            return obj
-        }
-
-        val nextVersionObj =
-            when (schemaVersion) {
-                "3.2" -> migrateTo32To33(obj)
-                "3.3" -> migrateFrom33To40(obj)
-                else -> return obj
-            }
-
-        return migrate(nextVersionObj, latestSupportedVersion)
-    }
 
     private fun GithubContentResponse.responseToRiScResult(
         riScId: String,
