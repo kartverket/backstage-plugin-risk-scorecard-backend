@@ -52,7 +52,7 @@ class RiScController(
             "4",
         )
 
-    @GetMapping("/{repositoryOwner}/{repositoryName}//all")
+    @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
