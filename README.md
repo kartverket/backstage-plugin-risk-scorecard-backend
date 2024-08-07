@@ -20,7 +20,7 @@ flowchart TD
 
 ### Simplified Architecture
 
-![RiSc Architecture](RiSc-architecture.png)
+![RiSc Architecture](ROS_as_code_arkitektur.png)
 
 ### Simplified Git RiSC-flow
 
