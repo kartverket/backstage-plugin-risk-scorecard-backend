@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "3.3",
+  "title": "Transformasjon",
+  "scope": "Sikkerhet av backend.",
+  "valuations": [],
+  "scenarios": [
+    {
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
+      "scenario": {
+        "ID": "14Kap",
+        "description": "Ondsinnet bruer ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "threatActors": [
+          "Organised crime"
+        ],
+        "vulnerabilities": [
+          "User repudiation",
+          "Compromised admin user",
+          "Escalation of rights",
+          "Disclosed secret",
+          "Denial of service"
+        ],
+        "risk": {
+          "summary": "",
+          "probability": 1,
+          "consequence": 1000
+        },
+        "existingActions": "Ddos protection. ",
+        "actions": [
+          {
+            "title": "",
+            "action": {
+              "ID": "w100Q",
+              "description": "Innlogging. ",
+              "owner": "Kåre",
+              "deadline": "2024-06-12",
+              "status": "Not started"
+            }
+          }
+        ],
+        "remainingRisk": {
+          "summary": "",
+          "probability": 0.1,
+          "consequence": 1000
+        }
+      }
+    }
+  ]
+}

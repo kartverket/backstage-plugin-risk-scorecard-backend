@@ -39,7 +39,7 @@ class RiScController(
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
-    suspend fun getAllRiScs(
+    suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
@@ -48,6 +48,21 @@ class RiScController(
             repositoryOwner,
             repositoryName,
             getAccessTokens(gcpAccessToken, repositoryName),
+            "4",
+        )
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
+    suspend fun getAllRiScs(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable latestSupportedVersion: String,
+    ): List<RiScContentResultDTO> =
+        riScService.fetchAllRiScs(
+            repositoryOwner,
+            repositoryName,
+            getAccessTokens(gcpAccessToken, repositoryName),
+            latestSupportedVersion,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
