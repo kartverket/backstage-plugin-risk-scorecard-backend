@@ -502,6 +502,4 @@ class RiScService(
             pullRequestUrl = this.url,
             pullRequestName = this.head.ref,
         )
-
-    fun fetchLatestJSONSchema(): GithubContentResponse = githubConnector.fetchLatestJSONSchema()
 }
