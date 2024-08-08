@@ -82,7 +82,7 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     jsonObject["schemaVersion"] = JsonPrimitive("4.0")
 
     // Update scenarios
-    val scenarios = jsonObject["scenarios"]?.jsonArray ?: return obj
+    val scenarios = jsonObject["scenarios"]?.jsonArray ?: JsonArray(emptyList())
     val updatedScenarios =
         scenarios.map { scenario ->
             val scenarioObject = scenario.jsonObject.toMutableMap()

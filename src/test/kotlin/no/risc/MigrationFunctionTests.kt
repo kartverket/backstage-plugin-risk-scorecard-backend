@@ -19,7 +19,7 @@ class MigrationFunctionTests {
     private val latestSupportedVersion = "4.0"
 
     @Test
-    fun `test migrateFrom33To32`() {
+    fun `test migrateFrom32To33`() {
         val resourcePath = "3.2.json"
         val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
         val file = File(resourceUrl!!.toURI())
@@ -101,7 +101,30 @@ class MigrationFunctionTests {
     }
 
     @Test
-    fun testMigrate() {
+    fun `test migrate33To40NoScenarios`() {
+        val resourcePath = "3.3-no-scenarios.json"
+        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val file = File(resourceUrl!!.toURI())
+        val fileContent = file.readText()
+        val obj =
+            RiScContentResultDTO(
+                riScId = "3",
+                status = ContentStatus.Success,
+                riScContent = fileContent,
+                riScStatus = RiScStatus.Draft,
+                migrationChanges = false,
+            )
+        val migratedObject = migrateFrom33To40(obj)
+
+        val json = Json { ignoreUnknownKeys = true }
+        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
+
+        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
+        assertEquals(latestSupportedVersion, schemaVersion)
+    }
+
+    @Test
+    fun `test migrate`() {
         val resourcePath = "3.2.json"
         val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
 
@@ -109,7 +132,7 @@ class MigrationFunctionTests {
         val fileContent = file.readText()
         val obj =
             RiScContentResultDTO(
-                riScId = "3",
+                riScId = "4",
                 status = ContentStatus.Success,
                 riScContent = fileContent,
                 riScStatus = RiScStatus.Published,
