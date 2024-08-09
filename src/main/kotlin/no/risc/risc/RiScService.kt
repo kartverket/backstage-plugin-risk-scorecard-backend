@@ -51,7 +51,7 @@ data class RiScContentResultDTO(
     val riScStatus: RiScStatus?,
     val riScContent: String?,
     val pullRequestUrl: String? = null,
-    val migrationStatus: MigrationStatus? =
+    val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,
             migrationRequiresNewApproval = false,
@@ -60,8 +60,8 @@ data class RiScContentResultDTO(
 
 @Serializable
 data class MigrationStatus(
-    val migrationChanges: Boolean?,
-    val migrationRequiresNewApproval: Boolean?,
+    val migrationChanges: Boolean,
+    val migrationRequiresNewApproval: Boolean,
 )
 
 data class PublishRiScResultDTO(

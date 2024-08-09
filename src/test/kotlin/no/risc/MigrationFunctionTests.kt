@@ -106,6 +106,7 @@ class MigrationFunctionTests {
             }
 
             assertEquals(true, migratedObject.migrationStatus?.migrationChanges)
+            assertEquals(true, migratedObject.migrationStatus?.migrationRequiresNewApproval)
         }
     }
 
