@@ -5,6 +5,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.ContentStatus
+import no.risc.risc.MigrationStatus
 import no.risc.risc.RiScContentResultDTO
 import no.risc.risc.RiScStatus
 import no.risc.utils.migrate
@@ -30,7 +31,11 @@ class MigrationFunctionTests {
                 status = ContentStatus.Success,
                 riScContent = fileContent,
                 riScStatus = RiScStatus.Published,
-                migrationChanges = false,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                    ),
             )
         val migratedObject = migrateTo32To33(obj)
 
@@ -55,7 +60,11 @@ class MigrationFunctionTests {
                 status = ContentStatus.Success,
                 riScContent = fileContent,
                 riScStatus = RiScStatus.Published,
-                migrationChanges = false,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = true,
+                    ),
             )
         val migratedObject = migrateFrom33To40(obj)
 
@@ -96,7 +105,8 @@ class MigrationFunctionTests {
                 }
             }
 
-            assertEquals(true, migratedObject.migrationChanges)
+            assertEquals(true, migratedObject.migrationStatus?.migrationChanges)
+            assertEquals(true, migratedObject.migrationStatus?.migrationRequiresNewApproval)
         }
     }
 
@@ -112,7 +122,11 @@ class MigrationFunctionTests {
                 status = ContentStatus.Success,
                 riScContent = fileContent,
                 riScStatus = RiScStatus.Draft,
-                migrationChanges = false,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = true,
+                    ),
             )
         val migratedObject = migrateFrom33To40(obj)
 
@@ -136,7 +150,11 @@ class MigrationFunctionTests {
                 status = ContentStatus.Success,
                 riScContent = fileContent,
                 riScStatus = RiScStatus.Published,
-                migrationChanges = false,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                    ),
             )
         val migratedObject = migrate(obj, latestSupportedVersion)
 

@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import no.risc.risc.MigrationStatus
 import no.risc.risc.RiScContentResultDTO
 
 fun migrate(
@@ -148,5 +149,12 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
         }
     content = prettyJson.encodeToString(JsonObject(jsonObject))
 
-    return obj.copy(riScContent = content, migrationChanges = true)
+    return obj.copy(
+        riScContent = content,
+        migrationStatus =
+            MigrationStatus(
+                migrationChanges = true,
+                migrationRequiresNewApproval = true,
+            ),
+    )
 }
