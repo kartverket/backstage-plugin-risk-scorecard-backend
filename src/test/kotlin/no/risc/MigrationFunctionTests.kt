@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.ContentStatus
 import no.risc.risc.MigrationStatus
+import no.risc.risc.MigrationVersions
 import no.risc.risc.RiScContentResultDTO
 import no.risc.risc.RiScStatus
 import no.risc.utils.migrate
@@ -35,6 +36,7 @@ class MigrationFunctionTests {
                     MigrationStatus(
                         migrationChanges = false,
                         migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
         val migratedObject = migrateTo32To33(obj)
@@ -64,6 +66,7 @@ class MigrationFunctionTests {
                     MigrationStatus(
                         migrationChanges = false,
                         migrationRequiresNewApproval = true,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
         val migratedObject = migrateFrom33To40(obj)
@@ -126,6 +129,7 @@ class MigrationFunctionTests {
                     MigrationStatus(
                         migrationChanges = false,
                         migrationRequiresNewApproval = true,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
         val migratedObject = migrateFrom33To40(obj)
@@ -154,6 +158,7 @@ class MigrationFunctionTests {
                     MigrationStatus(
                         migrationChanges = false,
                         migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
         val migratedObject = migrate(obj, latestSupportedVersion)
