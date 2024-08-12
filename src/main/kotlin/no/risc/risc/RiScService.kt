@@ -145,12 +145,12 @@ class RiScService(
                     msId.value.map { id ->
                         async(Dispatchers.IO) {
                             try {
-                                val fetchRisc =
+                                val fetchRiSc =
                                     when (id.status) {
                                         RiScStatus.Published -> githubConnector::fetchPublishedRiSc
                                         RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
                                     }
-                                fetchRisc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                                fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                                     .let {
                                         when (id.status) {
                                             RiScStatus.Draft -> {
@@ -161,11 +161,11 @@ class RiScService(
                                                  * our state flowchart would go from SentForApproval (pull request) to
                                                  * Draft (branch exists). Therefore, we check if the content in Draft is equal to
                                                  * the content on the default branch (often main). If they are equal then we
-                                                 * know we have a ros branch without changes, and therefore it should be in a
+                                                 * know we have a risc branch without changes, and therefore it should be in a
                                                  * Published state.
                                                  *  */
 
-                                                // Get ros content on default branch.
+                                                // Get risc content on default branch.
                                                 val published =
                                                     githubConnector.fetchPublishedRiSc(
                                                         owner,
