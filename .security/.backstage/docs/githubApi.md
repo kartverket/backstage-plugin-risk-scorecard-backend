@@ -5,16 +5,16 @@ Api-et er godt dokumentert her [her](https://docs.github.com/en/rest), men her e
 
 ## Vårt oppsett
 
-Et repo kan inneholde flere ROS-analyser, og alle er lagret i en flat struktur under ```.security/ros```-mappen.
+Et repo kan inneholde flere ROS-analyser, og alle er lagret i en flat struktur under ```.security/risc```-mappen.
 Dette gjør det ganske forutsigbart.
 
 ```bash
 .
 |____.security
-| |____ros
-| | |____ros-1.ros.yaml
-| | |____ros-2.ros.yaml
-| | |____ros-3.ros.yaml
+| |____risc
+| | |____risc-1.risc.yaml
+| | |____risc-2.risc.yaml
+| | |____risc-3.risc.yaml
 | | |____ ...
 ```
 

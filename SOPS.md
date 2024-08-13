@@ -47,7 +47,7 @@ Add the following in the JSON-filen:
 ```json
 {
   "yaml.schemas": {
-    "https://kartverket.github.io/ros-as-code/schema/ros_schema_no_v2_1.json": "*ros.yaml",
+    "https://kartverket.github.io/ros-as-code/schema/ros_schema_no_v2_1.json": "*risc.yaml",
   },
 }
 ```
@@ -56,9 +56,9 @@ Now you will get context-help and validation of the content.
 
 ### Setup for a repository
 
-ROS-files should be created in the `.security/ros` in the root directory of the repository and have the suffix `.ros.yaml`.
+ROS-files should be created in the `.security/risc` in the root directory of the repository and have the suffix `.risc.yaml`.
 
-Create a file called `.sops.yaml` in the `.security/ros`-catalog. This should include the regex pattern that identifies our ROS-files. It should also contain the configuration of the encryption keys used by SOPS. NOTE that the file should have two identical sections defining the keys, with the only difference being the regex pattern that should only be present in the first section. This is to support both vscode-plugins (which needs the regex) as well as the ROS-backend (which does not use the regex):
+Create a file called `.sops.yaml` in the `.security/risc`-catalog. This should include the regex pattern that identifies our risc-files. It should also contain the configuration of the encryption keys used by SOPS. NOTE that the file should have two identical sections defining the keys, with the only difference being the regex pattern that should only be present in the first section. This is to support both vscode-plugins (which needs the regex) as well as the ROS-backend (which does not use the regex):
 
 ```
 creation_rules:
@@ -113,7 +113,7 @@ GCP-keys are symmetrical, meaning that the same key is used to both encrypt and 
 
 ```yaml
 creation_rules:
-  - path_regex: \.ros\.yaml$
+  - path_regex: \.risc\.yaml$
     gcp_kms: <GCP_KEY_ID>
 ```
 
@@ -128,5 +128,5 @@ Everybody that should update the ROS-files must have access to encrypt/decrypt v
 
 It is considered good practise to rotate the data key regularely. 
 
-* In your favorite shell, navigate to `.security/ros` in the  repository .
-* Kjør `sops -r <name>.ros.yaml`
+* In your favorite shell, navigate to `.security/risc` in the  repository .
+* Kjør `sops -r <name>.risc.yaml`
