@@ -27,11 +27,10 @@ fun migrate(
 
     val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content ?: return obj
 
-    if (schemaVersion == latestSupportedVersion)
-    {
+    if (schemaVersion == latestSupportedVersion) {
         if (obj.migrationStatus.migrationVersions.fromVersion != null) {
-        // Set the toVersion to the latestSupportedVersion
-        obj.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
+            // Set the toVersion to the latestSupportedVersion
+            obj.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
         }
         return obj
     }
@@ -54,8 +53,6 @@ fun migrate(
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
 // and modifications can only be made when the schemaVersion is 3.3.
 fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
-
-
     val migratedSchemaVersion = obj.riScContent!!.replace("\"schemaVersion\": \"3.2\"", "\"schemaVersion\": \"3.3\"")
     return obj.copy(riScContent = migratedSchemaVersion)
 }
@@ -78,7 +75,6 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  */
 @OptIn(ExperimentalSerializationApi::class)
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-
     var content = obj.riScContent!!
 
     val json = Json { ignoreUnknownKeys = true }
