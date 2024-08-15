@@ -76,7 +76,6 @@ data class Author(val name: String?, val email: String?, val date: Date) {
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
-    @Value("\${json.schema.path}") private val jsonSchemaPath: String,
     private val githubHelper: GithubHelper,
 ) :
     WebClientConnector("https://api.github.com/repos") {
@@ -167,16 +166,6 @@ class GithubConnector(
                     accessToken,
                 ).decodedFileContentSuspend()
             when (fileContent) {
-                null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
-                else -> GithubContentResponse(fileContent, GithubStatus.Success)
-            }
-        } catch (e: Exception) {
-            GithubContentResponse(null, mapWebClientExceptionToGithubStatus(e))
-        }
-
-    fun fetchJSONSchema(filename: String): GithubContentResponse =
-        try {
-            when (val fileContent = getGithubResponseNoAuth("$jsonSchemaPath/$filename").rawFileContent()) {
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
                 else -> GithubContentResponse(fileContent, GithubStatus.Success)
             }
@@ -512,8 +501,6 @@ class GithubConnector(
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
         return fileContentDTO?.value?.decodeBase64()
     }
-
-    private fun ResponseSpec.rawFileContent(): String? = this.bodyToMono<String>().block()
 
     private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
 
