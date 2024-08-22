@@ -4,7 +4,6 @@ import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.util.UriBuilder
@@ -53,7 +52,7 @@ class CryptoServiceIntegration(
     ): String {
         try {
             val encryptedFile =
-                cryptoServiceConnector.webClient.method(HttpMethod.GET)
+                cryptoServiceConnector.webClient.post()
                     .uri { uriBuilder: UriBuilder ->
                         uriBuilder.path("/decrypt")
                             .build()
