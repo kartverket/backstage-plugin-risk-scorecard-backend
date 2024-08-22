@@ -53,7 +53,7 @@ class CryptoServiceIntegration(
     ): String {
         try {
             val encryptedFile =
-                cryptoServiceConnector.webClient.method(HttpMethod.GET)
+                cryptoServiceConnector.webClient.post()
                     .uri { uriBuilder: UriBuilder ->
                         uriBuilder.path("/decrypt")
                             .build()
