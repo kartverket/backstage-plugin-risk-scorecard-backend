@@ -9,7 +9,6 @@ FROM eclipse-temurin:21
 RUN mkdir -p /app /app/logs /app/tmp
 
 COPY --from=build /build/libs/*.jar /app/backend.jar
-COPY --from=build /src/main/resources/schemas schemas
 
 # Add non-root user og endre rettigheter
 RUN useradd user && chown -R user:user /app /app/logs /app/tmp
