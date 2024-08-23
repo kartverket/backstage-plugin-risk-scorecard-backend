@@ -25,10 +25,19 @@ fun migrate(
     val json = Json { ignoreUnknownKeys = true }
     val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
 
-    val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content
+    val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content ?: return obj
 
-    if (schemaVersion == null || schemaVersion == latestSupportedVersion) {
+    if (schemaVersion == latestSupportedVersion) {
+        if (obj.migrationStatus.migrationVersions.fromVersion != null) {
+            // Set the toVersion to the latestSupportedVersion
+            obj.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
+        }
         return obj
+    }
+
+    // Set the fromVersion only if it's not already set
+    if (obj.migrationStatus.migrationVersions.fromVersion == null) {
+        obj.migrationStatus.migrationVersions.fromVersion = schemaVersion
     }
 
     val nextVersionObj =
@@ -44,11 +53,7 @@ fun migrate(
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
 // and modifications can only be made when the schemaVersion is 3.3.
 fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
-    if (obj.riScContent == null) {
-        return obj
-    }
-
-    val migratedSchemaVersion = obj.riScContent.replace("\"schemaVersion\": \"3.2\"", "\"schemaVersion\": \"3.3\"")
+    val migratedSchemaVersion = obj.riScContent!!.replace("\"schemaVersion\": \"3.2\"", "\"schemaVersion\": \"3.3\"")
     return obj.copy(riScContent = migratedSchemaVersion)
 }
 
@@ -70,11 +75,7 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  */
 @OptIn(ExperimentalSerializationApi::class)
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-    if (obj.riScContent == null) {
-        return obj
-    }
-
-    var content = obj.riScContent
+    var content = obj.riScContent!!
 
     val json = Json { ignoreUnknownKeys = true }
     val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
@@ -155,6 +156,7 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
             MigrationStatus(
                 migrationChanges = true,
                 migrationRequiresNewApproval = true,
+                migrationVersions = obj.migrationStatus.migrationVersions,
             ),
     )
 }
