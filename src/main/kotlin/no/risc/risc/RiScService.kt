@@ -301,17 +301,14 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
 
-        val file =
-            File(
-                resourceUrl?.toURI() ?: throw JSONSchemaFetchException(
-                    message =
-                        "Failed to retrieve JSON schema for version ${content.schemaVersion}",
-                    riScId = riScId,
-                ),
+        val jsonSchema = resource?.bufferedReader().use { reader ->
+            reader?.readText() ?: throw JSONSchemaFetchException(
+                message = "Failed to read JSON schema for version ${content.schemaVersion}",
+                riScId = riScId,
             )
-        val jsonSchema = file.readText()
+        }
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema, content.riSc)
         if (!validationStatus.valid) {
