@@ -1,6 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="ACTIVE_PROFILES" value="local" />
+    <option name="ALTERNATIVE_JRE_PATH" value="temurin-21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
       <env name="GITHUB_APP_ID" value="827078" />
       <env name="GITHUB_INSTALLATION_ID" value="48036152" />
@@ -10,7 +12,7 @@
       <env name="ISSUER_URI" value="http://localhost:7007/api/auth" />
       <env name="FILENAME_PREFIX" value="risc" />
       <env name="FILENAME_POSTFIX" value="risc" />
-      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs"/>
+      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs" />
     </envs>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />
