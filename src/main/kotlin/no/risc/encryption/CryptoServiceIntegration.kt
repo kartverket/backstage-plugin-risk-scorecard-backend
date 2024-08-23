@@ -53,11 +53,8 @@ class CryptoServiceIntegration(
     ): String {
         try {
             val encryptedFile =
-                cryptoServiceConnector.webClient.method(HttpMethod.GET)
-                    .uri { uriBuilder: UriBuilder ->
-                        uriBuilder.path("/decrypt")
-                            .build()
-                    }
+                cryptoServiceConnector.webClient.post()
+                    .uri("/decrypt")
                     .header("gcpAccessToken", gcpAccessToken.value)
                     .bodyValue(ciphertext)
                     .retrieve()
