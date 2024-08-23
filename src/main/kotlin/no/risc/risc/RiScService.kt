@@ -27,7 +27,6 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.io.File
 import kotlin.time.measureTimedValue
 
 data class ProcessRiScResultDTO(
@@ -301,17 +300,15 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
 
-        val file =
-            File(
-                resourceUrl?.toURI() ?: throw JSONSchemaFetchException(
-                    message =
-                        "Failed to retrieve JSON schema for version ${content.schemaVersion}",
+        val jsonSchema =
+            resource?.bufferedReader().use { reader ->
+                reader?.readText() ?: throw JSONSchemaFetchException(
+                    message = "Failed to read JSON schema for version ${content.schemaVersion}",
                     riScId = riScId,
-                ),
-            )
-        val jsonSchema = file.readText()
+                )
+            }
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema, content.riSc)
         if (!validationStatus.valid) {
