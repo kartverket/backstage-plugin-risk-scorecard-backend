@@ -95,7 +95,7 @@ jobs:
           image_url: ${{ needs.build.outputs.image_url }}
 
   sandbox-deploy-argo:
-    name: Deploy to sandbox
+    name: Deploy to atgcp1-sandbox
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
@@ -124,7 +124,7 @@ jobs:
           git push
 
   prod-deploy-argo:
-    name: Deploy to prod
+    name: Deploy to atgcp1-prod
     if: github.ref == 'refs/heads/main'
     needs: [build, sandbox-deploy-argo]
     runs-on: ubuntu-latest
