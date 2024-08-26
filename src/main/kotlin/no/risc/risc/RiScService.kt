@@ -83,6 +83,11 @@ enum class ContentStatus {
     DecryptionFailed,
     Failure,
 }
+enum class DifferenceStatus {
+    Success,
+    DefaultNotFound,
+    Failure,
+}
 
 enum class ProcessingStatus(val message: String) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
@@ -112,6 +117,20 @@ class RiScService(
     private val cryptoService: CryptoServiceIntegration,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
+
+    suspend fun fetchDefaultRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        riScId: String,
+    ): RiScContentResultDTO {
+        return githubConnector.fetchPublishedRiSc(owner, repository, riScId, accessTokens.githubAccessToken.value).responseToRiScResult(
+            riScId,
+            RiScStatus.Published,
+            accessTokens.gcpAccessToken,
+            null,
+        )
+    }
 
     suspend fun fetchAllRiScIds(
         owner: String,
