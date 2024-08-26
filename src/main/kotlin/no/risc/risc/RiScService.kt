@@ -243,7 +243,7 @@ class RiScService(
             msRiSc.value
         }
 
-    private fun GithubContentResponse.responseToRiScResult(
+    private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
@@ -276,7 +276,7 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
+    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
         cryptoService.decrypt(
             ciphertext = data(),
             gcpAccessToken = gcpAccessToken,

@@ -6,6 +6,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.awaitBody
 
 data class EncryptionRequest(
     val text: String,
@@ -45,25 +46,23 @@ class CryptoServiceIntegration(
         }
     }
 
-    fun decrypt(
+    suspend fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): String {
-        try {
-            val encryptedFile =
-                cryptoServiceConnector.webClient.post()
-                    .uri("/decrypt")
-                    .header("gcpAccessToken", gcpAccessToken.value)
-                    .bodyValue(ciphertext)
-                    .retrieve()
-                    .bodyToMono(String::class.java)
-                    .block()
-                    .toString()
+        return try {
+            val decryptedFile = cryptoServiceConnector.webClient.post()
+                .uri("/decrypt")
+                .header("gcpAccessToken", gcpAccessToken.value)
+                .bodyValue(ciphertext)
+                .retrieve()
+                .awaitBody<String>()
 
-            return encryptedFile
+            decryptedFile
         } catch (e: Exception) {
             logger.error("Decrypting failed!", e)
-            return ""
+            ""
         }
     }
+
 }
