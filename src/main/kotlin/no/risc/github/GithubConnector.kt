@@ -144,13 +144,24 @@ class GithubConnector(
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
     ): List<RiScIdentifier> {
-        val draftIds = draftRiScList.map { it.id }
-        val sentForApprovalsIds = sentForApprovalList.map { it.id }
-        val publishedRiScIdentifiersNotInDraftList =
-            publishedRiScList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
-        val draftRiScIdentifiersNotInSentForApprovalsList = draftRiScList.filter { it.id !in sentForApprovalsIds }
+        val sentForApprovalsIds = sentForApprovalList.map { it.id }.toSet()
 
-        return sentForApprovalList + publishedRiScIdentifiersNotInDraftList + draftRiScIdentifiersNotInSentForApprovalsList
+        val combinedList = mutableListOf<RiScIdentifier>()
+        combinedList.addAll(sentForApprovalList)
+
+        for (published in publishedRiScList) {
+            if (published.id !in sentForApprovalsIds) {
+                combinedList.add(published)
+            }
+        }
+
+        for (draft in draftRiScList) {
+            if (draft.id !in sentForApprovalsIds) {
+                combinedList.add(draft)
+            }
+        }
+
+        return combinedList
     }
 
     suspend fun fetchPublishedRiSc(
