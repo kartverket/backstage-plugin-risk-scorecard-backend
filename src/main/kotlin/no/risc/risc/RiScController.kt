@@ -3,13 +3,13 @@ package no.risc.risc
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubRiScIdentifiersResponse
-import no.risc.github.GithubStatus
 import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
+import no.risc.utils.DifferenceException
 import no.risc.utils.diff
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -120,13 +120,13 @@ class RiScController(
         }
     }
 
-    data class DifferenceDTO (
+    data class DifferenceDTO(
         val status: DifferenceStatus,
         val differenceState: Difference,
         val errorMessage: String = "",
     )
 
-    data class DifferenceRequestBody (
+    data class DifferenceRequestBody(
         val riSc: String,
     )
 
@@ -136,27 +136,41 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-        @RequestBody data: DifferenceRequestBody
+        @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
-
-        val defaultRiSc = riScService.fetchDefaultRiSc(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
-            riScId = id,
-        )
+        val defaultRiSc =
+            riScService.fetchDefaultRiSc(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+                riScId = id,
+            )
 
         return when (defaultRiSc.status) {
             ContentStatus.Success -> {
-                val result = diff("${defaultRiSc.riScContent}", data.riSc)
-                ResponseEntity.ok().body(DifferenceDTO(status = DifferenceStatus.Success, differenceState = result))
+                try {
+                    val result = diff("${defaultRiSc.riScContent}", data.riSc)
+                    ResponseEntity.ok().body(DifferenceDTO(status = DifferenceStatus.Success, differenceState = result))
+                } catch (e: DifferenceException) {
+                    ResponseEntity.internalServerError().body(
+                        DifferenceDTO(status = DifferenceStatus.Failure, Difference(), "${e.message}"),
+                    )
+                }
             }
 
-            ContentStatus.FileNotFound -> ResponseEntity.ok().body(DifferenceDTO(status= DifferenceStatus.DefaultNotFound, differenceState = Difference(), "File not found"))
-            ContentStatus.DecryptionFailed -> ResponseEntity.ok().body(DifferenceDTO(status= DifferenceStatus.Failure, differenceState = Difference(), "Decryption failed"))
-            ContentStatus.Failure -> ResponseEntity.ok().body(DifferenceDTO(status= DifferenceStatus.Failure, differenceState = Difference(), "Unknown failure"))
+            ContentStatus.FileNotFound ->
+                ResponseEntity.ok().body(
+                    DifferenceDTO(status = DifferenceStatus.DefaultNotFound, differenceState = Difference(), "File not found"),
+                )
+            ContentStatus.DecryptionFailed ->
+                ResponseEntity.ok().body(
+                    DifferenceDTO(status = DifferenceStatus.Failure, differenceState = Difference(), "Decryption failed"),
+                )
+            ContentStatus.Failure ->
+                ResponseEntity.ok().body(
+                    DifferenceDTO(status = DifferenceStatus.Failure, differenceState = Difference(), "Unknown failure"),
+                )
         }
-
     }
 
     private fun getAccessTokens(

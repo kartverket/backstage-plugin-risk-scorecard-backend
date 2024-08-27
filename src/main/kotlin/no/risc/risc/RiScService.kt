@@ -94,6 +94,7 @@ enum class ContentStatus {
     DecryptionFailed,
     Failure,
 }
+
 enum class DifferenceStatus {
     Success,
     DefaultNotFound,

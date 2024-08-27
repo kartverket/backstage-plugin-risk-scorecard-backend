@@ -51,12 +51,13 @@ class CryptoServiceIntegration(
         gcpAccessToken: GCPAccessToken,
     ): String {
         return try {
-            val decryptedFile = cryptoServiceConnector.webClient.post()
-                .uri("/decrypt")
-                .header("gcpAccessToken", gcpAccessToken.value)
-                .bodyValue(ciphertext)
-                .retrieve()
-                .awaitBody<String>()
+            val decryptedFile =
+                cryptoServiceConnector.webClient.post()
+                    .uri("/decrypt")
+                    .header("gcpAccessToken", gcpAccessToken.value)
+                    .bodyValue(ciphertext)
+                    .retrieve()
+                    .awaitBody<String>()
 
             decryptedFile
         } catch (e: Exception) {
@@ -64,5 +65,4 @@ class CryptoServiceIntegration(
             ""
         }
     }
-
 }

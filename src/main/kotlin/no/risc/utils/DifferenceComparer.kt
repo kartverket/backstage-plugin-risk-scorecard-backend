@@ -1,20 +1,35 @@
 package no.risc.utils
 
-import com.google.common.collect.MapDifference
 import com.google.common.collect.Maps
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
-import java.util.AbstractMap.SimpleEntry
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 
 @Serializable
-data class Difference (
+data class Difference(
     val entriesOnLeft: List<String> = listOf(),
     val entriesOnRight: List<String> = listOf(),
     val difference: List<String> = listOf(),
 )
-object FlatMapUtils3 {
-    fun typeChecker(map: Map<String, Any?>): List<String> {
-        fun returnString(key: String, value: String): String {
+
+/**
+ * Utility class for flattening a RiSc json-object.
+ */
+object FlatMapRiScUtil {
+    /**
+     * Tries to flatten a RiSc map made from json-parsing.
+     *
+     * @param map is a Map made from a json-object
+     * @return A List<String> with each key in a RiSc and its value.
+     */
+    fun flatten(map: Map<String, Any?>): List<String> {
+        fun returnString(
+            key: String,
+            value: String,
+        ): String {
             return "/$key: $value"
         }
 
@@ -32,9 +47,8 @@ object FlatMapUtils3 {
                         listOf(returnString(entry.key, value.toString()))
                     } else {
                         val newMap = value.indices.associate { "${entry.key}/$it" to list[it] }
-                        typeChecker(newMap)
+                        flatten(newMap)
                     }
-
                 }
 
                 is JsonElement -> {
@@ -44,7 +58,7 @@ object FlatMapUtils3 {
                             if (json.keys.isEmpty()) {
                                 listOf(returnString(entry.key, value.toString()))
                             } else {
-                                json.flatMap { typeChecker(mapOf("${entry.key}/${it.key}" to it.value)) }
+                                json.flatMap { flatten(mapOf("${entry.key}/${it.key}" to it.value)) }
                             }
                         }
                         else -> listOf(returnString(entry.key, value.toString()))
@@ -52,7 +66,6 @@ object FlatMapUtils3 {
                 }
                 else -> listOf("${entry.key} - $value is Unknown")
             }
-
         }
     }
 
@@ -62,31 +75,33 @@ object FlatMapUtils3 {
     }
 }
 
+class DifferenceException(message: String) : Exception(message)
 
-
+@Throws(DifferenceException::class)
 fun diff(
-    content1: String,
-    content2: String,
+    base: String,
+    head: String,
 ): Difference {
     val json = Json { ignoreUnknownKeys = true }
-    val jsonObject1 = json.parseToJsonElement(content1).jsonObject.toMap()
-    val jsonObject2 = json.parseToJsonElement(content2).jsonObject.toMap()
+    try {
+        val baseJsonObject = json.parseToJsonElement(base).jsonObject.toMap()
+        val headJsonObject = json.parseToJsonElement(head).jsonObject.toMap()
 
-    val result1 = FlatMapUtils3.typeChecker(jsonObject1).associate { it.split(": ").first() to it.split(": ").last() }
-    val result2 = FlatMapUtils3.typeChecker(jsonObject2).associate { it.split(": ").first() to it.split(": ").last() }
+        val result1 = FlatMapRiScUtil.flatten(baseJsonObject).associate { it.split(": ").first() to it.split(": ").last() }
+        val result2 = FlatMapRiScUtil.flatten(headJsonObject).associate { it.split(": ").first() to it.split(": ").last() }
 
+        val difference = Maps.difference(result1, result2)
 
-    val difference = Maps.difference(result1, result2)
+        val entriesDiffering: List<String> = difference.entriesDiffering().entries.map { it.key + ": " + it.value }
+        val entriesOnLeft = difference.entriesOnlyOnLeft().entries.map { it.key + ": " + it.value }
+        val entriesOnRight = difference.entriesOnlyOnRight().entries.map { it.key + ": " + it.value }
 
-    val entriesDiffering: List<String> = difference.entriesDiffering().entries.map { it.key + ": " + it.value }
-    val entriesOnLeft = difference.entriesOnlyOnLeft().entries.map { it.key + ": " + it.value }
-    val entriesOnRight = difference.entriesOnlyOnRight().entries.map { it.key + ": " + it.value }
-
-    return Difference(
-        entriesOnLeft = entriesOnLeft,
-        entriesOnRight = entriesOnRight,
-        difference = entriesDiffering,
-    )
-
+        return Difference(
+            entriesOnLeft = entriesOnLeft,
+            entriesOnRight = entriesOnRight,
+            difference = entriesDiffering,
+        )
+    } catch (e: Exception) {
+        throw DifferenceException("Could not convert either source or target RiSc to JsonObject")
+    }
 }
-
