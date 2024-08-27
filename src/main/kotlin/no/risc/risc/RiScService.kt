@@ -136,7 +136,12 @@ class RiScService(
         accessTokens: AccessTokens,
         riScId: String,
     ): RiScContentResultDTO {
-        return githubConnector.fetchPublishedRiSc(owner, repository, riScId, accessTokens.githubAccessToken.value).responseToRiScResult(
+        return githubConnector.fetchPublishedRiSc(
+            owner = owner,
+            repository = repository,
+            id = riScId,
+            accessToken = accessTokens.githubAccessToken.value,
+        ).responseToRiScResult(
             riScId,
             RiScStatus.Published,
             accessTokens.gcpAccessToken,

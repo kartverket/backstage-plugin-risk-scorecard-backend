@@ -22,6 +22,28 @@ object FlatMapRiScUtil {
     /**
      * Tries to flatten a RiSc map made from json-parsing.
      *
+     * Example:
+     * {
+     *   "firstKey": "hello",
+     *   "secondKey": {
+     *     "thirdKey": [
+     *       "world",
+     *       "and",
+     *       "others"],
+     *       "forthKey": 4
+     *   }
+     * }
+     *
+     * should result in the following list:
+     *
+     * [
+     *   "/firstKey: "hello""
+     *   "/secondKey/thirdKey/0: "world""
+     *   "/secondKey/thirdKey/1: "and""
+     *   "/secondKey/thirdKey/2: "others""
+     *   "/secondKey/forthKey: 4"
+     * ]
+     *
      * @param map is a Map made from a json-object
      * @return A List<String> with each key in a RiSc and its value.
      */

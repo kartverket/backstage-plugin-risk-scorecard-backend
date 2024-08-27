@@ -130,12 +130,12 @@ class RiScController(
         val riSc: String,
     )
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}/difference/{id}", produces = ["application/json"])
+    @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @PathVariable id: String,
+        @PathVariable riscId: String,
         @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
         val defaultRiSc =
@@ -143,7 +143,7 @@ class RiScController(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
-                riScId = id,
+                riScId = riscId,
             )
 
         return when (defaultRiSc.status) {
