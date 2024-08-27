@@ -4,15 +4,15 @@
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-21" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
+      <env name="FILENAME_POSTFIX" value="risc" />
+      <env name="FILENAME_PREFIX" value="risc" />
       <env name="GITHUB_APP_ID" value="827078" />
       <env name="GITHUB_INSTALLATION_ID" value="48036152" />
-      <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1" />
+      <env name="GITHUB_PRIVATE_KEY_BASE64_ENCODED" value="base63 encoded github app private key" />
+      <env name="ISSUER_URI" value="http://localhost:7007/api/auth" />
+      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs" />
       <env name="RISC_FOLDER_PATH" value=".security/risc" />
       <env name="SOPS_AGE_KEY" value="AGE-SECRET-KEY-1X5DH3RVJ83CK3TJNGGC5QA277NRC9JDK2W5DUG8DY5P05CVL88WS8FT049" />
-      <env name="ISSUER_URI" value="http://localhost:7007/api/auth" />
-      <env name="FILENAME_PREFIX" value="risc" />
-      <env name="FILENAME_POSTFIX" value="risc" />
-      <env name="JSON_SCHEMA_PATH" value="/kartverket/backstage-plugin-risk-scorecard-backend/contents/docs" />
     </envs>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />

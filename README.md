@@ -73,7 +73,7 @@ account or by impersonating a service account.
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_SECRET_NAME=${GITHUB_PRIVATE_KEY_SECRET_NAME} backstage-plugin-risk-scorecard-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e SOPS_AGE_PUBLIC_KEY=${SOPS_AGE_PUBLIC_KEY} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED} backstage-plugin-risk-scorecard-backend
 ```
 
 #### Run the application using kubernetes
