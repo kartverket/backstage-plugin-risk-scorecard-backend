@@ -30,7 +30,7 @@ dependencies {
     implementation("org.springframework.security:spring-security-oauth2-resource-server")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
     implementation("io.netty:netty-all:4.1.112.Final")
@@ -56,7 +56,7 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("com.ninja-squad:springmockk:4.0.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 }
 
