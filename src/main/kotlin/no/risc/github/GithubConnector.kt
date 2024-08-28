@@ -338,19 +338,6 @@ class GithubConnector(
         accessToken: String,
     ): Boolean = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken).any { it.id == riScId }
 
-    private fun fetchBranchForRiSc(
-        owner: String,
-        repository: String,
-        riScId: String,
-        accessToken: String,
-    ): List<GithubReferenceObject> =
-        try {
-            getGithubResponse(githubHelper.uriToFindExistingBranchForRiSc(owner, repository, riScId), accessToken)
-                .toReferenceObjects()
-        } catch (e: Exception) {
-            emptyList()
-        }
-
     private fun fetchLatestShaForDefaultBranch(
         owner: String,
         repository: String,
