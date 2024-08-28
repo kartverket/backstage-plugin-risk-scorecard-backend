@@ -60,7 +60,6 @@ class CryptoServiceIntegration(
                     .awaitBody<String>()
                     .toString()
 
-
             return encryptedFile
         } catch (e: Exception) {
             logger.error("Decrypting failed!", e)

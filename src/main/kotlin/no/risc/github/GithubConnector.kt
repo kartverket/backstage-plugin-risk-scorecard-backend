@@ -263,15 +263,14 @@ class GithubConnector(
     ): Boolean {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
-        if (!branchForRiScDraftExists(owner, repository, riScId, accessToken)) {
-            createNewBranch(owner, repository, riScId, accessToken)
-        }
-
         val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
         val commitMessage =
             when (latestShaForRiSc) {
-                null -> "Create new RiSc with id: $riScId"
+                null -> {
+                    createNewBranch(owner, repository, riScId, accessToken)
+                    "Create new RiSc with id: $riScId"
+                }
                 else -> "Update RiSc with id: $riScId"
             }
 
@@ -331,13 +330,6 @@ class GithubConnector(
     } catch (e: Exception) {
         null
     }
-
-    private fun branchForRiScDraftExists(
-        owner: String,
-        repository: String,
-        riScId: String,
-        accessToken: String,
-    ): Boolean = fetchBranchForRiSc(owner, repository, riScId, accessToken).isNotEmpty()
 
     private suspend fun pullRequestForRiScExists(
         owner: String,

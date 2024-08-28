@@ -152,44 +152,55 @@ class RiScService(
                 }
             logger.info("Fetching risc ids took ${msId.duration}")
 
-            val riScContents = msId.value.associateWith { id ->
-                async(Dispatchers.IO) {
-                    val fetchRiSc = when (id.status) {
-                        RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                        RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                    }
-                    fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                }
-            }.mapValues { it.value.await() }
-
-            val msRiSc = measureTimedValue {
-                riScContents.map { (id, contentResponse) ->
+            val riScContents =
+                msId.value.associateWith { id ->
                     async(Dispatchers.IO) {
-                        try {
-                            val processedContent = if (id.status == RiScStatus.Draft) {
-                                val publishedContent = riScContents.entries.find {
-                                    it.key.status == RiScStatus.Published && it.key.id == id.id
-                                }?.value
-
-                                if (publishedContent?.status == GithubStatus.Success &&
-                                    publishedContent.data == contentResponse.data
-                                ) {
-                                    id.status = RiScStatus.Published
-                                }
-                                contentResponse
-                            } else contentResponse
-
-                            processedContent
-                                .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
-                                .let { migrate(it, latestSupportedVersion) }
-                        } catch (e: Exception) {
-                            RiScContentResultDTO(
-                                riScId = id.id, status = ContentStatus.Failure, riScStatus = id.status, riScContent = null, pullRequestUrl = null
-                            )
-                        }
+                        val fetchRiSc =
+                            when (id.status) {
+                                RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                                RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
+                            }
+                        fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                     }
-                }.awaitAll()
-            }
+                }.mapValues { it.value.await() }
+
+            val msRiSc =
+                measureTimedValue {
+                    riScContents.map { (id, contentResponse) ->
+                        async(Dispatchers.IO) {
+                            try {
+                                val processedContent =
+                                    if (id.status == RiScStatus.Draft) {
+                                        val publishedContent =
+                                            riScContents.entries.find {
+                                                it.key.status == RiScStatus.Published && it.key.id == id.id
+                                            }?.value
+
+                                        if (publishedContent?.status == GithubStatus.Success &&
+                                            publishedContent.data == contentResponse.data
+                                        ) {
+                                            id.status = RiScStatus.Published
+                                        }
+                                        contentResponse
+                                    } else {
+                                        contentResponse
+                                    }
+
+                                processedContent
+                                    .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+                                    .let { migrate(it, latestSupportedVersion) }
+                            } catch (e: Exception) {
+                                RiScContentResultDTO(
+                                    riScId = id.id,
+                                    status = ContentStatus.Failure,
+                                    riScStatus = id.status,
+                                    riScContent = null,
+                                    pullRequestUrl = null,
+                                )
+                            }
+                        }
+                    }.awaitAll()
+                }
 
             logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
             msRiSc.value
@@ -228,7 +239,7 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-   private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
+    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
         cryptoService.decrypt(
             ciphertext = data(),
             gcpAccessToken = gcpAccessToken,
