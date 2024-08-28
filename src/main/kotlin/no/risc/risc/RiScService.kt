@@ -97,8 +97,9 @@ enum class ContentStatus {
 
 enum class DifferenceStatus {
     Success,
-    DefaultNotFound,
-    Failure,
+    GithubFailure,
+    JsonFailure,
+    DecryptionFailure,
 }
 
 enum class ProcessingStatus(val message: String) {
@@ -142,10 +143,10 @@ class RiScService(
             id = riScId,
             accessToken = accessTokens.githubAccessToken.value,
         ).responseToRiScResult(
-            riScId,
-            RiScStatus.Published,
-            accessTokens.gcpAccessToken,
-            null,
+            riScId = riScId,
+            riScStatus = RiScStatus.Published,
+            gcpAccessToken = accessTokens.gcpAccessToken,
+            pullRequestUrl = null,
         )
     }
 

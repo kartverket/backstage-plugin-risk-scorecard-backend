@@ -146,31 +146,55 @@ class RiScController(
                 riScId = riscId,
             )
 
-        return when (defaultRiSc.status) {
-            ContentStatus.Success -> {
-                try {
-                    val result = diff("${defaultRiSc.riScContent}", data.riSc)
-                    ResponseEntity.ok().body(DifferenceDTO(status = DifferenceStatus.Success, differenceState = result))
-                } catch (e: DifferenceException) {
-                    ResponseEntity.internalServerError().body(
-                        DifferenceDTO(status = DifferenceStatus.Failure, Difference(), "${e.message}"),
-                    )
+        class InternDifference(
+            val status: DifferenceStatus,
+            val differenceState: Difference,
+            val errorMessage: String = "",
+        ) {
+            fun toDTO(): DifferenceDTO {
+                return DifferenceDTO(status = status, differenceState = differenceState, errorMessage = errorMessage)
+            }
+        }
+
+        val result: InternDifference =
+            when (defaultRiSc.status) {
+                ContentStatus.Success -> {
+                    try {
+                        InternDifference(
+                            status = DifferenceStatus.Success,
+                            differenceState = diff("${defaultRiSc.riScContent}", data.riSc),
+                            "",
+                        )
+                    } catch (e: DifferenceException) {
+                        InternDifference(
+                            status = DifferenceStatus.JsonFailure,
+                            Difference(),
+                            "${e.message}",
+                        )
+                    }
                 }
+
+                ContentStatus.FileNotFound ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: File not found",
+                    )
+                ContentStatus.DecryptionFailed ->
+                    InternDifference(
+                        status = DifferenceStatus.DecryptionFailure,
+                        differenceState = Difference(),
+                        "Encountered ROS problem: Could not decrypt content",
+                    )
+                ContentStatus.Failure ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: Github failure",
+                    )
             }
 
-            ContentStatus.FileNotFound ->
-                ResponseEntity.ok().body(
-                    DifferenceDTO(status = DifferenceStatus.DefaultNotFound, differenceState = Difference(), "File not found"),
-                )
-            ContentStatus.DecryptionFailed ->
-                ResponseEntity.ok().body(
-                    DifferenceDTO(status = DifferenceStatus.Failure, differenceState = Difference(), "Decryption failed"),
-                )
-            ContentStatus.Failure ->
-                ResponseEntity.ok().body(
-                    DifferenceDTO(status = DifferenceStatus.Failure, differenceState = Difference(), "Unknown failure"),
-                )
-        }
+        return ResponseEntity.ok().body(result.toDTO())
     }
 
     private fun getAccessTokens(
