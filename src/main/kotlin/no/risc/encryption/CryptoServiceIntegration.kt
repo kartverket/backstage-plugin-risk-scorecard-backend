@@ -50,20 +50,19 @@ class CryptoServiceIntegration(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): String {
-        try {
-            val encryptedFile =
+        return try {
+            val decryptedFile =
                 cryptoServiceConnector.webClient.post()
                     .uri("/decrypt")
                     .header("gcpAccessToken", gcpAccessToken.value)
                     .bodyValue(ciphertext)
                     .retrieve()
                     .awaitBody<String>()
-                    .toString()
 
-            return encryptedFile
+            decryptedFile
         } catch (e: Exception) {
             logger.error("Decrypting failed!", e)
-            return ""
+            ""
         }
     }
 }
