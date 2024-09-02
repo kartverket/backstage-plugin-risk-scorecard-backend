@@ -95,6 +95,13 @@ enum class ContentStatus {
     Failure,
 }
 
+enum class DifferenceStatus {
+    Success,
+    GithubFailure,
+    JsonFailure,
+    DecryptionFailure,
+}
+
 enum class ProcessingStatus(val message: String) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
@@ -123,6 +130,25 @@ class RiScService(
     private val cryptoService: CryptoServiceIntegration,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
+
+    suspend fun fetchDefaultRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        riScId: String,
+    ): RiScContentResultDTO {
+        return githubConnector.fetchPublishedRiSc(
+            owner = owner,
+            repository = repository,
+            id = riScId,
+            accessToken = accessTokens.githubAccessToken.value,
+        ).responseToRiScResult(
+            riScId = riScId,
+            riScStatus = RiScStatus.Published,
+            gcpAccessToken = accessTokens.gcpAccessToken,
+            pullRequestUrl = null,
+        )
+    }
 
     suspend fun fetchAllRiScIds(
         owner: String,
@@ -224,7 +250,7 @@ class RiScService(
             msRiSc.value
         }
 
-    private fun GithubContentResponse.responseToRiScResult(
+    private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
@@ -257,7 +283,7 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
+    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
         cryptoService.decrypt(
             ciphertext = data(),
             gcpAccessToken = gcpAccessToken,

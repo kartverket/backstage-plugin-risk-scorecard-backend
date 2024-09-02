@@ -8,6 +8,9 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.utils.Difference
+import no.risc.utils.DifferenceException
+import no.risc.utils.diff
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -115,6 +118,83 @@ class RiScController(
             ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
             else -> ResponseEntity.internalServerError().body(result)
         }
+    }
+
+    data class DifferenceDTO(
+        val status: DifferenceStatus,
+        val differenceState: Difference,
+        val errorMessage: String = "",
+    )
+
+    data class DifferenceRequestBody(
+        val riSc: String,
+    )
+
+    @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
+    suspend fun getDifferenceBetweenTwoRiScs(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable riscId: String,
+        @RequestBody data: DifferenceRequestBody,
+    ): ResponseEntity<DifferenceDTO> {
+        val defaultRiSc =
+            riScService.fetchDefaultRiSc(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+                riScId = riscId,
+            )
+
+        class InternDifference(
+            val status: DifferenceStatus,
+            val differenceState: Difference,
+            val errorMessage: String = "",
+        ) {
+            fun toDTO(): DifferenceDTO {
+                return DifferenceDTO(status = status, differenceState = differenceState, errorMessage = errorMessage)
+            }
+        }
+
+        val result: InternDifference =
+            when (defaultRiSc.status) {
+                ContentStatus.Success -> {
+                    try {
+                        InternDifference(
+                            status = DifferenceStatus.Success,
+                            differenceState = diff("${defaultRiSc.riScContent}", data.riSc),
+                            "",
+                        )
+                    } catch (e: DifferenceException) {
+                        InternDifference(
+                            status = DifferenceStatus.JsonFailure,
+                            Difference(),
+                            "${e.message}",
+                        )
+                    }
+                }
+
+                ContentStatus.FileNotFound ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: File not found",
+                    )
+                ContentStatus.DecryptionFailed ->
+                    InternDifference(
+                        status = DifferenceStatus.DecryptionFailure,
+                        differenceState = Difference(),
+                        "Encountered ROS problem: Could not decrypt content",
+                    )
+                ContentStatus.Failure ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: Github failure",
+                    )
+            }
+
+        return ResponseEntity.ok().body(result.toDTO())
     }
 
     private fun getAccessTokens(
