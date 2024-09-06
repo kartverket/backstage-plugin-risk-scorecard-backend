@@ -144,13 +144,24 @@ class GithubConnector(
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
     ): List<RiScIdentifier> {
-        val draftIds = draftRiScList.map { it.id }
-        val sentForApprovalsIds = sentForApprovalList.map { it.id }
-        val publishedRiScIdentifiersNotInDraftList =
-            publishedRiScList.filter { it.id !in draftIds && it.id !in sentForApprovalsIds }
-        val draftRiScIdentifiersNotInSentForApprovalsList = draftRiScList.filter { it.id !in sentForApprovalsIds }
+        val sentForApprovalsIds = sentForApprovalList.map { it.id }.toSet()
 
-        return sentForApprovalList + publishedRiScIdentifiersNotInDraftList + draftRiScIdentifiersNotInSentForApprovalsList
+        val combinedList = mutableListOf<RiScIdentifier>()
+        combinedList.addAll(sentForApprovalList)
+
+        for (published in publishedRiScList) {
+            if (published.id !in sentForApprovalsIds) {
+                combinedList.add(published)
+            }
+        }
+
+        for (draft in draftRiScList) {
+            if (draft.id !in sentForApprovalsIds) {
+                combinedList.add(draft)
+            }
+        }
+
+        return combinedList
     }
 
     suspend fun fetchPublishedRiSc(
@@ -252,15 +263,14 @@ class GithubConnector(
     ): Boolean {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
-        if (!branchForRiScDraftExists(owner, repository, riScId, accessToken)) {
-            createNewBranch(owner, repository, riScId, accessToken)
-        }
-
         val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
         val commitMessage =
             when (latestShaForRiSc) {
-                null -> "Create new RiSc with id: $riScId"
+                null -> {
+                    createNewBranch(owner, repository, riScId, accessToken)
+                    "Create new RiSc with id: $riScId"
+                }
                 else -> "Update RiSc with id: $riScId"
             }
 
@@ -321,32 +331,12 @@ class GithubConnector(
         null
     }
 
-    private fun branchForRiScDraftExists(
-        owner: String,
-        repository: String,
-        riScId: String,
-        accessToken: String,
-    ): Boolean = fetchBranchForRiSc(owner, repository, riScId, accessToken).isNotEmpty()
-
     private suspend fun pullRequestForRiScExists(
         owner: String,
         repository: String,
         riScId: String,
         accessToken: String,
     ): Boolean = fetchRiScIdentifiersSentForApproval(owner, repository, accessToken).any { it.id == riScId }
-
-    private fun fetchBranchForRiSc(
-        owner: String,
-        repository: String,
-        riScId: String,
-        accessToken: String,
-    ): List<GithubReferenceObject> =
-        try {
-            getGithubResponse(githubHelper.uriToFindExistingBranchForRiSc(owner, repository, riScId), accessToken)
-                .toReferenceObjects()
-        } catch (e: Exception) {
-            emptyList()
-        }
 
     private fun fetchLatestShaForDefaultBranch(
         owner: String,
