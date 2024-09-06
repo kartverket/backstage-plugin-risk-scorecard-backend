@@ -131,23 +131,31 @@ class RiScService(
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
-    suspend fun fetchDefaultRiSc(
+    suspend fun fetchDefaultRiScWiThLastModifiedDate(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
         riScId: String,
-    ): RiScContentResultDTO {
-        return githubConnector.fetchPublishedRiSc(
-            owner = owner,
-            repository = repository,
-            id = riScId,
-            accessToken = accessTokens.githubAccessToken.value,
-        ).responseToRiScResult(
-            riScId = riScId,
-            riScStatus = RiScStatus.Published,
-            gcpAccessToken = accessTokens.gcpAccessToken,
-            pullRequestUrl = null,
-        )
+    ): Pair<RiScContentResultDTO, String> {
+        var lastModifiedDate = ""
+        val response: RiScContentResultDTO =
+            githubConnector.fetchPublishedRiSc(
+                owner = owner,
+                repository = repository,
+                id = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
+            ).also {
+                if (it.status == GithubStatus.Success) {
+                    lastModifiedDate = it.data.toString().substringAfterLast("lastmodified: ").substringBefore("mac").trimEnd()
+                }
+            }.responseToRiScResult(
+                riScId = riScId,
+                riScStatus = RiScStatus.Published,
+                gcpAccessToken = accessTokens.gcpAccessToken,
+                pullRequestUrl = null,
+            )
+        println(lastModifiedDate)
+        return response to lastModifiedDate
     }
 
     suspend fun fetchAllRiScIds(

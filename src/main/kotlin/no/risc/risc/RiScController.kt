@@ -124,6 +124,7 @@ class RiScController(
         val status: DifferenceStatus,
         val differenceState: Difference,
         val errorMessage: String = "",
+        val defaultLastModifiedDateString: String = "",
     )
 
     data class DifferenceRequestBody(
@@ -139,7 +140,7 @@ class RiScController(
         @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
         val defaultRiSc =
-            riScService.fetchDefaultRiSc(
+            riScService.fetchDefaultRiScWiThLastModifiedDate(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
@@ -152,17 +153,22 @@ class RiScController(
             val errorMessage: String = "",
         ) {
             fun toDTO(): DifferenceDTO {
-                return DifferenceDTO(status = status, differenceState = differenceState, errorMessage = errorMessage)
+                return DifferenceDTO(
+                    status = status,
+                    differenceState = differenceState,
+                    errorMessage = errorMessage,
+                    defaultLastModifiedDateString = defaultRiSc.second, // Using default risc last modified date
+                )
             }
         }
 
         val result: InternDifference =
-            when (defaultRiSc.status) {
+            when (defaultRiSc.first.status) {
                 ContentStatus.Success -> {
                     try {
                         InternDifference(
                             status = DifferenceStatus.Success,
-                            differenceState = diff("${defaultRiSc.riScContent}", data.riSc),
+                            differenceState = diff("${defaultRiSc.first.riScContent}", data.riSc),
                             "",
                         )
                     } catch (e: DifferenceException) {
