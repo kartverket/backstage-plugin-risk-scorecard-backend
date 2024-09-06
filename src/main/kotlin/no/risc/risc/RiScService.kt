@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
+import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
 import no.risc.exception.exceptions.SOPSDecryptionException
@@ -109,6 +110,8 @@ enum class ProcessingStatus(val message: String) {
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
     InvalidAccessTokens("Invalid access tokens"),
+    UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
+    ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
 }
 
 data class RiScIdentifier(
@@ -304,18 +307,24 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-        val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
+        try {
+            val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
 
-        return when (result.status) {
-            ProcessingStatus.UpdatedRiSc ->
-                ProcessRiScResultDTO(
+            if (result.status == ProcessingStatus.UpdatedRiSc) {
+                return ProcessRiScResultDTO(
                     uniqueRiScId,
                     ProcessingStatus.CreatedRiSc,
                     "New RiSc was created",
                 )
+            }
+        } catch (e: Exception) {
+            throw CreatingRiScException(
+                message = "${e.message} for risk scorecard with id $uniqueRiScId",
+                riScId = uniqueRiScId,
+            )
 
-            else -> result
         }
+       return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     private suspend fun updateOrCreateRiSc(
@@ -327,7 +336,6 @@ class RiScService(
     ): ProcessRiScResultDTO {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
         val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
-
         val jsonSchema =
             resource?.bufferedReader().use { reader ->
                 reader?.readText() ?: throw JSONSchemaFetchException(
@@ -374,7 +382,7 @@ class RiScService(
 
             return ProcessRiScResultDTO(
                 riScId,
-                ProcessingStatus.UpdatedRiSc,
+                status = if (hasClosedPR) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
                 "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
             )
         } catch (e: Exception) {

@@ -1,5 +1,7 @@
 package no.risc.exception
 
+import no.risc.exception.exceptions.CreatePullRequestException
+import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
@@ -86,5 +88,28 @@ internal class GlobalExceptionHandler {
     fun handleInvalidAccessTokensException(ex: InvalidAccessTokensException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(CreatePullRequestException::class)
+    fun handleCreatePullRequestException(ex: CreatePullRequestException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            ex.riScId,
+            ProcessingStatus.ErrorWhenCreatingPullRequest,
+            ex.message,
+        )
+    }
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(CreatingRiScException::class)
+    fun handleCreatingRiScException(ex: CreatingRiScException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            ex.riScId,
+            ProcessingStatus.ErrorWhenCreatingRiSc,
+            ex.message,
+        )
     }
 }

@@ -4,6 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
+import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
@@ -388,11 +389,19 @@ class GithubConnector(
         accessTokens: AccessTokens,
         userInfo: UserInfo,
     ): GithubPullRequestObject? =
-        postNewPullRequestToGithub(
-            uri = githubHelper.uriToCreatePullRequest(owner, repository),
-            accessToken = accessTokens.githubAccessToken.value,
-            pullRequestPayload = githubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
-        ).pullRequestResponseDTO()
+        try {
+            postNewPullRequestToGithub(
+                uri = githubHelper.uriToCreatePullRequest(owner, repository),
+                accessToken = accessTokens.githubAccessToken.value,
+                pullRequestPayload = githubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
+            ).pullRequestResponseDTO()
+        } catch(e: Exception) {
+            throw CreatePullRequestException(
+                message = "Failed with error ${e.message} when creating pull request for RiSc with id: $riScId",
+                riScId = riScId,
+            )
+        }
+
 
     private fun postNewPullRequestToGithub(
         uri: String,
