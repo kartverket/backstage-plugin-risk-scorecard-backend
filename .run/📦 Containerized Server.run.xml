@@ -24,7 +24,7 @@
     <envs>
       <env name="GITHUB_APP_ID" value="827078" />
       <env name="GITHUB_INSTALLATION_ID" value="48036152" />
-      <env name="GITHUB_PRIVATE_KEY_SECRET_NAME" value="projects/457384642040/secrets/GITHUB_APP_PRIVATE_KEY_DEV/versions/1" />
+      <env name="GITHUB_PRIVATE_KEY_BASE64_ENCODED" value="base64 encoded github app private key" />
       <env name="RISC_PATH" value=".security/ros" />
       <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f" />
       <env name="FILENAME_PREFIX" value="ros" />

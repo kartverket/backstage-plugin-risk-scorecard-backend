@@ -8,6 +8,33 @@ We recommend using IntelliJ for local development. To run the application, simpl
 
 Backstage needs to be running, and you need to be logged in for the plugin backend to work. This is because the internal Backstage backend is the issuer of tokens this backend uses as OAuth server. 
 
+### Environment variables
+**SOPS_AGE_KEY** the age key used to encrypt and decrypt the RiSc Analyses. The public key of this asymmetric pair will have to be added and used to encrypt all RiScs that the backend is supposed to decrypt.
+The private key of the pair will be used to decrypt. This key is the SOPS_AGE_KEY environment variable.
+
+How to make one?
+
+``` shell
+brew install age-keygen
+age-keygen -o key.txt
+```
+
+This will create a file with the private key, and output the public key.
+Set the secret key as your environment variable, and the public key in the key groups of .sops.yaml.
+
+**GITHUB_PRIVATE_KEY_BASE64_ENCODED** is a private key to the GitHub App used to access the repositories of the organisation. 
+The key is used to sign jwt-tokens. Because of line ending encoding is hard, we base64 encode the private PEM key and set this as our environment variable.
+
+How to set it?
+- Go to your GitHub App settings, and scroll down to "Private keys"
+- Create one if you don't already have one
+
+``` shell
+echo "<  -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY----->" | base64
+```
+
+And set this as the environment variable.
+
 ## Architecture
 
 ### High level components
@@ -49,6 +76,7 @@ It does not fully support the latest JSON Schema draft.
 It covers our need regarding the JSON Schema validation.  
 If the version of the schema is updated, ensure that the library supports it.
 
+
 ## Alternative setup
 
 > [!WARNING]  
@@ -73,7 +101,7 @@ account or by impersonating a service account.
 To run the docker image, run:
 
 ```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_SECRET_NAME=${GITHUB_PRIVATE_KEY_SECRET_NAME} backstage-plugin-risk-scorecard-backend
+docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED} backstage-plugin-risk-scorecard-backend
 ```
 
 #### Run the application using kubernetes
