@@ -395,13 +395,12 @@ class GithubConnector(
                 accessToken = accessTokens.githubAccessToken.value,
                 pullRequestPayload = githubHelper.bodyToCreateNewPullRequest(owner, riScId, requiresNewApproval, userInfo),
             ).pullRequestResponseDTO()
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             throw CreatePullRequestException(
                 message = "Failed with error ${e.message} when creating pull request for RiSc with id: $riScId",
                 riScId = riScId,
             )
         }
-
 
     private fun postNewPullRequestToGithub(
         uri: String,

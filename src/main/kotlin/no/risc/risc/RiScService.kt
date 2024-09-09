@@ -322,9 +322,8 @@ class RiScService(
                 message = "${e.message} for risk scorecard with id $uniqueRiScId",
                 riScId = uniqueRiScId,
             )
-
         }
-       return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
+        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     private suspend fun updateOrCreateRiSc(

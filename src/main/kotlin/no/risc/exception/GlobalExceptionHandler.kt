@@ -101,6 +101,7 @@ internal class GlobalExceptionHandler {
             ex.message,
         )
     }
+
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
     @ExceptionHandler(CreatingRiScException::class)
