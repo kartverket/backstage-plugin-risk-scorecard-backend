@@ -95,6 +95,13 @@ enum class ContentStatus {
     Failure,
 }
 
+enum class DifferenceStatus {
+    Success,
+    GithubFailure,
+    JsonFailure,
+    DecryptionFailure,
+}
+
 enum class ProcessingStatus(val message: String) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
@@ -124,6 +131,25 @@ class RiScService(
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
+    suspend fun fetchDefaultRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        riScId: String,
+    ): RiScContentResultDTO {
+        return githubConnector.fetchPublishedRiSc(
+            owner = owner,
+            repository = repository,
+            id = riScId,
+            accessToken = accessTokens.githubAccessToken.value,
+        ).responseToRiScResult(
+            riScId = riScId,
+            riScStatus = RiScStatus.Published,
+            gcpAccessToken = accessTokens.gcpAccessToken,
+            pullRequestUrl = null,
+        )
+    }
+
     suspend fun fetchAllRiScIds(
         owner: String,
         repository: String,
@@ -152,60 +178,42 @@ class RiScService(
                 }
             logger.info("Fetching risc ids took ${msId.duration}")
 
+            val riScContents =
+                msId.value.associateWith { id ->
+                    async(Dispatchers.IO) {
+                        val fetchRiSc =
+                            when (id.status) {
+                                RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                                RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
+                            }
+                        fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+                    }
+                }.mapValues { it.value.await() }
+
             val msRiSc =
                 measureTimedValue {
-                    msId.value.map { id ->
+                    riScContents.map { (id, contentResponse) ->
                         async(Dispatchers.IO) {
                             try {
-                                val fetchRiSc =
-                                    when (id.status) {
-                                        RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                                        RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                                    }
-                                fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                                    .let {
-                                        when (id.status) {
-                                            RiScStatus.Draft -> {
-                                                /*
-                                                 * Because of our unusual datastorage, this is an extra state check for Drafts.
-                                                 *
-                                                 * In case a repository does not delete branches after merging pull requests,
-                                                 * our state flowchart would go from SentForApproval (pull request) to
-                                                 * Draft (branch exists). Therefore, we check if the content in Draft is equal to
-                                                 * the content on the default branch (often main). If they are equal then we
-                                                 * know we have a risc branch without changes, and therefore it should be in a
-                                                 * Published state.
-                                                 *  */
+                                val processedContent =
+                                    if (id.status == RiScStatus.Draft) {
+                                        val publishedContent =
+                                            riScContents.entries.find {
+                                                it.key.status == RiScStatus.Published && it.key.id == id.id
+                                            }?.value
 
-                                                // Get risc content on default branch.
-                                                val published =
-                                                    githubConnector.fetchPublishedRiSc(
-                                                        owner,
-                                                        repository,
-                                                        id.id,
-                                                        accessTokens.githubAccessToken.value,
-                                                    )
-
-                                                val fileFound = published.status === GithubStatus.Success
-                                                val fileIsEqual = published.data.equals(it.data)
-                                                // Check if file exists and its content is equal.
-                                                if (fileFound && fileIsEqual) {
-                                                    // Set its status to Published.
-                                                    id.status = RiScStatus.Published
-                                                }
-                                                it
-                                            }
-
-                                            RiScStatus.SentForApproval -> it
-                                            RiScStatus.Published -> it
+                                        if (publishedContent?.status == GithubStatus.Success &&
+                                            publishedContent.data == contentResponse.data
+                                        ) {
+                                            id.status = RiScStatus.Published
                                         }
+                                        contentResponse
+                                    } else {
+                                        contentResponse
                                     }
-                                    .responseToRiScResult(
-                                        id.id,
-                                        id.status,
-                                        accessTokens.gcpAccessToken,
-                                        id.pullRequestUrl,
-                                    )
+
+                                processedContent
+                                    .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
                                     .let { migrate(it, latestSupportedVersion) }
                             } catch (e: Exception) {
                                 RiScContentResultDTO(
@@ -224,7 +232,7 @@ class RiScService(
             msRiSc.value
         }
 
-    private fun GithubContentResponse.responseToRiScResult(
+    private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
@@ -257,7 +265,7 @@ class RiScService(
                 RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
-    private fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
+    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
         cryptoService.decrypt(
             ciphertext = data(),
             gcpAccessToken = gcpAccessToken,
