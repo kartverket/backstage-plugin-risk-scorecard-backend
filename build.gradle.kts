@@ -68,6 +68,7 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Test> {
+    environment["SOPS_AGE_KEY"] = "AGE-SECRET-KEY-12ZJZ9F3SSUGHTZMPMRX32R7MUT0C5JHWVND65643K8HDTMXQ0HZS4AHC08"
     environment["GCP_KMS_RESOURCE_PATH"] = "projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"
     environment["GITHUB_APP_ID"] = "828331"
     environment["GITHUB_APP_INSTALLATION_ID"] = "47304902"
