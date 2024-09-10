@@ -56,6 +56,11 @@ spec:
                 configMapKeyRef:
                   name: backstage-plugin-risk-scorecard-backend
                   key: ENTRA_ID_TENANT_ID
+            - name: SOPS_AGE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sops-age-private-key
+                  key: SOPS_AGE_KEY
             - name: FILENAME_PREFIX
               valueFrom:
                 configMapKeyRef:
