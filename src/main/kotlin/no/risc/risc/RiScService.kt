@@ -27,7 +27,6 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import kotlin.time.measureTimedValue
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -169,11 +168,11 @@ class RiScService(
     ): List<RiScContentResultDTO> =
         coroutineScope {
             val riScIds =
-                    githubConnector.fetchAllRiScIdentifiersInRepository(
-                        owner,
-                        repository,
-                        accessTokens.githubAccessToken.value,
-                    ).ids
+                githubConnector.fetchAllRiScIdentifiersInRepository(
+                    owner,
+                    repository,
+                    accessTokens.githubAccessToken.value,
+                ).ids
 
             val riScContents =
                 riScIds.associateWith { id ->
@@ -188,59 +187,59 @@ class RiScService(
                 }.mapValues { it.value.await() }
 
             val riScs =
-                    riScContents.map { (id, contentResponse) ->
-                        async(Dispatchers.IO) {
-                            try {
-                                val processedContent =
-                                    when (id.status) {
-                                        RiScStatus.Draft -> {
-                                            val publishedContent =
-                                                riScContents.entries.find {
-                                                    it.key.status == RiScStatus.Published && it.key.id == id.id
-                                                }?.value
+                riScContents.map { (id, contentResponse) ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val processedContent =
+                                when (id.status) {
+                                    RiScStatus.Draft -> {
+                                        val publishedContent =
+                                            riScContents.entries.find {
+                                                it.key.status == RiScStatus.Published && it.key.id == id.id
+                                            }?.value
 
-                                            contentResponse.takeUnless {
-                                                publishedContent?.status == GithubStatus.Success &&
-                                                        publishedContent.data == contentResponse.data
-                                            }
-                                            }
-                                        RiScStatus.Published -> {
-                                            val draftedContent =
-                                                riScContents.entries.find {
-                                                    it.key.status == RiScStatus.Draft && it.key.id == id.id
-                                                }?.value
-
-                                            contentResponse.takeUnless {
-                                                draftedContent?.status == GithubStatus.Success &&
-                                                        draftedContent.data != contentResponse.data
-                                            }
-                                        }
-                                        else -> {
-                                            contentResponse
+                                        contentResponse.takeUnless {
+                                            publishedContent?.status == GithubStatus.Success &&
+                                                publishedContent.data == contentResponse.data
                                         }
                                     }
-                                processedContent?.let { nonNullContent ->
-                                    nonNullContent
-                                        .responseToRiScResult(
-                                            id.id,
-                                            id.status,
-                                            accessTokens.gcpAccessToken,
-                                            id.pullRequestUrl
-                                        )
-                                        .let { migrate(it, latestSupportedVersion) }
+                                    RiScStatus.Published -> {
+                                        val draftedContent =
+                                            riScContents.entries.find {
+                                                it.key.status == RiScStatus.Draft && it.key.id == id.id
+                                            }?.value
+
+                                        contentResponse.takeUnless {
+                                            draftedContent?.status == GithubStatus.Success &&
+                                                draftedContent.data != contentResponse.data
+                                        }
+                                    }
+                                    else -> {
+                                        contentResponse
+                                    }
                                 }
-                            } catch (e: Exception) {
-                                RiScContentResultDTO(
-                                    riScId = id.id,
-                                    status = ContentStatus.Failure,
-                                    riScStatus = id.status,
-                                    riScContent = null,
-                                    pullRequestUrl = null,
-                                )
+                            processedContent?.let { nonNullContent ->
+                                nonNullContent
+                                    .responseToRiScResult(
+                                        id.id,
+                                        id.status,
+                                        accessTokens.gcpAccessToken,
+                                        id.pullRequestUrl,
+                                    )
+                                    .let { migrate(it, latestSupportedVersion) }
                             }
+                        } catch (e: Exception) {
+                            RiScContentResultDTO(
+                                riScId = id.id,
+                                status = ContentStatus.Failure,
+                                riScStatus = id.status,
+                                riScContent = null,
+                                pullRequestUrl = null,
+                            )
                         }
-                    }.awaitAll()
-                .filterNotNull()
+                    }
+                }.awaitAll()
+                    .filterNotNull()
             riScs
         }
 
