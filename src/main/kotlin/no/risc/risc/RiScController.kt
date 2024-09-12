@@ -6,11 +6,10 @@ import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.risc.models.DifferenceDTO
+import no.risc.risc.models.DifferenceRequestBody
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import no.risc.utils.Difference
-import no.risc.utils.DifferenceException
-import no.risc.utils.diff
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -120,17 +119,6 @@ class RiScController(
         }
     }
 
-    data class DifferenceDTO(
-        val status: DifferenceStatus,
-        val differenceState: Difference,
-        val errorMessage: String = "",
-        val defaultLastModifiedDateString: String = "",
-    )
-
-    data class DifferenceRequestBody(
-        val riSc: String,
-    )
-
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
@@ -139,68 +127,16 @@ class RiScController(
         @PathVariable riscId: String,
         @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
-        val defaultRiSc =
-            riScService.fetchDefaultRiScWiThLastModifiedDate(
+        val difference =
+            riScService.fetchAndDiffRiScs(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
                 riScId = riscId,
+                headRiSc = data.riSc,
             )
 
-        class InternDifference(
-            val status: DifferenceStatus,
-            val differenceState: Difference,
-            val errorMessage: String = "",
-        ) {
-            fun toDTO(): DifferenceDTO {
-                return DifferenceDTO(
-                    status = status,
-                    differenceState = differenceState,
-                    errorMessage = errorMessage,
-                    defaultLastModifiedDateString = defaultRiSc.second, // Using default risc last modified date
-                )
-            }
-        }
-
-        val result: InternDifference =
-            when (defaultRiSc.first.status) {
-                ContentStatus.Success -> {
-                    try {
-                        InternDifference(
-                            status = DifferenceStatus.Success,
-                            differenceState = diff("${defaultRiSc.first.riScContent}", data.riSc),
-                            "",
-                        )
-                    } catch (e: DifferenceException) {
-                        InternDifference(
-                            status = DifferenceStatus.JsonFailure,
-                            Difference(),
-                            "${e.message}",
-                        )
-                    }
-                }
-
-                ContentStatus.FileNotFound ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFailure,
-                        differenceState = Difference(),
-                        "Encountered Github problem: File not found",
-                    )
-                ContentStatus.DecryptionFailed ->
-                    InternDifference(
-                        status = DifferenceStatus.DecryptionFailure,
-                        differenceState = Difference(),
-                        "Encountered ROS problem: Could not decrypt content",
-                    )
-                ContentStatus.Failure ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFailure,
-                        differenceState = Difference(),
-                        "Encountered Github problem: Github failure",
-                    )
-            }
-
-        return ResponseEntity.ok().body(result.toDTO())
+        return ResponseEntity.ok().body(difference)
     }
 
     private fun getAccessTokens(

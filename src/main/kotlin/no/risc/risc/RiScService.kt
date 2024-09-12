@@ -18,8 +18,12 @@ import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.utils.Difference
+import no.risc.utils.DifferenceException
+import no.risc.utils.diff
 import no.risc.utils.migrate
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
@@ -123,6 +127,21 @@ enum class RiScStatus {
     Published,
 }
 
+class InternDifference(
+    val status: DifferenceStatus,
+    val differenceState: Difference,
+    val errorMessage: String = "",
+) {
+    fun toDTO(date: String = ""): DifferenceDTO {
+        return DifferenceDTO(
+            status = status,
+            differenceState = differenceState,
+            errorMessage = errorMessage,
+            defaultLastModifiedDateString = date,
+        )
+    }
+}
+
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
@@ -131,12 +150,13 @@ class RiScService(
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
-    suspend fun fetchDefaultRiScWiThLastModifiedDate(
+    suspend fun fetchAndDiffRiScs(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
         riScId: String,
-    ): Pair<RiScContentResultDTO, String> {
+        headRiSc: String,
+    ): DifferenceDTO {
         var lastModifiedDate = ""
         val response: RiScContentResultDTO =
             githubConnector.fetchPublishedRiSc(
@@ -154,7 +174,45 @@ class RiScService(
                 gcpAccessToken = accessTokens.gcpAccessToken,
                 pullRequestUrl = null,
             )
-        return response to lastModifiedDate
+
+        val result: InternDifference =
+            when (response.status) {
+                ContentStatus.Success -> {
+                    try {
+                        InternDifference(
+                            status = DifferenceStatus.Success,
+                            differenceState = diff("${response.riScContent}", headRiSc),
+                            "",
+                        )
+                    } catch (e: DifferenceException) {
+                        InternDifference(
+                            status = DifferenceStatus.JsonFailure,
+                            Difference(),
+                            "${e.message}",
+                        )
+                    }
+                }
+
+                ContentStatus.FileNotFound ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: File not found",
+                    )
+                ContentStatus.DecryptionFailed ->
+                    InternDifference(
+                        status = DifferenceStatus.DecryptionFailure,
+                        differenceState = Difference(),
+                        "Encountered ROS problem: Could not decrypt content",
+                    )
+                ContentStatus.Failure ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: Github failure",
+                    )
+            }
+        return result.toDTO(lastModifiedDate)
     }
 
     suspend fun fetchAllRiScIds(
