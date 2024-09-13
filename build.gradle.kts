@@ -43,7 +43,7 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.google.auth:google-auth-library-credentials:1.24.1")
-    implementation("com.google.cloud:google-cloud-secretmanager:2.48.0") {
+    implementation("com.google.cloud:google-cloud-secretmanager:2.49.0") {
         exclude(group = "commons-logging", module = "commons-logging")
     }
 
