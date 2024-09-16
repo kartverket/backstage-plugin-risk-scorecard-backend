@@ -102,6 +102,7 @@ enum class ContentStatus {
 enum class DifferenceStatus {
     Success,
     GithubFailure,
+    GithubFileNotFound,
     JsonFailure,
     DecryptionFailure,
 }
@@ -193,9 +194,10 @@ class RiScService(
                     }
                 }
 
+
                 ContentStatus.FileNotFound ->
                     InternDifference(
-                        status = DifferenceStatus.GithubFailure,
+                        status = DifferenceStatus.GithubFileNotFound,
                         differenceState = Difference(),
                         "Encountered Github problem: File not found",
                     )
