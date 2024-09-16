@@ -194,7 +194,6 @@ class RiScService(
                     }
                 }
 
-
                 ContentStatus.FileNotFound ->
                     InternDifference(
                         status = DifferenceStatus.GithubFileNotFound,
