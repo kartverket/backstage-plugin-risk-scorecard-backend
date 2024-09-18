@@ -5,9 +5,12 @@ import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
+import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
+import no.risc.risc.ContentStatus
+import no.risc.risc.DecryptionFailure
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import org.slf4j.Logger
@@ -67,6 +70,17 @@ internal class GlobalExceptionHandler {
             ex.riScId,
             ProcessingStatus.ErrorWhenUpdatingRiSc,
             "Could not encrypt RiSc",
+        )
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(SOPSDecryptionException::class)
+    fun handleSopsDecryptionException(ex: SOPSDecryptionException): DecryptionFailure {
+        logger.error(ex.message, ex)
+        return DecryptionFailure(
+            ContentStatus.DecryptionFailed,
+            ex.message,
         )
     }
 

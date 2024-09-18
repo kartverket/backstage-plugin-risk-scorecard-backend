@@ -130,6 +130,11 @@ enum class RiScStatus {
     Published,
 }
 
+data class DecryptionFailure(
+    val status: ContentStatus,
+    val message: String,
+)
+
 class InternDifference(
     val status: DifferenceStatus,
     val differenceState: Difference,
@@ -177,7 +182,6 @@ class RiScService(
                 gcpAccessToken = accessTokens.gcpAccessToken,
                 pullRequestUrl = null,
             )
-
         val result: InternDifference =
             when (response.status) {
                 ContentStatus.Success -> {
@@ -196,6 +200,11 @@ class RiScService(
                     }
                 }
 
+                /*
+                This case is considered valid, because if the file is not found, we can assume that the riSc
+                does not have a published version yet, and therefore there are no differences to compare.
+                The frontend handles this.
+                 */
                 ContentStatus.FileNotFound ->
                     InternDifference(
                         status = DifferenceStatus.GithubFileNotFound,
@@ -331,7 +340,7 @@ class RiScService(
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, e.message)
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
 
                         else ->
                             RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
