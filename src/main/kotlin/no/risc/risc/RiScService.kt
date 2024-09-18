@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
+import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
 import no.risc.exception.exceptions.SOPSDecryptionException
@@ -31,7 +32,6 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import kotlin.time.measureTimedValue
 
 data class ProcessRiScResultDTO(
     val riScId: String,
@@ -114,6 +114,8 @@ enum class ProcessingStatus(val message: String) {
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
     InvalidAccessTokens("Invalid access tokens"),
+    UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
+    ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
 }
 
 data class RiScIdentifier(
@@ -234,18 +236,15 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
-            val msId =
-                measureTimedValue {
-                    githubConnector.fetchAllRiScIdentifiersInRepository(
-                        owner,
-                        repository,
-                        accessTokens.githubAccessToken.value,
-                    ).ids
-                }
-            logger.info("Fetching risc ids took ${msId.duration}")
+            val riScIds =
+                githubConnector.fetchAllRiScIdentifiersInRepository(
+                    owner,
+                    repository,
+                    accessTokens.githubAccessToken.value,
+                ).ids
 
             val riScContents =
-                msId.value.associateWith { id ->
+                riScIds.associateWith { id ->
                     async(Dispatchers.IO) {
                         val fetchRiSc =
                             when (id.status) {
@@ -256,46 +255,61 @@ class RiScService(
                     }
                 }.mapValues { it.value.await() }
 
-            val msRiSc =
-                measureTimedValue {
-                    riScContents.map { (id, contentResponse) ->
-                        async(Dispatchers.IO) {
-                            try {
-                                val processedContent =
-                                    if (id.status == RiScStatus.Draft) {
+            val riScs =
+                riScContents.map { (id, contentResponse) ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val processedContent =
+                                when (id.status) {
+                                    RiScStatus.Draft -> {
                                         val publishedContent =
                                             riScContents.entries.find {
                                                 it.key.status == RiScStatus.Published && it.key.id == id.id
                                             }?.value
 
-                                        if (publishedContent?.status == GithubStatus.Success &&
-                                            publishedContent.data == contentResponse.data
-                                        ) {
-                                            id.status = RiScStatus.Published
+                                        contentResponse.takeUnless {
+                                            publishedContent?.status == GithubStatus.Success &&
+                                                publishedContent.data == contentResponse.data
                                         }
-                                        contentResponse
-                                    } else {
+                                    }
+                                    RiScStatus.Published -> {
+                                        val draftedContent =
+                                            riScContents.entries.find {
+                                                it.key.status == RiScStatus.Draft && it.key.id == id.id
+                                            }?.value
+
+                                        contentResponse.takeUnless {
+                                            draftedContent?.status == GithubStatus.Success &&
+                                                draftedContent.data != contentResponse.data
+                                        }
+                                    }
+                                    else -> {
                                         contentResponse
                                     }
-
-                                processedContent
-                                    .responseToRiScResult(id.id, id.status, accessTokens.gcpAccessToken, id.pullRequestUrl)
+                                }
+                            processedContent?.let { nonNullContent ->
+                                nonNullContent
+                                    .responseToRiScResult(
+                                        id.id,
+                                        id.status,
+                                        accessTokens.gcpAccessToken,
+                                        id.pullRequestUrl,
+                                    )
                                     .let { migrate(it, latestSupportedVersion) }
-                            } catch (e: Exception) {
-                                RiScContentResultDTO(
-                                    riScId = id.id,
-                                    status = ContentStatus.Failure,
-                                    riScStatus = id.status,
-                                    riScContent = null,
-                                    pullRequestUrl = null,
-                                )
                             }
+                        } catch (e: Exception) {
+                            RiScContentResultDTO(
+                                riScId = id.id,
+                                status = ContentStatus.Failure,
+                                riScStatus = id.status,
+                                riScContent = null,
+                                pullRequestUrl = null,
+                            )
                         }
-                    }.awaitAll()
-                }
-
-            logger.info("Fetching ${msId.value.count()} RiScs took ${msRiSc.duration}")
-            msRiSc.value
+                    }
+                }.awaitAll()
+                    .filterNotNull()
+            riScs
         }
 
     private suspend fun GithubContentResponse.responseToRiScResult(
@@ -352,18 +366,23 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-        val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
+        try {
+            val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
 
-        return when (result.status) {
-            ProcessingStatus.UpdatedRiSc ->
-                ProcessRiScResultDTO(
+            if (result.status == ProcessingStatus.UpdatedRiSc) {
+                return ProcessRiScResultDTO(
                     uniqueRiScId,
                     ProcessingStatus.CreatedRiSc,
                     "New RiSc was created",
                 )
-
-            else -> result
+            }
+        } catch (e: Exception) {
+            throw CreatingRiScException(
+                message = "${e.message} for risk scorecard with id $uniqueRiScId",
+                riScId = uniqueRiScId,
+            )
         }
+        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     private suspend fun updateOrCreateRiSc(
@@ -375,7 +394,6 @@ class RiScService(
     ): ProcessRiScResultDTO {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
         val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
-
         val jsonSchema =
             resource?.bufferedReader().use { reader ->
                 reader?.readText() ?: throw JSONSchemaFetchException(
@@ -422,7 +440,7 @@ class RiScService(
 
             return ProcessRiScResultDTO(
                 riScId,
-                ProcessingStatus.UpdatedRiSc,
+                status = if (hasClosedPR) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
                 "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
             )
         } catch (e: Exception) {
