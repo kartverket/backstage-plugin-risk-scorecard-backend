@@ -19,8 +19,12 @@ import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.utils.Difference
+import no.risc.utils.DifferenceException
+import no.risc.utils.diff
 import no.risc.utils.migrate
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
@@ -98,6 +102,7 @@ enum class ContentStatus {
 enum class DifferenceStatus {
     Success,
     GithubFailure,
+    GithubFileNotFound,
     JsonFailure,
     DecryptionFailure,
 }
@@ -125,6 +130,26 @@ enum class RiScStatus {
     Published,
 }
 
+data class DecryptionFailure(
+    val status: ContentStatus,
+    val message: String,
+)
+
+class InternDifference(
+    val status: DifferenceStatus,
+    val differenceState: Difference,
+    val errorMessage: String = "",
+) {
+    fun toDTO(date: String = ""): DifferenceDTO {
+        return DifferenceDTO(
+            status = status,
+            differenceState = differenceState,
+            errorMessage = errorMessage,
+            defaultLastModifiedDateString = date,
+        )
+    }
+}
+
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
@@ -133,23 +158,73 @@ class RiScService(
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
-    suspend fun fetchDefaultRiSc(
+    suspend fun fetchAndDiffRiScs(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
         riScId: String,
-    ): RiScContentResultDTO {
-        return githubConnector.fetchPublishedRiSc(
-            owner = owner,
-            repository = repository,
-            id = riScId,
-            accessToken = accessTokens.githubAccessToken.value,
-        ).responseToRiScResult(
-            riScId = riScId,
-            riScStatus = RiScStatus.Published,
-            gcpAccessToken = accessTokens.gcpAccessToken,
-            pullRequestUrl = null,
-        )
+        headRiSc: String,
+    ): DifferenceDTO {
+        var lastModifiedDate = ""
+        val response: RiScContentResultDTO =
+            githubConnector.fetchPublishedRiSc(
+                owner = owner,
+                repository = repository,
+                id = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
+            ).also {
+                if (it.status == GithubStatus.Success) {
+                    lastModifiedDate = it.data.toString().substringAfterLast("lastmodified: ").substringBefore("mac").trimEnd()
+                }
+            }.responseToRiScResult(
+                riScId = riScId,
+                riScStatus = RiScStatus.Published,
+                gcpAccessToken = accessTokens.gcpAccessToken,
+                pullRequestUrl = null,
+            )
+        val result: InternDifference =
+            when (response.status) {
+                ContentStatus.Success -> {
+                    try {
+                        InternDifference(
+                            status = DifferenceStatus.Success,
+                            differenceState = diff("${response.riScContent}", headRiSc),
+                            "",
+                        )
+                    } catch (e: DifferenceException) {
+                        InternDifference(
+                            status = DifferenceStatus.JsonFailure,
+                            Difference(),
+                            "${e.message}",
+                        )
+                    }
+                }
+
+                /*
+                This case is considered valid, because if the file is not found, we can assume that the riSc
+                does not have a published version yet, and therefore there are no differences to compare.
+                The frontend handles this.
+                 */
+                ContentStatus.FileNotFound ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFileNotFound,
+                        differenceState = Difference(),
+                        "Encountered Github problem: File not found",
+                    )
+                ContentStatus.DecryptionFailed ->
+                    InternDifference(
+                        status = DifferenceStatus.DecryptionFailure,
+                        differenceState = Difference(),
+                        "Encountered ROS problem: Could not decrypt content",
+                    )
+                ContentStatus.Failure ->
+                    InternDifference(
+                        status = DifferenceStatus.GithubFailure,
+                        differenceState = Difference(),
+                        "Encountered Github problem: Github failure",
+                    )
+            }
+        return result.toDTO(lastModifiedDate)
     }
 
     suspend fun fetchAllRiScIds(
@@ -265,7 +340,7 @@ class RiScService(
                 } catch (e: Exception) {
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, e.message)
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
 
                         else ->
                             RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)

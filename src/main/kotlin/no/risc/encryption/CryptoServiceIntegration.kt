@@ -1,9 +1,9 @@
 package no.risc.encryption
 
+import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBody
@@ -19,8 +19,6 @@ data class EncryptionRequest(
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
 ) {
-    private val logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
-
     fun encrypt(
         text: String,
         config: String,
@@ -61,8 +59,7 @@ class CryptoServiceIntegration(
 
             decryptedFile
         } catch (e: Exception) {
-            logger.error("Decrypting failed!", e)
-            ""
+            throw(SOPSDecryptionException(message = "Failed to decrypt file"))
         }
     }
 }
