@@ -264,15 +264,25 @@ class GithubConnector(
     ): Boolean {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
-        val latestShaForRiSc = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+        // Attempt to get SHA for the existing draft
+        var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
+        // Determine if a new branch is needed
         val commitMessage =
-            when (latestShaForRiSc) {
-                null -> {
-                    createNewBranch(owner, repository, riScId, accessToken)
+            if (latestShaForDraft == null) {
+                createNewBranch(owner, repository, riScId, accessToken)
+                // Fetch again after creating branch as it will return null if no branch exists
+                latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+
+                // Fetch to determine if update or create
+                val latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
+                if (latestShaForPublished != null) {
+                    "Update RiSc with id: $riScId"
+                } else {
                     "Create new RiSc with id: $riScId"
                 }
-                else -> "Update RiSc with id: $riScId"
+            } else {
+                "Update RiSc with id: $riScId"
             }
 
         putFileRequestToGithub(
@@ -281,7 +291,7 @@ class GithubConnector(
             GithubWriteToFilePayload(
                 message = commitMessage,
                 content = fileContent.encodeBase64(),
-                sha = latestShaForRiSc,
+                sha = latestShaForDraft,
                 branchName = riScId,
                 author = githubAuthor,
             ),
@@ -290,9 +300,14 @@ class GithubConnector(
         val prExists =
             runBlocking {
                 val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
+
+                // Create PR if no PR already exists and the update does not require new approval, as the usual case
+                // is that approving the RiSc from the plugin triggers the creation of a new PR.
                 if (!requiresNewApproval && !prExists) {
                     createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
                 }
+
+                // If a pull request already exists (meaning the RiSc has been approved), close it if the update requires new approval
                 if (requiresNewApproval && prExists) {
                     closePullRequestForRiSc(owner, repository, riScId, accessToken)
                 }
@@ -327,6 +342,18 @@ class GithubConnector(
         accessToken: String,
     ) = try {
         getGithubResponse(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, riScId), accessToken)
+            .shaResponseDTO()
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun getSHAForPublishedRiScOrNull(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessToken: String,
+    ) = try {
+        getGithubResponse(githubHelper.uriToFindRiSc(owner, repository, riScId), accessToken)
             .shaResponseDTO()
     } catch (e: Exception) {
         null
