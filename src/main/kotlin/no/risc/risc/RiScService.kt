@@ -33,11 +33,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
-data class ProcessRiScResultDTO(
-    val riScId: String,
-    val status: ProcessingStatus,
-    val statusMessage: String,
-) {
+class ProcessRiScResultDTO(
+    riScId: String,
+    status: ProcessingStatus,
+    statusMessage: String,
+):RiScResult(riScId, status, statusMessage) {
     companion object {
         val INVALID_ACCESS_TOKENS =
             ProcessRiScResultDTO(
@@ -80,12 +80,18 @@ data class MigrationVersions(
     var toVersion: String?,
 )
 
-data class PublishRiScResultDTO(
+open class RiScResult(
     val riScId: String,
     val status: ProcessingStatus,
     val statusMessage: String,
-    val pendingApproval: PendingApprovalDTO?,
 )
+
+ class PublishRiScResultDTO(
+    riScId: String,
+    status: ProcessingStatus,
+    statusMessage: String,
+    val pendingApproval: PendingApprovalDTO?,
+): RiScResult(riScId, status, statusMessage)
 
 data class PendingApprovalDTO(
     val pullRequestUrl: String,
@@ -111,6 +117,7 @@ enum class ProcessingStatus(val message: String) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
+    UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
     InvalidAccessTokens("Invalid access tokens"),
@@ -366,7 +373,7 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-    ): ProcessRiScResultDTO = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
+    ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
 
     suspend fun createRiSc(
         owner: String,
@@ -400,7 +407,7 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-    ): ProcessRiScResultDTO {
+    ): RiScResult {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
         val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
         val jsonSchema =
@@ -436,7 +443,7 @@ class RiScService(
             cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
-            val hasClosedPR =
+            val helper =
                 githubConnector.updateOrCreateDraft(
                     owner = owner,
                     repository = repository,
@@ -447,11 +454,29 @@ class RiScService(
                     userInfo = content.userInfo,
                 )
 
-            return ProcessRiScResultDTO(
-                riScId,
-                status = if (hasClosedPR) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
-                "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
-            )
+            return when (helper.pullRequest) {
+                is GithubPullRequestObject ->
+                    PublishRiScResultDTO(
+                        riScId,
+                        status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
+                        "RiSc was updated and does not require approval - pull request was created",
+                        helper.pullRequest.toPendingApprovalDTO(),
+                    )
+
+                null ->
+                    ProcessRiScResultDTO(
+                        riScId,
+                        status = if (helper.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
+                        "Risk scorecard was updated" + if (helper.hasClosedPr) " and has to be approved by av risk owner again" else "",
+                    )
+
+                else -> {
+                    throw UpdatingRiScException(
+                        message = "Failed to update risk scorecard with id $riScId",
+                        riScId = riScId,
+                    )
+                }
+            }
         } catch (e: Exception) {
             throw UpdatingRiScException(
                 message = "Failed with error ${e.message} for risk scorecard with id $riScId",

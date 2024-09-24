@@ -87,7 +87,7 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO =
+    ): RiScResult =
         riScService.updateRiSc(
             repositoryOwner,
             repositoryName,

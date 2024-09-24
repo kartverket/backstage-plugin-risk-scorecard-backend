@@ -73,6 +73,11 @@ data class Author(val name: String?, val email: String?, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
+data class UpdateOrCreateHelper(
+    val pullRequest: GithubPullRequestObject?,
+    val hasClosedPr: Boolean,
+)
+
 @Component
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
@@ -261,7 +266,7 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
-    ): Boolean {
+    ): UpdateOrCreateHelper {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
@@ -297,23 +302,26 @@ class GithubConnector(
             ),
         ).bodyToMono<String>().block()
 
-        val prExists =
+        val updateOrCreateHelper =
             runBlocking {
                 val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
 
                 // Create PR if no PR already exists and the update does not require new approval, as the usual case
                 // is that approving the RiSc from the plugin triggers the creation of a new PR.
                 if (!requiresNewApproval && !prExists) {
-                    createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
+                   val pullRequest =  createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
+                     UpdateOrCreateHelper(pullRequest, false)
+                }
+                // If a pull request already exists (meaning the RiSc has been approved), close it if the update requires new approval
+                else if (requiresNewApproval && prExists) {
+                    closePullRequestForRiSc(owner, repository, riScId, accessToken)
+                    UpdateOrCreateHelper(null, true)
+                } else {
+                    UpdateOrCreateHelper(null, false)
                 }
 
-                // If a pull request already exists (meaning the RiSc has been approved), close it if the update requires new approval
-                if (requiresNewApproval && prExists) {
-                    closePullRequestForRiSc(owner, repository, riScId, accessToken)
-                }
-                prExists
             }
-        return requiresNewApproval && prExists
+        return updateOrCreateHelper
     }
 
     private fun closePullRequestForRiSc(
