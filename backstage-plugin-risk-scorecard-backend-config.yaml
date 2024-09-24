@@ -9,6 +9,5 @@ data:
   GITHUB_PRIVATE_KEY_BASE64_ENCODED: "base 64 encoded private key"
   RISC_FOLDER_PATH: ".security/risc"
   JSON_SCHEMA_BASE_URL: "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend"
-  ENTRA_ID_TENANT_ID: "c6ea0b0b-e867-46d4-a70b-4c05887e7f6f"
   FILENAME_PREFIX: "risc"
   FILENAME_POSTFIX: "risc"

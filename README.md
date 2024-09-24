@@ -1,39 +1,67 @@
-# Risk Scorecard (RiSc) backend
-
-## Setup
-
-Make sure you follow the instructions to set up [the plugin frontend](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend) first, as you will need it running for the backend to run.
-
+# Setup when you have other test resources
+## Run with intellij
 We recommend using IntelliJ for local development. To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
 
-Backstage needs to be running, and you need to be logged in for the plugin backend to work. This is because the internal Backstage backend is the issuer of tokens this backend uses as OAuth server. 
+Backstage needs to be running, and you need to be logged in for the plugin backend to work. This is because the internal Backstage backend is the issuer of tokens this backend uses as OAuth server.
+See [backestage frontend plugin](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend).
 
-### Environment variables
-**SOPS_AGE_KEY** the age key used to encrypt and decrypt the RiSc Analyses. The public key of this asymmetric pair will have to be added and used to encrypt all RiScs that the backend is supposed to decrypt.
-The private key of the pair will be used to decrypt. This key is the SOPS_AGE_KEY environment variable.
+## Run from the terminal
+```shell
+# set environment variables from env-file
+export $(xargs <.env)
+export $(xargs <.env.local)
 
-How to make one?
-
-``` shell
-brew install age-keygen
-age-keygen -o key.txt
+./gradlew bootRun
 ```
 
-This will create a file with the private key, and output the public key.
-Set the secret key as your environment variable, and the public key in the key groups of .sops.yaml.
+## Run using docker-compose
+To build the docker image, run:
 
-**GITHUB_PRIVATE_KEY_BASE64_ENCODED** is a private key to the GitHub App used to access the repositories of the organisation. 
-The key is used to sign jwt-tokens. Because of line ending encoding is hard, we base64 encode the private PEM key and set this as our environment variable.
+```sh
+docker image build -t backstage-plugin-risk-scorecard-backend .
+```
+To run the docker image, run:
 
-How to set it?
-- Go to your GitHub App settings, and scroll down to "Private keys"
-- Create one if you don't already have one
+```sh
+docker-compose run --build local
+```
+
+# Setup from scratch: Preconditions and environment variables
+## Github App
+The Github App is used to issue oauth2 tokens in order to communicate with the Github repositories where the risc analyses are stored.
+The permissions that are asked for is set in the GithubHelper. Permissions for the access token requested is these:
+
+```json
+{
+  "repositories": ["<the repo that the risc belongs to>"],
+  "permissions": "contents:write,pull_requests:write,statuses:read"
+}
+```
+
+### New Github App
+Set up a Github App in your organisation and give the following permissions:
+Contents: read/write, commit statuses: read/write, pull requests: read/write, and personal access token requests: read/write.
+
+**GITHUB_INSTALLATION_ID**: Locate your application, for example by using this link https://github.com/organizations/<your-org>/settings/installations. Click your application, and find the installation id in the url.
+
+**GITHUB_APP_ID**: When you have created and installed your github app you can locate it here: https://github.com/organizations/<your-org>/settings/apps/<your-app>.
+
+**GITHUB_PRIVATE_KEY_BASE64_ENCODED** is a private key generated for the service, and base64 encoded because formats are hard. Generate a new private key, and base64 encode the PEM-key.
 
 ``` shell
 echo "<  -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY----->" | base64
 ```
 
-And set this as the environment variable.
+## OAuth Server
+We use the backend of the backstage plugin as our issuer/oauth server.
+
+**ISSUER_URI**: In our case the issuer_uri has been the backstage application "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app/api/auth".
+
+## Json schema and file specific environment variables
+**JSON_SCHEMA_BASE_URL**: The json schema is used to build, validate and migrate risc analyses. The json schema we use can be found [here](https://kartverket.github.io/backstage-plugin-risk-scorecard-backend), or you can create your own.
+**RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of risc and .sops.yaml.
+**FILE_NAME_PREFIX**: Used to find the correct files.
+**FILE_NAME_PREFIX**: Used to find the correct files.
 
 ## Architecture
 
@@ -77,51 +105,6 @@ It covers our need regarding the JSON Schema validation.
 If the version of the schema is updated, ensure that the library supports it.
 
 
-## Alternative setup
-
-> [!WARNING]  
-> While we do recommend simply using IntelliJ, some may prefer to run applications through Docker or other means.
-> As this is less frequently used, these instructions may be outdated and may no longer function properly.
-
-### Docker
-
-To build the docker image, run:
-
-```sh
-docker image build -t backstage-plugin-risk-scorecard-backend .
-```
-
-#### Run the application using Docker
-
-The backend application uses a gcp-secret to obtain the GithubApp-private key at the moment. In order to access this we
-need a service account with permission to read them.
-Configure gcloud with docker, using ```gcloud auth configure-docker```, remember to login first - either using your own
-account or by impersonating a service account.
-
-To run the docker image, run:
-
-```sh
-docker run -it -p 8080:8080 -e GCP_KMS_RESOURCE_PATH=${GCP_KMS_RESOURCE_PATH} -e GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID} -e GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED} backstage-plugin-risk-scorecard-backend
-```
-
-#### Run the application using kubernetes
-
-The same applies for the gcp application credentials here, so be sure to add a permissions for gcp.
-
-````sh
-# configmap 
-kubectl apply -f backstage-plugin-risk-scorecard-backend-config.yaml
-
-# app deployment
-kubectl apply -f backstage-plugin-risk-scorecard-backend.yaml
-````
-
-##### Minikube for local testing
-
-````sh
-gcloud auth configure-docker
-# to be able to fetch gcp-secret in the app (add)
-minikube addons enable gcp-auth
-# to be able to pull image from gcp
-minikube addons configure registry-creds && minikube addons enable registry-creds
-````
+# Common errors
+## JWT Decoder Bean fails to initialize
+This is most likely due to it not being able to get the jwks keys, or the key list might be empty. Try to restart the backstage app.
