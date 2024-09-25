@@ -37,7 +37,7 @@ class ProcessRiScResultDTO(
     riScId: String,
     status: ProcessingStatus,
     statusMessage: String,
-):RiScResult(riScId, status, statusMessage) {
+) : RiScResult(riScId, status, statusMessage) {
     companion object {
         val INVALID_ACCESS_TOKENS =
             ProcessRiScResultDTO(
@@ -86,12 +86,12 @@ open class RiScResult(
     val statusMessage: String,
 )
 
- class PublishRiScResultDTO(
+class PublishRiScResultDTO(
     riScId: String,
     status: ProcessingStatus,
     statusMessage: String,
     val pendingApproval: PendingApprovalDTO?,
-): RiScResult(riScId, status, statusMessage)
+) : RiScResult(riScId, status, statusMessage)
 
 data class PendingApprovalDTO(
     val pullRequestUrl: String,
