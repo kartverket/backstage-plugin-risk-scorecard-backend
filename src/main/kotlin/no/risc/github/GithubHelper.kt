@@ -55,13 +55,12 @@ data class GithubCreateNewAccessTokenForRepository(
             "statuses" to "read",
         ),
 ) {
-    fun toContentBody(): String {
-        return "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
+    fun toContentBody(): String =
+        "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
             permissions.map {
                 "\"${it.key}\":\"${it.value}\""
             }.joinToString(",")
         }}}"
-    }
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
