@@ -310,7 +310,6 @@ class GithubConnector(
 
                 // Latest commit timestamp on default branch that includes changes on this riSc
                 val latestCommitTimestamp = fetchLatestCommitTimestampOnDefault(owner, repository, accessToken, riScId)
-                println(latestCommitTimestamp)
 
                 // Check if previous commits on draft branch ahead of main requires approval
                 val commitMessages =
@@ -321,7 +320,7 @@ class GithubConnector(
                             accessToken,
                             riScId,
                             it,
-                        ).map { it.commit }.filterNot {it.committer.date == latestCommitTimestamp}
+                        ).map { it.commit }.filterNot { it.committer.date == latestCommitTimestamp }
                     }
 
                 val commitsAheadOfMainRequiresApproval =
