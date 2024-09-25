@@ -12,6 +12,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.encodeBase64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -54,6 +55,7 @@ data class CreateContentInfo(
     }
 }
 
+@Component
 class GithubContentConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
@@ -130,7 +132,7 @@ class GithubContentConnector(
         commitMessage: String = "Update RiSc with id: $riscId",
         author: Author,
         accessToken: GithubAccessToken,
-    ) {
+    ): UpdateContentInfo {
         val result =
             try {
                 githubPUT(
@@ -150,7 +152,7 @@ class GithubContentConnector(
                 null
             }
 
-        when (result.isNullOrBlank()) {
+        return when (result.isNullOrBlank()) {
             true -> UpdateContentInfo.NOT_SUCCESSFUL
             false -> UpdateContentInfo.SUCCESSFUL
         }
@@ -170,6 +172,30 @@ class GithubContentConnector(
                 ).shaResponseDTO()
             } catch (e: Exception) {
                 logger.error("Could not find branch for risc id $riscId", e)
+
+                null
+            }
+
+        return when (result.isNullOrBlank()) {
+            true -> BranchInfo.BRANCH_DOES_NOT_EXIST
+            false -> BranchInfo(exists = true, latestSha = result)
+        }
+    }
+
+    fun getLatestShaOfBranch(
+        owner: String,
+        repository: String,
+        branchName: String,
+        accessToken: GithubAccessToken,
+    ): BranchInfo {
+        val result =
+            try {
+                githubGET(
+                    uri = githubHelper.uriToFindBranch(owner, repository, branchName),
+                    accessToken = accessToken.value,
+                ).shaResponseDTO()
+            } catch (e: Exception) {
+                logger.error("Could not find main branch", e)
 
                 null
             }

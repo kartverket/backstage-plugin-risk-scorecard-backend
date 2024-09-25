@@ -103,11 +103,11 @@ class GithubHelper(
         repository: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
 
-    fun uriToFindExistingBranchForRiSc(
+    fun uriToFindBranch(
         owner: String,
         repository: String,
-        riScId: String,
-    ): String = "/$owner/$repository/git/matching-refs/heads/$riScId"
+        branchName: String,
+    ): String = "/$owner/$repository/git/matching-refs/heads/$branchName"
 
     fun uriToFindRiScOnDraftBranch(
         owner: String,
