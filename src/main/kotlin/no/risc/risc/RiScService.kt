@@ -466,8 +466,18 @@ class RiScService(
                 null ->
                     ProcessRiScResultDTO(
                         riScId,
-                        status = if (riScApprovalPRStatus.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
-                        "Risk scorecard was updated" + if (riScApprovalPRStatus.hasClosedPr) " and has to be approved by av risk owner again" else "",
+                        status =
+                            if (riScApprovalPRStatus.hasClosedPr) {
+                                ProcessingStatus.UpdatedRiScRequiresNewApproval
+                            } else {
+                                ProcessingStatus.UpdatedRiSc
+                            },
+                        "Risk scorecard was updated" +
+                            if (riScApprovalPRStatus.hasClosedPr) {
+                                " and has to be approved by av risk owner again"
+                            } else {
+                                ""
+                            },
                     )
 
                 else -> {
