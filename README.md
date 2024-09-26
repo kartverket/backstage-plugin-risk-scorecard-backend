@@ -67,9 +67,24 @@ For local development the **ISSUER_URI** can be set to "http://localhost:7007/ap
 **FILE_NAME_PREFIX**: Used to find the correct files.
 **FILE_NAME_PREFIX**: Used to find the correct files.
 
-## Architecture
 
-### High level components
+# Naming of RiSc files and branches
+Because RoS-as-Code is based on using Github for storage, we need to set som rules on how things are to be named.
+This is to be able to determine the states of the RiSc analyses and to be able to detect the changes that are being made.
+
+## RiSc file names
+All RiSc analyses needs to be named using a specific convention. It has to be stored in the .security/risc/ folder, and be named FILENAME_PREFIX-<5 random numbers and characters>.FILENAME_POSTFIX.yaml.
+
+## RiSc branch names
+The RiSc branch-name needs to have the same name as the RiSc; FILENAME_PREFIX-<5 random numbers and characters>.
+
+## Commit messages determine the need for approvals
+Commit messages are used to determine whether the changes in the draft branch has to be approved by a RiSc-owner or not. 
+Because we only rely on GitHub we have used the commit messages to make the decision. If the commit log from the latest published version until the latest commit on the draft branch does not include commits with "needs approval", we can publish without approval. 
+
+# Architecture
+
+## High level components
 
 ```mermaid
 flowchart TD
@@ -77,11 +92,11 @@ flowchart TD
      style B fill:#FFBF00,color:black
 ```
 
-### Simplified Architecture
+## Simplified Architecture
 
 ![RiSc Architecture](ROS_as_code_arkitektur.png)
 
-### Simplified Git RiSC-flow
+## Simplified Git RiSC-flow
 
 ```mermaid
 %%{init: { 'logLevel': 'debug', 'theme': 'base' } }%%
@@ -99,7 +114,7 @@ gitGraph
    commit
 ```
 
-### JSON Schema validation
+## JSON Schema validation
 
 The JSON schema validation is done using the [json-kotlin-schema](https://github.com/pwall567/json-kotlin-schema)
 library version 0.44.  
