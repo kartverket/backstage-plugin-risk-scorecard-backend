@@ -6,18 +6,23 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
-import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.RiScCouldNotCreateNewException
+import no.risc.exception.exceptions.RiScCouldNotUpdateException
 import no.risc.exception.exceptions.RiScNotValidException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
-import no.risc.exception.exceptions.UpdatingRiScException
-import no.risc.github.Author
+import no.risc.github.GithubAccessToken
 import no.risc.github.GithubConnector
+import no.risc.github.GithubContentConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
+import no.risc.github.models.Author
+import no.risc.github.models.BranchInfo
+import no.risc.github.models.CreateContentStatus
+import no.risc.github.models.UpdateContentStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.DifferenceDTO
@@ -152,6 +157,11 @@ class InternDifference(
             defaultLastModifiedDateString = date,
         )
 }
+
+data class RiScSchemaValidation(
+    val isValid: Boolean,
+    val errorMessage: String = "",
+)
 
 @Service
 class RiScService(
@@ -384,7 +394,44 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-    ): ProcessRiScResultDTO = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
+    ): ProcessRiScResultDTO {
+        val encryptedData: String =
+            validateAndEncryptData(content, riScId, owner, repository, accessTokens)
+        val contentAuthor = Author(name = content.userInfo.name, email = content.userInfo.email, date = Date())
+
+        val updateRiscStatus: ProcessRiScResultDTO =
+            updateExistingRisc(owner, repository, riScId, encryptedData, accessTokens, contentAuthor)
+        if (updateRiscStatus.status !=
+            ProcessingStatus.UpdatedRiSc
+        ) {
+            throw RiScCouldNotUpdateException("Could not update existing RiSc", riScId)
+        }
+
+        val pullRequestStatus = githubContentConnector.doesPRExist(owner, repository, riScId, accessTokens.githubAccessToken)
+        if (!pullRequestStatus.exists()) {
+            return ProcessRiScResultDTO(
+                riScId,
+                ProcessingStatus.UpdatedRiSc,
+                statusMessage = "Updated",
+            )
+        }
+
+        val closePrStatus = githubContentConnector.closePR(owner, repository, accessTokens.githubAccessToken, riScId)
+        return when {
+            closePrStatus.closedSuccessfully() ->
+                ProcessRiScResultDTO(
+                    riScId,
+                    ProcessingStatus.UpdatedRiSc,
+                    statusMessage = "Updated",
+                )
+            else ->
+                ProcessRiScResultDTO(
+                    riScId,
+                    ProcessingStatus.ErrorWhenUpdatingRiSc,
+                    statusMessage = "Failed to update RiSc with id $riScId",
+                )
+        }
+    }
 
     suspend fun createRiSc(
         owner: String,
@@ -393,48 +440,35 @@ class RiScService(
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-        try {
-            val author = no.risc.risc.Author(name = content.userInfo.name, email = content.userInfo.email, date = Date())
-            val result = createNewRiSc(owner, repository, uniqueRiScId, content, accessTokens, author)
+        val contentAuthor = Author(name = content.userInfo.name, email = content.userInfo.email, date = Date())
 
-            if (result == ProcessingStatus.UpdatedRiSc) {
-                return ProcessRiScResultDTO(
-                    uniqueRiScId,
-                    ProcessingStatus.CreatedRiSc,
-                    "New RiSc was created",
-                )
-            }
-        } catch (e: Exception) {
-            throw CreatingRiScException(
-                message = "${e.message} for risk scorecard with id $uniqueRiScId",
-                riScId = uniqueRiScId,
+        val newBranchInfo = createNewDraftBranchForRiSc(owner, repository, uniqueRiScId, accessTokens)
+        if (!newBranchInfo.exists) throw RiScCouldNotCreateNewException("Could not create new branch for new RiSc", uniqueRiScId)
+
+        val encryptedData = validateAndEncryptData(content, uniqueRiScId, owner, repository, accessTokens)
+        val newFileResult = createNewRiScFile(owner, repository, uniqueRiScId, encryptedData, accessTokens.githubAccessToken, contentAuthor)
+
+        return if (newFileResult != ProcessingStatus.UpdatedRiSc) {
+            ProcessRiScResultDTO(
+                uniqueRiScId,
+                ProcessingStatus.ErrorWhenCreatingRiSc,
+                "Error when creating new RiSc.",
+            )
+        } else {
+            ProcessRiScResultDTO(
+                uniqueRiScId,
+                ProcessingStatus.CreatedRiSc,
+                "New RiSc was created",
             )
         }
-        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
-    private suspend fun createNewRiSc(
+    private suspend fun createNewDraftBranchForRiSc(
         owner: String,
         repository: String,
         riScId: String,
-        content: RiScWrapperObject,
         accessTokens: AccessTokens,
-        author: no.risc.risc.Author,
-    ): ProcessingStatus {
-        val validatedRiSc = validateRiScWithSchemaVersion(content, riScId)
-        if (!validatedRiSc.isValid) {
-            throw RiScNotValidException(
-                message = "Failed when validating RiSc with error message: ${validatedRiSc.errorMessage}",
-                riScId = riScId,
-                validationError = validatedRiSc.errorMessage,
-            )
-        }
-
-        val config = getEncryptionConfig(owner, repository, accessTokens, riScId)
-
-        val encryptedData: String =
-            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-
+    ): BranchInfo {
         val mainBranchInfo =
             githubContentConnector.getLatestShaOfBranch(
                 owner = owner,
@@ -452,26 +486,84 @@ class RiScService(
                 accessToken = accessTokens.githubAccessToken,
             )
 
+        if (!draftBranchInfo.exists) throw RiScCouldNotCreateNewException("Could not create new RiSc for RiSc with id $riScId", riScId)
+
+        return draftBranchInfo
+    }
+
+    private suspend fun createNewRiScFile(
+        owner: String,
+        repository: String,
+        riScId: String,
+        encryptedData: String,
+        accessToken: GithubAccessToken,
+        contentAuthor: Author,
+    ): ProcessingStatus {
         val createBranchContentInfo =
             githubContentConnector.createContent(
                 owner = owner,
                 repository = repository,
                 fileContent = encryptedData,
                 riscId = riScId,
-                author = author,
-                accessToken = accessTokens.githubAccessToken,
+                contentAuthor = contentAuthor,
+                accessToken = accessToken,
             )
 
-        return if (createBranchContentInfo.success) ProcessingStatus.CreatedRiSc else ProcessingStatus.ErrorWhenCreatingRiSc
+        return when (createBranchContentInfo) {
+            CreateContentStatus.Success -> ProcessingStatus.CreatedRiSc
+            CreateContentStatus.Failure -> ProcessingStatus.ErrorWhenCreatingRiSc
+        }
     }
 
-    private suspend fun updateOrCreateRiSc(
+    private suspend fun updateExistingRisc(
         owner: String,
         repository: String,
         riScId: String,
-        content: RiScWrapperObject,
+        encryptedData: String,
         accessTokens: AccessTokens,
+        contentAuthor: Author,
     ): ProcessRiScResultDTO {
+        val existingDraftBranchInfo = githubContentConnector.doesBranchExist(owner, repository, riScId, accessTokens.githubAccessToken)
+
+        val draftBranchInfo =
+            if (!existingDraftBranchInfo.exists) {
+                val mainBranchInfo = githubContentConnector.getLatestShaOfBranch(owner, repository, "main", accessTokens.githubAccessToken)
+
+                githubContentConnector.createBranch(
+                    owner = owner,
+                    repository = repository,
+                    latestShaOfMain = mainBranchInfo.latestSha,
+                    riscId = riScId,
+                    accessToken = accessTokens.githubAccessToken,
+                )
+            } else {
+                existingDraftBranchInfo
+            }
+
+        val updateContentInfo =
+            githubContentConnector.updateContent(
+                owner = owner,
+                repository = repository,
+                sha = draftBranchInfo.latestSha,
+                updatedFileContent = encryptedData,
+                riscId = riScId,
+                contentAuthor = contentAuthor,
+                accessToken = accessTokens.githubAccessToken,
+            )
+
+        return when (updateContentInfo) {
+            UpdateContentStatus.Success -> ProcessRiScResultDTO(riScId, ProcessingStatus.UpdatedRiSc, "Updated RiSc")
+            UpdateContentStatus.Failure -> ProcessRiScResultDTO(riScId, ProcessingStatus.ErrorWhenUpdatingRiSc, "Could not update RiSc")
+        }
+    }
+
+    private fun validateAndEncryptData(
+        content: RiScWrapperObject,
+        riScId: String,
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+    ): String {
         val validatedRiSc = validateRiScWithSchemaVersion(content, riScId)
         if (!validatedRiSc.isValid) {
             throw RiScNotValidException(
@@ -485,30 +577,7 @@ class RiScService(
 
         val encryptedData: String =
             cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
-
-        try {
-            val hasClosedPR =
-                githubConnector.updateOrCreateDraft(
-                    owner = owner,
-                    repository = repository,
-                    riScId = riScId,
-                    fileContent = encryptedData,
-                    requiresNewApproval = content.isRequiresNewApproval,
-                    accessTokens = accessTokens,
-                    userInfo = content.userInfo,
-                )
-
-            return ProcessRiScResultDTO(
-                riScId,
-                status = if (hasClosedPR) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
-                "Risk scorecard was updated" + if (hasClosedPR) " and has to be approved by av risk owner again" else "",
-            )
-        } catch (e: Exception) {
-            throw UpdatingRiScException(
-                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
-                riScId = riScId,
-            )
-        }
+        return encryptedData
     }
 
     private fun getEncryptionConfig(
@@ -529,11 +598,6 @@ class RiScService(
         val config = removePathRegex(sopsConfig.data())
         return config
     }
-
-    data class RiScSchemaValidation(
-        val isValid: Boolean,
-        val errorMessage: String = "",
-    )
 
     private fun validateRiScWithSchemaVersion(
         content: RiScWrapperObject,
