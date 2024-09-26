@@ -8,6 +8,5 @@ data:
   GITHUB_INSTALLATION_ID: "48036152"
   GITHUB_PRIVATE_KEY_BASE64_ENCODED: "base 64 encoded private key"
   RISC_FOLDER_PATH: ".security/risc"
-  JSON_SCHEMA_BASE_URL: "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend"
   FILENAME_PREFIX: "risc"
   FILENAME_POSTFIX: "risc"

@@ -1,4 +1,8 @@
 # Setup when you have other test resources
+
+An environment file has been provided with all environment variables that are needed to run the application. 
+It is recomennded to create a local environment file for secrets and personal configuration. ```.env.local``` is added to the .gitignore.
+
 ## Run with intellij
 We recommend using IntelliJ for local development. To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
 
@@ -56,10 +60,10 @@ echo "<  -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY----->" | b
 We use the backend of the backstage plugin as our issuer/oauth server.
 
 **ISSUER_URI**: In our case the issuer_uri has been the backstage application "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app/api/auth".
+For local development the **ISSUER_URI** can be set to "http://localhost:7007/api/auth".
 
 ## Json schema and file specific environment variables
-**JSON_SCHEMA_BASE_URL**: The json schema is used to build, validate and migrate risc analyses. The json schema we use can be found [here](https://kartverket.github.io/backstage-plugin-risk-scorecard-backend), or you can create your own.
-**RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of risc and .sops.yaml.
+**RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of risc and .sops.yaml.s
 **FILE_NAME_PREFIX**: Used to find the correct files.
 **FILE_NAME_PREFIX**: Used to find the correct files.
 

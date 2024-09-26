@@ -46,11 +46,6 @@ spec:
                 configMapKeyRef:
                   name: backstage-plugin-risk-scorecard-backend
                   key: RISC_FOLDER_PATH
-            - name: JSON_SCHEMA_BASE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: backstage-plugin-risk-scorecard-backend
-                  key: JSON_SCHEMA_BASE_URL
             - name: FILENAME_PREFIX
               valueFrom:
                 configMapKeyRef:
