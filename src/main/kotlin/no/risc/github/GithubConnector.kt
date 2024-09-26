@@ -73,7 +73,7 @@ data class Author(val name: String?, val email: String?, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
-data class UpdateOrCreateHelper(
+data class RiScApprovalPRStatus(
     val pullRequest: GithubPullRequestObject?,
     val hasClosedPr: Boolean,
 )
@@ -266,7 +266,7 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
-    ): UpdateOrCreateHelper {
+    ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
@@ -304,7 +304,7 @@ class GithubConnector(
             ),
         ).bodyToMono<String>().block()
 
-        val updateOrCreateHelper =
+        val riScApprovalPRStatus =
             runBlocking {
                 val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
 
@@ -342,15 +342,15 @@ class GithubConnector(
                             accessTokens,
                             userInfo,
                         )
-                    UpdateOrCreateHelper(pullRequest, false)
+                    RiScApprovalPRStatus(pullRequest, false)
                 } else if (requiresNewApproval && prExists) {
                     closePullRequestForRiSc(owner, repository, riScId, accessToken)
-                    UpdateOrCreateHelper(null, true)
+                    RiScApprovalPRStatus(null, true)
                 } else {
-                    UpdateOrCreateHelper(null, false)
+                    RiScApprovalPRStatus(null, false)
                 }
             }
-        return updateOrCreateHelper
+        return riScApprovalPRStatus
     }
 
     private fun closePullRequestForRiSc(

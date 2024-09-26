@@ -443,7 +443,7 @@ class RiScService(
             cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
-            val helper =
+            val riScApprovalPRStatus =
                 githubConnector.updateOrCreateDraft(
                     owner = owner,
                     repository = repository,
@@ -454,20 +454,20 @@ class RiScService(
                     userInfo = content.userInfo,
                 )
 
-            return when (helper.pullRequest) {
+            return when (riScApprovalPRStatus.pullRequest) {
                 is GithubPullRequestObject ->
                     PublishRiScResultDTO(
                         riScId,
                         status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
                         "RiSc was updated and does not require approval - pull request was created",
-                        helper.pullRequest.toPendingApprovalDTO(),
+                        riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
                     )
 
                 null ->
                     ProcessRiScResultDTO(
                         riScId,
-                        status = if (helper.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
-                        "Risk scorecard was updated" + if (helper.hasClosedPr) " and has to be approved by av risk owner again" else "",
+                        status = if (riScApprovalPRStatus.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
+                        "Risk scorecard was updated" + if (riScApprovalPRStatus.hasClosedPr) " and has to be approved by av risk owner again" else "",
                     )
 
                 else -> {
