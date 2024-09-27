@@ -89,11 +89,11 @@ class RiScController(
         @RequestBody riSc: RiScWrapperObject,
     ): ProcessRiScResultDTO =
         riScService.updateRiSc(
-            repositoryOwner,
-            repositoryName,
-            id,
-            riSc,
-            getAccessTokens(gcpAccessToken, repositoryName),
+            owner = repositoryOwner,
+            repository = repositoryName,
+            riScId = id,
+            content = riSc,
+            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])

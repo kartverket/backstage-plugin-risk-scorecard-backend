@@ -6,8 +6,10 @@ import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.github.models.Author
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
+import no.risc.github.models.GithubUpdateFilePayload
 import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -24,7 +26,6 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
 
@@ -49,37 +50,12 @@ enum class GithubStatus {
     InternalError, // TODO
 }
 
-data class GithubWriteToFilePayload(
-    val message: String,
-    val content: String,
-    val sha: String? = null,
-    val branchName: String,
-    val author: Author,
-) {
-    fun toContentBody(): String =
-        when (sha) {
-            null ->
-                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
-
-            else ->
-                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
-                    "\"sha\":\"$sha\""
-        }
-}
-
-data class Author(val name: String?, val email: String?, val date: Date) {
-    fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
-}
-
 @Component
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     private val githubHelper: GithubHelper,
-) :
-    WebClientConnector("https://api.github.com/repos") {
+) : WebClientConnector("https://api.github.com/repos") {
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -263,7 +239,7 @@ class GithubConnector(
         userInfo: UserInfo,
     ): Boolean {
         val accessToken = accessTokens.githubAccessToken.value
-        val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
+        val githubContentAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
         var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
@@ -288,12 +264,12 @@ class GithubConnector(
         putFileRequestToGithub(
             githubHelper.uriToPutRiScOnDraftBranch(owner, repository, riScId),
             accessToken,
-            GithubWriteToFilePayload(
+            GithubUpdateFilePayload(
                 message = commitMessage,
                 content = fileContent.encodeBase64(),
                 sha = latestShaForDraft,
                 branchName = riScId,
-                author = githubAuthor,
+                author = githubContentAuthor,
             ),
         ).bodyToMono<String>().block()
 
@@ -464,7 +440,7 @@ class GithubConnector(
     private fun putFileRequestToGithub(
         uri: String,
         accessToken: String,
-        writePayload: GithubWriteToFilePayload,
+        writePayload: GithubUpdateFilePayload,
     ) = webClient
         .put()
         .uri(uri)
@@ -479,7 +455,8 @@ class GithubConnector(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
+        webClient
+            .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
@@ -490,17 +467,11 @@ class GithubConnector(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
+        webClient
+            .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
-
-    private fun getGithubResponseNoAuth(uri: String): ResponseSpec =
-        webClient.get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.raw+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
 
@@ -510,17 +481,31 @@ class GithubConnector(
     private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun List<FileNameDTO>.riScIdentifiersPublished(): List<RiScIdentifier> =
-        this.filter { it.value.endsWith(".$filenamePostfix.yaml") }
+        this
+            .filter { it.value.endsWith(".$filenamePostfix.yaml") }
             .map { RiScIdentifier(it.value.substringBefore(".$filenamePostfix"), RiScStatus.Published) }
 
     private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval, it.url) }
-            .filter { it.id.startsWith("$filenamePrefix-") }
+        this
+            .map {
+                RiScIdentifier(
+                    it.head.ref
+                        .split("/")
+                        .last(),
+                    RiScStatus.SentForApproval,
+                    it.url,
+                )
+            }.filter { it.id.startsWith("$filenamePrefix-") }
 
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
-    private fun ResponseSpec.decodedFileContent(): String? = this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
+    private fun ResponseSpec.decodedFileContent(): String? =
+        this
+            .bodyToMono<FileContentDTO>()
+            .block()
+            ?.value
+            ?.decodeBase64()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
