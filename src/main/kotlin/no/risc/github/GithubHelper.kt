@@ -73,6 +73,23 @@ data class GithubPullRequestObject(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubCommitObject(
+    val commit: Commit,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Commit(
+    val message: String,
+    val committer: Committer,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Committer(
+    val date: String,
+    val name: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubPullRequestHead(
     val ref: String,
 )
@@ -188,4 +205,17 @@ class GithubHelper(
 
     fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)
+
+    fun uriToFetchAllCommitsOnBranchSince(
+        owner: String,
+        repository: String,
+        branchName: String,
+        since: String,
+    ): String = "/$owner/$repository/commits?sha=$branchName&since=$since"
+
+    fun uriToFetchCommitOnMain(
+        owner: String,
+        repository: String,
+        riScId: String,
+    ): String = "/$owner/$repository/commits?sha=main&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
 }

@@ -73,6 +73,11 @@ data class Author(val name: String?, val email: String?, val date: Date) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
+data class RiScApprovalPRStatus(
+    val pullRequest: GithubPullRequestObject?,
+    val hasClosedPr: Boolean,
+)
+
 @Component
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
@@ -261,13 +266,15 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
-    ): Boolean {
+    ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
         var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+        var latestShaForPublished: String? = ""
 
-        // Determine if a new branch is needed
+        // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
+        // through updating.
         val commitMessage =
             if (latestShaForDraft == null) {
                 createNewBranch(owner, repository, riScId, accessToken)
@@ -275,14 +282,14 @@ class GithubConnector(
                 latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
                 // Fetch to determine if update or create
-                val latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
+                latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
                 if (latestShaForPublished != null) {
-                    "Update RiSc with id: $riScId"
+                    "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
                 } else {
-                    "Create new RiSc with id: $riScId"
+                    "Create new RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
                 }
             } else {
-                "Update RiSc with id: $riScId"
+                "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
             }
 
         putFileRequestToGithub(
@@ -297,23 +304,53 @@ class GithubConnector(
             ),
         ).bodyToMono<String>().block()
 
-        val prExists =
+        val riScApprovalPRStatus =
             runBlocking {
                 val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
 
-                // Create PR if no PR already exists and the update does not require new approval, as the usual case
-                // is that approving the RiSc from the plugin triggers the creation of a new PR.
-                if (!requiresNewApproval && !prExists) {
-                    createPullRequestForRiSc(owner, repository, riScId, requiresNewApproval, accessTokens, userInfo)
-                }
+                // Latest commit timestamp on default branch that includes changes on this riSc
+                val latestCommitTimestamp = fetchLatestCommitTimestampOnDefault(owner, repository, accessToken, riScId)
 
-                // If a pull request already exists (meaning the RiSc has been approved), close it if the update requires new approval
-                if (requiresNewApproval && prExists) {
+                // Check if previous commits on draft branch ahead of main requires approval
+                val commitMessages =
+                    latestCommitTimestamp?.let { it ->
+                        fetchCommitsSinceLastCommitOnMain(
+                            owner,
+                            repository,
+                            accessToken,
+                            riScId,
+                            it,
+                        ).map { it.commit }.filterNot { it.committer.date == latestCommitTimestamp }
+                    }
+
+                val commitsAheadOfMainRequiresApproval =
+                    commitMessages?.any { it.message.contains("requires new approval") } ?: true
+
+                // If no PR already exists and the update does not require new approval, as the usual case
+                // is that approving the RiSc from the plugin triggers the creation of a new PR, and no commits ahead
+                // of main requires approval, then create a new PR.
+
+                // else if a pull request already exists (meaning the RiSc has been approved)
+                // close it if the update requires new approval
+                if (!requiresNewApproval && !prExists && !commitsAheadOfMainRequiresApproval) {
+                    val pullRequest =
+                        createPullRequestForRiSc(
+                            owner,
+                            repository,
+                            riScId,
+                            requiresNewApproval,
+                            accessTokens,
+                            userInfo,
+                        )
+                    RiScApprovalPRStatus(pullRequest, false)
+                } else if (requiresNewApproval && prExists) {
                     closePullRequestForRiSc(owner, repository, riScId, accessToken)
+                    RiScApprovalPRStatus(null, true)
+                } else {
+                    RiScApprovalPRStatus(null, false)
                 }
-                prExists
             }
-        return requiresNewApproval && prExists
+        return riScApprovalPRStatus
     }
 
     private fun closePullRequestForRiSc(
@@ -396,6 +433,33 @@ class GithubConnector(
                 .pullRequestResponseDTOs()
         } catch (e: Exception) {
             emptyList()
+        }
+
+    private fun fetchCommitsSinceLastCommitOnMain(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        riScId: String,
+        since: String,
+    ): List<GithubCommitObject> =
+        try {
+            getGithubResponse(githubHelper.uriToFetchAllCommitsOnBranchSince(owner, repository, riScId, since), accessToken)
+                .bodyToMono<List<GithubCommitObject>>().block() ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+    private fun fetchLatestCommitTimestampOnDefault(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        riScId: String,
+    ): String? =
+        try {
+            getGithubResponse(githubHelper.uriToFetchCommitOnMain(owner, repository, riScId), accessToken)
+                .timeStampLatestCommitResponse()
+        } catch (e: Exception) {
+            null
         }
 
     fun createPullRequestForRiSc(
@@ -508,6 +572,9 @@ class GithubConnector(
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
     private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+
+    private fun ResponseSpec.timeStampLatestCommitResponse(): String? =
+        this.bodyToMono<List<GithubCommitObject>>().block()?.firstOrNull()?.commit?.committer?.date
 
     private fun List<FileNameDTO>.riScIdentifiersPublished(): List<RiScIdentifier> =
         this.filter { it.value.endsWith(".$filenamePostfix.yaml") }

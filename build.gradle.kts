@@ -18,6 +18,9 @@ java {
 
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://dist.wso2.org/maven2/public")
+    }
 }
 
 dependencies {
@@ -43,9 +46,7 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.google.auth:google-auth-library-credentials:1.24.1")
-    implementation("com.google.cloud:google-cloud-secretmanager:2.48.0") {
-        exclude(group = "commons-logging", module = "commons-logging")
-    }
+    implementation("com.google.guava:guava:33.3.1-jre")
 
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
