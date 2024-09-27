@@ -19,6 +19,7 @@ import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.kubernetes.KubernetesService
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
@@ -162,6 +163,7 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
+    private val kubernetesService: KubernetesService,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
@@ -374,6 +376,19 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
     ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
+
+    suspend fun initializeRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+    ): ProcessRiScResultDTO {
+        kubernetesService.applyKubernetesJob(
+            kubernetesJobName = ,
+            imageUrl = ,
+            kubernetesSecret = ,
+            envVars =
+        )
+    }
 
     suspend fun createRiSc(
         owner: String,

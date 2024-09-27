@@ -51,6 +51,8 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
 
+    implementation("io.kubernetes:client-java:21.0.1")
+
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")

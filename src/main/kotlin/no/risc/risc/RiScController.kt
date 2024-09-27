@@ -80,6 +80,18 @@ class RiScController(
             content = riSc,
         )
 
+    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
+    suspend fun initializeRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): ProcessRiScResultDTO =
+        riScService.initializeRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+        )
+
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun editRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
