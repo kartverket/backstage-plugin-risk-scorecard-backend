@@ -68,7 +68,6 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<Test> {
-    environment["GCP_KMS_RESOURCE_PATH"] = "projects/spire-ros-5lmr/locations/eur4/keyRings/ROS/cryptoKeys/ros-as-code"
     environment["GITHUB_APP_ID"] = "828331"
     environment["GITHUB_APP_INSTALLATION_ID"] = "47304902"
     environment["PRIVATE_KEY_SECRET_NAME"] = "projects/spire-ros-5lmr/secrets/GITHUB_APP_PRIVATE_KEY/versions/1"

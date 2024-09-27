@@ -26,10 +26,8 @@
       <env name="GITHUB_INSTALLATION_ID" value="48036152" />
       <env name="GITHUB_PRIVATE_KEY_BASE64_ENCODED" value="base64 encoded github app private key" />
       <env name="RISC_PATH" value=".security/ros" />
-      <env name="ENTRA_ID_TENANT_ID" value="c6ea0b0b-e867-46d4-a70b-4c05887e7f6f" />
       <env name="FILENAME_PREFIX" value="ros" />
       <env name="FILENAME_POSTFIX" value="ros" />
-      <env name="JSON_SCHEMA_BASE_URL" value="https://kartverket.github.io/backstage-plugin-risk-scorecard-backend" />
     </envs>
     <method v="2" />
   </configuration>
