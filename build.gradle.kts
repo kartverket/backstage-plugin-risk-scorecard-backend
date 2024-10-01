@@ -36,7 +36,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
-    implementation("io.netty:netty-all:4.1.112.Final")
+    implementation("io.netty:netty-all:4.1.114.Final")
 
     implementation("io.micrometer:micrometer-registry-prometheus")
 
