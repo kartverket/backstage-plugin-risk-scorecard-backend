@@ -6,10 +6,7 @@ import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.risc.models.DifferenceDTO
-import no.risc.risc.models.DifferenceRequestBody
-import no.risc.risc.models.RiScWrapperObject
-import no.risc.risc.models.UserInfo
+import no.risc.risc.models.*
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -82,15 +79,33 @@ class RiScController(
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
     suspend fun initializeRiSc(
-        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ProcessRiScResultDTO =
-        riScService.initializeRiSc(
+        @RequestBody body: InitializeRiScRequestBody,
+    ): ResponseEntity<Unit> {
+       riScService.scheduleInitializeRiSc(
             owner = repositoryOwner,
             repository = repositoryName,
-            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+            gcpProjectId = body.gcpProjectId,
+            securityChampionPublicKey = body.publicAgeKey
         )
+        return ResponseEntity.accepted().build()
+    }
+
+    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize/finished")
+    suspend fun storeInitializedRiSc(
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @RequestBody body: StoreInitializedRiScRequestBody,
+
+    ) = riScService.storeInitializedRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            sopsConfig = body.sopsConfig,
+            initializedRiSc = body.initializedRiSc,
+        )
+
+
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun editRiSc(

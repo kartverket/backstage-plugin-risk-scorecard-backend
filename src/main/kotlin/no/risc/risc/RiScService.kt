@@ -5,29 +5,19 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
+import no.risc.config.AirTableConfig
+import no.risc.config.SkiperatorConfig
 import no.risc.encryption.CryptoServiceIntegration
-import no.risc.exception.exceptions.CreatingRiScException
-import no.risc.exception.exceptions.JSONSchemaFetchException
-import no.risc.exception.exceptions.RiScNotValidException
-import no.risc.exception.exceptions.SOPSDecryptionException
-import no.risc.exception.exceptions.SopsConfigFetchException
-import no.risc.exception.exceptions.UpdatingRiScException
-import no.risc.github.GithubConnector
-import no.risc.github.GithubContentResponse
-import no.risc.github.GithubPullRequestObject
-import no.risc.github.GithubRiScIdentifiersResponse
-import no.risc.github.GithubStatus
+import no.risc.exception.exceptions.*
+import no.risc.github.*
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.kubernetes.KubernetesService
+import no.risc.kubernetes.model.*
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import no.risc.utils.Difference
-import no.risc.utils.DifferenceException
-import no.risc.utils.diff
-import no.risc.utils.migrate
-import no.risc.utils.removePathRegex
+import no.risc.utils.*
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.LoggerFactory
@@ -162,8 +152,12 @@ class InternDifference(
 class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${github.repository.risc-folder-path}") val riscFolderPath: String,
+    @Value("\${github.repository.path-regex}") val riscPathRegex: String,
     private val cryptoService: CryptoServiceIntegration,
     private val kubernetesService: KubernetesService,
+    private val skiperatorConfig: SkiperatorConfig,
+    private val airTableConfig: AirTableConfig,
 ) {
     private val logger = LoggerFactory.getLogger(RiScService::class.java)
 
@@ -377,17 +371,75 @@ class RiScService(
         accessTokens: AccessTokens,
     ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
 
-    suspend fun initializeRiSc(
+    suspend fun scheduleInitializeRiSc(
         owner: String,
         repository: String,
-        accessTokens: AccessTokens,
-    ): ProcessRiScResultDTO {
-        kubernetesService.applyKubernetesJob(
-            kubernetesJobName = ,
-            imageUrl = ,
-            kubernetesSecret = ,
-            envVars =
+        gcpProjectId: String,
+        securityChampionPublicKey: String?
+    ) {
+        kubernetesService.applySkipJob(
+            name = "initialize-risc-$owner-$repository",
+            namespace = skiperatorConfig.namespace,
+            imageUrl = skiperatorConfig.imageUrl,
+            envVars = listOfNotNull(
+                SkiperatorContainerEnvEntry(
+                    name = "RISC_FOLDER_PATH",
+                    value = riscFolderPath,
+                ),
+                SkiperatorContainerEnvEntry(
+                    name = "PATH_REGEX",
+                    value = riscPathRegex,
+                ),
+                SkiperatorContainerEnvEntry(
+                    name = "REPO_NAME",
+                    value = repository,
+                ),
+                SkiperatorContainerEnvEntry(
+                    name = "GCP_PROJECT_ID",
+                    value = gcpProjectId,
+                ),
+                securityChampionPublicKey?.let {
+                    SkiperatorContainerEnvEntry(
+                        name = "SECURITY_CHAMPION_KEY",
+                        value = it,
+                    )
+                }
+            ),
+            externalSecretsName = skiperatorConfig.externalSecretsName,
+            accessPolicy = SkiperatorContainerAccessPolicy(
+                inbound = SkiperatorContainerInboundAccessPolicy(
+                    rules = listOf(
+                        SkiperatorContainerAccessPolicyRule(
+                            namespace = skiperatorConfig.namespace,
+                            application = skiperatorConfig.riScBackendApplicationName
+                        )
+                    )
+                ),
+                outbound = SkiperatorContainerOutboundAccessPolicy(
+                    external = listOf(
+                        SkiperatorContainerExternalAccessPolicyEntry(
+                            host = "api.airtable.com",
+                        )
+                    ),
+                    rules = listOf(
+                        SkiperatorContainerAccessPolicyRule(
+                            namespace = "sikkerhetsmetrikker-main",
+                            application = "sikkerhetsmetrikker",
+                        )
+                    )
+                )
+            )
         )
+    }
+
+    fun storeInitializedRiSc(
+        owner: String,
+        repository: String,
+        sopsConfig: String,
+        initializedRiSc: String,
+    ) {
+        TODO("Not yet implemented")
+        //TODO("Hvordan vite/huske hvilket GCP-Access-Token som skal brukes til å lagre den autogenererte ROS-en")
     }
 
     suspend fun createRiSc(
@@ -551,4 +603,6 @@ class RiScService(
             pullRequestUrl = this.url,
             pullRequestName = this.head.ref,
         )
+
+
 }
