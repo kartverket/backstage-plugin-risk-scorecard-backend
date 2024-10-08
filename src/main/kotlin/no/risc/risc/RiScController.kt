@@ -8,14 +8,7 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.*
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/risc")
@@ -79,32 +72,33 @@ class RiScController(
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
     suspend fun initializeRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody body: InitializeRiScRequestBody,
     ): ResponseEntity<Unit> {
-       riScService.scheduleInitializeRiSc(
+        riScService.scheduleInitializeRiSc(
             owner = repositoryOwner,
             repository = repositoryName,
             gcpProjectId = body.gcpProjectId,
-            securityChampionPublicKey = body.publicAgeKey
+            securityChampionPublicKey = body.publicAgeKey,
+            gcpAccessTokenValue = gcpAccessToken
         )
         return ResponseEntity.accepted().build()
     }
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize/finished")
-    suspend fun storeInitializedRiSc(
+    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize/finalize")
+    suspend fun commitInitializedRiSc(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody body: StoreInitializedRiScRequestBody,
 
-    ) = riScService.storeInitializedRiSc(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            sopsConfig = body.sopsConfig,
-            initializedRiSc = body.initializedRiSc,
-        )
-
+        ) = riScService.commitInitializedRiSc(
+        owner = repositoryOwner,
+        repository = repositoryName,
+        sopsConfig = body.sopsConfig,
+        initializedRiSc = body.initializedRiSc,
+    )
 
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])

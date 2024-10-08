@@ -5,7 +5,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
-import no.risc.config.AirTableConfig
 import no.risc.config.SkiperatorConfig
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.*
@@ -14,13 +13,16 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.kubernetes.KubernetesService
 import no.risc.kubernetes.model.*
+import no.risc.redis.RedisService
+import no.risc.redis.Repository
+import no.risc.redis.model.InitializeRiScSession
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.utils.*
+import no.risc.utils.Hasher.sha256
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
@@ -157,10 +159,8 @@ class RiScService(
     private val cryptoService: CryptoServiceIntegration,
     private val kubernetesService: KubernetesService,
     private val skiperatorConfig: SkiperatorConfig,
-    private val airTableConfig: AirTableConfig,
+    private val redisService: RedisService,
 ) {
-    private val logger = LoggerFactory.getLogger(RiScService::class.java)
-
     suspend fun fetchAndDiffRiScs(
         owner: String,
         repository: String,
@@ -375,7 +375,8 @@ class RiScService(
         owner: String,
         repository: String,
         gcpProjectId: String,
-        securityChampionPublicKey: String?
+        securityChampionPublicKey: String?,
+        gcpAccessTokenValue: String,
     ) {
         kubernetesService.applySkipJob(
             name = "initialize-risc-$owner-$repository",
@@ -426,16 +427,37 @@ class RiScService(
                 )
             )
         )
+        redisService.storeInitializeRiScSession(
+            repository = Repository(
+                owner = owner,
+                repository = repository,
+            ),
+            gcpAccessTokenValue = gcpAccessTokenValue
+        )
     }
 
-    fun storeInitializedRiSc(
+    fun commitInitializedRiSc(
         owner: String,
         repository: String,
         sopsConfig: String,
         initializedRiSc: String,
     ) {
-        TODO("Not yet implemented")
-        //TODO("Hvordan vite/huske hvilket GCP-Access-Token som skal brukes til å lagre den autogenererte ROS-en")
+        val initializeRiScSession = redisService.retrieveInitializeRiScSessionByRepository(repository = Repository(
+            owner = owner,
+            repository = repository,
+        ))
+        val riScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+        val encryptedRiSc = cryptoService.encrypt(
+            text = initializedRiSc,
+            config = sopsConfig,
+            gcpAccessToken = GCPAccessToken(
+                initializeRiScSession.gcpAccessTokenValue
+            ),
+            riScId = riScId,
+        )
+        //TODO: Lag branch
+        //TODO: Skriv/overskriv sopsConfig til .security/risc/.sops.yaml
+        //TODO: Skriv {riScId} til .security/risc/.sops.yaml
     }
 
     suspend fun createRiSc(
