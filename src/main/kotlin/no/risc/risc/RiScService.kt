@@ -383,10 +383,6 @@ class RiScService(
             imageUrl = skiperatorConfig.imageUrl,
             envVars = listOfNotNull(
                 SkiperatorContainerEnvEntry(
-                    name = "RISC_FOLDER_PATH",
-                    value = riscFolderPath,
-                ),
-                SkiperatorContainerEnvEntry(
                     name = "PATH_REGEX",
                     value = riscPathRegex,
                 ),

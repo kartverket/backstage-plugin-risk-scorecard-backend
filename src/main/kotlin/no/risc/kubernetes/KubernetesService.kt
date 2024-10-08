@@ -6,13 +6,6 @@ import no.risc.config.SkiperatorConfig
 import no.risc.kubernetes.model.*
 import org.springframework.stereotype.Service
 
-data class NameSpacedCustomObject(
-    val name: String,
-    val group: String,
-    val version: String,
-    val namespace: String,
-    val plural: String,
-)
 
 @Service
 class KubernetesService(
