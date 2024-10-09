@@ -91,13 +91,12 @@ class RiScController(
     suspend fun commitInitializedRiSc(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @RequestBody body: StoreInitializedRiScRequestBody,
+        @RequestBody body: RiScWrapperObject,
 
         ) = riScService.commitInitializedRiSc(
         owner = repositoryOwner,
         repository = repositoryName,
-        sopsConfig = body.sopsConfig,
-        initializedRiSc = body.initializedRiSc,
+        content = body,
     )
 
 

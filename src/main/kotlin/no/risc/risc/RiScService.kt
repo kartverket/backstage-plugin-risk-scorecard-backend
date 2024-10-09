@@ -15,12 +15,10 @@ import no.risc.kubernetes.KubernetesService
 import no.risc.kubernetes.model.*
 import no.risc.redis.RedisService
 import no.risc.redis.Repository
-import no.risc.redis.model.InitializeRiScSession
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.utils.*
-import no.risc.utils.Hasher.sha256
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
@@ -160,6 +158,7 @@ class RiScService(
     private val kubernetesService: KubernetesService,
     private val skiperatorConfig: SkiperatorConfig,
     private val redisService: RedisService,
+    private val githubAppConnector: GithubAppConnector,
 ) {
     suspend fun fetchAndDiffRiScs(
         owner: String,
@@ -436,29 +435,30 @@ class RiScService(
         )
     }
 
-    fun commitInitializedRiSc(
+    suspend fun commitInitializedRiSc(
         owner: String,
         repository: String,
-        sopsConfig: String,
-        initializedRiSc: String,
+        content: RiScWrapperObject,
     ) {
         val initializeRiScSession = redisService.retrieveInitializeRiScSessionByRepository(repository = Repository(
             owner = owner,
             repository = repository,
         ))
-        val riScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-        val encryptedRiSc = cryptoService.encrypt(
-            text = initializedRiSc,
-            config = sopsConfig,
-            gcpAccessToken = GCPAccessToken(
-                initializeRiScSession.gcpAccessTokenValue
-            ),
-            riScId = riScId,
+        updateOrCreateRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = getUniqueRiScId(),
+            content = content,
+            accessTokens = AccessTokens(
+                githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
+                gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue)
+            )
         )
-        //TODO: Lag branch
-        //TODO: Skriv/overskriv sopsConfig til .security/risc/.sops.yaml
-        //TODO: Skriv {riScId} til .security/risc/.sops.yaml
     }
+
+    private fun getUniqueRiScId(
+        randomCharCount: Int = 5,
+    ) = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(randomCharCount)}"
 
     suspend fun createRiSc(
         owner: String,
@@ -466,7 +466,7 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
     ): ProcessRiScResultDTO {
-        val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+        val uniqueRiScId = getUniqueRiScId()
         try {
             val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
 
@@ -513,16 +513,19 @@ class RiScService(
             )
         }
 
-        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
-        if (sopsConfig.status != GithubStatus.Success) {
-            throw SopsConfigFetchException(
-                message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
-                riScId = riScId,
-                responseMessage = "Could not fetch SOPS config",
-            )
+        val config = if (content.sopsConfig == null) {
+            val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
+            if (sopsConfig.status != GithubStatus.Success) {
+                throw SopsConfigFetchException(
+                    message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
+                    riScId = riScId,
+                    responseMessage = "Could not fetch SOPS config",
+                )
+            }
+            removePathRegex(sopsConfig.data())
+        } else {
+            content.sopsConfig
         }
-
-        val config = removePathRegex(sopsConfig.data())
 
         val encryptedData: String =
             cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
@@ -534,6 +537,7 @@ class RiScService(
                     repository = repository,
                     riScId = riScId,
                     fileContent = encryptedData,
+                    sopsConfig = content.sopsConfig,
                     requiresNewApproval = content.isRequiresNewApproval,
                     accessTokens = accessTokens,
                     userInfo = content.userInfo,

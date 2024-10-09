@@ -18,8 +18,3 @@ data class InitializeRiScRequestBody(
     val publicAgeKey: String? = null,
     val gcpProjectId: String,
 )
-
-data class StoreInitializedRiScRequestBody(
-    val sopsConfig: String,
-    val initializedRiSc: String
-)

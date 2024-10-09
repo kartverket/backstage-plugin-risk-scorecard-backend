@@ -141,6 +141,13 @@ class GithubHelper(
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
+    fun uriToPutSopsConfigOnDraftBranch(
+        owner: String,
+        repository: String,
+        riScId: String,
+        draftBranch: String = riScId,
+    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
+
     fun uriToGetCommitStatus(
         owner: String,
         repository: String,
