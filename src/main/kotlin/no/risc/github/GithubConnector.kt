@@ -60,12 +60,12 @@ data class GithubWriteToFilePayload(
         when (sha) {
             null ->
                 "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                        "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
 
             else ->
                 "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                        "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
-                        "\"sha\":\"$sha\""
+                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
+                    "\"sha\":\"$sha\""
         }
 }
 
@@ -111,10 +111,11 @@ class GithubConnector(
                             responseMessage = "Could not fetch SOPS config",
                         )
 
-                        else -> GithubContentResponse(
-                            sopsConfigResponseOnDefaultBranch.decodedFileContent(),
-                            GithubStatus.Success
-                        )
+                        else ->
+                            GithubContentResponse(
+                                sopsConfigResponseOnDefaultBranch.decodedFileContent(),
+                                GithubStatus.Success,
+                            )
                     }
                 }
 
@@ -146,11 +147,11 @@ class GithubConnector(
             GithubRiScIdentifiersResponse(
                 status = GithubStatus.Success,
                 ids =
-                combinePublishedDraftAndSentForApproval(
-                    draftRiScList = draftRiScs,
-                    sentForApprovalList = riScsSentForApproval,
-                    publishedRiScList = publishedRiScs,
-                ),
+                    combinePublishedDraftAndSentForApproval(
+                        draftRiScList = draftRiScs,
+                        sentForApprovalList = riScsSentForApproval,
+                        publishedRiScList = publishedRiScs,
+                    ),
             )
         }
 
@@ -416,8 +417,7 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): String? =
-        getGithubResponse(githubHelper.uriToGetCommitStatus(owner, repository, "main"), accessToken).shaResponseDTO()
+    ): String? = getGithubResponse(githubHelper.uriToGetCommitStatus(owner, repository, "main"), accessToken).shaResponseDTO()
 
     fun createNewBranch(
         owner: String,
@@ -455,7 +455,7 @@ class GithubConnector(
         try {
             getGithubResponse(
                 githubHelper.uriToFetchAllCommitsOnBranchSince(owner, repository, riScId, since),
-                accessToken
+                accessToken,
             )
                 .bodyToMono<List<GithubCommitObject>>().block() ?: emptyList()
         } catch (e: Exception) {
@@ -487,12 +487,13 @@ class GithubConnector(
             postNewPullRequestToGithub(
                 uri = githubHelper.uriToCreatePullRequest(owner, repository),
                 accessToken = accessTokens.githubAccessToken.value,
-                pullRequestPayload = githubHelper.bodyToCreateNewPullRequest(
-                    owner,
-                    riScId,
-                    requiresNewApproval,
-                    userInfo
-                ),
+                pullRequestPayload =
+                    githubHelper.bodyToCreateNewPullRequest(
+                        owner,
+                        riScId,
+                        requiresNewApproval,
+                        userInfo,
+                    ),
             ).pullRequestResponseDTO()
         } catch (e: Exception) {
             throw CreatePullRequestException(
@@ -589,8 +590,7 @@ class GithubConnector(
     private fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? =
-        this.bodyToMono<GithubPullRequestObject>().block()
+    private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this.bodyToMono<List<GithubCommitObject>>().block()?.firstOrNull()?.commit?.committer?.date
@@ -606,8 +606,7 @@ class GithubConnector(
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
-    private fun ResponseSpec.decodedFileContent(): String? =
-        this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
+    private fun ResponseSpec.decodedFileContent(): String? = this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
