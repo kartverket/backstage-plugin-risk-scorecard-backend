@@ -435,7 +435,7 @@ class RiScService(
         )
     }
 
-    suspend fun commitInitializedRiSc(
+    suspend fun finalizeInitializedRiSc(
         owner: String,
         repository: String,
         content: RiScWrapperObject,
@@ -447,7 +447,9 @@ class RiScService(
         updateOrCreateRiSc(
             owner = owner,
             repository = repository,
-            riScId = getUniqueRiScId(),
+            riScId = getUniqueRiScId(
+                isInitRiSc = true
+            ),
             content = content,
             accessTokens = AccessTokens(
                 githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
@@ -458,7 +460,8 @@ class RiScService(
 
     private fun getUniqueRiScId(
         randomCharCount: Int = 5,
-    ) = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(randomCharCount)}"
+        isInitRiSc: Boolean = false,
+    ) = "$filenamePrefix-"+ if (isInitRiSc) "init-" else "" + RandomStringUtils.randomAlphanumeric(randomCharCount)
 
     suspend fun createRiSc(
         owner: String,

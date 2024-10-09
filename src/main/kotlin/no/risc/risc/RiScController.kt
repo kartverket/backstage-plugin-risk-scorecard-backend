@@ -93,7 +93,7 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody body: RiScWrapperObject,
 
-        ) = riScService.commitInitializedRiSc(
+        ) = riScService.finalizeInitializedRiSc(
         owner = repositoryOwner,
         repository = repositoryName,
         content = body,
