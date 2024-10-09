@@ -26,7 +26,7 @@ import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.util.*
+import java.util.Date
 
 data class GithubContentResponse(
     val data: String?,
@@ -83,8 +83,7 @@ class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     private val githubHelper: GithubHelper,
-) :
-    WebClientConnector("https://api.github.com/repos") {
+) : WebClientConnector("https://api.github.com/repos") {
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -106,7 +105,9 @@ class GithubConnector(
                         )
                     when (sopsConfigResponseOnDefaultBranch.decodedFileContent()) {
                         null -> throw SopsConfigFetchException(
-                            message = "Failed to fetch sops config from $owner/$repository on default branch and brnach with name: $riScId with the following response: $sopsConfigResponseOnDefaultBranch",
+                            message =
+                                "Failed to fetch sops config from $owner/$repository on default branch " +
+                                    "and branch with name: $riScId with the following response: $sopsConfigResponseOnDefaultBranch",
                             riScId = riScId,
                             responseMessage = "Could not fetch SOPS config",
                         )
@@ -137,8 +138,7 @@ class GithubConnector(
         coroutineScope {
             val draftRiScsDeferred = async { fetchRiScIdentifiersDrafted(owner, repository, accessToken) }
             val publishedRiScsDeferred = async { fetchPublishedRiScIdentifiers(owner, repository, accessToken) }
-            val riScsSentForApprovalDeferred =
-                async { fetchRiScIdentifiersSentForApproval(owner, repository, accessToken) }
+            val riScsSentForApprovalDeferred = async { fetchRiScIdentifiersSentForApproval(owner, repository, accessToken) }
 
             val draftRiScs = draftRiScsDeferred.await()
             val publishedRiScs = publishedRiScsDeferred.await()
@@ -208,8 +208,10 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponseSuspend(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, id), accessToken)
-                    .decodedFileContentSuspend()
+                getGithubResponseSuspend(
+                    githubHelper.uriToFindRiScOnDraftBranch(owner, repository, id),
+                    accessToken,
+                ).decodedFileContentSuspend()
 
             when (fileContent) {
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
@@ -243,8 +245,10 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         try {
             val response =
-                getGithubResponseSuspend(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
-                    .awaitBody<List<GithubPullRequestObject>>()
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchAllPullRequests(owner, repository),
+                    accessToken,
+                ).awaitBody<List<GithubPullRequestObject>>()
 
             response.riScIdentifiersSentForApproval()
         } catch (e: Exception) {
@@ -388,8 +392,10 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ) = try {
-        getGithubResponse(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, riScId), accessToken)
-            .shaResponseDTO()
+        getGithubResponse(
+            githubHelper.uriToFindRiScOnDraftBranch(owner, repository, riScId),
+            accessToken,
+        ).shaResponseDTO()
     } catch (e: Exception) {
         null
     }
@@ -400,8 +406,7 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ) = try {
-        getGithubResponse(githubHelper.uriToFindRiSc(owner, repository, riScId), accessToken)
-            .shaResponseDTO()
+        getGithubResponse(githubHelper.uriToFindRiSc(owner, repository, riScId), accessToken).shaResponseDTO()
     } catch (e: Exception) {
         null
     }
@@ -439,8 +444,10 @@ class GithubConnector(
         accessToken: String,
     ): List<GithubPullRequestObject> =
         try {
-            getGithubResponse(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
-                .pullRequestResponseDTOs()
+            getGithubResponse(
+                githubHelper.uriToFetchAllPullRequests(owner, repository),
+                accessToken,
+            ).pullRequestResponseDTOs()
         } catch (e: Exception) {
             emptyList()
         }
@@ -456,8 +463,7 @@ class GithubConnector(
             getGithubResponse(
                 githubHelper.uriToFetchAllCommitsOnBranchSince(owner, repository, riScId, since),
                 accessToken,
-            )
-                .bodyToMono<List<GithubCommitObject>>().block() ?: emptyList()
+            ).bodyToMono<List<GithubCommitObject>>().block() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
@@ -469,8 +475,10 @@ class GithubConnector(
         riScId: String,
     ): String? =
         try {
-            getGithubResponse(githubHelper.uriToFetchCommitOnMain(owner, repository, riScId), accessToken)
-                .timeStampLatestCommitResponse()
+            getGithubResponse(
+                githubHelper.uriToFetchCommitOnMain(owner, repository, riScId),
+                accessToken,
+            ).timeStampLatestCommitResponse()
         } catch (e: Exception) {
             null
         }
@@ -506,86 +514,54 @@ class GithubConnector(
         uri: String,
         accessToken: String,
         pullRequestPayload: GithubCreateNewPullRequestPayload,
-    ) = webClient
-        .post()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
+    ) = webClient.post().uri(uri).header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28")
         .header("Content-Type", "application/json")
-        .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java)
-        .retrieve()
+        .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java).retrieve()
 
     private fun closePullRequest(
         uri: String,
         accessToken: String,
         closePullRequestBody: String,
-    ) = webClient
-        .patch()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(closePullRequestBody), String::class.java)
-        .retrieve()
+    ) = webClient.patch().uri(uri).header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json").body(Mono.just(closePullRequestBody), String::class.java).retrieve()
 
     private fun postNewBranchToGithub(
         uri: String,
         accessToken: String,
         branchPayload: GithubCreateNewBranchPayload,
-    ) = webClient
-        .post()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(branchPayload.toContentBody()), String::class.java)
+    ) = webClient.post().uri(uri).header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json").body(Mono.just(branchPayload.toContentBody()), String::class.java)
         .retrieve()
 
     private fun putFileRequestToGithub(
         uri: String,
         accessToken: String,
         writePayload: GithubWriteToFilePayload,
-    ) = webClient
-        .put()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(writePayload.toContentBody()), String::class.java)
+    ) = webClient.put().uri(uri).header("Accept", "application/vnd.github+json")
+        .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28")
+        .header("Content-Type", "application/json").body(Mono.just(writePayload.toContentBody()), String::class.java)
         .retrieve()
 
     private suspend fun getGithubResponseSuspend(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
-            .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
+        webClient.get().uri(uri).header("Accept", "application/vnd.github.json")
+            .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28").retrieve()
 
     private fun getGithubResponse(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
-            .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
+        webClient.get().uri(uri).header("Accept", "application/vnd.github.json")
+            .header("Authorization", "token $accessToken").header("X-GitHub-Api-Version", "2022-11-28").retrieve()
 
     private fun getGithubResponseNoAuth(uri: String): ResponseSpec =
-        webClient.get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.raw+json")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
+        webClient.get().uri(uri).header("Accept", "application/vnd.github.raw+json")
+            .header("X-GitHub-Api-Version", "2022-11-28").retrieve()
 
     private fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
