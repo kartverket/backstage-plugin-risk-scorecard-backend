@@ -92,24 +92,29 @@ class GithubConnector(
         riScId: String,
     ): GithubContentResponse =
         try {
-            val sopsConfigResponse =
+            val sopsConfigResponseOnBranch =
                 getGithubResponse(
-                    githubHelper.uriToFindSopsConfig(owner, repository),
+                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
                     githubAccessToken.value,
                 )
-            when (sopsConfigResponse.decodedFileContent()) {
-                null -> throw SopsConfigFetchException(
-                    message = "Failed to fetch sops config from location: ${
-                        githubHelper.uriToFindSopsConfig(
-                            owner,
-                            repository,
+            when (sopsConfigResponseOnBranch.decodedFileContent()) {
+                null -> {
+                    val sopsConfigResponseOnDefaultBranch =
+                        getGithubResponse(
+                            githubHelper.uriToFindSopsConfig(owner, repository),
+                            githubAccessToken.value,
                         )
-                    } with the following response: $sopsConfigResponse",
-                    riScId = riScId,
-                    responseMessage = "Could not fetch SOPS config",
-                )
+                    when (sopsConfigResponseOnDefaultBranch.decodedFileContent()) {
+                        null -> throw SopsConfigFetchException(
+                            message = "Failed to fetch sops config from $owner/$repository on default branch and brnach with name: $riScId with the following response: $sopsConfigResponseOnDefaultBranch",
+                            riScId = riScId,
+                            responseMessage = "Could not fetch SOPS config",
+                        )
+                        else -> GithubContentResponse(sopsConfigResponseOnDefaultBranch.decodedFileContent(), GithubStatus.Success)
+                    }
+                }
 
-                else -> GithubContentResponse(sopsConfigResponse.decodedFileContent(), GithubStatus.Success)
+                else -> GithubContentResponse(sopsConfigResponseOnBranch.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
             throw SopsConfigFetchException(
