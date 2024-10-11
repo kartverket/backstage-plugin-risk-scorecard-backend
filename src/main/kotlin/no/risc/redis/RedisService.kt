@@ -18,28 +18,32 @@ data class Repository(
 class RedisService(
     private val initializeRiScSessionRedisClient: RedisTemplate<String, InitializeRiScSession>,
 ) {
-
     fun storeInitializeRiScSession(
         ttlSeconds: Int = 60,
         repository: Repository,
-        gcpAccessTokenValue: String
+        gcpAccessTokenValue: String,
     ) {
-        val initializeRiScSession = InitializeRiScSession(
-            repositoryHash = repository.sha256(),
-            gcpAccessTokenValue = gcpAccessTokenValue,
-        )
+        val initializeRiScSession =
+            InitializeRiScSession(
+                repositoryHash = repository.sha256(),
+                gcpAccessTokenValue = gcpAccessTokenValue,
+            )
         initializeRiScSessionRedisClient.opsForValue().set(initializeRiScSession.repositoryHash, initializeRiScSession)
         initializeRiScSessionRedisClient.expire(initializeRiScSession.repositoryHash, ttlSeconds.toLong(), TimeUnit.SECONDS)
     }
 
     fun retrieveInitializeRiScSessionByRepository(
         deleteOnRetrieve: Boolean = true,
-        repository: Repository
+        repository: Repository,
     ): InitializeRiScSession {
         val initializeRiScSession = initializeRiScSessionRedisClient.opsForValue().get(repository.sha256())
         if (deleteOnRetrieve) {
             initializeRiScSessionRedisClient.delete(repository.sha256())
         }
-        return initializeRiScSession ?: throw InitializeRiScSessionNotFoundException("The session details for initializing a RiSc for ${repository.owner}/${repository.repository} could not be found")
+        return initializeRiScSession
+            ?: throw InitializeRiScSessionNotFoundException(
+                "The session details for initializing a RiSc for " +
+                    "${repository.owner}/${repository.repository} could not be found",
+            )
     }
 }

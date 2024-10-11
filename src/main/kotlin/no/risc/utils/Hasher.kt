@@ -5,7 +5,7 @@ import java.security.MessageDigest
 object Hasher {
     private fun hash(
         input: Any,
-        algorithm: String
+        algorithm: String,
     ): String {
         val bytes = input.toString().toByteArray()
         val md = MessageDigest.getInstance(algorithm)
@@ -13,8 +13,9 @@ object Hasher {
         return digest.fold("") { str, it -> str + "%02x".format(it) }
     }
 
-    fun String.sha256() = hash(
-        input = this,
-        algorithm = "SHA-256",
-    )
+    fun String.sha256() =
+        hash(
+            input = this,
+            algorithm = "SHA-256",
+        )
 }

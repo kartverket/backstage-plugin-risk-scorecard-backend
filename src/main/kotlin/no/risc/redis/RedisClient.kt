@@ -9,9 +9,7 @@ import org.springframework.stereotype.Service
 @Service
 class RedisClient {
     @Bean
-    fun initializeRiScSessionRedisClient(
-        jedisConnectionFactory: JedisConnectionFactory,
-    ): RedisTemplate<String, InitializeRiScSession> {
+    fun initializeRiScSessionRedisClient(jedisConnectionFactory: JedisConnectionFactory): RedisTemplate<String, InitializeRiScSession> {
         val redisTemplate = RedisTemplate<String, InitializeRiScSession>()
         redisTemplate.connectionFactory = jedisConnectionFactory
         return redisTemplate

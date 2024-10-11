@@ -111,7 +111,10 @@ class GithubConnector(
                         )
                     when (sopsConfigResponseOnDefaultBranch.decodedFileContent()) {
                         null -> throw SopsConfigFetchException(
-                            message = "Failed to fetch sops config from $owner/$repository on default branch and brnach with name: $riScId with the following response: $sopsConfigResponseOnDefaultBranch",
+                            message =
+                                "Failed to fetch sops config from $owner/$repository on " +
+                                    "default branch and branch with name: $riScId with the following response: " +
+                                    "$sopsConfigResponseOnDefaultBranch",
                             riScId = riScId,
                             responseMessage = "Could not fetch SOPS config",
                         )
@@ -297,35 +300,53 @@ class GithubConnector(
                 if (latestShaForPublished != null) {
                     CommitMessages(
                         riSc = "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
-                        sopsConfig = if (sopsConfig != null) { "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else "" } else { null }
+                        sopsConfig =
+                            if (sopsConfig != null) {
+                                "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                            } else {
+                                null
+                            },
                     )
-
-
                 } else {
                     CommitMessages(
                         riSc = "Create new RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
-                        sopsConfig = if (sopsConfig != null) { "Create SOPS configuration" + if (requiresNewApproval)" requires new approval" else "" } else { null }
+                        sopsConfig =
+                            if (sopsConfig != null) {
+                                "Create SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                            } else {
+                                null
+                            },
                     )
                 }
             } else {
                 CommitMessages(
                     riSc = "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
-                    sopsConfig = if (sopsConfig != null) { "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else "" } else { null }
+                    sopsConfig =
+                        if (sopsConfig != null) {
+                            "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                        } else {
+                            null
+                        },
                 )
             }
 
-        //Write new sops config if sops config is passed to the method
+        // Write new sops config if sops config is passed to the method
         sopsConfig?.let { config ->
             putFileRequestToGithub(
                 githubHelper.uriToPutSopsConfigOnDraftBranch(owner, repository, riScId),
                 accessToken,
                 GithubWriteToFilePayload(
-                    message = commitMessage.sopsConfig ?: throw IllegalStateException("Commit message for SOPS config cannot be null when method argument 'sopsConfig' is not null"),
+                    message =
+                        commitMessage.sopsConfig
+                            ?: throw IllegalStateException(
+                                "Commit message for SOPS config cannot be " +
+                                    "null when method argument 'sopsConfig' is not null",
+                            ),
                     content = config.encodeBase64(),
                     sha = latestShaForDraft,
                     branchName = riScId,
-                    author = githubAuthor
-                )
+                    author = githubAuthor,
+                ),
             )
         }
 

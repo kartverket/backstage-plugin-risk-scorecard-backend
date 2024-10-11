@@ -1,6 +1,7 @@
 package no.risc.kubernetes.model
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
@@ -11,15 +12,23 @@ data class SkipJobManifest(
     val metadata: SkiperatorMetadata,
     val spec: SkipJobSpec,
 ) {
-    fun toYamlString() = ObjectMapper(YAMLFactory())
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-        .registerKotlinModule()
-        .writeValueAsString(this)
+    fun toYamlString() =
+        ObjectMapper(YAMLFactory())
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+            .registerKotlinModule()
+            .writeValueAsString(this)
 }
 
 data class SkiperatorMetadata(
     val name: String,
     val namespace: String? = null,
+    val annotations: SkiperatorMetadataAnnotations = SkiperatorMetadataAnnotations(),
+)
+
+data class SkiperatorMetadataAnnotations(
+    @JsonProperty(
+        "argocd.argoproj.io/tracking-id",
+    ) val trackingId: String = "atgcp1-ros-plugin-main:skiperator.kartverket.no/SKIPJob:ros-plugin-main/",
 )
 
 data class SkipJobSpec(
@@ -29,7 +38,7 @@ data class SkipJobSpec(
 
 data class SkiperatorJob(
     val ttlSecondsAfterFinished: Int,
-    val backoffLimit: Int
+    val backoffLimit: Int,
 )
 
 data class SkiperatorContainerSpec(
@@ -50,16 +59,16 @@ data class SkiperatorContainerEnvEntry(
 
 data class SkiperatorContainerAccessPolicy(
     val inbound: SkiperatorContainerInboundAccessPolicy? = null,
-    val outbound: SkiperatorContainerOutboundAccessPolicy? = null
+    val outbound: SkiperatorContainerOutboundAccessPolicy? = null,
 )
 
 data class SkiperatorContainerInboundAccessPolicy(
-    val rules: List<SkiperatorContainerAccessPolicyRule>? = null
+    val rules: List<SkiperatorContainerAccessPolicyRule>? = null,
 )
 
 data class SkiperatorContainerOutboundAccessPolicy(
     val external: List<SkiperatorContainerExternalAccessPolicyEntry>? = null,
-    val rules: List<SkiperatorContainerAccessPolicyRule>? = null
+    val rules: List<SkiperatorContainerAccessPolicyRule>? = null,
 )
 
 data class SkiperatorContainerExternalAccessPolicyEntry(

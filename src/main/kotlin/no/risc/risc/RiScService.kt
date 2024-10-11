@@ -7,21 +7,41 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.config.SkiperatorConfig
 import no.risc.encryption.CryptoServiceIntegration
-import no.risc.exception.exceptions.*
-import no.risc.github.*
+import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.RiScNotValidException
+import no.risc.exception.exceptions.SOPSDecryptionException
+import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.exception.exceptions.UpdatingRiScException
+import no.risc.github.GithubAppConnector
+import no.risc.github.GithubConnector
+import no.risc.github.GithubContentResponse
+import no.risc.github.GithubPullRequestObject
+import no.risc.github.GithubRiScIdentifiersResponse
+import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.kubernetes.KubernetesService
-import no.risc.kubernetes.model.*
+import no.risc.kubernetes.model.SkiperatorContainerAccessPolicy
+import no.risc.kubernetes.model.SkiperatorContainerAccessPolicyRule
+import no.risc.kubernetes.model.SkiperatorContainerEnvEntry
+import no.risc.kubernetes.model.SkiperatorContainerExternalAccessPolicyEntry
+import no.risc.kubernetes.model.SkiperatorContainerInboundAccessPolicy
+import no.risc.kubernetes.model.SkiperatorContainerOutboundAccessPolicy
 import no.risc.redis.RedisService
 import no.risc.redis.Repository
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import no.risc.utils.*
+import no.risc.utils.Difference
+import no.risc.utils.DifferenceException
+import no.risc.utils.diff
+import no.risc.utils.migrate
+import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.env.Environment
 import org.springframework.stereotype.Service
 
 class ProcessRiScResultDTO(
@@ -159,6 +179,7 @@ class RiScService(
     private val skiperatorConfig: SkiperatorConfig,
     private val redisService: RedisService,
     private val githubAppConnector: GithubAppConnector,
+    private val environment: Environment,
 ) {
     suspend fun fetchAndDiffRiScs(
         owner: String,
@@ -381,57 +402,65 @@ class RiScService(
             name = "initialize-risc-$owner-$repository",
             namespace = skiperatorConfig.namespace,
             imageUrl = skiperatorConfig.imageUrl,
-            envVars = listOfNotNull(
-                SkiperatorContainerEnvEntry(
-                    name = "PATH_REGEX",
-                    value = riscPathRegex,
-                ),
-                SkiperatorContainerEnvEntry(
-                    name = "REPO_NAME",
-                    value = repository,
-                ),
-                SkiperatorContainerEnvEntry(
-                    name = "GCP_PROJECT_ID",
-                    value = gcpProjectId,
-                ),
-                securityChampionPublicKey?.let {
+            envVars =
+                listOfNotNull(
                     SkiperatorContainerEnvEntry(
-                        name = "SECURITY_CHAMPION_KEY",
-                        value = it,
-                    )
-                }
-            ),
-            externalSecretsName = skiperatorConfig.externalSecretsName,
-            accessPolicy = SkiperatorContainerAccessPolicy(
-                inbound = SkiperatorContainerInboundAccessPolicy(
-                    rules = listOf(
-                        SkiperatorContainerAccessPolicyRule(
-                            namespace = skiperatorConfig.namespace,
-                            application = skiperatorConfig.riScBackendApplicationName
-                        )
-                    )
-                ),
-                outbound = SkiperatorContainerOutboundAccessPolicy(
-                    external = listOf(
-                        SkiperatorContainerExternalAccessPolicyEntry(
-                            host = "api.airtable.com",
-                        )
+                        name = "PATH_REGEX",
+                        value = riscPathRegex,
                     ),
-                    rules = listOf(
-                        SkiperatorContainerAccessPolicyRule(
-                            namespace = "sikkerhetsmetrikker-main",
-                            application = "sikkerhetsmetrikker",
+                    SkiperatorContainerEnvEntry(
+                        name = "REPO_NAME",
+                        value = repository,
+                    ),
+                    SkiperatorContainerEnvEntry(
+                        name = "GCP_PROJECT_ID",
+                        value = gcpProjectId,
+                    ),
+                    securityChampionPublicKey?.let {
+                        SkiperatorContainerEnvEntry(
+                            name = "SECURITY_CHAMPION_KEY",
+                            value = it,
                         )
-                    )
-                )
-            )
+                    },
+                ),
+            externalSecretsName = skiperatorConfig.externalSecretsName,
+            accessPolicy =
+                SkiperatorContainerAccessPolicy(
+                    inbound =
+                        SkiperatorContainerInboundAccessPolicy(
+                            rules =
+                                listOf(
+                                    SkiperatorContainerAccessPolicyRule(
+                                        namespace = skiperatorConfig.namespace,
+                                        application = skiperatorConfig.riScBackendApplicationName,
+                                    ),
+                                ),
+                        ),
+                    outbound =
+                        SkiperatorContainerOutboundAccessPolicy(
+                            external =
+                                listOf(
+                                    SkiperatorContainerExternalAccessPolicyEntry(
+                                        host = "api.airtable.com",
+                                    ),
+                                ),
+                            rules =
+                                listOf(
+                                    SkiperatorContainerAccessPolicyRule(
+                                        namespace = "sikkerhetsmetrikker-main",
+                                        application = "sikkerhetsmetrikker",
+                                    ),
+                                ),
+                        ),
+                ),
         )
         redisService.storeInitializeRiScSession(
-            repository = Repository(
-                owner = owner,
-                repository = repository,
-            ),
-            gcpAccessTokenValue = gcpAccessTokenValue
+            repository =
+                Repository(
+                    owner = owner,
+                    repository = repository,
+                ),
+            gcpAccessTokenValue = gcpAccessTokenValue,
         )
     }
 
@@ -440,28 +469,34 @@ class RiScService(
         repository: String,
         content: RiScWrapperObject,
     ) {
-        val initializeRiScSession = redisService.retrieveInitializeRiScSessionByRepository(repository = Repository(
-            owner = owner,
-            repository = repository,
-        ))
+        val initializeRiScSession =
+            redisService.retrieveInitializeRiScSessionByRepository(
+                repository =
+                    Repository(
+                        owner = owner,
+                        repository = repository,
+                    ),
+            )
         updateOrCreateRiSc(
             owner = owner,
             repository = repository,
-            riScId = getUniqueRiScId(
-                isInitRiSc = true
-            ),
+            riScId =
+                getUniqueRiScId(
+                    isInitRiSc = true,
+                ),
             content = content,
-            accessTokens = AccessTokens(
-                githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
-                gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue)
-            )
+            accessTokens =
+                AccessTokens(
+                    githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
+                    gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue),
+                ),
         )
     }
 
     private fun getUniqueRiScId(
         randomCharCount: Int = 5,
         isInitRiSc: Boolean = false,
-    ) = "$filenamePrefix-"+ if (isInitRiSc) "init-" else "" + RandomStringUtils.randomAlphanumeric(randomCharCount)
+    ) = "$filenamePrefix-" + if (isInitRiSc) "init-" else "" + RandomStringUtils.randomAlphanumeric(randomCharCount)
 
     suspend fun createRiSc(
         owner: String,
@@ -516,19 +551,20 @@ class RiScService(
             )
         }
 
-        val config = if (content.sopsConfig == null) {
-            val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
-            if (sopsConfig.status != GithubStatus.Success) {
-                throw SopsConfigFetchException(
-                    message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
-                    riScId = riScId,
-                    responseMessage = "Could not fetch SOPS config",
-                )
+        val config =
+            if (content.sopsConfig == null) {
+                val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
+                if (sopsConfig.status != GithubStatus.Success) {
+                    throw SopsConfigFetchException(
+                        message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
+                        riScId = riScId,
+                        responseMessage = "Could not fetch SOPS config",
+                    )
+                }
+                removePathRegex(sopsConfig.data())
+            } else {
+                content.sopsConfig
             }
-            removePathRegex(sopsConfig.data())
-        } else {
-            content.sopsConfig
-        }
 
         val encryptedData: String =
             cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
@@ -628,6 +664,4 @@ class RiScService(
             pullRequestUrl = this.url,
             pullRequestName = this.head.ref,
         )
-
-
 }

@@ -8,4 +8,3 @@ data class InitializeRiScSession(
     @Id val repositoryHash: String,
     val gcpAccessTokenValue: String,
 )
-

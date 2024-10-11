@@ -37,6 +37,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
+    implementation("redis.clients:jedis")
+
     implementation("io.netty:netty-all:4.1.112.Final")
 
     implementation("io.micrometer:micrometer-registry-prometheus")
@@ -63,6 +65,9 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
+    // Development
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 }
 
 tasks.withType<KotlinCompile> {

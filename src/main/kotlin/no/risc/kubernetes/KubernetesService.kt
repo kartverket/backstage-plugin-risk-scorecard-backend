@@ -3,15 +3,20 @@ package no.risc.kubernetes
 import io.kubernetes.client.openapi.ApiException
 import io.kubernetes.client.util.Yaml
 import no.risc.config.SkiperatorConfig
-import no.risc.kubernetes.model.*
+import no.risc.kubernetes.model.ExternalSecretOperatorRef
+import no.risc.kubernetes.model.SkipJobManifest
+import no.risc.kubernetes.model.SkipJobSpec
+import no.risc.kubernetes.model.SkiperatorContainerAccessPolicy
+import no.risc.kubernetes.model.SkiperatorContainerEnvEntry
+import no.risc.kubernetes.model.SkiperatorContainerSpec
+import no.risc.kubernetes.model.SkiperatorJob
+import no.risc.kubernetes.model.SkiperatorMetadata
 import org.springframework.stereotype.Service
-
 
 @Service
 class KubernetesService(
-    private val skiperatorConfig: SkiperatorConfig
+    private val skiperatorConfig: SkiperatorConfig,
 ) {
-
     fun applySkipJob(
         name: String,
         namespace: String,
@@ -19,32 +24,40 @@ class KubernetesService(
         envVars: List<SkiperatorContainerEnvEntry>? = null,
         externalSecretsName: String? = null,
         accessPolicy: SkiperatorContainerAccessPolicy? = null,
-        skiperatorJob: SkiperatorJob = SkiperatorJob(
-            ttlSecondsAfterFinished = 1,
-            backoffLimit = 1
-        )
-    ) {
-        val skipJob = SkipJobManifest(
-            apiVersion = "skiperator.kartverket.no/v1alpha1",
-            kind = "SKIPJob",
-            metadata = SkiperatorMetadata(
-                name = name,
-                namespace = namespace,
+        skiperatorJob: SkiperatorJob =
+            SkiperatorJob(
+                ttlSecondsAfterFinished = 1,
+                backoffLimit = 1,
             ),
-            spec = SkipJobSpec(
-                container = SkiperatorContainerSpec(
-                    image = imageUrl,
-                    env = envVars,
-                    envFrom = listOf(
-                        ExternalSecretOperatorRef(
-                            secret = externalSecretsName ?: throw IllegalStateException("Cannot inject secrets without specifying ref. to External Secrets object")
-                        )
+    ) {
+        val skipJob =
+            SkipJobManifest(
+                apiVersion = "skiperator.kartverket.no/v1alpha1",
+                kind = "SKIPJob",
+                metadata =
+                    SkiperatorMetadata(
+                        name = name,
+                        namespace = namespace,
                     ),
-                    accessPolicy = accessPolicy
-                ),
-                job = skiperatorJob
+                spec =
+                    SkipJobSpec(
+                        container =
+                            SkiperatorContainerSpec(
+                                image = imageUrl,
+                                env = envVars,
+                                envFrom =
+                                    externalSecretsName?.let {
+                                        listOf(
+                                            ExternalSecretOperatorRef(
+                                                secret = it,
+                                            ),
+                                        )
+                                    },
+                                accessPolicy = accessPolicy,
+                            ),
+                        job = skiperatorJob,
+                    ),
             )
-        )
         try {
             skiperatorConfig.customObjectsApi()
                 .createNamespacedCustomObject(
@@ -52,7 +65,7 @@ class KubernetesService(
                     "v1alpha1",
                     namespace,
                     "skipjobs",
-                    Yaml.load(skipJob.toYamlString())
+                    Yaml.load(skipJob.toYamlString()),
                 )
         } catch (e: ApiException) {
             throw e
