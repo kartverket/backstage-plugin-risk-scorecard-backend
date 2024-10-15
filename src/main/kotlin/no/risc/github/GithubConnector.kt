@@ -121,7 +121,6 @@ class GithubConnector(
                         else -> GithubContentResponse(sopsConfigResponseOnDefaultBranch.decodedFileContent(), GithubStatus.Success)
                     }
                 }
-
                 else -> GithubContentResponse(sopsConfigResponseOnBranch.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
