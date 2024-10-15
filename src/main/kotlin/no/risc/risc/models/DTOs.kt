@@ -13,3 +13,8 @@ data class DifferenceDTO(
 data class DifferenceRequestBody(
     val riSc: String,
 )
+
+data class InitializeRiScRequestBody(
+    val publicAgeKey: String? = null,
+    val gcpProjectId: String,
+)

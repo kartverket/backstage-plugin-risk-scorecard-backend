@@ -78,6 +78,11 @@ data class RiScApprovalPRStatus(
     val hasClosedPr: Boolean,
 )
 
+data class CommitMessages(
+    val riSc: String,
+    val sopsConfig: String?,
+)
+
 @Component
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
@@ -92,24 +97,31 @@ class GithubConnector(
         riScId: String,
     ): GithubContentResponse =
         try {
-            val sopsConfigResponse =
+            val sopsConfigResponseOnBranch =
                 getGithubResponse(
-                    githubHelper.uriToFindSopsConfig(owner, repository),
+                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
                     githubAccessToken.value,
                 )
-            when (sopsConfigResponse.decodedFileContent()) {
-                null -> throw SopsConfigFetchException(
-                    message = "Failed to fetch sops config from location: ${
-                        githubHelper.uriToFindSopsConfig(
-                            owner,
-                            repository,
+            when (sopsConfigResponseOnBranch.decodedFileContent()) {
+                null -> {
+                    val sopsConfigResponseOnDefaultBranch =
+                        getGithubResponse(
+                            githubHelper.uriToFindSopsConfig(owner, repository),
+                            githubAccessToken.value,
                         )
-                    } with the following response: $sopsConfigResponse",
-                    riScId = riScId,
-                    responseMessage = "Could not fetch SOPS config",
-                )
-
-                else -> GithubContentResponse(sopsConfigResponse.decodedFileContent(), GithubStatus.Success)
+                    when (sopsConfigResponseOnDefaultBranch.decodedFileContent()) {
+                        null -> throw SopsConfigFetchException(
+                            message =
+                                "Failed to fetch sops config from $owner/$repository on " +
+                                    "default branch and branch with name: $riScId with the following response: " +
+                                    "$sopsConfigResponseOnDefaultBranch",
+                            riScId = riScId,
+                            responseMessage = "Could not fetch SOPS config",
+                        )
+                        else -> GithubContentResponse(sopsConfigResponseOnDefaultBranch.decodedFileContent(), GithubStatus.Success)
+                    }
+                }
+                else -> GithubContentResponse(sopsConfigResponseOnBranch.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
             throw SopsConfigFetchException(
@@ -263,6 +275,7 @@ class GithubConnector(
         repository: String,
         riScId: String,
         fileContent: String,
+        sopsConfig: String? = null,
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
@@ -271,7 +284,7 @@ class GithubConnector(
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
         var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-        var latestShaForPublished: String? = ""
+        val latestShaForPublished: String?
 
         // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
         // through updating.
@@ -284,19 +297,63 @@ class GithubConnector(
                 // Fetch to determine if update or create
                 latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
                 if (latestShaForPublished != null) {
-                    "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
+                    CommitMessages(
+                        riSc = "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
+                        sopsConfig =
+                            if (sopsConfig != null) {
+                                "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                            } else {
+                                null
+                            },
+                    )
                 } else {
-                    "Create new RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
+                    CommitMessages(
+                        riSc = "Create new RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
+                        sopsConfig =
+                            if (sopsConfig != null) {
+                                "Create SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                            } else {
+                                null
+                            },
+                    )
                 }
             } else {
-                "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else ""
+                CommitMessages(
+                    riSc = "Update RiSc with id: $riScId" + if (requiresNewApproval)" requires new approval" else "",
+                    sopsConfig =
+                        if (sopsConfig != null) {
+                            "Update SOPS configuration" + if (requiresNewApproval)" requires new approval" else ""
+                        } else {
+                            null
+                        },
+                )
             }
+
+        // Write new sops config if sops config is passed to the method
+        sopsConfig?.let { config ->
+            putFileRequestToGithub(
+                githubHelper.uriToPutSopsConfigOnDraftBranch(owner, repository, riScId),
+                accessToken,
+                GithubWriteToFilePayload(
+                    message =
+                        commitMessage.sopsConfig
+                            ?: throw IllegalStateException(
+                                "Commit message for SOPS config cannot be " +
+                                    "null when method argument 'sopsConfig' is not null",
+                            ),
+                    content = config.encodeBase64(),
+                    sha = latestShaForDraft,
+                    branchName = riScId,
+                    author = githubAuthor,
+                ),
+            )
+        }
 
         putFileRequestToGithub(
             githubHelper.uriToPutRiScOnDraftBranch(owner, repository, riScId),
             accessToken,
             GithubWriteToFilePayload(
-                message = commitMessage,
+                message = commitMessage.riSc,
                 content = fileContent.encodeBase64(),
                 sha = latestShaForDraft,
                 branchName = riScId,

@@ -29,6 +29,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.data:spring-data-redis")
     implementation("org.springframework.security:spring-security-oauth2-jose")
     implementation("org.springframework.security:spring-security-oauth2-resource-server")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
@@ -36,11 +37,14 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
 
+    implementation("redis.clients:jedis")
+
     implementation("io.netty:netty-all:4.1.112.Final")
 
     implementation("io.micrometer:micrometer-registry-prometheus")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
     implementation("net.pwall.json:json-kotlin-schema:0.48")
     implementation("org.apache.commons:commons-lang3:3.16.0")
 
@@ -51,6 +55,8 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
 
+    implementation("io.kubernetes:client-java:21.0.1")
+
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
@@ -59,6 +65,9 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+
+    // Development
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 }
 
 tasks.withType<KotlinCompile> {

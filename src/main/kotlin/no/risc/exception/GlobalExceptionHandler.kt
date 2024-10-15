@@ -2,6 +2,7 @@ package no.risc.exception
 
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.InitializeRiScSessionNotFoundException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidException
@@ -126,5 +127,11 @@ internal class GlobalExceptionHandler {
             ProcessingStatus.ErrorWhenCreatingRiSc,
             ex.message,
         )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InitializeRiScSessionNotFoundException::class)
+    fun handleInitializeRiScSessionNotFoundException(ex: InitializeRiScSessionNotFoundException) {
+        logger.error(ex.message, ex)
     }
 }

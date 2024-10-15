@@ -19,4 +19,4 @@ http-client.private.env.json
 
 
 # Env
-.env.local
+.env

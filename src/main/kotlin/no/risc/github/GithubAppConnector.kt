@@ -12,6 +12,7 @@ import no.risc.infra.connector.WebClientConnector
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
@@ -30,19 +31,25 @@ class GithubAppConnector(
     @Value("\${githubAppIdentifier.appId}") private val appId: Int,
     @Value("\${githubAppIdentifier.installationId}") private val installationId: Int,
     @Value("\${githubAppIdentifier.privateKey}") private val base64EncodedPrivateKey: String,
+    @Value("\${github.pat}") private val githubPersonalAccessToken: String,
     private val githubHelper: GithubHelper,
+    private val environment: Environment,
 ) :
     WebClientConnector("https://api.github.com/app") {
     private val logger: Logger = getLogger(GithubAppConnector::class.java)
     private val githubAppPrivateKey = Base64.getDecoder().decode(base64EncodedPrivateKey)
 
     internal fun getAccessTokenFromApp(repositoryName: String): GithubAccessToken {
-        return GithubAccessToken(
-            getGithubAppAccessToken(
-                jwt = generateJWT(),
-                repositoryName = repositoryName,
-            ).token,
-        )
+        return if (environment.activeProfiles.contains("local")) {
+            GithubAccessToken(githubPersonalAccessToken)
+        } else {
+            GithubAccessToken(
+                getGithubAppAccessToken(
+                    jwt = generateJWT(),
+                    repositoryName = repositoryName,
+                ).token,
+            )
+        }
     }
 
     private fun getGithubAppAccessToken(

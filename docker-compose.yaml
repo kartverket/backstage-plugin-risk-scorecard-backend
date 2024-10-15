@@ -1,29 +1,12 @@
 services:
-  local:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  cache:
+    image: redis:alpine
+    restart: always
+    container_name: "ros-backend-redis"
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - '6379:6379'
     volumes:
-      - .:/code
-    env_file:
-      - .env
-  skip:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - ISSUER_URI=${ISSUER_URI}
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
-      - GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED}
-      - RISC_FOLDER_PATH=${RISC_FOLDER_PATH}
-      - FILENAME_PREFIX=${FILENAME_PREFIX}
-      - FILENAME_POSTFIX=${FILENAME_POSTFIX}
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    volumes:
-      - .:/code
+      - cache:/data
+volumes:
+  cache:
+    driver: local
