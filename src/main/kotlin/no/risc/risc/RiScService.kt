@@ -1,9 +1,5 @@
 package no.risc.risc
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.config.SkiperatorConfig
 import no.risc.encryption.CryptoServiceIntegration
@@ -50,12 +46,11 @@ class ProcessRiScResultDTO(
     statusMessage: String,
 ) : RiScResult(riScId, status, statusMessage) {
     companion object {
-        val INVALID_ACCESS_TOKENS =
-            ProcessRiScResultDTO(
-                "",
-                ProcessingStatus.InvalidAccessTokens,
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
-            )
+        val INVALID_ACCESS_TOKENS = ProcessRiScResultDTO(
+            "",
+            ProcessingStatus.InvalidAccessTokens,
+            "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
+        )
     }
 }
 
@@ -66,16 +61,14 @@ data class RiScContentResultDTO(
     val riScStatus: RiScStatus?,
     val riScContent: String?,
     val pullRequestUrl: String? = null,
-    val migrationStatus: MigrationStatus =
-        MigrationStatus(
-            migrationChanges = false,
-            migrationRequiresNewApproval = false,
-            migrationVersions =
-                MigrationVersions(
-                    fromVersion = null,
-                    toVersion = null,
-                ),
+    val migrationStatus: MigrationStatus = MigrationStatus(
+        migrationChanges = false,
+        migrationRequiresNewApproval = false,
+        migrationVersions = MigrationVersions(
+            fromVersion = null,
+            toVersion = null,
         ),
+    ),
 )
 
 @Serializable
@@ -110,30 +103,23 @@ data class PendingApprovalDTO(
 )
 
 enum class ContentStatus {
-    Success,
-    FileNotFound,
-    DecryptionFailed,
-    Failure,
+    Success, FileNotFound, DecryptionFailed, Failure,
 }
 
 enum class DifferenceStatus {
-    Success,
-    GithubFailure,
-    GithubFileNotFound,
-    JsonFailure,
-    DecryptionFailure,
+    Success, GithubFailure, GithubFileNotFound, JsonFailure, DecryptionFailure,
 }
 
 enum class ProcessingStatus(val message: String) {
-    ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
-    CreatedRiSc("Created new risk scorecard successfully"),
-    UpdatedRiSc("Updated risk scorecard successfully"),
-    UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
-    CreatedPullRequest("Created pull request for risk scorecard"),
-    ErrorWhenCreatingPullRequest("Error when creating pull request"),
-    InvalidAccessTokens("Invalid access tokens"),
-    UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
-    ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
+    ErrorWhenUpdatingRiSc("Error when updating risk scorecard"), CreatedRiSc("Created new risk scorecard successfully"), UpdatedRiSc(
+        "Updated risk scorecard successfully"
+    ),
+    UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"), CreatedPullRequest("Created pull request for risk scorecard"), ErrorWhenCreatingPullRequest(
+        "Error when creating pull request"
+    ),
+    InvalidAccessTokens("Invalid access tokens"), UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"), ErrorWhenCreatingRiSc(
+        "Error when creating risk scorecard"
+    ),
 }
 
 data class RiScIdentifier(
@@ -143,9 +129,7 @@ data class RiScIdentifier(
 )
 
 enum class RiScStatus {
-    Draft,
-    SentForApproval,
-    Published,
+    Draft, SentForApproval, Published,
 }
 
 data class DecryptionFailure(
@@ -189,64 +173,62 @@ class RiScService(
         headRiSc: String,
     ): DifferenceDTO {
         var lastModifiedDate = ""
-        val response: RiScContentResultDTO =
-            githubConnector.fetchPublishedRiSc(
-                owner = owner,
-                repository = repository,
-                id = riScId,
-                accessToken = accessTokens.githubAccessToken.value,
-            ).also {
-                if (it.status == GithubStatus.Success) {
-                    lastModifiedDate = it.data.toString().substringAfterLast("lastmodified: ").substringBefore("mac").trimEnd()
-                }
-            }.responseToRiScResult(
-                riScId = riScId,
-                riScStatus = RiScStatus.Published,
-                gcpAccessToken = accessTokens.gcpAccessToken,
-                pullRequestUrl = null,
-            )
-        val result: InternDifference =
-            when (response.status) {
-                ContentStatus.Success -> {
-                    try {
-                        InternDifference(
-                            status = DifferenceStatus.Success,
-                            differenceState = diff("${response.riScContent}", headRiSc),
-                            "",
-                        )
-                    } catch (e: DifferenceException) {
-                        InternDifference(
-                            status = DifferenceStatus.JsonFailure,
-                            Difference(),
-                            "${e.message}",
-                        )
-                    }
-                }
-
-                /*
-                This case is considered valid, because if the file is not found, we can assume that the riSc
-                does not have a published version yet, and therefore there are no differences to compare.
-                The frontend handles this.
-                 */
-                ContentStatus.FileNotFound ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFileNotFound,
-                        differenceState = Difference(),
-                        "Encountered Github problem: File not found",
-                    )
-                ContentStatus.DecryptionFailed ->
-                    InternDifference(
-                        status = DifferenceStatus.DecryptionFailure,
-                        differenceState = Difference(),
-                        "Encountered ROS problem: Could not decrypt content",
-                    )
-                ContentStatus.Failure ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFailure,
-                        differenceState = Difference(),
-                        "Encountered Github problem: Github failure",
-                    )
+        val response: RiScContentResultDTO = githubConnector.fetchPublishedRiSc(
+            owner = owner,
+            repository = repository,
+            id = riScId,
+            accessToken = accessTokens.githubAccessToken.value,
+        ).also {
+            if (it.status == GithubStatus.Success) {
+                lastModifiedDate =
+                    it.data.toString().substringAfterLast("lastmodified: ").substringBefore("mac").trimEnd()
             }
+        }.responseToRiScResult(
+            riScId = riScId,
+            riScStatus = RiScStatus.Published,
+            gcpAccessToken = accessTokens.gcpAccessToken,
+            pullRequestUrl = null,
+        )
+        val result: InternDifference = when (response.status) {
+            ContentStatus.Success -> {
+                try {
+                    InternDifference(
+                        status = DifferenceStatus.Success,
+                        differenceState = diff("${response.riScContent}", headRiSc),
+                        "",
+                    )
+                } catch (e: DifferenceException) {
+                    InternDifference(
+                        status = DifferenceStatus.JsonFailure,
+                        Difference(),
+                        "${e.message}",
+                    )
+                }
+            }
+
+            /*
+            This case is considered valid, because if the file is not found, we can assume that the riSc
+            does not have a published version yet, and therefore there are no differences to compare.
+            The frontend handles this.
+             */
+            ContentStatus.FileNotFound -> InternDifference(
+                status = DifferenceStatus.GithubFileNotFound,
+                differenceState = Difference(),
+                "Encountered Github problem: File not found",
+            )
+
+            ContentStatus.DecryptionFailed -> InternDifference(
+                status = DifferenceStatus.DecryptionFailure,
+                differenceState = Difference(),
+                "Encountered ROS problem: Could not decrypt content",
+            )
+
+            ContentStatus.Failure -> InternDifference(
+                status = DifferenceStatus.GithubFailure,
+                differenceState = Difference(),
+                "Encountered Github problem: Github failure",
+            )
+        }
         return result.toDTO(lastModifiedDate)
     }
 
@@ -254,134 +236,114 @@ class RiScService(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
-    ): GithubRiScIdentifiersResponse =
-        githubConnector.fetchAllRiScIdentifiersInRepository(
-            owner,
-            repository,
-            accessTokens.githubAccessToken.value,
-        )
+    ): GithubRiScIdentifiersResponse = githubConnector.fetchAllRiScIdentifiersInRepository(
+        owner,
+        repository,
+        accessTokens.githubAccessToken.value,
+    )
 
     suspend fun fetchAllRiScs(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
         latestSupportedVersion: String,
-    ): List<RiScContentResultDTO> =
-        coroutineScope {
-            val riScIds =
-                githubConnector.fetchAllRiScIdentifiersInRepository(
-                    owner,
-                    repository,
-                    accessTokens.githubAccessToken.value,
-                ).ids
+    ): List<RiScContentResultDTO> {
+        val riScIds = githubConnector.fetchAllRiScIdentifiersInRepository(
+            owner,
+            repository,
+            accessTokens.githubAccessToken.value,
+        ).ids
+        val riScContents = riScIds.associateWith { id ->
+            val fetchRiSc = when (id.status) {
+                RiScStatus.Published -> githubConnector::fetchPublishedRiSc
+                RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
+            }
+            fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
+        }.mapValues { it.value }
+        val riScs = riScContents.map { (id, contentResponse) ->
+            try {
+                val processedContent = when (id.status) {
+                    RiScStatus.Draft -> {
+                        val publishedContent = riScContents.entries.find {
+                            it.key.status == RiScStatus.Published && it.key.id == id.id
+                        }?.value
 
-            val riScContents =
-                riScIds.associateWith { id ->
-                    async(Dispatchers.IO) {
-                        val fetchRiSc =
-                            when (id.status) {
-                                RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                                RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                            }
-                        fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                    }
-                }.mapValues { it.value.await() }
-
-            val riScs =
-                riScContents.map { (id, contentResponse) ->
-                    async(Dispatchers.IO) {
-                        try {
-                            val processedContent =
-                                when (id.status) {
-                                    RiScStatus.Draft -> {
-                                        val publishedContent =
-                                            riScContents.entries.find {
-                                                it.key.status == RiScStatus.Published && it.key.id == id.id
-                                            }?.value
-
-                                        contentResponse.takeUnless {
-                                            publishedContent?.status == GithubStatus.Success &&
-                                                publishedContent.data == contentResponse.data
-                                        }
-                                    }
-                                    RiScStatus.Published -> {
-                                        val draftedContent =
-                                            riScContents.entries.find {
-                                                it.key.status == RiScStatus.Draft && it.key.id == id.id
-                                            }?.value
-
-                                        contentResponse.takeUnless {
-                                            draftedContent?.status == GithubStatus.Success &&
-                                                draftedContent.data != contentResponse.data
-                                        }
-                                    }
-                                    else -> {
-                                        contentResponse
-                                    }
-                                }
-                            processedContent?.let { nonNullContent ->
-                                nonNullContent
-                                    .responseToRiScResult(
-                                        id.id,
-                                        id.status,
-                                        accessTokens.gcpAccessToken,
-                                        id.pullRequestUrl,
-                                    )
-                                    .let { migrate(it, latestSupportedVersion) }
-                            }
-                        } catch (e: Exception) {
-                            RiScContentResultDTO(
-                                riScId = id.id,
-                                status = ContentStatus.Failure,
-                                riScStatus = id.status,
-                                riScContent = null,
-                                pullRequestUrl = null,
-                            )
+                        contentResponse.takeUnless {
+                            publishedContent?.status == GithubStatus.Success && publishedContent.data == contentResponse.data
                         }
                     }
-                }.awaitAll()
-                    .filterNotNull()
-            riScs
-        }
+
+                    RiScStatus.Published -> {
+                        val draftedContent = riScContents.entries.find {
+                            it.key.status == RiScStatus.Draft && it.key.id == id.id
+                        }?.value
+
+                        contentResponse.takeUnless {
+                            draftedContent?.status == GithubStatus.Success && draftedContent.data != contentResponse.data
+                        }
+                    }
+
+                    else -> {
+                        contentResponse
+                    }
+                }
+                processedContent?.let { nonNullContent ->
+                    nonNullContent.responseToRiScResult(
+                            id.id,
+                            id.status,
+                            accessTokens.gcpAccessToken,
+                            id.pullRequestUrl,
+                        ).let { migrate(it, latestSupportedVersion) }
+                }
+            } catch (e: Exception) {
+                RiScContentResultDTO(
+                    riScId = id.id,
+                    status = ContentStatus.Failure,
+                    riScStatus = id.status,
+                    riScContent = null,
+                    pullRequestUrl = null,
+                )
+            }
+        }.filterNotNull()
+        return riScs
+    }
 
     private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
-    ): RiScContentResultDTO =
-        when (status) {
-            GithubStatus.Success ->
-                try {
-                    RiScContentResultDTO(
-                        riScId,
-                        ContentStatus.Success,
-                        riScStatus,
-                        decryptContent(gcpAccessToken),
-                        pullRequestUrl,
-                    )
-                } catch (e: Exception) {
-                    when (e) {
-                        is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
+    ): RiScContentResultDTO = when (status) {
+        GithubStatus.Success -> try {
+            RiScContentResultDTO(
+                riScId,
+                ContentStatus.Success,
+                riScStatus,
+                decryptContent(gcpAccessToken),
+                pullRequestUrl,
+            )
+        } catch (e: Exception) {
+            when (e) {
+                is SOPSDecryptionException -> RiScContentResultDTO(
+                    riScId,
+                    ContentStatus.DecryptionFailed,
+                    riScStatus,
+                    null
+                )
 
-                        else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
-                    }
-                }
-
-            GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
-
-            else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                else -> RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+            }
         }
 
-    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
-        cryptoService.decrypt(
-            ciphertext = data(),
-            gcpAccessToken = gcpAccessToken,
-        )
+        GithubStatus.NotFound -> RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
+
+        else -> RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+    }
+
+    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) = cryptoService.decrypt(
+        ciphertext = data(),
+        gcpAccessToken = gcpAccessToken,
+    )
 
     suspend fun updateRiSc(
         owner: String,
@@ -402,64 +364,56 @@ class RiScService(
             name = "initialize-risc-$owner-$repository",
             namespace = skiperatorConfig.namespace,
             imageUrl = skiperatorConfig.imageUrl,
-            envVars =
-                listOfNotNull(
-                    SkiperatorContainerEnvEntry(
-                        name = "PATH_REGEX",
-                        value = riscPathRegex,
-                    ),
-                    SkiperatorContainerEnvEntry(
-                        name = "REPO_NAME",
-                        value = repository,
-                    ),
-                    SkiperatorContainerEnvEntry(
-                        name = "GCP_PROJECT_ID",
-                        value = gcpProjectId,
-                    ),
-                    securityChampionPublicKey?.let {
-                        SkiperatorContainerEnvEntry(
-                            name = "SECURITY_CHAMPION_KEY",
-                            value = it,
-                        )
-                    },
+            envVars = listOfNotNull(
+                SkiperatorContainerEnvEntry(
+                    name = "PATH_REGEX",
+                    value = riscPathRegex,
                 ),
+                SkiperatorContainerEnvEntry(
+                    name = "REPO_NAME",
+                    value = repository,
+                ),
+                SkiperatorContainerEnvEntry(
+                    name = "GCP_PROJECT_ID",
+                    value = gcpProjectId,
+                ),
+                securityChampionPublicKey?.let {
+                    SkiperatorContainerEnvEntry(
+                        name = "SECURITY_CHAMPION_KEY",
+                        value = it,
+                    )
+                },
+            ),
             externalSecretsName = skiperatorConfig.externalSecretsName,
-            accessPolicy =
-                SkiperatorContainerAccessPolicy(
-                    inbound =
-                        SkiperatorContainerInboundAccessPolicy(
-                            rules =
-                                listOf(
-                                    SkiperatorContainerAccessPolicyRule(
-                                        namespace = skiperatorConfig.namespace,
-                                        application = skiperatorConfig.riScBackendApplicationName,
-                                    ),
-                                ),
+            accessPolicy = SkiperatorContainerAccessPolicy(
+                inbound = SkiperatorContainerInboundAccessPolicy(
+                    rules = listOf(
+                        SkiperatorContainerAccessPolicyRule(
+                            namespace = skiperatorConfig.namespace,
+                            application = skiperatorConfig.riScBackendApplicationName,
                         ),
-                    outbound =
-                        SkiperatorContainerOutboundAccessPolicy(
-                            external =
-                                listOf(
-                                    SkiperatorContainerExternalAccessPolicyEntry(
-                                        host = "api.airtable.com",
-                                    ),
-                                ),
-                            rules =
-                                listOf(
-                                    SkiperatorContainerAccessPolicyRule(
-                                        namespace = "sikkerhetsmetrikker-main",
-                                        application = "sikkerhetsmetrikker",
-                                    ),
-                                ),
-                        ),
+                    ),
                 ),
+                outbound = SkiperatorContainerOutboundAccessPolicy(
+                    external = listOf(
+                        SkiperatorContainerExternalAccessPolicyEntry(
+                            host = "api.airtable.com",
+                        ),
+                    ),
+                    rules = listOf(
+                        SkiperatorContainerAccessPolicyRule(
+                            namespace = "sikkerhetsmetrikker-main",
+                            application = "sikkerhetsmetrikker",
+                        ),
+                    ),
+                ),
+            ),
         )
         redisService.storeInitializeRiScSession(
-            repository =
-                Repository(
-                    owner = owner,
-                    repository = repository,
-                ),
+            repository = Repository(
+                owner = owner,
+                repository = repository,
+            ),
             gcpAccessTokenValue = gcpAccessTokenValue,
         )
     }
@@ -469,27 +423,23 @@ class RiScService(
         repository: String,
         content: RiScWrapperObject,
     ) {
-        val initializeRiScSession =
-            redisService.retrieveInitializeRiScSessionByRepository(
-                repository =
-                    Repository(
-                        owner = owner,
-                        repository = repository,
-                    ),
-            )
+        val initializeRiScSession = redisService.retrieveInitializeRiScSessionByRepository(
+            repository = Repository(
+                owner = owner,
+                repository = repository,
+            ),
+        )
         updateOrCreateRiSc(
             owner = owner,
             repository = repository,
-            riScId =
-                getUniqueRiScId(
-                    isInitRiSc = true,
-                ),
+            riScId = getUniqueRiScId(
+                isInitRiSc = true,
+            ),
             content = content,
-            accessTokens =
-                AccessTokens(
-                    githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
-                    gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue),
-                ),
+            accessTokens = AccessTokens(
+                githubAccessToken = githubAppConnector.getAccessTokenFromApp(repository),
+                gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue),
+            ),
         )
     }
 
@@ -533,13 +483,12 @@ class RiScService(
     ): RiScResult {
         val resourcePath = "schemas/risc_schema_en_v${content.schemaVersion.replace('.', '_')}.json"
         val resource = object {}.javaClass.classLoader.getResourceAsStream(resourcePath)
-        val jsonSchema =
-            resource?.bufferedReader().use { reader ->
-                reader?.readText() ?: throw JSONSchemaFetchException(
-                    message = "Failed to read JSON schema for version ${content.schemaVersion}",
-                    riScId = riScId,
-                )
-            }
+        val jsonSchema = resource?.bufferedReader().use { reader ->
+            reader?.readText() ?: throw JSONSchemaFetchException(
+                message = "Failed to read JSON schema for version ${content.schemaVersion}",
+                riScId = riScId,
+            )
+        }
 
         val validationStatus = JSONValidator.validateJSON(jsonSchema, content.riSc)
         if (!validationStatus.valid) {
@@ -551,62 +500,55 @@ class RiScService(
             )
         }
 
-        val config =
-            if (content.sopsConfig == null) {
-                val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
-                if (sopsConfig.status != GithubStatus.Success) {
-                    throw SopsConfigFetchException(
-                        message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
-                        riScId = riScId,
-                        responseMessage = "Could not fetch SOPS config",
-                    )
-                }
-                removePathRegex(sopsConfig.data())
-            } else {
-                content.sopsConfig
+        val config = if (content.sopsConfig == null) {
+            val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
+            if (sopsConfig.status != GithubStatus.Success) {
+                throw SopsConfigFetchException(
+                    message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
+                    riScId = riScId,
+                    responseMessage = "Could not fetch SOPS config",
+                )
             }
+            removePathRegex(sopsConfig.data())
+        } else {
+            content.sopsConfig
+        }
 
-        val encryptedData: String =
-            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+        val encryptedData: String = cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
-            val riScApprovalPRStatus =
-                githubConnector.updateOrCreateDraft(
-                    owner = owner,
-                    repository = repository,
-                    riScId = riScId,
-                    fileContent = encryptedData,
-                    sopsConfig = content.sopsConfig,
-                    requiresNewApproval = content.isRequiresNewApproval,
-                    accessTokens = accessTokens,
-                    userInfo = content.userInfo,
-                )
+            val riScApprovalPRStatus = githubConnector.updateOrCreateDraft(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                fileContent = encryptedData,
+                sopsConfig = content.sopsConfig,
+                requiresNewApproval = content.isRequiresNewApproval,
+                accessTokens = accessTokens,
+                userInfo = content.userInfo,
+            )
 
             return when (riScApprovalPRStatus.pullRequest) {
-                is GithubPullRequestObject ->
-                    PublishRiScResultDTO(
-                        riScId,
-                        status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
-                        "RiSc was updated and does not require approval - pull request was created",
-                        riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
-                    )
+                is GithubPullRequestObject -> PublishRiScResultDTO(
+                    riScId,
+                    status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
+                    "RiSc was updated and does not require approval - pull request was created",
+                    riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
+                )
 
-                null ->
-                    ProcessRiScResultDTO(
-                        riScId,
-                        status =
-                            if (riScApprovalPRStatus.hasClosedPr) {
-                                ProcessingStatus.UpdatedRiScRequiresNewApproval
-                            } else {
-                                ProcessingStatus.UpdatedRiSc
-                            },
-                        "Risk scorecard was updated" +
-                            if (riScApprovalPRStatus.hasClosedPr) {
-                                " and has to be approved by av risk owner again"
-                            } else {
-                                ""
-                            },
-                    )
+                null -> ProcessRiScResultDTO(
+                    riScId,
+                    status = if (riScApprovalPRStatus.hasClosedPr) {
+                        ProcessingStatus.UpdatedRiScRequiresNewApproval
+                    } else {
+                        ProcessingStatus.UpdatedRiSc
+                    },
+                    "Risk scorecard was updated" + if (riScApprovalPRStatus.hasClosedPr) {
+                        " and has to be approved by av risk owner again"
+                    } else {
+                        ""
+                    },
+                )
 
                 else -> {
                     throw UpdatingRiScException(
@@ -630,38 +572,34 @@ class RiScService(
         accessTokens: AccessTokens,
         userInfo: UserInfo,
     ): PublishRiScResultDTO {
-        val pullRequestObject =
-            githubConnector.createPullRequestForRiSc(
-                owner = owner,
-                repository = repository,
-                riScId = riScId,
-                requiresNewApproval = true,
-                accessTokens = accessTokens,
-                userInfo = userInfo,
-            )
+        val pullRequestObject = githubConnector.createPullRequestForRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = riScId,
+            requiresNewApproval = true,
+            accessTokens = accessTokens,
+            userInfo = userInfo,
+        )
 
         return when (pullRequestObject) {
-            is GithubPullRequestObject ->
-                PublishRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.CreatedPullRequest,
-                    "Pull request was created",
-                    pullRequestObject.toPendingApprovalDTO(),
-                )
+            is GithubPullRequestObject -> PublishRiScResultDTO(
+                riScId,
+                ProcessingStatus.CreatedPullRequest,
+                "Pull request was created",
+                pullRequestObject.toPendingApprovalDTO(),
+            )
 
-            else ->
-                PublishRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    "Could not create pull request",
-                    null,
-                )
+            else -> PublishRiScResultDTO(
+                riScId,
+                ProcessingStatus.ErrorWhenCreatingPullRequest,
+                "Could not create pull request",
+                null,
+            )
         }
     }
 
-    private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =
-        PendingApprovalDTO(
-            pullRequestUrl = this.url,
-            pullRequestName = this.head.ref,
-        )
+    private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO = PendingApprovalDTO(
+        pullRequestUrl = this.url,
+        pullRequestName = this.head.ref,
+    )
 }
