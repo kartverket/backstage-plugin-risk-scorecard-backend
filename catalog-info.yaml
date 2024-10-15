@@ -9,7 +9,7 @@ spec:
   type: "service"
   lifecycle: "production"
   owner: "skvis"
-  system: "utviklerportal"
+  system: "ros-as-code"
   providesApis:
   - "backstage-plugin-risk-scorecard-backend-api"
 ---

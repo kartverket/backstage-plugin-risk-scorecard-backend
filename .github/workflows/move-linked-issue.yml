@@ -1,0 +1,33 @@
+name: Move linked issue to specific project column based on PR status
+
+on:
+  pull_request:
+    types: [converted_to_draft, opened, ready_for_review]
+
+jobs:
+  manage-project:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Move PR to In Progress
+        uses: leonsteinhaeuser/project-beta-automations@v2.2.1
+        if: ${{ (github.event.action == 'opened' && github.event.pull_request.draft) || github.event.action == 'converted_to_draft' }}
+        with:
+          gh_token: ${{ secrets.ISSUES_PAT }}
+          organization: kartverket
+          project_id: 20
+          resource_node_id: ${{ github.event.pull_request.node_id }}
+          move_related_issues: true
+          status_value: 'In Progress' # Target status
+
+      - name: Move PR to Ready for review
+        uses: leonsteinhaeuser/project-beta-automations@v2.2.1
+        if: ${{ (github.event.action == 'opened' && !github.event.pull_request.draft) || github.event.action == 'ready_for_review' }}
+        with:
+          gh_token: ${{ secrets.ISSUES_PAT }}
+          organization: kartverket
+          project_id: 20
+          resource_node_id: ${{ github.event.pull_request.node_id }}
+          move_related_issues: true
+          status_value: 'Ready for review' # Target status
