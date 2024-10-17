@@ -20,3 +20,17 @@ data class FileNameDTO(
     @JsonProperty("name")
     val value: String,
 )
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RepositoryPermissionsDTO(
+    val permissions: RepositoryPermissions,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RepositoryPermissions(
+    val admin: Boolean,
+    val maintain: Boolean,
+    val push: Boolean,
+    val triage: Boolean,
+    val pull: Boolean,
+)
