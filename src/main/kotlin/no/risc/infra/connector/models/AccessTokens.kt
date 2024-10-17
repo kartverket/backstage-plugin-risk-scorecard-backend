@@ -1,15 +1,19 @@
 package no.risc.infra.connector.models
 
-import no.risc.github.GithubAccessToken
-
 data class AccessTokens(
     val githubAccessToken: GithubAccessToken,
     val gcpAccessToken: GCPAccessToken,
 )
 
-data class GCPAccessToken(val value: String)
+enum class GitHubPermission {
+    READ,
+    WRITE,
+}
 
-fun GCPAccessToken.sensor() =
-    GCPAccessToken(
-        value = value.slice(IntRange(0, 3)) + "****",
-    )
+data class GCPAccessToken(
+    val value: String,
+)
+
+data class GithubAccessToken(
+    val value: String,
+)

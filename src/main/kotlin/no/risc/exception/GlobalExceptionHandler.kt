@@ -4,10 +4,14 @@ import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.NoReadAccessToRepositoryException
+import no.risc.exception.exceptions.NoWriteAccessToRepositoryException
+import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RiScNotValidException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.SopsEncryptionException
+import no.risc.exception.exceptions.UnableToParseResponseBodyException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.risc.ContentStatus
 import no.risc.risc.DecryptionFailure
@@ -126,5 +130,36 @@ internal class GlobalExceptionHandler {
             ProcessingStatus.ErrorWhenCreatingRiSc,
             ex.message,
         )
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(UnableToParseResponseBodyException::class)
+    fun handleUnableToParseResponseBodyException(ex: UnableToParseResponseBodyException) {
+        logger.error(ex.message, ex)
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseBody
+    @ExceptionHandler(PermissionDeniedOnGitHubException::class)
+    fun handlePermissionDeniedOnGitHubException(ex: PermissionDeniedOnGitHubException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    @ExceptionHandler(NoWriteAccessToRepositoryException::class)
+    fun handleNoWriteAccessToRepositoryException(ex: NoWriteAccessToRepositoryException): Any {
+        logger.error(ex.message, ex)
+        return ex.response
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    @ExceptionHandler(NoReadAccessToRepositoryException::class)
+    fun handleNoWriteAccessToRepositoryException(ex: NoReadAccessToRepositoryException): Any {
+        logger.error(ex.message, ex)
+        return ex.response
     }
 }
