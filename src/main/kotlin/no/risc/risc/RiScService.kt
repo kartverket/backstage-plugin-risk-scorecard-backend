@@ -315,6 +315,7 @@ class RiScService(
             val riScs =
                 riScContents
                     .map { (id, contentResponse) ->
+
                         async(Dispatchers.IO) {
                             try {
                                 val processedContent =
@@ -371,33 +372,37 @@ class RiScService(
                     }.awaitAll()
                     .filterNotNull()
                     .map {
-                        LOGGER.info(
-                            "Validating RiSc with id: '${it.riScId}' ${
-                                it.riScContent?.let {
-                                    "content starting with ${it.substring(3, 10)}***"
-                                } ?: "without content"
-                            }",
-                        )
-                        val validationStatus =
-                            JSONValidator.validateAgainstSchema(
-                                riScId = it.riScId,
-                                riScContent = it.riScContent,
+                        if (it.status == ContentStatus.Success) {
+                            LOGGER.info(
+                                "Validating RiSc with id: '${it.riScId}' ${
+                                    it.riScContent?.let {
+                                        "content starting with ${it.substring(3, 10)}***"
+                                    } ?: "without content"
+                                }",
                             )
-                        when (validationStatus.valid) {
-                            true -> {
-                                LOGGER.info("RiSc with id: ${it.riScId} successfully validated")
-                                it
-                            }
-
-                            false -> {
-                                LOGGER.info("RiSc with id: ${it.riScId} failed validation")
-                                RiScContentResultDTO(
-                                    it.riScId,
-                                    ContentStatus.SchemaValidationFailed,
-                                    null,
-                                    null,
+                            val validationStatus =
+                                JSONValidator.validateAgainstSchema(
+                                    riScId = it.riScId,
+                                    riScContent = it.riScContent,
                                 )
+                            when (validationStatus.valid) {
+                                true -> {
+                                    LOGGER.info("RiSc with id: ${it.riScId} successfully validated")
+                                    it
+                                }
+
+                                false -> {
+                                    LOGGER.info("RiSc with id: ${it.riScId} failed validation")
+                                    RiScContentResultDTO(
+                                        it.riScId,
+                                        ContentStatus.SchemaValidationFailed,
+                                        null,
+                                        null,
+                                    )
+                                }
                             }
+                        } else {
+                            it
                         }
                     }
             riScs

@@ -1,8 +1,6 @@
 package no.risc.infra.connector
 
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
 import org.springframework.http.codec.ClientCodecConfigurer
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
@@ -14,7 +12,6 @@ abstract class WebClientConnector(
         WebClient
             .builder()
             .baseUrl(baseURL)
-            .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
             .exchangeStrategies(
                 ExchangeStrategies
                     .builder()
