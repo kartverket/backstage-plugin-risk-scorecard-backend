@@ -7,7 +7,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
-import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
@@ -371,11 +370,7 @@ class RiScService(
                         val validationStatus =
                             JSONValidator.validateAgainstSchema(
                                 riScId = it.riScId,
-                                riScContent =
-                                    it.riScContent ?: throw RiScNotValidOnFetchException(
-                                        "Trying to validate riSc with id: ${it.riScId}, but riScContent is null",
-                                        it.riScId,
-                                    ),
+                                riScContent = it.riScContent,
                             )
                         when (validationStatus.valid) {
                             true -> it

@@ -61,20 +61,27 @@ object JSONValidator {
     fun validateAgainstSchema(
         riScId: String,
         schema: String? = null,
-        riScContent: String,
+        riScContent: String?,
     ): BasicOutput =
-        if (schema == null) {
-            SchemaVersion.entries.forEach {
-                val currentSchema = getSchemaOnFetch(riScId, it)
-                val output = validateJson(riScId, currentSchema, riScContent)
-                if (output.valid) {
-                    return output
-                }
-            }
-            LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
+        if (riScContent == null) {
+            LOGGER.error(
+                "RiSc with id: $riScId has riScContent equals null. Probably because of size-limitations of response-body in response.",
+            )
             BasicOutput(false)
         } else {
-            validateJson(riScId, schema, riScContent)
+            if (schema == null) {
+                SchemaVersion.entries.forEach {
+                    val currentSchema = getSchemaOnFetch(riScId, it)
+                    val output = validateJson(riScId, currentSchema, riScContent)
+                    if (output.valid) {
+                        return output
+                    }
+                }
+                LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
+                BasicOutput(false)
+            } else {
+                validateJson(riScId, schema, riScContent)
+            }
         }
 
     private fun validateJson(
