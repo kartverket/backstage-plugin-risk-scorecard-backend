@@ -569,14 +569,16 @@ class GithubConnector(
     private suspend fun getGithubResponseSuspend(
         uri: String,
         accessToken: String,
-    ): ResponseSpec =
-        webClient
+    ): ResponseSpec {
+        LOGGER.info("Sending GET-request to $uri")
+        return webClient
             .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
+    }
 
     private fun getGithubResponse(
         uri: String,
@@ -636,13 +638,14 @@ class GithubConnector(
         this
             .bodyToMono<FileContentDTO>()
             .block()
-            ?.value
+            ?.content
             ?.decodeBase64()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
-        LOGGER.info("GET to GitHub contents-API responded with ${this.awaitBodilessEntity().statusCode}")
-        val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
-        return fileContentDTO?.value?.decodeBase64()
+        LOGGER.info("GET to GitHub contents-API responded with ${awaitBodilessEntity().statusCode}")
+        val fileContentDTO: FileContentDTO? = awaitBodyOrNull<FileContentDTO>()
+        LOGGER.info("RiSc content: ${fileContentDTO?.content?.substring(0, 10)}")
+        return fileContentDTO?.content?.decodeBase64()
     }
 
     private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
