@@ -420,6 +420,7 @@ class RiScService(
                         pullRequestUrl,
                     )
                 } catch (e: Exception) {
+                    LOGGER.error("An error occured when decrypting: ${e.message}")
                     when (e) {
                         is SOPSDecryptionException ->
                             RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
