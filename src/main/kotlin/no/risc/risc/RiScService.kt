@@ -28,6 +28,7 @@ import no.risc.utils.migrate
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
 import org.apache.commons.lang3.RandomStringUtils
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -170,7 +171,9 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
 ) {
-    private val logger = LoggerFactory.getLogger(RiScService::class.java)
+    companion object {
+        val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
+    }
 
     suspend fun fetchAndDiffRiScs(
         owner: String,
@@ -295,6 +298,7 @@ class RiScService(
                         repository,
                         accessTokens.githubAccessToken.value,
                     ).ids
+            LOGGER.info("Found RiSc's with id's: ${riScIds.map { it.id }.joinToString(", ")}")
             val riScContents =
                 riScIds
                     .associateWith { id ->

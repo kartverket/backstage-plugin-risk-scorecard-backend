@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -639,6 +640,7 @@ class GithubConnector(
             ?.decodeBase64()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
+        LOGGER.info("GET to GitHub contents-API responded with ${this.awaitBodilessEntity().statusCode}")
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
         return fileContentDTO?.value?.decodeBase64()
     }
