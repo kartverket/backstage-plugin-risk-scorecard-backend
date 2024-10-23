@@ -1,7 +1,6 @@
 package no.risc.exception.exceptions
 
-data class RiScNotValidException(
+data class RiScNotValidOnFetchException(
     override val message: String,
     val riScId: String,
-    val validationError: String,
 ) : Exception()

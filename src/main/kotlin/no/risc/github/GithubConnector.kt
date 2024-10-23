@@ -5,17 +5,23 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
+import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.exception.exceptions.UnableToParseResponseBodyException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
+import no.risc.github.models.RepositoryPermissionsDTO
 import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
+import no.risc.infra.connector.models.GitHubPermission
+import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
@@ -46,7 +52,8 @@ enum class GithubStatus {
     ContentIsEmpty,
     Success,
     RequestResponseBodyError,
-    InternalError, // TODO
+    ResponseBodyTooLargeForWebClientError,
+    InternalError,
 }
 
 data class GithubWriteToFilePayload(
@@ -69,7 +76,11 @@ data class GithubWriteToFilePayload(
         }
 }
 
-data class Author(val name: String?, val email: String?, val date: Date) {
+data class Author(
+    val name: String?,
+    val email: String?,
+    val date: Date,
+) {
     fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
 }
 
@@ -83,8 +94,11 @@ class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     private val githubHelper: GithubHelper,
-) :
-    WebClientConnector("https://api.github.com/repos") {
+) : WebClientConnector("https://api.github.com/repos") {
+    companion object {
+        val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
+    }
+
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -92,24 +106,36 @@ class GithubConnector(
         riScId: String,
     ): GithubContentResponse =
         try {
-            val sopsConfigResponse =
+            val sopsConfigResponseOnBranch =
                 getGithubResponse(
-                    githubHelper.uriToFindSopsConfig(owner, repository),
+                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
                     githubAccessToken.value,
                 )
-            when (sopsConfigResponse.decodedFileContent()) {
-                null -> throw SopsConfigFetchException(
-                    message = "Failed to fetch sops config from location: ${
-                        githubHelper.uriToFindSopsConfig(
-                            owner,
-                            repository,
+            when (sopsConfigResponseOnBranch.decodedFileContent()) {
+                null -> {
+                    val sopsConfigResponseOnDefaultBranch =
+                        getGithubResponse(
+                            githubHelper.uriToFindSopsConfig(owner, repository),
+                            githubAccessToken.value,
                         )
-                    } with the following response: $sopsConfigResponse",
-                    riScId = riScId,
-                    responseMessage = "Could not fetch SOPS config",
-                )
+                    when (sopsConfigResponseOnDefaultBranch.decodedFileContent()) {
+                        null -> throw SopsConfigFetchException(
+                            message =
+                                "Failed to fetch sops config from $owner/$repository on default branch " +
+                                    "and branch with name: $riScId with the following response: $sopsConfigResponseOnDefaultBranch",
+                            riScId = riScId,
+                            responseMessage = "Could not fetch SOPS config",
+                        )
 
-                else -> GithubContentResponse(sopsConfigResponse.decodedFileContent(), GithubStatus.Success)
+                        else ->
+                            GithubContentResponse(
+                                sopsConfigResponseOnDefaultBranch.decodedFileContent(),
+                                GithubStatus.Success,
+                            )
+                    }
+                }
+
+                else -> GithubContentResponse(sopsConfigResponseOnBranch.decodedFileContent(), GithubStatus.Success)
             }
         } catch (e: Exception) {
             throw SopsConfigFetchException(
@@ -200,7 +226,6 @@ class GithubConnector(
             val fileContent =
                 getGithubResponseSuspend(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, id), accessToken)
                     .decodedFileContentSuspend()
-
             when (fileContent) {
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
                 else -> GithubContentResponse(fileContent, GithubStatus.Success)
@@ -444,7 +469,8 @@ class GithubConnector(
     ): List<GithubCommitObject> =
         try {
             getGithubResponse(githubHelper.uriToFetchAllCommitsOnBranchSince(owner, repository, riScId, since), accessToken)
-                .bodyToMono<List<GithubCommitObject>>().block() ?: emptyList()
+                .bodyToMono<List<GithubCommitObject>>()
+                .block() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
@@ -543,7 +569,8 @@ class GithubConnector(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
+        webClient
+            .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
@@ -554,7 +581,8 @@ class GithubConnector(
         uri: String,
         accessToken: String,
     ): ResponseSpec =
-        webClient.get()
+        webClient
+            .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
@@ -562,7 +590,8 @@ class GithubConnector(
             .retrieve()
 
     private fun getGithubResponseNoAuth(uri: String): ResponseSpec =
-        webClient.get()
+        webClient
+            .get()
             .uri(uri)
             .header("Accept", "application/vnd.github.raw+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
@@ -574,20 +603,40 @@ class GithubConnector(
     private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.timeStampLatestCommitResponse(): String? =
-        this.bodyToMono<List<GithubCommitObject>>().block()?.firstOrNull()?.commit?.committer?.date
+        this
+            .bodyToMono<List<GithubCommitObject>>()
+            .block()
+            ?.firstOrNull()
+            ?.commit
+            ?.committer
+            ?.date
 
     private fun List<FileNameDTO>.riScIdentifiersPublished(): List<RiScIdentifier> =
-        this.filter { it.value.endsWith(".$filenamePostfix.yaml") }
+        this
+            .filter { it.value.endsWith(".$filenamePostfix.yaml") }
             .map { RiScIdentifier(it.value.substringBefore(".$filenamePostfix"), RiScStatus.Published) }
 
     private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.head.ref.split("/").last(), RiScStatus.SentForApproval, it.url) }
-            .filter { it.id.startsWith("$filenamePrefix-") }
+        this
+            .map {
+                RiScIdentifier(
+                    it.head.ref
+                        .split("/")
+                        .last(),
+                    RiScStatus.SentForApproval,
+                    it.url,
+                )
+            }.filter { it.id.startsWith("$filenamePrefix-") }
 
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
-    private fun ResponseSpec.decodedFileContent(): String? = this.bodyToMono<FileContentDTO>().block()?.value?.decodeBase64()
+    private fun ResponseSpec.decodedFileContent(): String? =
+        this
+            .bodyToMono<FileContentDTO>()
+            .block()
+            ?.value
+            ?.decodeBase64()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
         val fileContentDTO: FileContentDTO? = this.awaitBodyOrNull()
@@ -599,6 +648,10 @@ class GithubConnector(
     private fun ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
         this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
 
+    private fun ResponseSpec.toRepositoryPermissionsDTO(): RepositoryPermissionsDTO =
+        this.bodyToMono<RepositoryPermissionsDTO>().block()
+            ?: throw UnableToParseResponseBodyException("Unable to parse response body when retrieving repository permissions")
+
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
             is WebClientResponseException ->
@@ -606,9 +659,48 @@ class GithubConnector(
                     is WebClientResponseException.NotFound -> GithubStatus.NotFound
                     is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
                     is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                    else -> GithubStatus.InternalError
+                    else -> {
+                        if (e.message.contains("DataBufferLimitException")) {
+                            LOGGER.error(e.message)
+                            GithubStatus.ResponseBodyTooLargeForWebClientError
+                        } else {
+                            GithubStatus.InternalError
+                        }
+                    }
                 }
-
             else -> GithubStatus.InternalError
         }
+
+    private fun getRepositoryPermissions(
+        uri: String,
+        gitHubAccessToken: String,
+    ): ResponseSpec =
+        webClient
+            .get()
+            .uri(uri)
+            .header("Accept", "application/vnd.github.json")
+            .header("Authorization", "token $gitHubAccessToken")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .retrieve()
+
+    fun getRepositoryPermissions(
+        gitHubAccessToken: String,
+        repositoryOwner: String,
+        repositoryName: String,
+    ): List<GitHubPermission> {
+        val repositoryPermissions =
+            getRepositoryPermissions(
+                githubHelper.uriToGetRepositoryPermissions(repositoryOwner, repositoryName),
+                gitHubAccessToken,
+            ).toRepositoryPermissionsDTO().permissions
+        if (repositoryPermissions.pull) {
+            if (repositoryPermissions.push) {
+                return GitHubPermission.entries.toList()
+            }
+            return listOf(GitHubPermission.READ)
+        }
+        throw PermissionDeniedOnGitHubException(
+            "Request on $repositoryOwner/$repositoryName denied since user did not have pull or push permissions",
+        )
+    }
 }

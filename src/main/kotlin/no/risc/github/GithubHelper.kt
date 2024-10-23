@@ -55,13 +55,12 @@ data class GithubCreateNewAccessTokenForRepository(
             "statuses" to "read",
         ),
 ) {
-    fun toContentBody(): String {
-        return "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
+    fun toContentBody(): String =
+        "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
             permissions.map {
                 "\"${it.key}\":\"${it.value}\""
             }.joinToString(",")
         }}}"
-    }
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -126,6 +125,11 @@ class GithubHelper(
         repository: String,
         riScId: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$riScId"
+
+    fun uriToGetRepositoryPermissions(
+        owner: String,
+        repository: String,
+    ): String = "/$owner/$repository"
 
     fun uriToFindRiScOnDraftBranch(
         owner: String,
