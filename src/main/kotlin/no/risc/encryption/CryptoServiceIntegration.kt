@@ -4,6 +4,8 @@ import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBody
@@ -19,6 +21,10 @@ data class EncryptionRequest(
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
 ) {
+    companion object {
+        val LOGGER: Logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
+    }
+
     fun encrypt(
         text: String,
         config: String,
@@ -29,7 +35,8 @@ class CryptoServiceIntegration(
             EncryptionRequest(text = text, config = config, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
 
         return try {
-            cryptoServiceConnector.webClient.post()
+            cryptoServiceConnector.webClient
+                .post()
                 .uri("/encrypt")
                 .body(BodyInserters.fromValue(encryptionRequest))
                 .retrieve()
@@ -47,19 +54,27 @@ class CryptoServiceIntegration(
     suspend fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
-    ): String {
-        return try {
+    ): String =
+        try {
+            LOGGER.info("Trying to decrypt ciphertext: ${ciphertext.substring(0, 14)}")
             val decryptedFile =
-                cryptoServiceConnector.webClient.post()
+                cryptoServiceConnector.webClient
+                    .post()
                     .uri("/decrypt")
                     .header("gcpAccessToken", gcpAccessToken.value)
                     .bodyValue(ciphertext)
                     .retrieve()
                     .awaitBody<String>()
-
+            LOGGER.info(
+                "Successfully decrypted ciphertext ${
+                    ciphertext.substring(
+                        0,
+                        14,
+                    )
+                } to ${decryptedFile.substring(3, 10)}",
+            )
             decryptedFile
         } catch (e: Exception) {
-            throw(SOPSDecryptionException(message = "Failed to decrypt file"))
+            throw (SOPSDecryptionException(message = "Failed to decrypt file"))
         }
-    }
 }

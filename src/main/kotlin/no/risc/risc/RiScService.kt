@@ -371,7 +371,13 @@ class RiScService(
                     }.awaitAll()
                     .filterNotNull()
                     .map {
-                        LOGGER.info("Validating RiSc with id: '${it.riScId}' with content: ${it.riScContent?.substring(3,10)}***")
+                        LOGGER.info(
+                            "Validating RiSc with id: '${it.riScId}' ${
+                                it.riScContent?.let {
+                                    "content starting with ${it.substring(3, 10)}***"
+                                } ?: "without content"
+                            }",
+                        )
                         val validationStatus =
                             JSONValidator.validateAgainstSchema(
                                 riScId = it.riScId,
@@ -382,6 +388,7 @@ class RiScService(
                                 LOGGER.info("RiSc with id: ${it.riScId} successfully validated")
                                 it
                             }
+
                             false -> {
                                 LOGGER.info("RiSc with id: ${it.riScId} failed validation")
                                 RiScContentResultDTO(
@@ -430,11 +437,10 @@ class RiScService(
         }
 
     private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
-        cryptoService
-            .decrypt(
-                ciphertext = data(),
-                gcpAccessToken = gcpAccessToken,
-            )
+        cryptoService.decrypt(
+            ciphertext = data(),
+            gcpAccessToken = gcpAccessToken,
+        )
 
     suspend fun updateRiSc(
         owner: String,
