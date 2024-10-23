@@ -21,6 +21,7 @@ import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
@@ -51,7 +52,8 @@ enum class GithubStatus {
     ContentIsEmpty,
     Success,
     RequestResponseBodyError,
-    InternalError, // TODO
+    ResponseBodyTooLargeForWebClientError,
+    InternalError,
 }
 
 data class GithubWriteToFilePayload(
@@ -93,6 +95,10 @@ class GithubConnector(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
+    companion object {
+        val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
+    }
+
     fun fetchSopsConfig(
         owner: String,
         repository: String,
@@ -208,7 +214,6 @@ class GithubConnector(
             val fileContent =
                 getGithubResponseSuspend(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, id), accessToken)
                     .decodedFileContentSuspend()
-
             when (fileContent) {
                 null -> GithubContentResponse(null, GithubStatus.ContentIsEmpty)
                 else -> GithubContentResponse(fileContent, GithubStatus.Success)
@@ -642,9 +647,15 @@ class GithubConnector(
                     is WebClientResponseException.NotFound -> GithubStatus.NotFound
                     is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
                     is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                    else -> GithubStatus.InternalError
+                    else -> {
+                        if (e.message.contains("DataBufferLimitException")) {
+                            LOGGER.error(e.message)
+                            GithubStatus.ResponseBodyTooLargeForWebClientError
+                        } else {
+                            GithubStatus.InternalError
+                        }
+                    }
                 }
-
             else -> GithubStatus.InternalError
         }
 
