@@ -1,5 +1,39 @@
-name: Build Docker
-on:  [workflow_dispatch, push]
+name: Build and deploy RiSC-plugin backend
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit hash to deploy'
+        default: ''
+        type: string
+      dev:
+        description: 'Deploy to dev'
+        required: true
+        type: boolean
+      sandbox:
+        description: 'Deploy to sandbox'
+        required: true
+        type: boolean
+      prod:
+        description: 'Deploy to prod'
+        required: true
+        type: boolean
+  pull_request:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - build.gradle.kts
+      - src/**
+      - .github/workflows/build-and-deploy-to-skip.yml
+  push:
+    paths:
+      - Dockerfile
+      - build.gradle.kts
+      - src/**
+      - .github/workflows/build-and-deploy-to-skip.yml
+    branches:
+      - main
 
 permissions:
   id-token: write
@@ -21,7 +55,20 @@ jobs:
       image_url: ${{ steps.setOutput.outputs.image_url }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        if: ${{ github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && github.event.inputs.commit_sha == '') }}
+        uses: actions/checkout@v4
+
+      - name: Checkout code
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_sha != '' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout specific commit
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_sha != '' }}
+        run: git checkout ${{ github.event.inputs.commit_sha }}
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -69,7 +116,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
           push: ${{ !github.event.pull_request.draft }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -77,10 +123,10 @@ jobs:
       - name: Set output with build values
         id: setOutput
         run: |
-          echo "image_url=${{ env.REGISTRY }}/${{ github.repository }}@${{ steps.build-docker.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "image_url=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-docker.outputs.digest }}" >> $GITHUB_OUTPUT  
 
   pharos:
-    name: Run Pharos with Required Permissions
+    name: Run Pharos on docker image
     needs: build
     permissions:
       actions: read
@@ -90,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Run Pharos"
-        uses: kartverket/pharos@v0.2.1
+        uses: kartverket/pharos@v0.1.5
         with:
           image_url: ${{ needs.build.outputs.image_url }}
 
@@ -120,13 +166,42 @@ jobs:
           echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-sandbox/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
-          git commit -am "Update ros-backend ${{ env.ARGO_VERSION_FILE }}"
+          git commit -am "${{ github.event.head_commit.message }}"
+          git push
+
+  dev-deploy-argo:
+    name: Deploy to atgcp1-sandbox
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+    permissions:
+      id-token: write
+    steps:
+      - uses: octo-sts/action@6177b4481c00308b3839969c3eca88c96a91775f # v1.0.0
+        id: octo-sts
+        with:
+          scope: kartverket/skvis-apps
+          identity: ros-plugin-backend
+      - name: Checkout skvis-apps
+        uses: actions/checkout@v4
+        with:
+          repository: kartverket/skvis-apps
+          ref: main
+          token: ${{ steps.octo-sts.outputs.token }}
+      - name: Update version
+        run: |
+          echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-dev/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
+          git config --global user.email "noreply@kartverket.no"
+          git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
+          git commit -am "${{ github.event.head_commit.message }}"
           git push
 
   prod-deploy-argo:
     name: Deploy to atgcp1-prod
     if: github.ref == 'refs/heads/main'
-    needs: [build, sandbox-deploy-argo]
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: prod
@@ -149,5 +224,5 @@ jobs:
           echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-prod/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
-          git commit -am "Update ros-backend ${{ env.ARGO_VERSION_FILE }}"
+          git commit -am "${{ github.event.head_commit.message }}"
           git push
