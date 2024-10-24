@@ -41,6 +41,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  ARGO_VERSION_FILE: image-url-ros-plugin-backend
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
