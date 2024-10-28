@@ -131,6 +131,7 @@ enum class ProcessingStatus(
     NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
     UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
+    AccessTokensValidationFailure("Failure when validating access tokens"),
 }
 
 data class RiScIdentifier(

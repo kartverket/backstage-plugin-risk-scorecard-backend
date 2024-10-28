@@ -1,12 +1,12 @@
 package no.risc.exception
 
+import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
-import no.risc.exception.exceptions.NoReadAccessToRepositoryException
-import no.risc.exception.exceptions.NoWriteAccessToRepositoryException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
+import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
@@ -173,16 +173,16 @@ internal class GlobalExceptionHandler {
 
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ResponseBody
-    @ExceptionHandler(NoWriteAccessToRepositoryException::class)
-    fun handleNoWriteAccessToRepositoryException(ex: NoWriteAccessToRepositoryException): Any {
+    @ExceptionHandler(RepositoryAccessException::class)
+    fun handleNoWriteAccessToRepositoryException(ex: RepositoryAccessException): Any {
         logger.error(ex.message, ex)
         return ex.response
     }
 
-    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    @ExceptionHandler(NoReadAccessToRepositoryException::class)
-    fun handleNoWriteAccessToRepositoryException(ex: NoReadAccessToRepositoryException): Any {
+    @ExceptionHandler(AccessTokenValidationFailedException::class)
+    fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
         logger.error(ex.message, ex)
         return ex.response
     }
