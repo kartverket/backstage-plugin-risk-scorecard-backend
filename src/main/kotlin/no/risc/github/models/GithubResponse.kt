@@ -21,7 +21,8 @@ data class FileNameDTO(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class RepositoryPermissionsDTO(
+data class RepositoryDTO(
+    @JsonProperty("default_branch") val defaultBranch: String,
     val permissions: RepositoryPermissions,
 )
 

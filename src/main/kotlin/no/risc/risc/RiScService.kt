@@ -14,7 +14,6 @@ import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
-import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
@@ -273,17 +272,6 @@ class RiScService(
         return result.toDTO(lastModifiedDate)
     }
 
-    suspend fun fetchAllRiScIds(
-        owner: String,
-        repository: String,
-        accessTokens: AccessTokens,
-    ): GithubRiScIdentifiersResponse =
-        githubConnector.fetchAllRiScIdentifiersInRepository(
-            owner,
-            repository,
-            accessTokens.githubAccessToken.value,
-        )
-
     suspend fun fetchAllRiScs(
         owner: String,
         repository: String,
@@ -454,17 +442,19 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-    ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens)
+        defaultBranch: String,
+    ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens, defaultBranch)
 
     suspend fun createRiSc(
         owner: String,
         repository: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
+        defaultBranch: String,
     ): ProcessRiScResultDTO {
         val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
         try {
-            val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens)
+            val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens, defaultBranch)
 
             if (result.status == ProcessingStatus.UpdatedRiSc) {
                 return ProcessRiScResultDTO(
@@ -488,7 +478,9 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
+        defaultBranch: String,
     ): RiScResult {
+        println(defaultBranch)
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId,
@@ -528,6 +520,7 @@ class RiScService(
                     requiresNewApproval = content.isRequiresNewApproval,
                     accessTokens = accessTokens,
                     userInfo = content.userInfo,
+                    defaultBranch = defaultBranch,
                 )
 
             return when (riScApprovalPRStatus.pullRequest) {

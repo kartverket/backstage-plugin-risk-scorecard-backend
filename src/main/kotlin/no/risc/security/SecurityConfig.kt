@@ -17,7 +17,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(private val environment: Environment) {
+class SecurityConfig(
+    private val environment: Environment,
+) {
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
@@ -56,7 +58,8 @@ class SecurityConfig(private val environment: Environment) {
     fun jwtDecoder(): JwtDecoder? {
         val issuerUri = environment.getProperty("ISSUER_URI")
         val jwtDecoder =
-            NimbusJwtDecoder.withIssuerLocation(issuerUri)
+            NimbusJwtDecoder
+                .withIssuerLocation(issuerUri)
                 .jwtProcessorCustomizer { customizer ->
                     customizer.jwsTypeVerifier =
                         DefaultJOSEObjectTypeVerifier(
@@ -67,18 +70,16 @@ class SecurityConfig(private val environment: Environment) {
                             JOSEObjectType("vnd.backstage.user"),
                             null,
                         )
-                }
-                .build()
+                }.build()
 
         return JwtDecoder { token -> jwtDecoder.decode(token) }
     }
 
-    fun getAllowedOrigins(): List<String> {
-        return listOf(
+    fun getAllowedOrigins(): List<String> =
+        listOf(
             "http://localhost:3000/",
             "https://sandbox.kartverket.dev",
             "https://kartverket.dev",
             "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app",
         )
-    }
 }

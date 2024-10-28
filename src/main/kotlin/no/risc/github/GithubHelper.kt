@@ -126,7 +126,7 @@ class GithubHelper(
         riScId: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$riScId"
 
-    fun uriToGetRepositoryPermissions(
+    fun uriToGetRepositoryInfo(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository"
