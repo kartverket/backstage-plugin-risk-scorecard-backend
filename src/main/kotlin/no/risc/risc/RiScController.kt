@@ -1,13 +1,8 @@
 package no.risc.risc
 
-import no.risc.exception.exceptions.InvalidAccessTokensException
-import no.risc.exception.exceptions.NoReadAccessToRepositoryException
-import no.risc.exception.exceptions.NoWriteAccessToRepositoryException
 import no.risc.github.GithubConnector
-import no.risc.infra.connector.GoogleApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
@@ -27,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/risc")
 class RiScController(
     private val riScService: RiScService,
-    private val googleApiConnector: GoogleApiConnector,
     private val githubConnector: GithubConnector,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
@@ -40,12 +34,9 @@ class RiScController(
         riScService.fetchAllRiScs(
             repositoryOwner,
             repositoryName,
-            getAccessTokens(
-                gcpAccessToken = gcpAccessToken,
-                gitHubAccessToken = gitHubAccessToken,
-                repositoryOwner = repositoryOwner,
-                repositoryName = repositoryName,
-                gitHubPermissionNeeded = GitHubPermission.READ,
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
             ),
             "4",
         )
@@ -61,12 +52,9 @@ class RiScController(
         riScService.fetchAllRiScs(
             repositoryOwner,
             repositoryName,
-            getAccessTokens(
-                gcpAccessToken = gcpAccessToken,
-                gitHubAccessToken = gitHubAccessToken,
-                repositoryOwner = repositoryOwner,
-                repositoryName = repositoryName,
-                gitHubPermissionNeeded = GitHubPermission.READ,
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
             ),
             latestSupportedVersion,
         )
@@ -83,14 +71,12 @@ class RiScController(
             owner = repositoryOwner,
             repository = repositoryName,
             accessTokens =
-                getAccessTokens(
-                    gcpAccessToken = gcpAccessToken,
-                    gitHubAccessToken = gitHubAccessToken,
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubPermissionNeeded = GitHubPermission.WRITE,
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
                 ),
             content = riSc,
+            defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
         )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
@@ -106,13 +92,11 @@ class RiScController(
         repositoryName,
         id,
         riSc,
-        getAccessTokens(
-            gcpAccessToken,
-            gitHubAccessToken,
-            repositoryOwner,
-            repositoryName,
-            GitHubPermission.WRITE,
+        AccessTokens(
+            gcpAccessToken = GCPAccessToken(gcpAccessToken),
+            githubAccessToken = GithubAccessToken(gitHubAccessToken),
         ),
+        githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
     )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
@@ -130,12 +114,9 @@ class RiScController(
                 repository = repositoryName,
                 riScId = id,
                 accessTokens =
-                    getAccessTokens(
-                        gcpAccessToken = gcpAccessToken,
-                        gitHubAccessToken = gitHubAccessToken,
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubPermissionNeeded = GitHubPermission.WRITE,
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 userInfo = userInfo,
             )
@@ -160,64 +141,14 @@ class RiScController(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens =
-                    getAccessTokens(
-                        gcpAccessToken = gcpAccessToken,
-                        gitHubAccessToken = gitHubAccessToken,
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubPermissionNeeded = GitHubPermission.READ,
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 riScId = riscId,
                 headRiSc = data.riSc,
             )
 
         return ResponseEntity.ok().body(difference)
-    }
-
-    private fun getAccessTokens(
-        gcpAccessToken: String,
-        gitHubAccessToken: String,
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubPermissionNeeded: GitHubPermission,
-    ): AccessTokens {
-        val gitHubPermissions =
-            githubConnector.getRepositoryPermissions(gitHubAccessToken, repositoryOwner, repositoryName)
-        if (gitHubPermissionNeeded !in gitHubPermissions) {
-            when (gitHubPermissionNeeded) {
-                GitHubPermission.READ -> throw NoReadAccessToRepositoryException(
-                    listOf(
-                        RiScContentResultDTO(
-                            riScId = "",
-                            status = ContentStatus.NoReadAccess,
-                            riScStatus = null,
-                            riScContent = null,
-                            pullRequestUrl = null,
-                        ),
-                    ),
-                    "Access denied. No read permission on $repositoryOwner/$repositoryName",
-                )
-
-                GitHubPermission.WRITE -> throw NoWriteAccessToRepositoryException(
-                    ProcessRiScResultDTO(
-                        riScId = "",
-                        status = ProcessingStatus.NoWriteAccessToRepository,
-                        statusMessage = "Access denied. No write permission on $repositoryOwner/$repositoryName",
-                    ),
-                    "Access denied. No write permission on $repositoryOwner/$repositoryName",
-                )
-            }
-        }
-        if (!googleApiConnector.validateAccessToken(gcpAccessToken)) {
-            throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
-            )
-        }
-        val accessTokens =
-            AccessTokens(
-                GithubAccessToken(gitHubAccessToken),
-                GCPAccessToken(gcpAccessToken),
-            )
-        return accessTokens
     }
 }

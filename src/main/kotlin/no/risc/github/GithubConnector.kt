@@ -7,15 +7,15 @@ import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.SopsConfigFetchException
-import no.risc.exception.exceptions.UnableToParseResponseBodyException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
-import no.risc.github.models.RepositoryPermissionsDTO
+import no.risc.github.models.RepositoryDTO
 import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
+import no.risc.infra.connector.models.RepositoryInfo
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
@@ -23,7 +23,10 @@ import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
+import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBodilessEntity
@@ -279,6 +282,7 @@ class GithubConnector(
         owner: String,
         repository: String,
         riScId: String,
+        defaultBranch: String,
         fileContent: String,
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
@@ -294,7 +298,7 @@ class GithubConnector(
         // through updating.
         val commitMessage =
             if (latestShaForDraft == null) {
-                createNewBranch(owner, repository, riScId, accessToken)
+                createNewBranch(owner, repository, riScId, accessToken, defaultBranch)
                 // Fetch again after creating branch as it will return null if no branch exists
                 latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
 
@@ -424,15 +428,22 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): String? = getGithubResponse(githubHelper.uriToGetCommitStatus(owner, repository, "main"), accessToken).shaResponseDTO()
+        defaultBranch: String,
+    ): String? =
+        getGithubResponse(
+            githubHelper.uriToGetCommitStatus(owner, repository, defaultBranch),
+            accessToken,
+        ).shaResponseDTO()
 
     fun createNewBranch(
         owner: String,
         repository: String,
         riScId: String,
         accessToken: String,
+        defaultBranch: String,
     ): String? {
-        val latestShaForMainBranch = fetchLatestShaForDefaultBranch(owner, repository, accessToken) ?: return null
+        val latestShaForMainBranch =
+            fetchLatestShaForDefaultBranch(owner, repository, accessToken, defaultBranch) ?: return null
         return postNewBranchToGithub(
             uri = githubHelper.uriToCreateNewBranchForRiSc(owner, repository),
             accessToken = accessToken,
@@ -634,13 +645,6 @@ class GithubConnector(
 
     private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
 
-    private fun ResponseSpec.toReferenceObjects(): List<GithubReferenceObject> =
-        this.bodyToMono<List<GithubReferenceObjectDTO>>().block()?.map { it.toInternal() } ?: emptyList()
-
-    private fun ResponseSpec.toRepositoryPermissionsDTO(): RepositoryPermissionsDTO =
-        this.bodyToMono<RepositoryPermissionsDTO>().block()
-            ?: throw UnableToParseResponseBodyException("Unable to parse response body when retrieving repository permissions")
-
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
             is WebClientResponseException ->
@@ -661,36 +665,57 @@ class GithubConnector(
             else -> GithubStatus.InternalError
         }
 
-    private fun getRepositoryPermissions(
+    private fun fetchRepositoryInfo(
         uri: String,
         gitHubAccessToken: String,
-    ): ResponseSpec =
-        webClient
-            .get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
-            .header("Authorization", "token $gitHubAccessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
+    ) = RestClient
+        .builder()
+        .baseUrl("https://api.github.com/repos")
+        .defaultHeader(HttpHeaders.AUTHORIZATION, "token $gitHubAccessToken")
+        .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github.json")
+        .defaultHeader("X-GitHub-Api-Version", "2022-11-28")
+        .build()
+        .get()
+        .uri { uriBuilder ->
+            uriBuilder
+                .path(uri)
+                .build()
+        }.retrieve()
+        .body(object : ParameterizedTypeReference<RepositoryDTO>() {})!!
 
-    fun getRepositoryPermissions(
+    fun fetchRepositoryInfo(
         gitHubAccessToken: String,
         repositoryOwner: String,
         repositoryName: String,
-    ): List<GitHubPermission> {
-        val repositoryPermissions =
-            getRepositoryPermissions(
-                githubHelper.uriToGetRepositoryPermissions(repositoryOwner, repositoryName),
+    ): RepositoryInfo {
+        val repositoryDTO =
+            fetchRepositoryInfo(
+                githubHelper.uriToGetRepositoryInfo(repositoryOwner, repositoryName),
                 gitHubAccessToken,
-            ).toRepositoryPermissionsDTO().permissions
-        if (repositoryPermissions.pull) {
-            if (repositoryPermissions.push) {
-                return GitHubPermission.entries.toList()
+            )
+        if (repositoryDTO.permissions.pull) {
+            if (repositoryDTO.permissions.push) {
+                return RepositoryInfo(
+                    defaultBranch = repositoryDTO.defaultBranch,
+                    permissions = GitHubPermission.entries.toList(),
+                )
             }
-            return listOf(GitHubPermission.READ)
+            return RepositoryInfo(
+                defaultBranch = repositoryDTO.defaultBranch,
+                permissions = listOf(GitHubPermission.READ),
+            )
         }
         throw PermissionDeniedOnGitHubException(
             "Request on $repositoryOwner/$repositoryName denied since user did not have pull or push permissions",
         )
     }
+
+    fun fetchDefaultBranch(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: String,
+    ) = fetchRepositoryInfo(
+        uri = githubHelper.uriToGetRepositoryInfo(repositoryOwner, repositoryName),
+        gitHubAccessToken = gitHubAccessToken,
+    ).defaultBranch
 }
