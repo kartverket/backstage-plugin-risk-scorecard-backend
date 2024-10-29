@@ -140,37 +140,8 @@ jobs:
         with:
           image_url: ${{ needs.build.outputs.image_url }}
 
-  sandbox-deploy-argo:
-    name: Deploy to atgcp1-sandbox
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: sandbox
-    permissions:
-      id-token: write
-    steps:
-      - uses: octo-sts/action@6177b4481c00308b3839969c3eca88c96a91775f # v1.0.0
-        id: octo-sts
-        with:
-          scope: kartverket/skvis-apps
-          identity: ros-plugin-backend
-      - name: Checkout skvis-apps
-        uses: actions/checkout@v4
-        with:
-          repository: kartverket/skvis-apps
-          ref: main
-          token: ${{ steps.octo-sts.outputs.token }}
-      - name: Update version
-        run: |
-          echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-sandbox/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
-          git config --global user.email "noreply@kartverket.no"
-          git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
-          git commit -am "${{ github.event.head_commit.message }}"
-          git push
-
   dev-deploy-argo:
-    name: Deploy to atgcp1-sandbox
+    name: Deploy to atgcp1-dev
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
