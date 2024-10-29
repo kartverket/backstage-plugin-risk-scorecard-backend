@@ -1,12 +1,10 @@
 package no.risc.risc
 
-import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.ScheduleInitialRiScDuringLocalException
-import no.risc.github.GithubAppConnector
-import no.risc.github.GithubRiScIdentifiersResponse
-import no.risc.infra.connector.GoogleApiConnector
+import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
 import no.risc.risc.models.InitializeRiScRequestBody
@@ -29,38 +27,30 @@ import org.springframework.web.server.ResponseStatusException
 @RequestMapping("/api/risc")
 class RiScController(
     private val riScService: RiScService,
-    private val githubAppConnector: GithubAppConnector,
-    private val googleApiConnector: GoogleApiConnector,
     private val environment: Environment,
+    private val githubConnector: GithubConnector,
 ) {
-    @GetMapping("/{repositoryOwner}/{repositoryName}/filenames")
-    suspend fun getRiScNames(
-        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-    ): GithubRiScIdentifiersResponse =
-        riScService.fetchAllRiScIds(
-            repositoryOwner,
-            repositoryName,
-            getAccessTokens(gcpAccessToken, repositoryName),
-        )
-
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> =
         riScService.fetchAllRiScs(
             repositoryOwner,
             repositoryName,
-            getAccessTokens(gcpAccessToken, repositoryName),
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
             "4",
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
@@ -68,13 +58,17 @@ class RiScController(
         riScService.fetchAllRiScs(
             repositoryOwner,
             repositoryName,
-            getAccessTokens(gcpAccessToken, repositoryName),
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
             latestSupportedVersion,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createNewRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
@@ -82,13 +76,19 @@ class RiScController(
         riScService.createRiSc(
             owner = repositoryOwner,
             repository = repositoryName,
-            accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                ),
             content = riSc,
+            defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
     suspend fun initializeRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody body: InitializeRiScRequestBody,
@@ -101,6 +101,7 @@ class RiScController(
             gcpProjectId = body.gcpProjectId,
             securityChampionPublicKey = body.publicAgeKey,
             gcpAccessTokenValue = gcpAccessToken,
+            gitHubAccessTokenValue = gitHubAccessToken,
         )
     }
 
@@ -122,22 +123,27 @@ class RiScController(
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun editRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): RiScResult =
-        riScService.updateRiSc(
-            repositoryOwner,
-            repositoryName,
-            id,
-            riSc,
-            getAccessTokens(gcpAccessToken, repositoryName),
-        )
+    ) = riScService.updateRiSc(
+        repositoryOwner,
+        repositoryName,
+        id,
+        riSc,
+        AccessTokens(
+            gcpAccessToken = GCPAccessToken(gcpAccessToken),
+            githubAccessToken = GithubAccessToken(gitHubAccessToken),
+        ),
+        githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+    )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendRiScForPublishing(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
@@ -148,7 +154,11 @@ class RiScController(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 riScId = id,
-                accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+                accessTokens =
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                    ),
                 userInfo = userInfo,
             )
 
@@ -161,6 +171,7 @@ class RiScController(
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable riscId: String,
@@ -170,28 +181,15 @@ class RiScController(
             riScService.fetchAndDiffRiScs(
                 owner = repositoryOwner,
                 repository = repositoryName,
-                accessTokens = getAccessTokens(gcpAccessToken, repositoryName),
+                accessTokens =
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                    ),
                 riScId = riscId,
                 headRiSc = data.riSc,
             )
 
         return ResponseEntity.ok().body(difference)
-    }
-
-    private fun getAccessTokens(
-        gcpAccessToken: String,
-        repositoryName: String,
-    ): AccessTokens {
-        if (!googleApiConnector.validateAccessToken(gcpAccessToken)) {
-            throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
-            )
-        }
-        val accessTokens =
-            AccessTokens(
-                githubAppConnector.getAccessTokenFromApp(repositoryName),
-                GCPAccessToken(gcpAccessToken),
-            )
-        return accessTokens
     }
 }

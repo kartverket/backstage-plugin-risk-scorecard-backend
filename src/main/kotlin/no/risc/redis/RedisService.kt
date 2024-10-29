@@ -22,11 +22,13 @@ class RedisService(
         ttlSeconds: Int = 60,
         repository: Repository,
         gcpAccessTokenValue: String,
+        gitHubAccessTokenValue: String,
     ) {
         val initializeRiScSession =
             InitializeRiScSession(
                 repositoryHash = repository.sha256(),
                 gcpAccessTokenValue = gcpAccessTokenValue,
+                gitHubAccessTokenValue = gitHubAccessTokenValue,
             )
         initializeRiScSessionRedisClient.opsForValue().set(initializeRiScSession.repositoryHash, initializeRiScSession)
         initializeRiScSessionRedisClient.expire(initializeRiScSession.repositoryHash, ttlSeconds.toLong(), TimeUnit.SECONDS)

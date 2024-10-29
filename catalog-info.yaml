@@ -9,35 +9,9 @@ spec:
   type: "service"
   lifecycle: "production"
   owner: "skvis"
-  system: "utviklerportal"
+  system: "ros-as-code"
   providesApis:
   - "backstage-plugin-risk-scorecard-backend-api"
----
-apiVersion: "backstage.io/v1alpha1"
-kind: "Group"
-metadata:
-  name: "security_champion_backstage-plugin-risk-scorecard-backend"
-  title: "Security Champion backstage-plugin-risk-scorecard-backend"
-spec:
-  type: "security_champion"
-  parent: "eiendom_security_champions"
-  members:
-  - "jorn-ola-birkeland"
-  children:
-  - "resource:backstage-plugin-risk-scorecard-backend"
----
-apiVersion: "backstage.io/v1alpha1"
-kind: "Resource"
-metadata:
-  name: "backstage-plugin-risk-scorecard-backend"
-  links:
-  - url: "https://github.com/kartverket/backstage-plugin-risk-scorecard-backend"
-    title: "backstage-plugin-risk-scorecard-backend på GitHub"
-spec:
-  type: "repo"
-  owner: "security_champion_backstage-plugin-risk-scorecard-backend"
-  dependencyOf:
-  - "component:backstage-plugin-risk-scorecard-backend"
 ---
 apiVersion: "backstage.io/v1alpha1"
 kind: "API"

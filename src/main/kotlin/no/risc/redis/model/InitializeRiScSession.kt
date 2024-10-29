@@ -7,4 +7,5 @@ import org.springframework.data.redis.core.RedisHash
 data class InitializeRiScSession(
     @Id val repositoryHash: String,
     val gcpAccessTokenValue: String,
+    val gitHubAccessTokenValue: String,
 )

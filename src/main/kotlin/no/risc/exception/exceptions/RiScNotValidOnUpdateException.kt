@@ -1,9 +1,7 @@
 package no.risc.exception.exceptions
 
-import java.lang.Exception
-
-data class JSONSchemaFetchException(
+data class RiScNotValidOnUpdateException(
     override val message: String,
-    val onUpdateOfRiSC: Boolean,
     val riScId: String,
+    val validationError: String,
 ) : Exception()

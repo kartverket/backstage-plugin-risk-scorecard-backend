@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FileContentDTO(
-    @JsonProperty("content")
-    val value: String,
+    val content: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -19,4 +18,19 @@ data class ShaResponseDTO(
 data class FileNameDTO(
     @JsonProperty("name")
     val value: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RepositoryDTO(
+    @JsonProperty("default_branch") val defaultBranch: String,
+    val permissions: RepositoryPermissions,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RepositoryPermissions(
+    val admin: Boolean,
+    val maintain: Boolean,
+    val push: Boolean,
+    val triage: Boolean,
+    val pull: Boolean,
 )
