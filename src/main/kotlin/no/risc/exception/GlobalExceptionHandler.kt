@@ -169,7 +169,7 @@ internal class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_IMPLEMENTED)
     @ExceptionHandler(ScheduleInitialRiScDuringLocalException::class)
     fun handleScheduleInitialRiScDuringLocalException(ex: ScheduleInitialRiScDuringLocalException): ScheduleInitialRiScDTO {
-        logger.error(ex.message, ex)
+        logger.error(ex.message)
         return ex.response
     }
 

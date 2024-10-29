@@ -10,6 +10,7 @@ import no.risc.risc.models.DifferenceRequestBody
 import no.risc.risc.models.InitializeRiScRequestBody
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import org.slf4j.LoggerFactory
 import org.springframework.core.env.Environment
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -30,6 +31,10 @@ class RiScController(
     private val environment: Environment,
     private val githubConnector: GithubConnector,
 ) {
+    companion object {
+        val LOGGER = LoggerFactory.getLogger(RiScController::class.java)
+    }
+
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,

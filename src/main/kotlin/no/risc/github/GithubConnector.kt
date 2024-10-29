@@ -116,7 +116,6 @@ class GithubConnector(
     ): GithubContentResponse {
         val sopsConfig =
             try {
-                println("Trying to get sops config from branch: $riScId")
                 getGithubResponse(
                     "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
                     githubAccessToken.value,
@@ -125,9 +124,8 @@ class GithubConnector(
                     ?.content
                     ?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
-                println("Trying to get sops config from default branch")
                 getGithubResponse(
-                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
+                    githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
                 ).bodyToMono<FileContentDTO>()
                     .block()
