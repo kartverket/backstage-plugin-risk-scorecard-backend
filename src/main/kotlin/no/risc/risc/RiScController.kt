@@ -1,6 +1,7 @@
 package no.risc.risc
 
 import no.risc.exception.exceptions.InvalidAccessTokensException
+import no.risc.exception.exceptions.ScheduleInitialRiScDuringLocalException
 import no.risc.github.GithubAppConnector
 import no.risc.github.GithubRiScIdentifiersResponse
 import no.risc.infra.connector.GoogleApiConnector
@@ -91,22 +92,16 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody body: InitializeRiScRequestBody,
-    ): ResponseEntity<Unit> {
-        if (environment.activeProfiles.contains("local")) {
-            return ResponseEntity(
-                Unit,
-                HttpStatus.NOT_IMPLEMENTED,
-            )
-        } else {
-            riScService.scheduleInitializeRiSc(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                gcpProjectId = body.gcpProjectId,
-                securityChampionPublicKey = body.publicAgeKey,
-                gcpAccessTokenValue = gcpAccessToken,
-            )
-            return ResponseEntity.accepted().build()
-        }
+    ) = if (environment.activeProfiles.contains("local")) {
+        throw ScheduleInitialRiScDuringLocalException("Not possible to schedule initial RiSc when running locally")
+    } else {
+        riScService.scheduleInitializeRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            gcpProjectId = body.gcpProjectId,
+            securityChampionPublicKey = body.publicAgeKey,
+            gcpAccessTokenValue = gcpAccessToken,
+        )
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/initialize/finalize")
