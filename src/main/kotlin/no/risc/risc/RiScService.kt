@@ -5,10 +5,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
+import no.risc.config.SkiperatorConfig
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
+import no.risc.exception.exceptions.ScheduleInitialRiScException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
@@ -17,8 +19,19 @@ import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.infra.connector.models.GithubAccessToken
+import no.risc.kubernetes.KubernetesService
+import no.risc.kubernetes.model.SkiperatorContainerAccessPolicy
+import no.risc.kubernetes.model.SkiperatorContainerAccessPolicyRule
+import no.risc.kubernetes.model.SkiperatorContainerEnvEntry
+import no.risc.kubernetes.model.SkiperatorContainerExternalAccessPolicyEntry
+import no.risc.kubernetes.model.SkiperatorContainerInboundAccessPolicy
+import no.risc.kubernetes.model.SkiperatorContainerOutboundAccessPolicy
+import no.risc.redis.RedisService
+import no.risc.redis.Repository
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.ScheduleInitialRiScDTO
 import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
@@ -123,13 +136,23 @@ enum class ProcessingStatus(
 ) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
-    UpdatedRiSc("Updated risk scorecard successfully"),
+    UpdatedRiSc(
+        "Updated risk scorecard successfully",
+    ),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
-    ErrorWhenCreatingPullRequest("Error when creating pull request"),
+    ErrorWhenCreatingPullRequest(
+        "Error when creating pull request",
+    ),
     InvalidAccessTokens("Invalid access tokens"),
     NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
     UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
+    ScheduledInitialRiSc(
+        "Scheduled initial RiSc generation successfully",
+    ),
+    ErrorWhenSchedulingInitialRiSc(
+        "Error scheduling initial RiSc generation",
+    ),
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
     AccessTokensValidationFailure("Failure when validating access tokens"),
 }
@@ -169,7 +192,11 @@ class InternDifference(
 class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${github.repository.path-regex}") val riscPathRegex: String,
     private val cryptoService: CryptoServiceIntegration,
+    private val kubernetesService: KubernetesService,
+    private val skiperatorConfig: SkiperatorConfig,
+    private val redisService: RedisService,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -223,11 +250,11 @@ class RiScService(
                     }
                 }
 
-                /*
-                This case is considered valid, because if the file is not found, we can assume that the riSc
-                does not have a published version yet, and therefore there are no differences to compare.
-                The frontend handles this.
-                 */
+            /*
+            This case is considered valid, because if the file is not found, we can assume that the riSc
+            does not have a published version yet, and therefore there are no differences to compare.
+            The frontend handles this.
+             */
                 ContentStatus.FileNotFound ->
                     InternDifference(
                         status = DifferenceStatus.GithubFileNotFound,
@@ -416,19 +443,22 @@ class RiScService(
                 } catch (e: Exception) {
                     LOGGER.error("An error occured when decrypting: ${e.message}")
                     when (e) {
-                        is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
-
-                        else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                        is SOPSDecryptionException -> {
+                            LOGGER.error(e.message)
+                            RiScContentResultDTO(
+                                riScId,
+                                ContentStatus.DecryptionFailed,
+                                riScStatus,
+                                null,
+                            )
+                        }
+                        else -> RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
                     }
                 }
 
-            GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
+            GithubStatus.NotFound -> RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
 
-            else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+            else -> RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
     private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
@@ -446,6 +476,126 @@ class RiScService(
         defaultBranch: String,
     ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens, defaultBranch)
 
+    suspend fun scheduleInitializeRiSc(
+        owner: String,
+        repository: String,
+        gcpProjectId: String,
+        securityChampionPublicKey: String?,
+        gcpAccessTokenValue: String,
+        gitHubAccessTokenValue: String,
+    ): ScheduleInitialRiScDTO {
+        try {
+            kubernetesService.applySkipJob(
+                name = "initialize-risc-$owner-$repository",
+                namespace = skiperatorConfig.namespace,
+                imageUrl = skiperatorConfig.imageUrl,
+                envVars =
+                    listOfNotNull(
+                        SkiperatorContainerEnvEntry(
+                            name = "PATH_REGEX",
+                            value = riscPathRegex,
+                        ),
+                        SkiperatorContainerEnvEntry(
+                            name = "REPO_NAME",
+                            value = repository,
+                        ),
+                        SkiperatorContainerEnvEntry(
+                            name = "GCP_PROJECT_ID",
+                            value = gcpProjectId,
+                        ),
+                        securityChampionPublicKey?.let {
+                            SkiperatorContainerEnvEntry(
+                                name = "SECURITY_CHAMPION_KEY",
+                                value = it,
+                            )
+                        },
+                    ),
+                externalSecretsName = skiperatorConfig.externalSecretsName,
+                accessPolicy =
+                    SkiperatorContainerAccessPolicy(
+                        inbound =
+                            SkiperatorContainerInboundAccessPolicy(
+                                rules =
+                                    listOf(
+                                        SkiperatorContainerAccessPolicyRule(
+                                            namespace = skiperatorConfig.namespace,
+                                            application = skiperatorConfig.riScBackendApplicationName,
+                                        ),
+                                    ),
+                            ),
+                        outbound =
+                            SkiperatorContainerOutboundAccessPolicy(
+                                external =
+                                    listOf(
+                                        SkiperatorContainerExternalAccessPolicyEntry(
+                                            host = "api.airtable.com",
+                                        ),
+                                    ),
+                                rules =
+                                    listOf(
+                                        SkiperatorContainerAccessPolicyRule(
+                                            namespace = "sikkerhetsmetrikker-main",
+                                            application = "sikkerhetsmetrikker",
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
+            redisService.storeInitializeRiScSession(
+                repository =
+                    Repository(
+                        owner = owner,
+                        repository = repository,
+                    ),
+                gcpAccessTokenValue = gcpAccessTokenValue,
+                gitHubAccessTokenValue = gitHubAccessTokenValue,
+            )
+            return ScheduleInitialRiScDTO(
+                status = ProcessingStatus.ScheduledInitialRiSc,
+                statusMessage = "Scheduled the generation of initial RiSc successfully",
+            )
+        } catch (e: Exception) {
+            throw ScheduleInitialRiScException(
+                "Failure occured when scheduling initial RiSc-creation: ${e.message}",
+            )
+        }
+    }
+
+    suspend fun finalizeInitializedRiSc(
+        owner: String,
+        repository: String,
+        content: RiScWrapperObject,
+    ) {
+        val initializeRiScSession =
+            redisService.retrieveInitializeRiScSessionByRepository(
+                repository =
+                    Repository(
+                        owner = owner,
+                        repository = repository,
+                    ),
+            )
+        updateOrCreateRiSc(
+            owner = owner,
+            repository = repository,
+            riScId =
+                getUniqueRiScId(
+                    isInitRiSc = true,
+                ),
+            content = content,
+            accessTokens =
+                AccessTokens(
+                    githubAccessToken = GithubAccessToken(initializeRiScSession.gitHubAccessTokenValue),
+                    gcpAccessToken = GCPAccessToken(initializeRiScSession.gcpAccessTokenValue),
+                ),
+            defaultBranch = githubConnector.fetchDefaultBranch(owner, repository, initializeRiScSession.gitHubAccessTokenValue),
+        )
+    }
+
+    private fun getUniqueRiScId(
+        randomCharCount: Int = 5,
+        isInitRiSc: Boolean = false,
+    ) = "$filenamePrefix-" + if (isInitRiSc) "init-" else "" + RandomStringUtils.randomAlphanumeric(randomCharCount)
+
     suspend fun createRiSc(
         owner: String,
         repository: String,
@@ -453,7 +603,7 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): ProcessRiScResultDTO {
-        val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+        val uniqueRiScId = getUniqueRiScId()
         try {
             val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens, defaultBranch)
 
@@ -497,19 +647,22 @@ class RiScService(
             )
         }
 
-        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
-        if (sopsConfig.status != GithubStatus.Success) {
-            throw SopsConfigFetchException(
-                message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
-                riScId = riScId,
-                responseMessage = "Could not fetch SOPS config",
-            )
-        }
+        val config =
+            if (content.sopsConfig == null) {
+                val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
+                if (sopsConfig.status != GithubStatus.Success) {
+                    throw SopsConfigFetchException(
+                        message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
+                        riScId = riScId,
+                        responseMessage = "Could not fetch SOPS config",
+                    )
+                }
+                removePathRegex(sopsConfig.data())
+            } else {
+                content.sopsConfig
+            }
 
-        val config = removePathRegex(sopsConfig.data())
-
-        val encryptedData: String =
-            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+        val encryptedData: String = cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
 
         try {
             val riScApprovalPRStatus =
@@ -518,6 +671,7 @@ class RiScService(
                     repository = repository,
                     riScId = riScId,
                     fileContent = encryptedData,
+                    sopsConfig = content.sopsConfig,
                     requiresNewApproval = content.isRequiresNewApproval,
                     accessTokens = accessTokens,
                     userInfo = content.userInfo,

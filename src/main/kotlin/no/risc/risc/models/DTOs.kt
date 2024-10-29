@@ -1,6 +1,7 @@
 package no.risc.risc.models
 
 import no.risc.risc.DifferenceStatus
+import no.risc.risc.ProcessingStatus
 import no.risc.utils.Difference
 
 data class DifferenceDTO(
@@ -13,3 +14,19 @@ data class DifferenceDTO(
 data class DifferenceRequestBody(
     val riSc: String,
 )
+
+data class InitializeRiScRequestBody(
+    val publicAgeKey: String? = null,
+    val gcpProjectId: String,
+)
+
+data class ScheduleInitialRiScDTO(
+    val status: ProcessingStatus,
+    val statusMessage: String,
+)
+
+enum class ScheduleInitialRiScStatus {
+    Success,
+    Failure,
+    NotImplemented,
+}

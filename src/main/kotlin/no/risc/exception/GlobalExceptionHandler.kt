@@ -3,6 +3,7 @@ package no.risc.exception
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.InitializeRiScSessionNotFoundException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -10,6 +11,8 @@ import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
+import no.risc.exception.exceptions.ScheduleInitialRiScDuringLocalException
+import no.risc.exception.exceptions.ScheduleInitialRiScException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.exception.exceptions.UnableToParseResponseBodyException
@@ -19,6 +22,7 @@ import no.risc.risc.DecryptionFailure
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScContentResultDTO
+import no.risc.risc.models.ScheduleInitialRiScDTO
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -156,6 +160,19 @@ internal class GlobalExceptionHandler {
         )
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InitializeRiScSessionNotFoundException::class)
+    fun handleInitializeRiScSessionNotFoundException(ex: InitializeRiScSessionNotFoundException) {
+        logger.error(ex.message, ex)
+    }
+
+    @ResponseStatus(HttpStatus.NOT_IMPLEMENTED)
+    @ExceptionHandler(ScheduleInitialRiScDuringLocalException::class)
+    fun handleScheduleInitialRiScDuringLocalException(ex: ScheduleInitialRiScDuringLocalException): ScheduleInitialRiScDTO {
+        logger.error(ex.message)
+        return ex.response
+    }
+
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
     @ExceptionHandler(UnableToParseResponseBodyException::class)
@@ -180,6 +197,12 @@ internal class GlobalExceptionHandler {
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(ScheduleInitialRiScException::class)
+    fun handleScheduleInitialRiScException(ex: ScheduleInitialRiScException): ScheduleInitialRiScDTO {
+        logger.error(ex.message, ex)
+        return ex.response
+    }
+
     @ResponseBody
     @ExceptionHandler(AccessTokenValidationFailedException::class)
     fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
