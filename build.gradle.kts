@@ -42,7 +42,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
-    implementation("net.pwall.json:json-kotlin-schema:0.48")
+    implementation("net.pwall.json:json-kotlin-schema:0.51")
     implementation("org.apache.commons:commons-lang3:3.16.0")
 
     implementation("com.google.code.gson:gson:2.11.0")
