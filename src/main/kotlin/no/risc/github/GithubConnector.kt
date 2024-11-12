@@ -9,6 +9,7 @@ import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
+import no.risc.github.models.PutFileContentsDTO
 import no.risc.github.models.RepositoryDTO
 import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
@@ -287,11 +288,12 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
+        commitSha: String?,
     ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
         val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
-        var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+        var latestShaForDraft = commitSha ?: getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
         var latestShaForPublished: String? = ""
 
         // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
@@ -310,7 +312,11 @@ class GithubConnector(
                     "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
                 }
             } else {
-                "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+                if (commitSha != null) {
+                    "Initialize generated RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+                } else {
+                    "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+                }
             }
 
         putFileRequestToGithub(
@@ -393,6 +399,18 @@ class GithubConnector(
             }
         }
 
+    private fun getSHAForExistingSopsConfigDraftOrNull(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessToken: String,
+    ) = try {
+        getGithubResponse(githubHelper.uriToFindSopsConfigOnDraftBranch(owner, repository, riScId), accessToken)
+            .shaResponseDTO()
+    } catch (e: Exception) {
+        null
+    }
+
     private fun getSHAForExistingRiScDraftOrNull(
         owner: String,
         repository: String,
@@ -400,6 +418,18 @@ class GithubConnector(
         accessToken: String,
     ) = try {
         getGithubResponse(githubHelper.uriToFindRiScOnDraftBranch(owner, repository, riScId), accessToken)
+            .shaResponseDTO()
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun getSHAForPublishedSopsConfigOrNull(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessToken: String,
+    ) = try {
+        getGithubResponse(githubHelper.uriToFindSopsConfig(owner, repository, riScId), accessToken)
             .shaResponseDTO()
     } catch (e: Exception) {
         null
@@ -575,6 +605,54 @@ class GithubConnector(
         .header("Content-Type", "application/json")
         .body(Mono.just(writePayload.toContentBody()), String::class.java)
         .retrieve()
+
+    fun writeSopsConfig(
+        sopsConfig: String,
+        repositoryOwner: String,
+        repositoryName: String,
+        riScId: String,
+        accessTokens: AccessTokens,
+        userInfo: UserInfo,
+        defaultBranch: String,
+        requiresNewApproval: Boolean,
+    ): PutFileContentsDTO {
+        val accessToken = accessTokens.githubAccessToken.value
+        val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
+        // Attempt to get SHA for the existing draft
+        var latestShaForDraft = getSHAForExistingSopsConfigDraftOrNull(repositoryOwner, repositoryName, riScId, accessToken)
+        var latestShaForPublished: String? = ""
+
+        // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
+        // through updating.
+        val commitMessage =
+            if (latestShaForDraft == null) {
+                createNewBranch(repositoryOwner, repositoryName, riScId, accessToken, defaultBranch)
+                // Fetch again after creating branch as it will return null if no branch exists
+                latestShaForDraft = getSHAForExistingSopsConfigDraftOrNull(repositoryOwner, repositoryName, riScId, accessToken)
+
+                // Fetch to determine if update or create
+                latestShaForPublished = getSHAForPublishedSopsConfigOrNull(repositoryOwner, repositoryName, riScId, accessToken)
+                if (latestShaForPublished != null) {
+                    "Update SOPS config with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+                } else {
+                    "Create new SOPS config with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+                }
+            } else {
+                "Update SOPS config with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
+            }
+        return putFileRequestToGithub(
+            githubHelper.uriToPutSopsConfigOnDraftBranch(repositoryOwner, repositoryName, riScId),
+            accessToken,
+            GithubWriteToFilePayload(
+                message = commitMessage,
+                content = sopsConfig.encodeBase64(),
+                sha = latestShaForDraft,
+                branchName = riScId,
+                author = githubAuthor,
+            ),
+        ).bodyToMono<PutFileContentsDTO>().block()
+            ?: throw IllegalStateException("Failed to de-serialize response from writing SOPS config to GitHub")
+    }
 
     private suspend fun getGithubResponseSuspend(
         uri: String,

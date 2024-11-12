@@ -109,6 +109,12 @@ class GithubHelper(
         repository: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath"
 
+    fun uriToFindSopsConfig(
+        owner: String,
+        repository: String,
+        id: String,
+    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
+
     fun uriToFindRiSc(
         owner: String,
         repository: String,
@@ -138,12 +144,26 @@ class GithubHelper(
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
+    fun uriToFindSopsConfigOnDraftBranch(
+        owner: String,
+        repository: String,
+        riScId: String,
+        draftBranch: String = riScId,
+    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
+
     fun uriToPutRiScOnDraftBranch(
         owner: String,
         repository: String,
         riScId: String,
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
+
+    fun uriToPutSopsConfigOnDraftBranch(
+        owner: String,
+        repository: String,
+        riScId: String,
+        draftBranch: String = riScId,
+    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
 
     fun uriToGetCommitStatus(
         owner: String,

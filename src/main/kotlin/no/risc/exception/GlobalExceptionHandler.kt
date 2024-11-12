@@ -3,6 +3,7 @@ package no.risc.exception
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.GenerateInitialRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -152,6 +153,18 @@ internal class GlobalExceptionHandler {
         return ProcessRiScResultDTO(
             ex.riScId,
             ProcessingStatus.ErrorWhenCreatingRiSc,
+            ex.message,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(GenerateInitialRiScException::class)
+    fun handleGenerateInitialRiScException(ex: GenerateInitialRiScException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            ex.riScId,
+            ProcessingStatus.ErrorWhenGeneratingInitialRiSc,
             ex.message,
         )
     }

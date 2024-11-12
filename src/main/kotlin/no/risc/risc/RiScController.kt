@@ -6,6 +6,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
+import no.risc.risc.models.GenerateInitialRiScRequestBody
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity
@@ -126,6 +127,26 @@ class RiScController(
             else -> ResponseEntity.internalServerError().body(result)
         }
     }
+
+    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
+    suspend fun generateInitialRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @RequestBody generateInitialRiScRequestBody: GenerateInitialRiScRequestBody,
+    ): RiScContentResultDTO =
+        riScService.initializeGeneratedRiSc(
+            repositoryOwner,
+            repositoryName,
+            generateInitialRiScRequestBody.publicAgeKey,
+            generateInitialRiScRequestBody.gcpProjectId,
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
+            defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(

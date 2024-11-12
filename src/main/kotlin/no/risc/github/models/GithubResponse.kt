@@ -34,3 +34,13 @@ data class RepositoryPermissions(
     val triage: Boolean,
     val pull: Boolean,
 )
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PutFileContentsDTO(
+    val commit: GitCommit,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GitCommit(
+    val sha: String,
+)
