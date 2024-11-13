@@ -46,7 +46,7 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.16.0")
 
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.google.auth:google-auth-library-credentials:1.24.1")
+    implementation("com.google.auth:google-auth-library-credentials:1.30.0")
     implementation("com.google.guava:guava:33.3.1-jre")
 
     implementation("com.nimbusds:nimbus-jose-jwt:9.40")
