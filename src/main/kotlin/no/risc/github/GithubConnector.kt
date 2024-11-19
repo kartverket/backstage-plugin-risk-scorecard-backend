@@ -112,7 +112,7 @@ class GithubConnector(
     ): GithubContentResponse {
         val sopsConfig =
             try {
-                println("Trying to get sops config from branch: $riScId")
+                LOGGER.info("Trying to get sops config from branch: $riScId")
                 getGithubResponse(
                     "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
                     githubAccessToken.value,
@@ -121,7 +121,7 @@ class GithubConnector(
                     ?.content
                     ?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
-                println("Trying to get sops config from default branch")
+                LOGGER.info("Trying to get sops config from default branch")
                 getGithubResponse(
                     githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
@@ -134,6 +134,30 @@ class GithubConnector(
             null -> throw SopsConfigFetchException(
                 message = "Fetch of sops config responded with 200 OK but file contents was null",
                 riScId = riScId,
+                responseMessage = "Could not fetch SOPS config",
+            )
+
+            else -> GithubContentResponse(sopsConfig, GithubStatus.Success)
+        }
+    }
+
+    fun fetchSopsConfigFromDefaultBranch(
+        repositoryOwner: String,
+        repositoryName: String,
+        githubAccessToken: GithubAccessToken,
+    ): GithubContentResponse {
+        val sopsConfig =
+            getGithubResponse(
+                githubHelper.uriToFindSopsConfig(repositoryOwner, repositoryName),
+                githubAccessToken.value,
+            ).bodyToMono<FileContentDTO>()
+                .block()
+                ?.content
+                ?.decodeBase64()
+        return when (sopsConfig) {
+            null -> throw SopsConfigFetchException(
+                message = "Fetch of sops config responded with 200 OK but file contents was null",
+                riScId = "",
                 responseMessage = "Could not fetch SOPS config",
             )
 

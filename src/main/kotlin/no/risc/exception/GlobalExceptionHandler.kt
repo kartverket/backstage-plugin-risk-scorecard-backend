@@ -3,9 +3,11 @@ package no.risc.exception
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.GcpProjectIdFetchException
 import no.risc.exception.exceptions.GenerateInitialRiScException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
+import no.risc.exception.exceptions.NoResourceIdFoundException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
@@ -20,6 +22,7 @@ import no.risc.risc.DecryptionFailure
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScContentResultDTO
+import no.risc.sops.model.GetSopsConfigResponse
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -196,6 +199,22 @@ internal class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(AccessTokenValidationFailedException::class)
     fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
+        logger.error(ex.message, ex)
+        return ex.response
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(NoResourceIdFoundException::class)
+    fun handleNoResourceIdFoundException(ex: NoResourceIdFoundException): GetSopsConfigResponse {
+        logger.error(ex.message, ex)
+        return ex.response
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(GcpProjectIdFetchException::class)
+    fun handleGcpProjectIdFetchException(ex: GcpProjectIdFetchException): GetSopsConfigResponse {
         logger.error(ex.message, ex)
         return ex.response
     }

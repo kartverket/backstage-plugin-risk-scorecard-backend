@@ -139,6 +139,10 @@ enum class ProcessingStatus(
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
     AccessTokensValidationFailure("Failure when validating access tokens"),
     ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
+    NoGcpKeyInSopsConfigFound("No GCP KMS resource ID was found in sops config"),
+    FetchedSopsConfig("Fetched sops config successfully"),
+    FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
+    NoSopsConfigFound("No SOPS config found in repo"),
 }
 
 data class RiScIdentifier(
