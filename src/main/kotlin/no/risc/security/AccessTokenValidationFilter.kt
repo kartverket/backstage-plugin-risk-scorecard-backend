@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
-@WebFilter(urlPatterns = ["/api/risc/**"])
+@WebFilter(urlPatterns = ["/api/**"])
 class AccessTokenValidationFilter(
     private val validationService: ValidationService,
 ) : OncePerRequestFilter() {

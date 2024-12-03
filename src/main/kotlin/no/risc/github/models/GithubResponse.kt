@@ -6,6 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FileContentDTO(
     val content: String,
+    val sha: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FileContentsDTO(
+    val name: String,
+    val path: String,
+    val sha: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

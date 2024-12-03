@@ -4,7 +4,7 @@ import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.github.GithubConnector
-import no.risc.infra.connector.GoogleApiConnector
+import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.ProcessingStatus
 import org.springframework.stereotype.Service
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 @Service
 class ValidationService(
     private val githubConnector: GithubConnector,
-    private val googleApiConnector: GoogleApiConnector,
+    private val googleOAuthApiConnector: GoogleOAuthApiConnector,
 ) {
     fun validateAccessTokens(
         gcpAccessToken: String,
@@ -38,7 +38,7 @@ class ValidationService(
                 message = "Access denied: No ${gitHubPermissionNeeded.name.lowercase()}-access on $repositoryOwner/$repositoryName",
             )
         }
-        if (!googleApiConnector.validateAccessToken(gcpAccessToken)) {
+        if (!googleOAuthApiConnector.validateAccessToken(gcpAccessToken)) {
             throw InvalidAccessTokensException(
                 "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
             )

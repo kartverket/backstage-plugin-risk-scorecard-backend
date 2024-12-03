@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -66,7 +67,8 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO =
+        @RequestParam generateDefault: Boolean = false,
+    ): CreateRiScResultDTO =
         riScService.createRiSc(
             owner = repositoryOwner,
             repository = repositoryName,
@@ -77,6 +79,7 @@ class RiScController(
                 ),
             content = riSc,
             defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+            generateDefault = generateDefault,
         )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])

@@ -1,6 +1,7 @@
 package no.risc.utils
 
 import no.risc.github.models.FileNameDTO
+import org.apache.commons.lang3.RandomStringUtils
 import java.util.Base64
 
 fun getFileNameWithHighestVersion(files: List<FileNameDTO>): String? =
@@ -32,6 +33,10 @@ fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArr
 
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
+fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+
+fun generateSopsId() = "sops-${RandomStringUtils.randomAlphanumeric(5)}"
+
 fun removePathRegex(config: String): String {
     val regex = "(?<pathregex>path_regex:.*)".toRegex()
 
@@ -44,3 +49,10 @@ fun removePathRegex(config: String): String {
         config
     }
 }
+
+fun modifySopsConfigForGitHub(config: String) =
+    config
+        .lines()
+        .drop(1) // Remove the first line (---)
+        .joinToString("\n")
+        .replace("\"\\\\.risc\\\\.yaml$\"", "\\.risc\\.yaml$")
