@@ -1,10 +1,14 @@
 package no.risc.github
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 import no.risc.risc.models.UserInfo
+import no.risc.sops.model.PullRequestObject
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.time.OffsetDateTime
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubReferenceObjectDTO(
@@ -39,11 +43,11 @@ data class GithubCreateNewPullRequestPayload(
     val title: String,
     val body: String,
     val repositoryOwner: String,
-    val riScId: String,
+    val branch: String,
     val baseBranch: String,
 ) {
     fun toContentBody(): String =
-        "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$riScId\", \"base\": \"$baseBranch\" }"
+        "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$branch\", \"base\": \"$baseBranch\" }"
 }
 
 data class GithubCreateNewAccessTokenForRepository(
@@ -67,8 +71,52 @@ data class GithubCreateNewAccessTokenForRepository(
 data class GithubPullRequestObject(
     @JsonProperty("html_url")
     val url: String,
+    val title: String,
+    @JsonProperty("created_at")
+    val createdAt: OffsetDateTime,
     val head: GithubPullRequestHead,
+    val base: GithubPullRequestHead,
     val number: Int,
+    val user: GitHubPullRequestUser,
+) {
+    fun toPullRequestObject() = PullRequestObject(url, title, user.login, createdAt)
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GitHubPullRequestUser(
+    val login: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RepositoryBranchDTO(
+    val name: String,
+)
+
+enum class PullRequestFileStatus(
+    val value: String,
+) {
+    Added("added"),
+    Removed("removed"),
+    Modified("modified"),
+    Renamed("renamed"),
+    Copied("copied"),
+    Changed("changed"),
+    Unchanged("unchanged"),
+    ;
+
+    companion object {
+        @JsonCreator
+        fun fromValue(value: String): PullRequestFileStatus? = entries.firstOrNull { it.value == value }
+    }
+
+    @JsonValue
+    fun toValue(): String = value
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PullRequestFileObject(
+    val filename: String,
+    val status: PullRequestFileStatus,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -109,6 +157,13 @@ class GithubHelper(
         repository: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath"
 
+    fun repositoryContentsUri(
+        owner: String,
+        repository: String,
+        path: String,
+        branch: String? = null,
+    ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
+
     fun uriToFindSopsConfig(
         owner: String,
         repository: String,
@@ -126,11 +181,10 @@ class GithubHelper(
         repository: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
 
-    fun uriToFindExistingBranchForRiSc(
+    fun uriToFindAllBranches(
         owner: String,
         repository: String,
-        riScId: String,
-    ): String = "/$owner/$repository/git/matching-refs/heads/$riScId"
+    ): String = "/$owner/$repository/branches?per_page=100"
 
     fun uriToGetRepositoryInfo(
         owner: String,
@@ -161,9 +215,15 @@ class GithubHelper(
     fun uriToPutSopsConfigOnDraftBranch(
         owner: String,
         repository: String,
-        riScId: String,
-        draftBranch: String = riScId,
+        draftBranch: String,
     ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
+
+    fun uriToPutFileToGitHub(
+        owner: String,
+        repository: String,
+        path: String,
+        branch: String? = null,
+    ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
 
     fun uriToGetCommitStatus(
         owner: String,
@@ -180,6 +240,12 @@ class GithubHelper(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/pulls"
+
+    fun uriToFetchPullRequestFiles(
+        owner: String,
+        repository: String,
+        pullRequestNumber: Int,
+    ): String = "/$owner/$repository/pulls/$pullRequestNumber/files"
 
     fun uriToCreatePullRequest(
         owner: String,
@@ -220,10 +286,10 @@ class GithubHelper(
         )
     }
 
-    fun bodyToCreateNewBranchForRiScFromMain(
-        riScId: String,
+    fun bodyToCreateNewBranchFromMain(
+        branchName: String,
         latestShaAtMain: String,
-    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$riScId", latestShaAtMain)
+    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$branchName", latestShaAtMain)
 
     fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 

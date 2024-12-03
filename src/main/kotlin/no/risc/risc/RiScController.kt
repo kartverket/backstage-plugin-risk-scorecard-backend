@@ -6,7 +6,6 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
-import no.risc.risc.models.GenerateInitialRiScRequestBody
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -49,16 +49,16 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
-    ): List<RiScContentResultDTO> = emptyList()
-//        riScService.fetchAllRiScs(
-//            repositoryOwner,
-//            repositoryName,
-//            AccessTokens(
-//                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-//                githubAccessToken = GithubAccessToken(gitHubAccessToken),
-//            ),
-//            latestSupportedVersion,
-//        )
+    ): List<RiScContentResultDTO> =
+        riScService.fetchAllRiScs(
+            repositoryOwner,
+            repositoryName,
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
+            latestSupportedVersion,
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createNewRiSc(
@@ -67,7 +67,8 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): ProcessRiScResultDTO =
+        @RequestParam generateDefault: Boolean = false,
+    ): CreateRiScResultDTO =
         riScService.createRiSc(
             owner = repositoryOwner,
             repository = repositoryName,
@@ -78,6 +79,7 @@ class RiScController(
                 ),
             content = riSc,
             defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+            generateDefault = generateDefault,
         )
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
@@ -127,26 +129,6 @@ class RiScController(
             else -> ResponseEntity.internalServerError().body(result)
         }
     }
-
-    @PostMapping("/{repositoryOwner}/{repositoryName}/initialize")
-    suspend fun generateInitialRiSc(
-        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
-        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
-        @PathVariable repositoryOwner: String,
-        @PathVariable repositoryName: String,
-        @RequestBody generateInitialRiScRequestBody: GenerateInitialRiScRequestBody,
-    ): RiScContentResultDTO =
-        riScService.initializeGeneratedRiSc(
-            repositoryOwner,
-            repositoryName,
-            generateInitialRiScRequestBody.publicAgeKey,
-            generateInitialRiScRequestBody.gcpProjectId,
-            AccessTokens(
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
-            ),
-            defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
-        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(

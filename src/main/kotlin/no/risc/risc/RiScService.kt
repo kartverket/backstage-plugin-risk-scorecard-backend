@@ -7,7 +7,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
-import no.risc.exception.exceptions.GenerateInitialRiScException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsConfigFetchException
@@ -28,7 +27,6 @@ import no.risc.utils.DifferenceException
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
-import no.risc.utils.modifySopsConfigForGitHub
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
@@ -51,6 +49,13 @@ class ProcessRiScResultDTO(
             )
     }
 }
+
+data class CreateRiScResultDTO(
+    val riScId: String,
+    val status: ProcessingStatus,
+    val statusMessage: String,
+    val riScContent: String?,
+)
 
 @Serializable
 data class RiScContentResultDTO(
@@ -128,10 +133,13 @@ enum class ProcessingStatus(
 ) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
+    CreatedSops("Created SOPS configuration successfully"),
     InitializedGeneratedRiSc("Created new auto-generated risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
+    UpdatedSops("Updated SOPS configuration successfully"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
+    OpenedPullRequest("Opened pull request successfully"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
     InvalidAccessTokens("Invalid access tokens"),
     NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
@@ -142,6 +150,7 @@ enum class ProcessingStatus(
     NoGcpKeyInSopsConfigFound("No GCP KMS resource ID was found in sops config"),
     FetchedSopsConfig("Fetched sops config successfully"),
     FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
+    FailedToCreateSops("Failed to create SOPS configuration"),
     NoSopsConfigFound("No SOPS config found in repo"),
 }
 
@@ -473,26 +482,40 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
         defaultBranch: String,
-        sopsConfiguration: String? = null,
-    ): ProcessRiScResultDTO {
+        generateDefault: Boolean,
+    ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
-        try {
+        val riScContentWrapperObject =
+            content.copy(
+                riSc =
+                    if (generateDefault) {
+                        initRiScService.generateDefaultRiSc(repository, content.riSc)
+                    } else {
+                        content.riSc
+                    },
+            )
+        return try {
             val result =
                 updateOrCreateRiSc(
                     owner,
                     repository,
                     uniqueRiScId,
-                    content,
-                    sopsConfiguration,
+                    riScContentWrapperObject,
                     accessTokens,
                     defaultBranch,
                 )
 
             if (result.status == ProcessingStatus.UpdatedRiSc) {
-                return ProcessRiScResultDTO(
+                return CreateRiScResultDTO(
                     uniqueRiScId,
                     ProcessingStatus.CreatedRiSc,
                     "New RiSc was created",
+                    riScContentWrapperObject.riSc,
+                )
+            } else {
+                throw CreatingRiScException(
+                    message = "Failed to create RiSc with id $uniqueRiScId",
+                    riScId = uniqueRiScId,
                 )
             }
         } catch (e: Exception) {
@@ -501,7 +524,6 @@ class RiScService(
                 riScId = uniqueRiScId,
             )
         }
-        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     private suspend fun updateOrCreateRiSc(
@@ -509,7 +531,6 @@ class RiScService(
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
-        sopsConfiguration: String? = null,
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
@@ -528,42 +549,21 @@ class RiScService(
             )
         }
 
-        val sopsConfigOnGitHub: SopsConfigOnGitHub =
-            if (sopsConfiguration != null) {
-                val providedSopsConfig = removePathRegex(sopsConfiguration)
-                // Need to write generated SOPS config to GitHub
-                LOGGER.info("Writing SOPS config to GitHub")
-                val commitSha =
-                    githubConnector
-                        .writeSopsConfig(
-                            modifySopsConfigForGitHub(sopsConfiguration),
-                            owner,
-                            repository,
-                            riScId,
-                            accessTokens,
-                            content.userInfo,
-                            defaultBranch,
-                            true,
-                        ).commit.sha
-                LOGGER.info("Successfully written SOPS config to GitHub")
-                SopsConfigOnGitHub(providedSopsConfig, commitSha)
-            } else {
-                val gitHubFetchSopsConfigResponse =
-                    githubConnector.fetchSopsConfig(
-                        owner,
-                        repository,
-                        accessTokens.githubAccessToken,
-                        riScId,
-                    )
-                if (gitHubFetchSopsConfigResponse.status != GithubStatus.Success) {
-                    throw SopsConfigFetchException(
-                        message = "Failed when fetching SopsConfig from Github with status: ${gitHubFetchSopsConfigResponse.status}",
-                        riScId = riScId,
-                        responseMessage = "Could not fetch SOPS config",
-                    )
-                }
-                SopsConfigOnGitHub(removePathRegex(gitHubFetchSopsConfigResponse.data()))
-            }
+        val gitHubFetchSopsConfigResponse =
+            githubConnector.fetchSopsConfig(
+                owner,
+                repository,
+                accessTokens.githubAccessToken,
+                riScId,
+            )
+        if (gitHubFetchSopsConfigResponse.status != GithubStatus.Success) {
+            throw SopsConfigFetchException(
+                message = "Failed when fetching SopsConfig from Github with status: ${gitHubFetchSopsConfigResponse.status}",
+                riScId = riScId,
+                responseMessage = "Could not fetch SOPS config",
+            )
+        }
+        val sopsConfigOnGitHub = SopsConfigOnGitHub(removePathRegex(gitHubFetchSopsConfigResponse.data()))
 
         val encryptedData: String =
             cryptoService.encrypt(content.riSc, sopsConfigOnGitHub.config, accessTokens.gcpAccessToken, riScId)
@@ -579,7 +579,6 @@ class RiScService(
                     accessTokens = accessTokens,
                     userInfo = content.userInfo,
                     defaultBranch = defaultBranch,
-                    commitSha = sopsConfigOnGitHub.commitSha,
                 )
 
             return when (riScApprovalPRStatus.pullRequest) {
@@ -664,46 +663,4 @@ class RiScService(
             pullRequestUrl = this.url,
             pullRequestName = this.head.ref,
         )
-
-    suspend fun initializeGeneratedRiSc(
-        repositoryOwner: String,
-        repositoryName: String,
-        publicAgeKey: String?,
-        gcpProjectId: String,
-        accessTokens: AccessTokens,
-        defaultBranch: String,
-    ): RiScContentResultDTO {
-        val initialRiScAndSopsConfig =
-            initRiScService.getInitialRiScAndSopsConfig(repositoryName, publicAgeKey, gcpProjectId)
-                ?: throw GenerateInitialRiScException(
-                    "Error occurred fetching generated RiSc from Initialize RiSc Service",
-                    "",
-                )
-        LOGGER.info("Successfully fetched initial RiSc")
-        val result =
-            createRiSc(
-                repositoryOwner,
-                repositoryName,
-                RiScWrapperObject(
-                    initialRiScAndSopsConfig.initialRiScContent,
-                    true,
-                    initialRiScAndSopsConfig.schemaVersion,
-                    initialRiScAndSopsConfig.userInfo,
-                ),
-                accessTokens,
-                defaultBranch,
-                initialRiScAndSopsConfig.sopsConfig,
-            )
-        if (result.status == ProcessingStatus.CreatedRiSc) {
-            return RiScContentResultDTO(
-                result.riScId,
-                ContentStatus.Success,
-                RiScStatus.Draft,
-                initialRiScAndSopsConfig.initialRiScContent,
-                null,
-            )
-        } else {
-            throw GenerateInitialRiScException("Error occurred when encrypting and writing initial RiSc to GitHub", "")
-        }
-    }
 }

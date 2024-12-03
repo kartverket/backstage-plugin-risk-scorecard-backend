@@ -2,6 +2,7 @@ package no.risc.sops.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import no.risc.exception.exceptions.NoResourceIdFoundException
+import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 
 data class SopsConfig(
@@ -18,11 +19,10 @@ data class SopsConfig(
                 ?.resourceId
                 ?: throw NoResourceIdFoundException(
                     "No gcp kms resource id could be found",
-                    GetSopsConfigResponse(
-                        status = ProcessingStatus.NoGcpKeyInSopsConfigFound,
-                        gcpProjectId = GcpProjectId(""),
-                        publicAgeKeys = emptyList(),
-                        gcpProjectIds = emptyList(),
+                    ProcessRiScResultDTO(
+                        "",
+                        ProcessingStatus.NoGcpKeyInSopsConfigFound,
+                        ProcessingStatus.NoGcpKeyInSopsConfigFound.message,
                     ),
                 )
         return GcpProjectId(resourceId.split("/")[1])

@@ -1,8 +1,8 @@
 package no.risc.exception.exceptions
 
-import no.risc.sops.model.GetSopsConfigResponse
+import no.risc.risc.ProcessRiScResultDTO
 
 data class NoResourceIdFoundException(
     override val message: String,
-    val response: GetSopsConfigResponse,
+    val response: ProcessRiScResultDTO,
 ) : Exception()

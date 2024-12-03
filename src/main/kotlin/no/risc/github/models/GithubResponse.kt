@@ -6,6 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FileContentDTO(
     val content: String,
+    val sha: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FileContentsDTO(
+    val name: String,
+    val path: String,
+    val sha: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -33,14 +41,4 @@ data class RepositoryPermissions(
     val push: Boolean,
     val triage: Boolean,
     val pull: Boolean,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class PutFileContentsDTO(
-    val commit: GitCommit,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GitCommit(
-    val sha: String,
 )

@@ -35,6 +35,8 @@ fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()
 
 fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
 
+fun generateSopsId() = "sops-${RandomStringUtils.randomAlphanumeric(5)}"
+
 fun removePathRegex(config: String): String {
     val regex = "(?<pathregex>path_regex:.*)".toRegex()
 
