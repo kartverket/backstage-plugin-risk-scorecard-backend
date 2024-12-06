@@ -9,16 +9,16 @@ data class GetSopsConfigResponseBody(
     val status: ProcessingStatus,
     val statusMessage: String,
     val sopsConfigs: List<SopsConfigDTO>,
-    val gcpProjectIds: List<GcpProjectId>,
+    val gcpCryptoKeys: List<GcpCryptoKeyObject>,
 )
 
 data class SopsConfigRequestBody(
-    val gcpProjectId: GcpProjectId,
+    val gcpCryptoKey: GcpCryptoKeyObject,
     val publicAgeKeys: List<PublicAgeKey>,
 )
 
 data class SopsConfigDTO(
-    val gcpProjectId: GcpProjectId,
+    val gcpCryptoKey: GcpCryptoKeyObject,
     val publicAgeKeys: List<PublicAgeKey>,
     val onDefaultBranch: Boolean,
     val branch: String,
@@ -48,3 +48,11 @@ data class PullRequestObject(
     val openedBy: String,
     val createdAt: OffsetDateTime,
 )
+
+data class GcpCryptoKeyObject(
+    val projectId: String,
+    val keyRing: String,
+    val name: String,
+) {
+    fun getValidationResult() = GcpProjectId(projectId).getValidationResult()
+}

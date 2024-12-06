@@ -8,7 +8,7 @@ import no.risc.risc.ProcessingStatus
 data class SopsConfig(
     @JsonProperty("creation_rules") val creationRules: List<CreationRule>,
 ) {
-    fun getGcpProjectId(): GcpProjectId {
+    fun getGcpCryptoKey(): GcpCryptoKeyObject {
         val resourceId =
             this.creationRules
                 .firstOrNull()
@@ -25,7 +25,11 @@ data class SopsConfig(
                         ProcessingStatus.NoGcpKeyInSopsConfigFound.message,
                     ),
                 )
-        return GcpProjectId(resourceId.split("/")[1])
+        return GcpCryptoKeyObject(
+            resourceId.split("/")[1],
+            resourceId.split("/")[5],
+            resourceId,
+        )
     }
 
     fun getDeveloperPublicKeys(backendPublicAgeKey: String): List<PublicAgeKey> =

@@ -6,7 +6,7 @@ import no.risc.initRiSc.model.GenerateRiScRequestBody
 import no.risc.initRiSc.model.GenerateSopsConfigRequestBody
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
-import no.risc.sops.model.GcpProjectId
+import no.risc.sops.model.GcpCryptoKeyObject
 import no.risc.sops.model.PublicAgeKey
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
@@ -32,13 +32,13 @@ class InitRiScServiceIntegration(
         )
 
     fun generateSopsConfig(
-        gcpProjectId: GcpProjectId,
+        gcpCryptoKey: GcpCryptoKeyObject,
         publicAgeKeys: List<PublicAgeKey>,
     ): String =
         initRiScServiceConnector.webClient
             .post()
             .uri("/generate/sopsConfig")
-            .body(BodyInserters.fromValue(GenerateSopsConfigRequestBody(gcpProjectId, publicAgeKeys)))
+            .body(BodyInserters.fromValue(GenerateSopsConfigRequestBody(gcpCryptoKey, publicAgeKeys)))
             .retrieve()
             .bodyToMono<String>()
             .block() ?: throw SopsConfigGenerateFetchException(

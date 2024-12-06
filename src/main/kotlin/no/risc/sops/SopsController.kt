@@ -54,7 +54,7 @@ class SopsController(
             sopsService.createSopsConfig(
                 repositoryOwner,
                 repositoryName,
-                requestBody.gcpProjectId,
+                requestBody.gcpCryptoKey,
                 requestBody.publicAgeKeys,
                 AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )
@@ -78,7 +78,7 @@ class SopsController(
                 repositoryOwner,
                 repositoryName,
                 ref,
-                requestBody.gcpProjectId,
+                requestBody.gcpCryptoKey,
                 requestBody.publicAgeKeys,
                 AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )

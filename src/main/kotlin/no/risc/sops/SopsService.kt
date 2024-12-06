@@ -3,18 +3,20 @@ package no.risc.sops
 import no.risc.config.SopsServiceConfig
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreateNewBranchException
-import no.risc.exception.exceptions.GcpProjectIdFetchException
+import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.github.GithubConnector
 import no.risc.github.GithubHelper
-import no.risc.infra.connector.GoogleApiConnector
+import no.risc.infra.connector.GcpCloudResourceApiConnector
+import no.risc.infra.connector.GcpKmsApiConnector
+import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.sops.model.CreateSopsConfigResponseBody
-import no.risc.sops.model.GcpProjectId
+import no.risc.sops.model.GcpCryptoKeyObject
 import no.risc.sops.model.GetSopsConfigResponseBody
 import no.risc.sops.model.OpenPullRequestForSopsConfigResponseBody
 import no.risc.sops.model.PublicAgeKey
@@ -32,13 +34,15 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 class SopsService(
     private val githubConnector: GithubConnector,
     private val sopsServiceConfig: SopsServiceConfig,
-    private val googleApiConnector: GoogleApiConnector,
+    private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val initRiScServiceIntegration: InitRiScServiceIntegration,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     @Value("\${filename.postfix}") private val riScPostfix: String,
     @Value("\${filename.prefix}") private val riScPrefix: String,
     private val cryptoServiceIntegration: CryptoServiceIntegration,
     private val githubHelper: GithubHelper,
+    private val gcpKmsApiConnector: GcpKmsApiConnector,
+    private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
 ) {
     companion object {
         val LOGGER = LoggerFactory.getLogger(SopsService::class.java)
@@ -123,50 +127,58 @@ class SopsService(
                 }.keys
 
         val gcpProjectIds =
-            googleApiConnector.fetchProjectIds(accessTokens.gcpAccessToken)
-                ?: throw GcpProjectIdFetchException(
-                    message = "Fetch of sops config responded with 200 OK but file contents was null",
-                    ProcessRiScResultDTO(
-                        "",
-                        ProcessingStatus.FailedToFetchGcpProjectIds,
-                        ProcessingStatus.FailedToFetchGcpProjectIds.message,
-                    ),
+            gcpCloudResourceApiConnector.fetchProjectIds(accessTokens.gcpAccessToken)
+                ?: throw FetchException(
+                    "Failed to fetch GCP projects",
+                    ProcessingStatus.FailedToFetchGcpProjectIds,
                 )
 
-        val response =
-            GetSopsConfigResponseBody(
-                status = ProcessingStatus.FetchedSopsConfig,
-                statusMessage = ProcessingStatus.FetchedSopsConfig.message,
-                gcpProjectIds = gcpProjectIds.filter { it.value.contains("-prod-") },
-                sopsConfigs =
-                    sopsBranchesToSopsConfigs
-                        .map { (sopsBranch, sopsConfig) ->
-                            if (sopsConfig != null) {
-                                SopsConfigDTO(
-                                    sopsConfig.getGcpProjectId(),
-                                    sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
-                                    sopsBranch == defaultBranch,
-                                    sopsBranch,
-                                    pullRequests.firstOrNull { it.head.ref == sopsBranch }?.toPullRequestObject(),
-                                )
-                            } else {
-                                null
-                            }
-                        }.filterNotNull(),
-            )
-        return response
+        val cryptoKeys =
+            gcpProjectIds
+                .filter { it.value.contains("-prod-") }
+                .mapNotNull { project ->
+                    try {
+                        val cryptoKeys = gcpKmsInventoryApiConnector.fetchCryptoKeys(project, accessTokens.gcpAccessToken)
+                        cryptoKeys?.map { key ->
+                            if (gcpKmsApiConnector.testEncryptDecryptIamPermissions(key.resourceId))
+                        }
+                    } catch (e: WebClientResponseException) {
+                        LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
+                        null
+                    }
+                }
+
+        return GetSopsConfigResponseBody(
+            status = ProcessingStatus.FetchedSopsConfig,
+            statusMessage = ProcessingStatus.FetchedSopsConfig.message,
+            gcpCryptoKeys = cryptoKeys,
+            sopsConfigs =
+                sopsBranchesToSopsConfigs.mapNotNull { (sopsBranch, sopsConfig) ->
+                    if (sopsConfig != null) {
+                        SopsConfigDTO(
+                            sopsConfig.getGcpCryptoKey(),
+                            sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
+                            sopsBranch == defaultBranch,
+                            sopsBranch,
+                            pullRequests.firstOrNull { it.head.ref == sopsBranch }?.toPullRequestObject(),
+                        )
+                    } else {
+                        null
+                    }
+                },
+        )
     }
 
     suspend fun createSopsConfig(
         repositoryOwner: String,
         repositoryName: String,
-        gcpProjectId: GcpProjectId,
+        gcpCryptoKey: GcpCryptoKeyObject,
         publicAgeKeys: List<PublicAgeKey>,
         accessTokens: AccessTokens,
     ): CreateSopsConfigResponseBody {
         val defaultBranch =
             githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, accessTokens.githubAccessToken.value)
-        val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpProjectId, publicAgeKeys)
+        val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpCryptoKey, publicAgeKeys)
         val branch = generateSopsId()
         githubConnector.createNewBranch(
             repositoryOwner,
@@ -227,7 +239,7 @@ class SopsService(
             ProcessingStatus.CreatedSops,
             ProcessingStatus.CreatedSops.message,
             SopsConfigDTO(
-                gcpProjectId,
+                gcpCryptoKey,
                 publicAgeKeys,
                 false,
                 branch,
@@ -240,11 +252,11 @@ class SopsService(
         repositoryOwner: String,
         repositoryName: String,
         branch: String,
-        gcpProjectId: GcpProjectId,
+        gcpCryptoKey: GcpCryptoKeyObject,
         publicAgeKeys: List<PublicAgeKey>,
         accessTokens: AccessTokens,
     ): UpdateSopsConfigResponseBody {
-        val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpProjectId, publicAgeKeys)
+        val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpCryptoKey, publicAgeKeys)
         githubConnector.writeSopsConfig(
             newSopsConfig,
             repositoryOwner,

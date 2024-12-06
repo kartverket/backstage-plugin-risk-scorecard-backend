@@ -4,6 +4,7 @@ import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreateNewBranchException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GcpProjectIdFetchException
 import no.risc.exception.exceptions.GenerateInitialRiScException
 import no.risc.exception.exceptions.GitHubFetchException
@@ -253,5 +254,17 @@ internal class GlobalExceptionHandler {
     fun handleFetchRepositoryBranchesException(ex: GitHubFetchException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ex.response
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(FetchException::class)
+    fun handleFetchException(ex: FetchException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            "",
+            ex.status,
+            ex.status.message,
+        )
     }
 }

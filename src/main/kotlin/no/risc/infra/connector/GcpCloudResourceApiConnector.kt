@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.bodyToMono
 
 @Component
-class GoogleApiConnector(
+class GcpCloudResourceApiConnector(
     baseUrl: String = "https://cloudresourcemanager.googleapis.com",
 ) : WebClientConnector(baseUrl) {
     fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId>? =
