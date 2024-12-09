@@ -5,9 +5,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
+import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.SopsConfigFetchException
+import no.risc.exception.exceptions.UnableToWriteSopsConfigException
 import no.risc.github.models.FileContentDTO
+import no.risc.github.models.FileContentsDTO
 import no.risc.github.models.FileNameDTO
 import no.risc.github.models.RepositoryDTO
 import no.risc.github.models.ShaResponseDTO
@@ -16,6 +19,8 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
+import no.risc.risc.ProcessRiScResultDTO
+import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
@@ -35,7 +40,6 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
-import java.time.Instant
 import java.util.Date
 
 data class GithubContentResponse(
@@ -65,18 +69,30 @@ data class GithubWriteToFilePayload(
     val content: String,
     val sha: String? = null,
     val branchName: String,
-    val author: Author,
+    val author: Author? = null,
 ) {
     fun toContentBody(): String =
-        when (sha) {
+        when (author) {
             null ->
-                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+                when (sha) {
+                    null ->
+                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}"
+
+                    else ->
+                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"sha\":\"$sha\"}"
+                }
 
             else ->
-                "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                    "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
-                    "\"sha\":\"$sha\""
+                when (sha) {
+                    null ->
+                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
+                            "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
+
+                    else ->
+                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
+                            "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
+                            "\"sha\":\"$sha\""
+                }
         }
 }
 
@@ -97,6 +113,7 @@ data class RiScApprovalPRStatus(
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
+    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
@@ -107,20 +124,21 @@ class GithubConnector(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
-        riScId: String,
+        branch: String,
     ): GithubContentResponse {
+        LOGGER.info("Trying to get sops config from branch: $branch")
         val sopsConfig =
             try {
-                println("Trying to get sops config from branch: $riScId")
+                LOGGER.info("Trying to get sops config from branch: $branch")
                 getGithubResponse(
-                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$riScId",
+                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
                     githubAccessToken.value,
                 ).bodyToMono<FileContentDTO>()
                     .block()
                     ?.content
                     ?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
-                println("Trying to get sops config from default branch")
+                LOGGER.info("Trying to get sops config from default branch")
                 getGithubResponse(
                     githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
@@ -132,7 +150,31 @@ class GithubConnector(
         return when (sopsConfig) {
             null -> throw SopsConfigFetchException(
                 message = "Fetch of sops config responded with 200 OK but file contents was null",
-                riScId = riScId,
+                riScId = branch,
+                responseMessage = "Could not fetch SOPS config",
+            )
+
+            else -> GithubContentResponse(sopsConfig, GithubStatus.Success)
+        }
+    }
+
+    fun fetchSopsConfigFromDefaultBranch(
+        repositoryOwner: String,
+        repositoryName: String,
+        githubAccessToken: GithubAccessToken,
+    ): GithubContentResponse {
+        val sopsConfig =
+            getGithubResponse(
+                githubHelper.uriToFindSopsConfig(repositoryOwner, repositoryName),
+                githubAccessToken.value,
+            ).bodyToMono<FileContentDTO>()
+                .block()
+                ?.content
+                ?.decodeBase64()
+        return when (sopsConfig) {
+            null -> throw SopsConfigFetchException(
+                message = "Fetch of sops config responded with 200 OK but file contents was null",
+                riScId = "",
                 responseMessage = "Could not fetch SOPS config",
             )
 
@@ -289,10 +331,9 @@ class GithubConnector(
         userInfo: UserInfo,
     ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
-        val githubAuthor = Author(userInfo.name, userInfo.email, Date.from(Instant.now()))
         // Attempt to get SHA for the existing draft
         var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-        var latestShaForPublished: String? = ""
+        val latestShaForPublished: String?
 
         // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
         // through updating.
@@ -314,15 +355,13 @@ class GithubConnector(
             }
 
         putFileRequestToGithub(
-            githubHelper.uriToPutRiScOnDraftBranch(owner, repository, riScId),
-            accessToken,
-            GithubWriteToFilePayload(
-                message = commitMessage,
-                content = fileContent.encodeBase64(),
-                sha = latestShaForDraft,
-                branchName = riScId,
-                author = githubAuthor,
-            ),
+            owner,
+            repository,
+            accessTokens.githubAccessToken,
+            "$riScFolderPath/$riScId.$filenamePostfix.yaml",
+            riScId,
+            commitMessage,
+            fileContent.encodeBase64(),
         ).bodyToMono<String>().block()
 
         val riScApprovalPRStatus =
@@ -380,7 +419,7 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ): String? =
-        fetchAllPullRequestsForRiSc(owner, repository, accessToken).find { it.head.ref == riScId }?.let {
+        fetchAllPullRequests(owner, repository, accessToken).find { it.head.ref == riScId }?.let {
             try {
                 closePullRequest(
                     uri = githubHelper.uriToEditPullRequest(owner, repository, it.number),
@@ -438,7 +477,7 @@ class GithubConnector(
     fun createNewBranch(
         owner: String,
         repository: String,
-        riScId: String,
+        newBranchName: String,
         accessToken: String,
         defaultBranch: String,
     ): String? {
@@ -447,18 +486,18 @@ class GithubConnector(
         return postNewBranchToGithub(
             uri = githubHelper.uriToCreateNewBranchForRiSc(owner, repository),
             accessToken = accessToken,
-            branchPayload = githubHelper.bodyToCreateNewBranchForRiScFromMain(riScId, latestShaForMainBranch),
+            branchPayload = githubHelper.bodyToCreateNewBranchFromMain(newBranchName, latestShaForMainBranch),
         ).bodyToMono<String>().block()
     }
 
-    fun fetchAllPullRequestsForRiSc(
+    fun fetchAllPullRequests(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<GithubPullRequestObject> =
         try {
             getGithubResponse(githubHelper.uriToFetchAllPullRequests(owner, repository), accessToken)
-                .pullRequestResponseDTOs()
+                .toPullRequestResponseDTOs()
         } catch (e: Exception) {
             emptyList()
         }
@@ -520,6 +559,29 @@ class GithubConnector(
             )
         }
 
+    fun createPullRequestForSopsConfig(
+        owner: String,
+        repository: String,
+        sopsId: String,
+        gitHubAccessToken: GithubAccessToken,
+        defaultBranch: String,
+    ): GithubPullRequestObject? =
+        postNewPullRequestToGithub(
+            uri = githubHelper.uriToCreatePullRequest(owner, repository),
+            accessToken = gitHubAccessToken.value,
+            pullRequestPayload =
+                GithubCreateNewPullRequestPayload(
+                    "Update SOPS configuration",
+                    "This pull request updates the SOPS configuration that is needed to encrypt and decrypt RiSc's in " +
+                        "[Risk Scorecard in Kartverket.dev](https://kartverket.dev/catalog/default/component/$repository/risc). " +
+                        "Merge this PR in order to use the new SOPS configuration in the " +
+                        "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
+                    owner,
+                    sopsId,
+                    defaultBranch,
+                ),
+        ).pullRequestResponseDTO()
+
     private fun postNewPullRequestToGithub(
         uri: String,
         accessToken: String,
@@ -562,19 +624,80 @@ class GithubConnector(
         .body(Mono.just(branchPayload.toContentBody()), String::class.java)
         .retrieve()
 
-    private fun putFileRequestToGithub(
-        uri: String,
-        accessToken: String,
-        writePayload: GithubWriteToFilePayload,
-    ) = webClient
-        .put()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(writePayload.toContentBody()), String::class.java)
-        .retrieve()
+    fun putFileRequestToGithub(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+        filePath: String,
+        branch: String,
+        message: String,
+        content: String,
+    ): ResponseSpec {
+        val payload =
+            GithubWriteToFilePayload(
+                message = message,
+                content = content,
+                sha = fetchFileInfo(repositoryOwner, repositoryName, gitHubAccessToken, filePath, branch)?.sha,
+                branchName = branch,
+            )
+
+        return try {
+            webClient
+                .put()
+                .uri(githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, filePath, branch))
+                .header("Accept", "application/vnd.github+json")
+                .header("Authorization", "token ${gitHubAccessToken.value}")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .header("Content-Type", "application/json")
+                .body(Mono.just(payload.toContentBody()), String::class.java)
+                .retrieve()
+        } catch (e: WebClientResponseException.BadRequest) {
+            LOGGER.error("Got 400 bad request for filePath: $filePath with message: ${e.message}")
+            throw e
+        }
+    }
+
+    fun writeSopsConfig(
+        sopsConfig: String,
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+        branch: String,
+    ): String =
+        putFileRequestToGithub(
+            repositoryOwner,
+            repositoryName,
+            gitHubAccessToken,
+            "$riScFolderPath/.sops.yaml",
+            branch,
+            "Update SOPS configuration",
+            sopsConfig.encodeBase64(),
+        ).bodyToMono<String>().block() ?: throw UnableToWriteSopsConfigException(
+            "Failed to put new sops config on branch: '$branch'",
+            ProcessRiScResultDTO("", ProcessingStatus.FailedToCreateSops, ProcessingStatus.FailedToCreateSops.message),
+        )
+
+    private fun fetchFileInfo(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+        filePath: String,
+        branch: String,
+    ) = try {
+        getGithubResponse(
+            githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, filePath, branch),
+            gitHubAccessToken.value,
+        ).toFileContentDTO() ?: throw GitHubFetchException(
+            "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
+            ProcessRiScResultDTO(
+                "",
+                ProcessingStatus.FailedToCreateSops,
+                ProcessingStatus.FailedToCreateSops.message,
+            ),
+        )
+    } catch (e: WebClientResponseException.NotFound) {
+        null
+    }
 
     private suspend fun getGithubResponseSuspend(
         uri: String,
@@ -602,10 +725,12 @@ class GithubConnector(
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
 
-    private fun ResponseSpec.pullRequestResponseDTOs(): List<GithubPullRequestObject> =
+    private fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
 
-    private fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    private fun ResponseSpec.toPullRequestFilesDTO(): List<PullRequestFileObject>? = this.bodyToMono<List<PullRequestFileObject>>().block()
+
+    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
 
     private fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this
@@ -636,6 +761,8 @@ class GithubConnector(
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
+    private fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
+
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
         LOGGER.info("GET to GitHub contents-API responded with ${awaitBodilessEntity().statusCode}")
         val fileContentDTO: FileContentDTO? = awaitBodyOrNull<FileContentDTO>()
@@ -644,6 +771,10 @@ class GithubConnector(
     }
 
     private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
+
+    private fun ResponseSpec.toRepositoryBranchDTO(): List<RepositoryBranchDTO>? = this.bodyToMono<List<RepositoryBranchDTO>>().block()
+
+    private fun ResponseSpec.toFileContentsDTO(): List<FileContentsDTO>? = this.bodyToMono<List<FileContentsDTO>>().block()
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
@@ -718,4 +849,86 @@ class GithubConnector(
         uri = githubHelper.uriToGetRepositoryInfo(repositoryOwner, repositoryName),
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
+
+    fun fetchFilesUpdatedInPullRequest(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+        pullRequest: GithubPullRequestObject,
+    ) = getGithubResponse(
+        githubHelper.uriToFetchPullRequestFiles(repositoryOwner, repositoryName, pullRequest.number),
+        gitHubAccessToken.value,
+    ).toPullRequestFilesDTO() ?: throw GitHubFetchException(
+        "Unable to fetch files changed in pull request number ${pullRequest.number} for $repositoryOwner/$repositoryName",
+        ProcessRiScResultDTO(
+            "",
+            ProcessingStatus.FailedToCreateSops,
+            ProcessingStatus.FailedToCreateSops.message,
+        ),
+    )
+
+    fun fetchPullRequestsForBranches(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+        defaultBranch: String,
+        branches: List<String>,
+    ): List<GithubPullRequestObject> =
+        getGithubResponse(
+            githubHelper.uriToFetchAllPullRequests(repositoryOwner, repositoryName),
+            gitHubAccessToken.value,
+        ).toPullRequestResponseDTOs()
+            .filter {
+                it.head.ref in branches &&
+                    it.base.ref == defaultBranch
+            }
+
+    fun fetchAllBranches(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+    ) = getGithubResponse(
+        githubHelper.uriToFindAllBranches(repositoryOwner, repositoryName),
+        gitHubAccessToken.value,
+    ).toRepositoryBranchDTO()
+
+    fun fetchAllRiScsOnDefaultBranch(
+        repositoryOwner: String,
+        repositoryName: String,
+        gitHubAccessToken: GithubAccessToken,
+    ): Map<FileContentsDTO, String> {
+        val fileContentPaths =
+            try {
+                getGithubResponse(
+                    githubHelper.uriToFindRiScFiles(repositoryOwner, repositoryName),
+                    gitHubAccessToken.value,
+                ).toFileContentsDTO() ?: throw GitHubFetchException(
+                    "Unable to fetch RiScs file paths on default branch for $repositoryOwner/$repositoryName",
+                    ProcessRiScResultDTO(
+                        "",
+                        ProcessingStatus.FailedToCreateSops,
+                        ProcessingStatus.FailedToCreateSops.message,
+                    ),
+                )
+            } catch (e: WebClientResponseException.NotFound) {
+                emptyList()
+            }
+        return fileContentPaths
+            .filter { it.name.endsWith("$filenamePostfix.json") || it.name.endsWith("$filenamePostfix.yaml") }
+            .associateWith {
+                getGithubResponse(
+                    githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, it.path),
+                    gitHubAccessToken.value,
+                ).toFileContentDTO()
+                    ?.content
+                    ?.decodeBase64() ?: throw GitHubFetchException(
+                    "Unable to fetch RiScs file content from default branch for $repositoryOwner/$repositoryName",
+                    ProcessRiScResultDTO(
+                        "",
+                        ProcessingStatus.FailedToCreateSops,
+                        ProcessingStatus.FailedToCreateSops.message,
+                    ),
+                )
+            }
+    }
 }

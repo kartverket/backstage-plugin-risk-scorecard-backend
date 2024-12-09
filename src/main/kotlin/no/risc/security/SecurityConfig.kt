@@ -47,6 +47,7 @@ class SecurityConfig(
                 "Authorization",
                 "Microsoft-Id-Token",
                 "GCP-Access-Token",
+                "GitHub-Access-Token",
             )
         configuration.exposedHeaders = mutableListOf("x-auth-token")
         val source = UrlBasedCorsConfigurationSource()

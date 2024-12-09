@@ -15,21 +15,24 @@ import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
+import no.risc.github.models.SopsConfigOnGitHub
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.diff
+import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
-import org.apache.commons.lang3.RandomStringUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
 
 class ProcessRiScResultDTO(
@@ -46,6 +49,13 @@ class ProcessRiScResultDTO(
             )
     }
 }
+
+data class CreateRiScResultDTO(
+    val riScId: String,
+    val status: ProcessingStatus,
+    val statusMessage: String,
+    val riScContent: String?,
+)
 
 @Serializable
 data class RiScContentResultDTO(
@@ -123,15 +133,25 @@ enum class ProcessingStatus(
 ) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
+    CreatedSops("Created SOPS configuration successfully"),
+    InitializedGeneratedRiSc("Created new auto-generated risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
+    UpdatedSops("Updated SOPS configuration successfully"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
+    OpenedPullRequest("Opened pull request successfully"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
     InvalidAccessTokens("Invalid access tokens"),
     NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
     UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
     AccessTokensValidationFailure("Failure when validating access tokens"),
+    ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
+    NoGcpKeyInSopsConfigFound("No GCP KMS resource ID was found in sops config"),
+    FetchedSopsConfig("Fetched sops config successfully"),
+    FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
+    FailedToCreateSops("Failed to create SOPS configuration"),
+    NoSopsConfigFound("No SOPS config found in repo"),
 }
 
 data class RiScIdentifier(
@@ -170,6 +190,8 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
+    private val initRiScService: InitRiScServiceIntegration,
+    private val healthHttpCodeStatusMapper: HttpCodeStatusMapper,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -444,7 +466,15 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
         defaultBranch: String,
-    ): RiScResult = updateOrCreateRiSc(owner, repository, riScId, content, accessTokens, defaultBranch)
+    ): RiScResult =
+        updateOrCreateRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = riScId,
+            content = content,
+            accessTokens = accessTokens,
+            defaultBranch = defaultBranch,
+        )
 
     suspend fun createRiSc(
         owner: String,
@@ -452,16 +482,40 @@ class RiScService(
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
         defaultBranch: String,
-    ): ProcessRiScResultDTO {
-        val uniqueRiScId = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
-        try {
-            val result = updateOrCreateRiSc(owner, repository, uniqueRiScId, content, accessTokens, defaultBranch)
+        generateDefault: Boolean,
+    ): CreateRiScResultDTO {
+        val uniqueRiScId = generateRiScId(filenamePrefix)
+        val riScContentWrapperObject =
+            content.copy(
+                riSc =
+                    if (generateDefault) {
+                        initRiScService.generateDefaultRiSc(repository, content.riSc)
+                    } else {
+                        content.riSc
+                    },
+            )
+        return try {
+            val result =
+                updateOrCreateRiSc(
+                    owner,
+                    repository,
+                    uniqueRiScId,
+                    riScContentWrapperObject,
+                    accessTokens,
+                    defaultBranch,
+                )
 
             if (result.status == ProcessingStatus.UpdatedRiSc) {
-                return ProcessRiScResultDTO(
+                return CreateRiScResultDTO(
                     uniqueRiScId,
                     ProcessingStatus.CreatedRiSc,
                     "New RiSc was created",
+                    riScContentWrapperObject.riSc,
+                )
+            } else {
+                throw CreatingRiScException(
+                    message = "Failed to create RiSc with id $uniqueRiScId",
+                    riScId = uniqueRiScId,
                 )
             }
         } catch (e: Exception) {
@@ -470,7 +524,6 @@ class RiScService(
                 riScId = uniqueRiScId,
             )
         }
-        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     private suspend fun updateOrCreateRiSc(
@@ -481,7 +534,6 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
-        println(defaultBranch)
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId,
@@ -497,19 +549,24 @@ class RiScService(
             )
         }
 
-        val sopsConfig = githubConnector.fetchSopsConfig(owner, repository, accessTokens.githubAccessToken, riScId)
-        if (sopsConfig.status != GithubStatus.Success) {
+        val gitHubFetchSopsConfigResponse =
+            githubConnector.fetchSopsConfig(
+                owner,
+                repository,
+                accessTokens.githubAccessToken,
+                riScId,
+            )
+        if (gitHubFetchSopsConfigResponse.status != GithubStatus.Success) {
             throw SopsConfigFetchException(
-                message = "Failed when fetching SopsConfig from Github with status: ${sopsConfig.status}",
+                message = "Failed when fetching SopsConfig from Github with status: ${gitHubFetchSopsConfigResponse.status}",
                 riScId = riScId,
                 responseMessage = "Could not fetch SOPS config",
             )
         }
-
-        val config = removePathRegex(sopsConfig.data())
+        val sopsConfigOnGitHub = SopsConfigOnGitHub(removePathRegex(gitHubFetchSopsConfigResponse.data()))
 
         val encryptedData: String =
-            cryptoService.encrypt(content.riSc, config, accessTokens.gcpAccessToken, riScId)
+            cryptoService.encrypt(content.riSc, sopsConfigOnGitHub.config, accessTokens.gcpAccessToken, riScId)
 
         try {
             val riScApprovalPRStatus =
