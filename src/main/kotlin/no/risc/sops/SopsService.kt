@@ -1,16 +1,19 @@
 package no.risc.sops
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import no.risc.config.SopsServiceConfig
-import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreateNewBranchException
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
+import no.risc.exception.exceptions.NoResourceIdFoundException
 import no.risc.github.GithubConnector
-import no.risc.github.GithubHelper
+import no.risc.google.GoogleServiceIntegration
+import no.risc.google.model.GcpIamPermission
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
-import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.models.AccessTokens
+import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.ProcessRiScResultDTO
@@ -37,12 +40,8 @@ class SopsService(
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val initRiScServiceIntegration: InitRiScServiceIntegration,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
-    @Value("\${filename.postfix}") private val riScPostfix: String,
-    @Value("\${filename.prefix}") private val riScPrefix: String,
-    private val cryptoServiceIntegration: CryptoServiceIntegration,
-    private val githubHelper: GithubHelper,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
-    private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
+    private val googleServiceIntegration: GoogleServiceIntegration,
 ) {
     companion object {
         val LOGGER = LoggerFactory.getLogger(SopsService::class.java)
@@ -55,36 +54,30 @@ class SopsService(
     ): GetSopsConfigResponseBody {
         LOGGER.info("Fetching SOPS config for $repositoryOwner/$repositoryName")
 
-        val sopsBranches =
-            githubConnector
-                .fetchAllBranches(repositoryOwner, repositoryName, accessTokens.githubAccessToken)
-                ?.filter { it.name.startsWith("sops-") }
-                ?.map { it.name } ?: throw GitHubFetchException(
-                "Error occured when parsing GitHub-response when fetching repository branches",
-                ProcessRiScResultDTO(
-                    "",
-                    ProcessingStatus.FailedToCreateSops,
-                    ProcessingStatus.FailedToCreateSops.message,
-                ),
-            )
-
-        val sopsBranchesToSopsConfigs =
-            sopsBranches
-                .associateWith {
-                    try {
-                        githubConnector
-                            .fetchSopsConfig(
-                                repositoryOwner,
-                                repositoryName,
-                                accessTokens.githubAccessToken,
-                                it,
-                            ).data
-                    } catch (e: WebClientResponseException.NotFound) {
-                        null
-                    }
-                }.map { (branch, sopsConfigAsString) ->
-                    branch to sopsConfigAsString?.let { YamlUtils.deSerialize<SopsConfig>(sopsConfigAsString) }
-                }.toMutableList()
+        coroutineScope {
+            val sopsBranchesToSopsConfigs =
+                async {
+                    githubConnector
+                        .fetchAllBranches(repositoryOwner, repositoryName, accessTokens.githubAccessToken)
+                        ?.filter { it.name.startsWith("sops-") }
+                        ?.map { it.name }
+                        ?.associateWith {
+                            try {
+                                githubConnector
+                                    .fetchSopsConfig(
+                                        repositoryOwner,
+                                        repositoryName,
+                                        accessTokens.githubAccessToken,
+                                        it,
+                                    ).data
+                            } catch (e: WebClientResponseException.NotFound) {
+                                null
+                            }
+                        }?.map { (branch, sopsConfigAsString) ->
+                            branch to sopsConfigAsString?.let { YamlUtils.deSerialize<SopsConfig>(sopsConfigAsString) }
+                        }?.toMutableList()
+                }
+        }
 
         val defaultBranch =
             githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, accessTokens.githubAccessToken.value)
@@ -127,7 +120,7 @@ class SopsService(
                 }.keys
 
         val gcpProjectIds =
-            gcpCloudResourceApiConnector.fetchProjectIds(accessTokens.gcpAccessToken)
+            googleServiceIntegration.fetchProjectIds(accessTokens.gcpAccessToken)
                 ?: throw FetchException(
                     "Failed to fetch GCP projects",
                     ProcessingStatus.FailedToFetchGcpProjectIds,
@@ -138,15 +131,33 @@ class SopsService(
                 .filter { it.value.contains("-prod-") }
                 .mapNotNull { project ->
                     try {
-                        val cryptoKeys = gcpKmsInventoryApiConnector.fetchCryptoKeys(project, accessTokens.gcpAccessToken)
-                        cryptoKeys?.map { key ->
-                            if (gcpKmsApiConnector.testEncryptDecryptIamPermissions(key.resourceId))
-                        }
+                        googleServiceIntegration
+                            .fetchKeyRings(
+                                project,
+                                accessTokens.gcpAccessToken,
+                            )?.mapNotNull { keyRing ->
+                                googleServiceIntegration
+                                    .fetchCryptoKeys(
+                                        keyRing,
+                                        accessTokens.gcpAccessToken,
+                                    )?.map { cryptoKey ->
+                                        GcpCryptoKeyObject(
+                                            project.value,
+                                            cryptoKey.getKeyRingName(),
+                                            cryptoKey.getCryptoKeyName(),
+                                            googleServiceIntegration.testIamPermissions(
+                                                cryptoKey.resourceId,
+                                                accessTokens.gcpAccessToken,
+                                                GcpIamPermission.ENCRYPT_DECRYPT,
+                                            ),
+                                        )
+                                    }
+                            }?.flatten()
                     } catch (e: WebClientResponseException) {
                         LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
                         null
                     }
-                }
+                }.flatten()
 
         return GetSopsConfigResponseBody(
             status = ProcessingStatus.FetchedSopsConfig,
@@ -156,7 +167,7 @@ class SopsService(
                 sopsBranchesToSopsConfigs.mapNotNull { (sopsBranch, sopsConfig) ->
                     if (sopsConfig != null) {
                         SopsConfigDTO(
-                            sopsConfig.getGcpCryptoKey(),
+                            getGcpCryptoKey(sopsConfig, accessTokens.gcpAccessToken),
                             sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
                             sopsBranch == defaultBranch,
                             sopsBranch,
@@ -178,7 +189,9 @@ class SopsService(
     ): CreateSopsConfigResponseBody {
         val defaultBranch =
             githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, accessTokens.githubAccessToken.value)
+        LOGGER.info("Generating SOPS config for $repositoryOwner/$repositoryName")
         val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpCryptoKey, publicAgeKeys)
+        LOGGER.info("Generated SOPS config for $repositoryOwner/$repositoryName")
         val branch = generateSopsId()
         githubConnector.createNewBranch(
             repositoryOwner,
@@ -196,6 +209,7 @@ class SopsService(
                 ),
         )
 
+        LOGGER.info("Writing SOPS config github.com/$repositoryOwner/$repositoryName")
         githubConnector.writeSopsConfig(
             newSopsConfig,
             repositoryOwner,
@@ -235,6 +249,7 @@ class SopsService(
 //                }
 //        }
 
+        LOGGER.info("Wrote SOPS config github.com/$repositoryOwner/$repositoryName")
         return CreateSopsConfigResponseBody(
             ProcessingStatus.CreatedSops,
             ProcessingStatus.CreatedSops.message,
@@ -297,6 +312,38 @@ class SopsService(
             ProcessingStatus.OpenedPullRequest,
             ProcessingStatus.OpenedPullRequest.message,
             pullRequestObject,
+        )
+    }
+
+    private fun getGcpCryptoKey(
+        sopsConfig: SopsConfig,
+        gcpAccessToken: GCPAccessToken,
+    ): GcpCryptoKeyObject {
+        val resourceId =
+            sopsConfig.creationRules
+                .firstOrNull()
+                ?.keyGroups
+                ?.firstOrNull { !it.gcpKms.isNullOrEmpty() }
+                ?.gcpKms
+                ?.firstOrNull()
+                ?.resourceId
+                ?: throw NoResourceIdFoundException(
+                    "No gcp kms resource id could be found",
+                    ProcessRiScResultDTO(
+                        "",
+                        ProcessingStatus.NoGcpKeyInSopsConfigFound,
+                        ProcessingStatus.NoGcpKeyInSopsConfigFound.message,
+                    ),
+                )
+        return GcpCryptoKeyObject(
+            resourceId.split("/")[1],
+            resourceId.split("/")[5],
+            resourceId.split("/").last(),
+            googleServiceIntegration.testIamPermissions(
+                resourceId,
+                gcpAccessToken,
+                GcpIamPermission.ENCRYPT_DECRYPT,
+            ),
         )
     }
 }

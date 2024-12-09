@@ -3,6 +3,7 @@ package no.risc.initRiSc
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
 import no.risc.initRiSc.model.GenerateRiScRequestBody
+import no.risc.initRiSc.model.GenerateSopsConfigGcpCryptoKeyObject
 import no.risc.initRiSc.model.GenerateSopsConfigRequestBody
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
@@ -38,8 +39,18 @@ class InitRiScServiceIntegration(
         initRiScServiceConnector.webClient
             .post()
             .uri("/generate/sopsConfig")
-            .body(BodyInserters.fromValue(GenerateSopsConfigRequestBody(gcpCryptoKey, publicAgeKeys)))
-            .retrieve()
+            .body(
+                BodyInserters.fromValue(
+                    GenerateSopsConfigRequestBody(
+                        GenerateSopsConfigGcpCryptoKeyObject(
+                            gcpCryptoKey.projectId,
+                            gcpCryptoKey.keyRing,
+                            gcpCryptoKey.name,
+                        ),
+                        publicAgeKeys,
+                    ),
+                ),
+            ).retrieve()
             .bodyToMono<String>()
             .block() ?: throw SopsConfigGenerateFetchException(
             "Failed to generate sops config by calling init risc service",

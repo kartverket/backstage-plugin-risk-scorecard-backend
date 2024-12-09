@@ -1,4 +1,6 @@
-package no.risc.infra.connector.models
+@file:Suppress("ktlint:standard:no-empty-file")
+
+package no.risc.google.model
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -25,6 +27,8 @@ data class GcpCryptoKey(
     val purpose: GcpCryptoKeyPurpose,
 ) {
     fun getCryptoKeyName() = resourceId.split("/").last()
+
+    fun getKeyRingName() = resourceId.split("/")[5]
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -57,5 +61,15 @@ enum class GcpCryptoKeyPurpose {
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class TestIamPermissionBody(
-    val permissions: List<String>,
+    val permissions: List<GcpIamPermission>? = null,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class FetchGcpKeyRingsResponse(
+    val keyRings: List<GcpKeyRing>? = null,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GcpKeyRing(
+    @JsonProperty("name") val resourceId: String,
 )
