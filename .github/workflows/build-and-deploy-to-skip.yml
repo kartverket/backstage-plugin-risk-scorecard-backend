@@ -166,7 +166,7 @@ jobs:
           echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-dev/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
-          git commit -am "${{ github.event.head_commit.message }}"
+          git commit -am "Update Risk Scorecard Backend"
           git push
 
   prod-deploy-argo:
@@ -195,5 +195,5 @@ jobs:
           echo "\"${{ needs.build.outputs.image_url }}\"" > "env/atgcp1-prod/ros-plugin-main/${{ env.ARGO_VERSION_FILE }}"
           git config --global user.email "noreply@kartverket.no"
           git config --global user.name "Backstage Plugin Risk Scorecard Backend CI"
-          git commit -am "${{ github.event.head_commit.message }}"
+          git commit -am "Update Risk Scorecard Backend"
           git push

@@ -218,6 +218,7 @@ class SopsService(
             branch,
         )
 
+        // TODO: This will be the block needed to re-encrypt existing RiSc on default branch with the newly generated SOPS configuration
 //        if (reEncryptExistingRiScs) {
 //            githubConnector
 //                .fetchAllRiScsOnDefaultBranch(

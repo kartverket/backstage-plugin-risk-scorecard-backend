@@ -574,7 +574,8 @@ class GithubConnector(
                     "Update SOPS configuration",
                     "This pull request updates the SOPS configuration that is needed to encrypt and decrypt RiSc's in " +
                         "[Risk Scorecard in Kartverket.dev](https://kartverket.dev/catalog/default/component/$repository/risc). " +
-                        "Merge this PR in order to use the new SOPS configuration in the [Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
+                        "Merge this PR in order to use the new SOPS configuration in the " +
+                        "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
                     owner,
                     sopsId,
                     defaultBranch,

@@ -3,13 +3,14 @@
     <option name="ACTIVE_PROFILES" value="local" />
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-21" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="BACKEND_PUBLIC_KEY" value="age18e0t6ve0vdxqzzjt7rxf0r6vzc37fhs5cad2qz40r02c3spzgvvq8uxz23" />
+    </envs>
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/.env" />
     </option>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
-    <selectedOptions>
-      <option name="environmentVariables" />
-    </selectedOptions>
+    <option name="PASS_PARENT_ENVS" value="false" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />
     <method v="2">
       <option name="Make" enabled="true" />
