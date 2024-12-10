@@ -146,27 +146,21 @@ class SopsService(
                         async(Dispatchers.IO) {
                             try {
                                 googleServiceIntegration
-                                    .fetchKeyRings(
+                                    .fetchCryptoKeys(
                                         project,
                                         accessTokens.gcpAccessToken,
-                                    )?.mapNotNull { keyRing ->
-                                        googleServiceIntegration
-                                            .fetchCryptoKeys(
-                                                keyRing,
+                                    )?.map { gcpCryptoKey ->
+                                        GcpCryptoKeyObject(
+                                            project.value,
+                                            gcpCryptoKey.getKeyRingName(),
+                                            gcpCryptoKey.getCryptoKeyName(),
+                                            googleServiceIntegration.testIamPermissions(
+                                                gcpCryptoKey.resourceId,
                                                 accessTokens.gcpAccessToken,
-                                            )?.map { cryptoKey ->
-                                                GcpCryptoKeyObject(
-                                                    project.value,
-                                                    cryptoKey.getKeyRingName(),
-                                                    cryptoKey.getCryptoKeyName(),
-                                                    googleServiceIntegration.testIamPermissions(
-                                                        cryptoKey.resourceId,
-                                                        accessTokens.gcpAccessToken,
-                                                        GcpIamPermission.ENCRYPT_DECRYPT,
-                                                    ),
-                                                )
-                                            }
-                                    }?.flatten()
+                                                GcpIamPermission.ENCRYPT_DECRYPT,
+                                            ),
+                                        )
+                                    }
                             } catch (e: WebClientResponseException) {
                                 LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
                                 null

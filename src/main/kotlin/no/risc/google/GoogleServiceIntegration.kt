@@ -10,6 +10,7 @@ import no.risc.google.model.GcpLocation
 import no.risc.google.model.TestIamPermissionBody
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
+import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
@@ -23,6 +24,7 @@ class GoogleServiceIntegration(
     private val googleOAuthApiConnector: GoogleOAuthApiConnector,
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
+    private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
 ) {
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
@@ -92,6 +94,18 @@ class GoogleServiceIntegration(
     ) = gcpKmsApiConnector.webClient
         .get()
         .uri("/v1/${gcpKeyRing.resourceId}/cryptoKeys")
+        .header("Authorization", "Bearer ${gcpAccessToken.value}")
+        .retrieve()
+        .bodyToMono<FetchCryptoKeysResponse>()
+        .block()
+        ?.cryptoKeys
+
+    fun fetchCryptoKeys(
+        gcpProjectId: GcpProjectId,
+        gcpAccessToken: GCPAccessToken,
+    ) = gcpKmsInventoryApiConnector.webClient
+        .get()
+        .uri("/v1/projects/$gcpProjectId/cryptoKeys")
         .header("Authorization", "Bearer ${gcpAccessToken.value}")
         .retrieve()
         .bodyToMono<FetchCryptoKeysResponse>()
