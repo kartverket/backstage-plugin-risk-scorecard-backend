@@ -26,7 +26,7 @@ class SopsController(
     private val sopsService: SopsService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}")
-    fun getSopsConfig(
+    suspend fun getSopsConfig(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable("repositoryOwner") repositoryOwner: String,

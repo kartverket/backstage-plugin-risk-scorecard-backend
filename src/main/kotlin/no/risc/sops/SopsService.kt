@@ -1,5 +1,6 @@
 package no.risc.sops
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import no.risc.config.SopsServiceConfig
@@ -47,138 +48,152 @@ class SopsService(
         val LOGGER = LoggerFactory.getLogger(SopsService::class.java)
     }
 
-    fun getSopsConfigs(
+    suspend fun getSopsConfigs(
         repositoryOwner: String,
         repositoryName: String,
         accessTokens: AccessTokens,
-    ): GetSopsConfigResponseBody {
-        LOGGER.info("Fetching SOPS config for $repositoryOwner/$repositoryName")
-
+    ): GetSopsConfigResponseBody =
         coroutineScope {
+            LOGGER.info("Fetching SOPS config for $repositoryOwner/$repositoryName")
+            val defaultBranch =
+                githubConnector.fetchDefaultBranch(
+                    repositoryOwner,
+                    repositoryName,
+                    accessTokens.githubAccessToken.value,
+                )
+
+            val sopsBranches =
+                githubConnector
+                    .fetchAllBranches(repositoryOwner, repositoryName, accessTokens.githubAccessToken)
+                    ?.filter { it.name.startsWith("sops-") }
+                    ?.map { it.name } ?: throw FetchException(
+                    "Unable to fetch sops branches for $repositoryOwner/$repositoryName",
+                    ProcessingStatus.FailedToFetchGcpProjectIds,
+                )
+
             val sopsBranchesToSopsConfigs =
-                async {
-                    githubConnector
-                        .fetchAllBranches(repositoryOwner, repositoryName, accessTokens.githubAccessToken)
-                        ?.filter { it.name.startsWith("sops-") }
-                        ?.map { it.name }
-                        ?.associateWith {
+                sopsBranches
+                    .associateWith { branch ->
+                        async(Dispatchers.IO) {
                             try {
                                 githubConnector
                                     .fetchSopsConfig(
                                         repositoryOwner,
                                         repositoryName,
                                         accessTokens.githubAccessToken,
-                                        it,
+                                        branch,
                                     ).data
                             } catch (e: WebClientResponseException.NotFound) {
                                 null
                             }
-                        }?.map { (branch, sopsConfigAsString) ->
-                            branch to sopsConfigAsString?.let { YamlUtils.deSerialize<SopsConfig>(sopsConfigAsString) }
-                        }?.toMutableList()
-                }
-        }
-
-        val defaultBranch =
-            githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, accessTokens.githubAccessToken.value)
-        sopsBranchesToSopsConfigs.add(
-            Pair(
-                defaultBranch,
-                try {
-                    val sopsConfigAsString =
-                        githubConnector
-                            .fetchSopsConfig(
-                                repositoryOwner,
-                                repositoryName,
-                                accessTokens.githubAccessToken,
-                                defaultBranch,
-                            ).data
-                    sopsConfigAsString?.let { YamlUtils.deSerialize<SopsConfig>(it) }
-                } catch (e: WebClientResponseException.NotFound) {
-                    null
-                },
-            ),
-        )
-
-        val pullRequests =
-            githubConnector
-                .fetchPullRequestsForBranches(
-                    repositoryOwner,
-                    repositoryName,
-                    accessTokens.githubAccessToken,
-                    defaultBranch,
-                    sopsBranches,
-                ).associateWith {
-                    githubConnector.fetchFilesUpdatedInPullRequest(
+                        }
+                    }.map {
+                        it.key to
+                            it.value.await()?.let { sopsConfigAsString ->
+                                YamlUtils.deSerialize<SopsConfig>(sopsConfigAsString)
+                            }
+                    }.toMutableList()
+            sopsBranchesToSopsConfigs.add(
+                defaultBranch to
+                    async(Dispatchers.IO) {
+                        try {
+                            val sopsConfigAsString =
+                                githubConnector
+                                    .fetchSopsConfig(
+                                        repositoryOwner,
+                                        repositoryName,
+                                        accessTokens.githubAccessToken,
+                                        defaultBranch,
+                                    ).data
+                            sopsConfigAsString?.let { YamlUtils.deSerialize<SopsConfig>(it) }
+                        } catch (e: WebClientResponseException.NotFound) {
+                            null
+                        }
+                    }.await(),
+            )
+            val pullRequests =
+                githubConnector
+                    .fetchPullRequestsForBranches(
                         repositoryOwner,
                         repositoryName,
                         accessTokens.githubAccessToken,
-                        it,
+                        defaultBranch,
+                        sopsBranches,
+                    ).associateWith {
+                        async(Dispatchers.IO) {
+                            githubConnector.fetchFilesUpdatedInPullRequest(
+                                repositoryOwner,
+                                repositoryName,
+                                accessTokens.githubAccessToken,
+                                it,
+                            )
+                        }
+                    }.filter { (_, files) ->
+                        files.await().any { it.filename == "$riScFolderPath/.sops.yaml" }
+                    }.keys
+
+            val gcpProjectIds =
+                googleServiceIntegration.fetchProjectIds(accessTokens.gcpAccessToken)
+                    ?: throw FetchException(
+                        "Failed to fetch GCP projects",
+                        ProcessingStatus.FailedToFetchGcpProjectIds,
                     )
-                }.filter { (_, files) ->
-                    files.any { it.filename == "$riScFolderPath/.sops.yaml" }
-                }.keys
 
-        val gcpProjectIds =
-            googleServiceIntegration.fetchProjectIds(accessTokens.gcpAccessToken)
-                ?: throw FetchException(
-                    "Failed to fetch GCP projects",
-                    ProcessingStatus.FailedToFetchGcpProjectIds,
-                )
-
-        val cryptoKeys =
-            gcpProjectIds
-                .filter { it.value.contains("-prod-") }
-                .mapNotNull { project ->
-                    try {
-                        googleServiceIntegration
-                            .fetchKeyRings(
-                                project,
-                                accessTokens.gcpAccessToken,
-                            )?.mapNotNull { keyRing ->
+            val cryptoKeys =
+                gcpProjectIds
+                    .filter { it.value.contains("-prod-") }
+                    .mapNotNull { project ->
+                        async(Dispatchers.IO) {
+                            try {
                                 googleServiceIntegration
-                                    .fetchCryptoKeys(
-                                        keyRing,
+                                    .fetchKeyRings(
+                                        project,
                                         accessTokens.gcpAccessToken,
-                                    )?.map { cryptoKey ->
-                                        GcpCryptoKeyObject(
-                                            project.value,
-                                            cryptoKey.getKeyRingName(),
-                                            cryptoKey.getCryptoKeyName(),
-                                            googleServiceIntegration.testIamPermissions(
-                                                cryptoKey.resourceId,
+                                    )?.mapNotNull { keyRing ->
+                                        googleServiceIntegration
+                                            .fetchCryptoKeys(
+                                                keyRing,
                                                 accessTokens.gcpAccessToken,
-                                                GcpIamPermission.ENCRYPT_DECRYPT,
-                                            ),
-                                        )
-                                    }
-                            }?.flatten()
-                    } catch (e: WebClientResponseException) {
-                        LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
-                        null
-                    }
-                }.flatten()
-
-        return GetSopsConfigResponseBody(
-            status = ProcessingStatus.FetchedSopsConfig,
-            statusMessage = ProcessingStatus.FetchedSopsConfig.message,
-            gcpCryptoKeys = cryptoKeys,
-            sopsConfigs =
-                sopsBranchesToSopsConfigs.mapNotNull { (sopsBranch, sopsConfig) ->
-                    if (sopsConfig != null) {
-                        SopsConfigDTO(
-                            getGcpCryptoKey(sopsConfig, accessTokens.gcpAccessToken),
-                            sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
-                            sopsBranch == defaultBranch,
-                            sopsBranch,
-                            pullRequests.firstOrNull { it.head.ref == sopsBranch }?.toPullRequestObject(),
-                        )
-                    } else {
-                        null
-                    }
-                },
-        )
-    }
+                                            )?.map { cryptoKey ->
+                                                GcpCryptoKeyObject(
+                                                    project.value,
+                                                    cryptoKey.getKeyRingName(),
+                                                    cryptoKey.getCryptoKeyName(),
+                                                    googleServiceIntegration.testIamPermissions(
+                                                        cryptoKey.resourceId,
+                                                        accessTokens.gcpAccessToken,
+                                                        GcpIamPermission.ENCRYPT_DECRYPT,
+                                                    ),
+                                                )
+                                            }
+                                    }?.flatten()
+                            } catch (e: WebClientResponseException) {
+                                LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
+                                null
+                            }
+                        }.await()
+                    }.flatten()
+            GetSopsConfigResponseBody(
+                status = ProcessingStatus.FetchedSopsConfig,
+                statusMessage = ProcessingStatus.FetchedSopsConfig.message,
+                gcpCryptoKeys = cryptoKeys,
+                sopsConfigs =
+                    sopsBranchesToSopsConfigs.mapNotNull
+                        { (sopsBranch, sopsConfig) ->
+                            if (sopsConfig != null) {
+                                SopsConfigDTO(
+                                    getGcpCryptoKey(sopsConfig, accessTokens.gcpAccessToken),
+                                    sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
+                                    sopsBranch == defaultBranch,
+                                    sopsBranch,
+                                    pullRequests.firstOrNull { it.head.ref == sopsBranch }?.toPullRequestObject(),
+                                )
+                            } else {
+                                null
+                            }
+                        },
+            )
+        }
 
     suspend fun createSopsConfig(
         repositoryOwner: String,
