@@ -120,7 +120,7 @@ class GithubConnector(
         val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
     }
 
-    fun fetchSopsConfig(
+    suspend fun fetchSopsConfig(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
@@ -130,20 +130,18 @@ class GithubConnector(
         val sopsConfig =
             try {
                 LOGGER.info("Trying to get sops config from branch: $branch")
-                getGithubResponse(
+                getGithubResponseSuspend(
                     "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
                     githubAccessToken.value,
-                ).bodyToMono<FileContentDTO>()
-                    .block()
+                ).toFileContentDTO()
                     ?.content
                     ?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
                 LOGGER.info("Trying to get sops config from default branch")
-                getGithubResponse(
+                getGithubResponseSuspend(
                     githubHelper.uriToFindSopsConfig(owner, repository),
                     githubAccessToken.value,
-                ).bodyToMono<FileContentDTO>()
-                    .block()
+                ).toFileContentDTO()
                     ?.content
                     ?.decodeBase64()
             }

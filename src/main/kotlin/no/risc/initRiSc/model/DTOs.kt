@@ -1,6 +1,5 @@
 package no.risc.initRiSc.model
 
-import no.risc.sops.model.GcpProjectId
 import no.risc.sops.model.PublicAgeKey
 
 data class GenerateRiScRequestBody(
@@ -8,6 +7,12 @@ data class GenerateRiScRequestBody(
 )
 
 data class GenerateSopsConfigRequestBody(
-    val gcpProjectId: GcpProjectId,
+    val gcpCryptoKey: GenerateSopsConfigGcpCryptoKeyObject,
     val publicAgeKeys: List<PublicAgeKey>,
+)
+
+data class GenerateSopsConfigGcpCryptoKeyObject(
+    val projectId: String,
+    val keyRing: String,
+    val name: String,
 )

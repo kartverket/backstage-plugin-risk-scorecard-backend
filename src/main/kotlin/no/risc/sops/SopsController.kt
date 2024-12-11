@@ -26,7 +26,7 @@ class SopsController(
     private val sopsService: SopsService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}")
-    fun getSopsConfig(
+    suspend fun getSopsConfig(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable("repositoryOwner") repositoryOwner: String,
@@ -54,7 +54,7 @@ class SopsController(
             sopsService.createSopsConfig(
                 repositoryOwner,
                 repositoryName,
-                requestBody.gcpProjectId,
+                requestBody.gcpCryptoKey,
                 requestBody.publicAgeKeys,
                 AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )
@@ -78,7 +78,7 @@ class SopsController(
                 repositoryOwner,
                 repositoryName,
                 ref,
-                requestBody.gcpProjectId,
+                requestBody.gcpCryptoKey,
                 requestBody.publicAgeKeys,
                 AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )

@@ -1,33 +1,10 @@
 package no.risc.sops.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import no.risc.exception.exceptions.NoResourceIdFoundException
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
 
 data class SopsConfig(
     @JsonProperty("creation_rules") val creationRules: List<CreationRule>,
 ) {
-    fun getGcpProjectId(): GcpProjectId {
-        val resourceId =
-            this.creationRules
-                .firstOrNull()
-                ?.keyGroups
-                ?.firstOrNull { !it.gcpKms.isNullOrEmpty() }
-                ?.gcpKms
-                ?.firstOrNull()
-                ?.resourceId
-                ?: throw NoResourceIdFoundException(
-                    "No gcp kms resource id could be found",
-                    ProcessRiScResultDTO(
-                        "",
-                        ProcessingStatus.NoGcpKeyInSopsConfigFound,
-                        ProcessingStatus.NoGcpKeyInSopsConfigFound.message,
-                    ),
-                )
-        return GcpProjectId(resourceId.split("/")[1])
-    }
-
     fun getDeveloperPublicKeys(backendPublicAgeKey: String): List<PublicAgeKey> =
         this.creationRules
             .firstOrNull()

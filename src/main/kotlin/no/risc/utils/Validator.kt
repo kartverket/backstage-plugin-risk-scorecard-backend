@@ -10,7 +10,7 @@ data class ValidationResult(
 
 object Validator {
     fun validate(body: SopsConfigRequestBody): ValidationResult {
-        val gcpProjectIdValidationResult = body.gcpProjectId.getValidationResult()
+        val gcpProjectIdValidationResult = body.gcpCryptoKey.getValidationResult()
         val publicKeysValidationResult = body.publicAgeKeys.map { it.getValidationResult() }
         return if (publicKeysValidationResult.any { !it.isValid }) {
             publicKeysValidationResult.first { !it.isValid }
