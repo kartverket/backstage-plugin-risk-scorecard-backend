@@ -27,6 +27,9 @@ import no.risc.sops.model.PublicAgeKey
 import no.risc.sops.model.SopsConfig
 import no.risc.sops.model.SopsConfigDTO
 import no.risc.sops.model.UpdateSopsConfigResponseBody
+import no.risc.sops.model.getRiScCryptoKey
+import no.risc.sops.model.getRiScCryptoKeyResourceId
+import no.risc.sops.model.getRiScKeyRing
 import no.risc.utils.YamlUtils
 import no.risc.utils.generateSopsId
 import org.slf4j.LoggerFactory
@@ -142,31 +145,50 @@ class SopsService(
             val cryptoKeys =
                 gcpProjectIds
                     .filter { it.value.contains("-prod-") }
-                    .mapNotNull { project ->
-                        async(Dispatchers.IO) {
-                            try {
-                                googleServiceIntegration
-                                    .fetchCryptoKeys(
-                                        project,
-                                        accessTokens.gcpAccessToken,
-                                    )?.map { gcpCryptoKey ->
-                                        GcpCryptoKeyObject(
-                                            project.value,
-                                            gcpCryptoKey.getKeyRingName(),
-                                            gcpCryptoKey.getCryptoKeyName(),
-                                            googleServiceIntegration.testIamPermissions(
-                                                gcpCryptoKey.resourceId,
-                                                accessTokens.gcpAccessToken,
-                                                GcpIamPermission.ENCRYPT_DECRYPT,
-                                            ),
-                                        )
-                                    }
-                            } catch (e: WebClientResponseException) {
-                                LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
-                                null
+                    .map {
+                        it to
+                            async(Dispatchers.IO) {
+                                googleServiceIntegration.testIamPermissions(
+                                    it.getRiScCryptoKeyResourceId(),
+                                    accessTokens.gcpAccessToken,
+                                    GcpIamPermission.ENCRYPT_DECRYPT,
+                                )
                             }
-                        }.await()
-                    }.flatten()
+                    }.map { (gcpProjectId, hasAccess) ->
+                        GcpCryptoKeyObject(
+                            gcpProjectId.value,
+                            gcpProjectId.getRiScKeyRing(),
+                            gcpProjectId.getRiScCryptoKey(),
+                            hasAccess.await(),
+                        )
+                    }
+
+            // TODO: Use this when
+//                    .mapNotNull { project ->
+//                        async(Dispatchers.IO) {
+//                            try {
+//                                googleServiceIntegration
+//                                    .fetchCryptoKeys(
+//                                        project,
+//                                        accessTokens.gcpAccessToken,
+//                                    )?.map { gcpCryptoKey ->
+//                                        GcpCryptoKeyObject(
+//                                            project.value,
+//                                            gcpCryptoKey.getKeyRingName(),
+//                                            gcpCryptoKey.getCryptoKeyName(),
+//                                            googleServiceIntegration.testIamPermissions(
+//                                                gcpCryptoKey.resourceId,
+//                                                accessTokens.gcpAccessToken,
+//                                                GcpIamPermission.ENCRYPT_DECRYPT,
+//                                            ),
+//                                        )
+//                                    }
+//                            } catch (e: WebClientResponseException) {
+//                                LOGGER.warn("Received 403 when fetching from ${e.request?.uri}")
+//                                null
+//                            }
+//                        }.await()
+//                    }.flatten()
             GetSopsConfigResponseBody(
                 status = ProcessingStatus.FetchedSopsConfig,
                 statusMessage = ProcessingStatus.FetchedSopsConfig.message,
