@@ -161,7 +161,7 @@ class SopsService(
                             gcpProjectId.getRiScCryptoKey(),
                             hasAccess.await(),
                         )
-                    }
+                    }.toMutableList()
 
             // TODO: Use this when
 //                    .mapNotNull { project ->
@@ -192,13 +192,16 @@ class SopsService(
             GetSopsConfigResponseBody(
                 status = ProcessingStatus.FetchedSopsConfig,
                 statusMessage = ProcessingStatus.FetchedSopsConfig.message,
-                gcpCryptoKeys = cryptoKeys,
                 sopsConfigs =
                     sopsBranchesToSopsConfigs.mapNotNull
                         { (sopsBranch, sopsConfig) ->
                             if (sopsConfig != null) {
+                                val gcpCryptoKey = getGcpCryptoKey(sopsConfig, accessTokens.gcpAccessToken)
+                                if (gcpCryptoKey !in cryptoKeys) {
+                                    cryptoKeys.add(gcpCryptoKey)
+                                }
                                 SopsConfigDTO(
-                                    getGcpCryptoKey(sopsConfig, accessTokens.gcpAccessToken),
+                                    gcpCryptoKey,
                                     sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
                                     sopsBranch == defaultBranch,
                                     sopsBranch,
@@ -208,6 +211,7 @@ class SopsService(
                                 null
                             }
                         },
+                gcpCryptoKeys = cryptoKeys,
             )
         }
 

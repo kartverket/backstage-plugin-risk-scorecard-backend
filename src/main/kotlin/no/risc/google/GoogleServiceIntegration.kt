@@ -15,6 +15,7 @@ import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
 import no.risc.sops.model.GcpProjectId
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -26,6 +27,10 @@ class GoogleServiceIntegration(
     private val gcpKmsApiConnector: GcpKmsApiConnector,
     private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
 ) {
+    companion object {
+        val LOGGER = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
+    }
+
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
     private fun fetchTokenInfo(token: String): String? =
