@@ -43,6 +43,11 @@ val ninjaSquadVersion = "4.0.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation("org.apache.tomcat.embed:tomcat-embed-core") {
+        version {
+            strictly("10.1.34")
+        }
+    }
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
