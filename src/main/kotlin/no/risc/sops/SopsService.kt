@@ -189,18 +189,6 @@ class SopsService(
 //                            }
 //                        }.await()
 //                    }.flatten()
-            cryptoKeys.add(
-                GcpCryptoKeyObject(
-                    "skvis-prod-9329",
-                    "test",
-                    "test",
-                    googleServiceIntegration.testIamPermissions(
-                        "projects/skvis-prod-9329/locations/europe-north1/keyRings/test/cryptoKeys/test",
-                        accessTokens.gcpAccessToken,
-                        GcpIamPermission.ENCRYPT_DECRYPT,
-                    ),
-                ),
-            )
             GetSopsConfigResponseBody(
                 status = ProcessingStatus.FetchedSopsConfig,
                 statusMessage = ProcessingStatus.FetchedSopsConfig.message,
