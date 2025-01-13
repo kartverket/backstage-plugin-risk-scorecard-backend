@@ -8,6 +8,7 @@
     </envs>
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/.env" />
+      <option value="$PROJECT_DIR$/.env.local" />
     </option>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
     <option name="PASS_PARENT_ENVS" value="false" />

@@ -24,7 +24,7 @@ repositories {
 }
 
 val kotlinVersion = "2.0.21"
-val springBootVersion = "3.4.0"
+val springBootVersion = "3.4.1"
 val springSecurityVersion = "6.4.1"
 val kotlinxSerializationVersion = "1.7.3"
 val kotlinxCoroutinesVersion = "1.9.0"
@@ -43,6 +43,11 @@ val ninjaSquadVersion = "4.0.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation("org.apache.tomcat.embed:tomcat-embed-core") {
+        version {
+            strictly("10.1.34")
+        }
+    }
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
