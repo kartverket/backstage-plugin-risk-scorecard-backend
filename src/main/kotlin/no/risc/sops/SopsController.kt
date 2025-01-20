@@ -38,9 +38,7 @@ class SopsController(
             repositoryOwner,
             repositoryName,
             AccessTokens(
-                githubAccessToken =
-                    gitHubAccessToken?.let { GithubAccessToken(gitHubAccessToken) }
-                        ?: gitHubAppService.getInstallationToken(),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
             ),
         )

@@ -10,10 +10,13 @@ import no.risc.config.GitHubAppConfig
 import no.risc.github.models.GitHubAccessTokenResponse
 import no.risc.github.models.isNotExpired
 import no.risc.infra.connector.models.GithubAccessToken
+import org.springframework.core.env.Environment
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
+import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
@@ -22,12 +25,12 @@ import java.util.concurrent.atomic.AtomicReference
 @Service
 class GitHubAppService(
     val gitHubAppConfig: GitHubAppConfig,
+    val environment: Environment,
 ) {
     private val installationToken: AtomicReference<GitHubAccessTokenResponse> = AtomicReference()
-    private val gitHubPrivateKey = Base64.getDecoder().decode(gitHubAppConfig.privateKey)
 
     private fun generateJWT(): String? {
-        val jwk = JWK.parseFromPEMEncodedObjects(String(gitHubPrivateKey))
+        val jwk = JWK.parseFromPEMEncodedObjects(String(Base64.getDecoder().decode(gitHubAppConfig.privateKey)))
         val signer = RSASSASigner(jwk.toRSAKey())
         val jwtClaimSet =
             JWTClaimsSet
@@ -43,13 +46,24 @@ class GitHubAppService(
         return signedJwt.serialize()
     }
 
-    fun getInstallationToken(): GithubAccessToken {
+    private fun getInstallationToken(): GithubAccessToken {
         if (installationToken.get() != null && installationToken.get().isNotExpired()) {
             return GithubAccessToken(installationToken.get().token)
         }
         installationToken.set(fetchGitHubInstallationToken())
         return GithubAccessToken(installationToken.get().token)
     }
+
+    fun getGitHubAccessToken(tokenFromHeader: String?): GithubAccessToken =
+        tokenFromHeader?.let { GithubAccessToken(it) }
+            ?: if (environment.activeProfiles.contains("local")) {
+                throw ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A GitHub personal access token MUST be provided when running locally.",
+                )
+            } else {
+                getInstallationToken()
+            }
 
     private fun fetchGitHubInstallationToken(): GitHubAccessTokenResponse =
         RestClient

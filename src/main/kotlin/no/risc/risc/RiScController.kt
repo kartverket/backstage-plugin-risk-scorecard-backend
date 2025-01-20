@@ -39,9 +39,7 @@ class RiScController(
             repositoryName,
             AccessTokens(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken =
-                    gitHubAccessToken?.let { GithubAccessToken(gitHubAccessToken) }
-                        ?: gitHubAppService.getInstallationToken(),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ),
             "4",
         )
@@ -59,9 +57,7 @@ class RiScController(
             repositoryName,
             AccessTokens(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken =
-                    gitHubAccessToken?.let { GithubAccessToken(gitHubAccessToken) }
-                        ?: gitHubAppService.getInstallationToken(),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ),
             latestSupportedVersion,
         )
