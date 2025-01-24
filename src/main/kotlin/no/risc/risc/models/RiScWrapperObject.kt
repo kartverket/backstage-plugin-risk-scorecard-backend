@@ -5,4 +5,5 @@ data class RiScWrapperObject(
     val isRequiresNewApproval: Boolean,
     val schemaVersion: String,
     val userInfo: UserInfo,
+    val sopsConfig: String,
 )

@@ -58,26 +58,27 @@ class CryptoServiceIntegration(
     suspend fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
-    ): String =
+    ): Pair<String, String> =
         try {
             LOGGER.info("Trying to decrypt ciphertext: ${ciphertext.substring(0, 14)}")
-            val decryptedFile =
+            val decryptedFileWithConfig =
                 cryptoServiceConnector.webClient
                     .post()
                     .uri("/decrypt")
                     .header("gcpAccessToken", gcpAccessToken.value)
                     .bodyValue(ciphertext)
                     .retrieve()
-                    .awaitBody<String>()
+                    .awaitBody<Pair<String, String>>()
             LOGGER.info(
                 "Successfully decrypted ciphertext ${
                     ciphertext.substring(
                         0,
                         14,
                     )
-                } to ${decryptedFile.substring(3, 10)}",
+                } to ${decryptedFileWithConfig.first.substring(3, 10)}",
             )
-            decryptedFile
+            LOGGER.info("Decrypted config: ${decryptedFileWithConfig.second}")
+            decryptedFileWithConfig
         } catch (e: Exception) {
             throw (SOPSDecryptionException(message = "Failed to decrypt file"))
         }

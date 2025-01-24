@@ -63,6 +63,7 @@ data class RiScContentResultDTO(
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
+    val sopsConfig: String? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
@@ -428,11 +429,13 @@ class RiScService(
         when (status) {
             GithubStatus.Success ->
                 try {
+                    val decryptedContent = decryptContent(gcpAccessToken)
                     RiScContentResultDTO(
                         riScId,
                         ContentStatus.Success,
                         riScStatus,
-                        decryptContent(gcpAccessToken),
+                        decryptedContent.first,
+                        decryptedContent.second,
                         pullRequestUrl,
                     )
                 } catch (e: Exception) {
@@ -472,6 +475,7 @@ class RiScService(
             repository = repository,
             riScId = riScId,
             content = content,
+            sopsConfig = content.sopsConfig,
             accessTokens = accessTokens,
             defaultBranch = defaultBranch,
         )
@@ -501,6 +505,7 @@ class RiScService(
                     repository,
                     uniqueRiScId,
                     riScContentWrapperObject,
+                    content.sopsConfig,
                     accessTokens,
                     defaultBranch,
                 )
@@ -531,6 +536,7 @@ class RiScService(
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
+        sopsConfig: String,
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
@@ -549,24 +555,16 @@ class RiScService(
             )
         }
 
-        val gitHubFetchSopsConfigResponse =
-            githubConnector.fetchSopsConfig(
-                owner,
-                repository,
-                accessTokens.githubAccessToken,
-                riScId,
-            )
-        if (gitHubFetchSopsConfigResponse.status != GithubStatus.Success) {
+        if (sopsConfig.isEmpty()) {
             throw SopsConfigFetchException(
-                message = "Failed when fetching SopsConfig from Github with status: ${gitHubFetchSopsConfigResponse.status}",
+                message = "Failed to read SOPS config",
                 riScId = riScId,
-                responseMessage = "Could not fetch SOPS config",
+                responseMessage = "Did not receive SOPS config",
             )
         }
-        val sopsConfigOnGitHub = SopsConfigOnGitHub(removePathRegex(gitHubFetchSopsConfigResponse.data()))
 
         val encryptedData: String =
-            cryptoService.encrypt(content.riSc, sopsConfigOnGitHub.config, accessTokens.gcpAccessToken, riScId)
+            cryptoService.encrypt(content.riSc, sopsConfig, accessTokens.gcpAccessToken, riScId)
 
         try {
             val riScApprovalPRStatus =
