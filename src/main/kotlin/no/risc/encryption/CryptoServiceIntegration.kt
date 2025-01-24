@@ -42,7 +42,11 @@ class CryptoServiceIntegration(
                 .retrieve()
                 .bodyToMono(String::class.java)
                 .block()
-                .toString()
+                ?.toString()
+                ?: throw SopsEncryptionException(
+                    message = "Failed to encrypt file",
+                    riScId = riScId,
+                )
         } catch (e: Exception) {
             throw SopsEncryptionException(
                 message = e.stackTraceToString(),
