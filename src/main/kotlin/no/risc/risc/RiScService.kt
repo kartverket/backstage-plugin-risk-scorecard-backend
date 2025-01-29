@@ -15,7 +15,6 @@ import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
 import no.risc.github.GithubPullRequestObject
 import no.risc.github.GithubStatus
-import no.risc.github.models.SopsConfigOnGitHub
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
@@ -27,7 +26,6 @@ import no.risc.utils.DifferenceException
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
-import no.risc.utils.removePathRegex
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
