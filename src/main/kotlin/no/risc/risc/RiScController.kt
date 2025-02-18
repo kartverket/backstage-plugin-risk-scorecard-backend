@@ -51,16 +51,19 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
-    ): List<RiScContentResultDTO> =
-        riScService.fetchAllRiScs(
-            repositoryOwner,
-            repositoryName,
-            AccessTokens(
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
-            ),
-            latestSupportedVersion,
-        )
+    ): List<RiScContentResultDTO> {
+        val result =
+            riScService.fetchAllRiScs(
+                repositoryOwner,
+                repositoryName,
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+                latestSupportedVersion,
+            )
+        return result
+    }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createNewRiSc(

@@ -9,7 +9,6 @@ import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
-import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
 import no.risc.github.GithubContentResponse
@@ -21,6 +20,8 @@ import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.sops.model.SopsConfigDTO
+import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.diff
@@ -61,7 +62,7 @@ data class RiScContentResultDTO(
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
-    val sopsConfig: String? = null,
+    val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
@@ -432,8 +433,8 @@ class RiScService(
                         riScId,
                         ContentStatus.Success,
                         riScStatus,
-                        decryptedContent.first,
-                        decryptedContent.second,
+                        decryptedContent.riSc,
+                        decryptedContent.sopsConfig,
                         pullRequestUrl,
                     )
                 } catch (e: Exception) {
@@ -496,7 +497,7 @@ class RiScService(
                         content.riSc
                     },
             )
-        return try {
+        try {
             val result =
                 updateOrCreateRiSc(
                     owner,
@@ -534,7 +535,7 @@ class RiScService(
         repository: String,
         riScId: String,
         content: RiScWrapperObject,
-        sopsConfig: String,
+        sopsConfig: SopsConfig,
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
@@ -550,14 +551,6 @@ class RiScService(
                 message = "Failed when validating RiSc with error message: $validationError",
                 riScId = riScId,
                 validationError = validationError,
-            )
-        }
-
-        if (sopsConfig.isEmpty()) {
-            throw SopsConfigFetchException(
-                message = "Failed to read SOPS config",
-                riScId = riScId,
-                responseMessage = "Did not receive SOPS config",
             )
         }
 
