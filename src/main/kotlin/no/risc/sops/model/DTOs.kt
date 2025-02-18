@@ -20,9 +20,6 @@ data class SopsConfigRequestBody(
 data class SopsConfigDTO(
     val gcpCryptoKey: GcpCryptoKeyObject,
     val publicAgeKeys: List<PublicAgeKey>,
-    val onDefaultBranch: Boolean,
-    val branch: String,
-    val pullRequest: PullRequestObject?,
 )
 
 data class CreateSopsConfigResponseBody(
@@ -53,6 +50,7 @@ data class GcpCryptoKeyObject(
     val projectId: String,
     val keyRing: String,
     val name: String,
+    val resourceId: String,
     val hasEncryptDecryptAccess: Boolean,
 )
 

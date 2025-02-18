@@ -126,12 +126,15 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
             val actionsArray = scenarioDetails?.get("actions")?.jsonArray?.toMutableList()
             actionsArray?.forEachIndexed { index, actionElement ->
                 val actionObject = actionElement.jsonObject.toMutableMap()
-                actionObject["action"]?.jsonObject?.toMutableMap()?.apply {
-                    this.remove("owner")
-                    this.remove("deadline")
-                }?.let { updatedAction ->
-                    actionObject["action"] = JsonObject(updatedAction)
-                }
+                actionObject["action"]
+                    ?.jsonObject
+                    ?.toMutableMap()
+                    ?.apply {
+                        this.remove("owner")
+                        this.remove("deadline")
+                    }?.let { updatedAction ->
+                        actionObject["action"] = JsonObject(updatedAction)
+                    }
                 actionsArray[index] = JsonObject(actionObject)
             }
             actionsArray?.let { scenarioDetails["actions"] = JsonArray(it) }

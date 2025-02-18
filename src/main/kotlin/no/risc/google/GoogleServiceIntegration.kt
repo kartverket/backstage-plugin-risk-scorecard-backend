@@ -1,5 +1,8 @@
 package no.risc.google
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import no.risc.exception.exceptions.FetchException
 import no.risc.google.model.FetchCryptoKeysResponse
 import no.risc.google.model.FetchGcpKeyRingsResponse
@@ -7,14 +10,18 @@ import no.risc.google.model.FetchGcpProjectIdsResponse
 import no.risc.google.model.GcpIamPermission
 import no.risc.google.model.GcpKeyRing
 import no.risc.google.model.GcpLocation
+import no.risc.google.model.GcpProjectId
 import no.risc.google.model.TestIamPermissionBody
+import no.risc.google.model.getRiScCryptoKey
+import no.risc.google.model.getRiScCryptoKeyResourceId
+import no.risc.google.model.getRiScKeyRing
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
 import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
-import no.risc.sops.model.GcpProjectId
+import no.risc.sops.model.GcpCryptoKeyObject
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
@@ -116,4 +123,35 @@ class GoogleServiceIntegration(
         .bodyToMono<FetchCryptoKeysResponse>()
         .block()
         ?.cryptoKeys
+
+    suspend fun getGcpCryptoKeys(gcpAccessToken: GCPAccessToken): List<GcpCryptoKeyObject> =
+        coroutineScope {
+            LOGGER.info("Fetching GCP crypto keys")
+            val gcpProjectIds =
+                fetchProjectIds(gcpAccessToken)
+                    ?: throw FetchException(
+                        "Failed to fetch GCP projects",
+                        ProcessingStatus.FailedToFetchGcpProjectIds,
+                    )
+            gcpProjectIds
+                .filter { it.value.contains("-prod-") }
+                .map {
+                    it to
+                        async(Dispatchers.IO) {
+                            testIamPermissions(
+                                it.getRiScCryptoKeyResourceId(),
+                                gcpAccessToken,
+                                GcpIamPermission.ENCRYPT_DECRYPT,
+                            )
+                        }
+                }.map { (gcpProjectId, hasAccess) ->
+                    GcpCryptoKeyObject(
+                        gcpProjectId.value,
+                        gcpProjectId.getRiScKeyRing(),
+                        gcpProjectId.getRiScCryptoKey(),
+                        gcpProjectId.getRiScCryptoKeyResourceId(),
+                        hasAccess.await(),
+                    )
+                }.toMutableList()
+        }
 }
