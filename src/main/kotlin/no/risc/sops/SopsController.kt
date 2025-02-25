@@ -1,5 +1,6 @@
 package no.risc.sops
 
+import no.risc.github.GitHubAppService
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
@@ -24,10 +25,11 @@ import org.springframework.web.server.ResponseStatusException
 @RequestMapping("/api/sops")
 class SopsController(
     private val sopsService: SopsService,
+    private val gitHubAppService: GitHubAppService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun getSopsConfig(
-        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable("repositoryOwner") repositoryOwner: String,
         @PathVariable("repositoryName") repositoryName: String,
@@ -36,7 +38,7 @@ class SopsController(
             repositoryOwner,
             repositoryName,
             AccessTokens(
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
             ),
         )

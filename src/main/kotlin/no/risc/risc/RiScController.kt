@@ -1,5 +1,6 @@
 package no.risc.risc
 
+import no.risc.github.GitHubAppService
 import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
@@ -24,11 +25,12 @@ import org.springframework.web.bind.annotation.RestController
 class RiScController(
     private val riScService: RiScService,
     private val githubConnector: GithubConnector,
+    private val gitHubAppService: GitHubAppService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
-        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> =
@@ -37,7 +39,7 @@ class RiScController(
             repositoryName,
             AccessTokens(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ),
             "4",
         )
@@ -45,7 +47,7 @@ class RiScController(
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
-        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
@@ -55,7 +57,7 @@ class RiScController(
             repositoryName,
             AccessTokens(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ),
             latestSupportedVersion,
         )

@@ -24,17 +24,15 @@ class AccessTokenValidationFilter(
                 repositoryOwner = request.requestURI.split("/")[3],
                 repositoryName = request.requestURI.split("/")[4],
             )
-        validationService.validateAccessTokens(
-            request.getHeader("GCP-Access-Token"),
-            request.getHeader("GitHub-Access-Token"),
-            if (request.method.lowercase() == "get") {
-                GitHubPermission.READ
-            } else {
-                GitHubPermission.WRITE
-            },
-            repository.repositoryOwner,
-            repository.repositoryName,
-        )
+        if (request.method.lowercase() != "get") {
+            validationService.validateAccessTokens(
+                request.getHeader("GCP-Access-Token"),
+                request.getHeader("GitHub-Access-Token"),
+                GitHubPermission.WRITE,
+                repository.repositoryOwner,
+                repository.repositoryName,
+            )
+        }
         filterChain.doFilter(request, response)
     }
 }

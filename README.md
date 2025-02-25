@@ -1,71 +1,25 @@
-# Setup when you have other test resources
-
-An environment file has been provided with all environment variables that are needed to run the application. 
-It is recomennded to create a local environment file for secrets and personal configuration. ```.env.local``` is added to the .gitignore.
+# Running locally
 
 ## Run with intellij
-We recommend using IntelliJ for local development. To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
+We recommend using IntelliJ for local development. The following environment variable must be available to run the application:
+- `BACKEND_PUBLIC_KEY`: The public key part used for encryption of RiSc's.
+
+To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
 
 Backstage needs to be running, and you need to be logged in for the plugin backend to work. This is because the internal Backstage backend is the issuer of tokens this backend uses as OAuth server.
-See [backestage frontend plugin](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend).
-
-## Run from the terminal
-```shell
-# set environment variables from env-file
-export $(xargs <.env)
-export $(xargs <.env.local)
-
-./gradlew bootRun
-```
-
-## Run using docker-compose
-To build the docker image, run:
-
-```sh
-docker image build -t backstage-plugin-risk-scorecard-backend .
-```
-To run the docker image, run:
-
-```sh
-docker-compose run --build local
-```
+See [backstage frontend plugin](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend).
 
 # Setup from scratch: Preconditions and environment variables
-## Github App
-The Github App is used to issue oauth2 tokens in order to communicate with the Github repositories where the risc analyses are stored.
-The permissions that are asked for is set in the GithubHelper. Permissions for the access token requested is these:
-
-```json
-{
-  "repositories": ["<the repo that the risc belongs to>"],
-  "permissions": "contents:write,pull_requests:write,statuses:read"
-}
-```
-
-### New Github App
-Set up a Github App in your organisation and give the following permissions:
-Contents: read/write, commit statuses: read/write, pull requests: read/write, and personal access token requests: read/write.
-
-**GITHUB_INSTALLATION_ID**: Locate your application, for example by using this link https://github.com/organizations/<your-org>/settings/installations. Click your application, and find the installation id in the url.
-
-**GITHUB_APP_ID**: When you have created and installed your github app you can locate it here: https://github.com/organizations/<your-org>/settings/apps/<your-app>.
-
-**GITHUB_PRIVATE_KEY_BASE64_ENCODED** is a private key generated for the service, and base64 encoded because formats are hard. Generate a new private key, and base64 encode the PEM-key.
-
-``` shell
-echo "<  -----BEGIN RSA PRIVATE KEY----- ... -----END RSA PRIVATE KEY----->" | base64
-```
-
 ## OAuth Server
 We use the backend of the backstage plugin as our issuer/oauth server.
 
-**ISSUER_URI**: In our case the issuer_uri has been the backstage application "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app/api/auth".
+**ISSUER_URI**: In our case the issuer_uri has been the URL to [Kartverket.dev](https://github.com/kartverket/kartverket.dev) "https://kartverket.dev/api/auth".
 For local development the **ISSUER_URI** can be set to "http://localhost:7007/api/auth".
 
 ## Json schema and file specific environment variables
-**RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of risc and .sops.yaml.s
-**FILE_NAME_PREFIX**: Used to find the correct files.
-**FILE_NAME_PREFIX**: Used to find the correct files.
+- **RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of RiSc's and the file used to encrypt RiSc's, i.e. `.sops.yaml`.
+- **FILE_NAME_PREFIX**: Used to find the correct files.
+- **FILE_NAME_PREFIX**: Used to find the correct files.
 
 
 # Naming of RiSc files and branches
@@ -73,10 +27,10 @@ Because RoS-as-Code is based on using Github for storage, we need to set som rul
 This is to be able to determine the states of the RiSc analyses and to be able to detect the changes that are being made.
 
 ## RiSc file names
-All RiSc analyses needs to be named using a specific convention. It has to be stored in the .security/risc/ folder, and be named FILENAME_PREFIX-<5 random numbers and characters>.FILENAME_POSTFIX.yaml.
+All RiSc analyses needs to be named using a specific convention. It has to be stored in the `.security/risc/` folder, and be named `FILENAME_PREFIX-<5 random numbers and characters>.FILENAME_POSTFIX.yaml`.
 
 ## RiSc branch names
-The RiSc branch-name needs to have the same name as the RiSc; FILENAME_PREFIX-<5 random numbers and characters>.
+The RiSc branch-name needs to have the same name as the RiSc; `FILENAME_PREFIX-<5 random numbers and characters>`.
 
 ## Commit messages determine the need for approvals
 Commit messages are used to determine whether the changes in the draft branch has to be approved by a RiSc-owner or not. 
@@ -85,12 +39,6 @@ Because we only rely on GitHub we have used the commit messages to make the deci
 # Architecture
 
 ## High level components
-
-```mermaid
-flowchart TD
-     A[Backstage RiSc-plugin] --> B{RiSc-backend/API} -->|.security/risc| C[(GitHub)]
-     style B fill:#FFBF00,color:black
-```
 
 ## Simplified Architecture
 
@@ -126,4 +74,4 @@ If the version of the schema is updated, ensure that the library supports it.
 
 # Common errors
 ## JWT Decoder Bean fails to initialize
-This is most likely due to it not being able to get the jwks keys, or the key list might be empty. Try to restart the backstage app.
+This is most likely due to it not being able to get the JWK-keys, or the key list might be empty. Try to restart the backstage app.

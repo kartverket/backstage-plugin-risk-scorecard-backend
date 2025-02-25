@@ -2,6 +2,7 @@ package no.risc.github.models
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.time.OffsetDateTime
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class FileContentDTO(
@@ -42,3 +43,11 @@ data class RepositoryPermissions(
     val triage: Boolean,
     val pull: Boolean,
 )
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GitHubAccessTokenResponse(
+    val token: String,
+    @JsonProperty("expires_at") val expiresAt: OffsetDateTime,
+)
+
+fun GitHubAccessTokenResponse.isNotExpired(): Boolean = expiresAt.isAfter(OffsetDateTime.now())
