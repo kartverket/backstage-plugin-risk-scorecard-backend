@@ -22,6 +22,7 @@ import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.sops.model.PullRequestObject
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.diff
@@ -99,7 +100,7 @@ class PublishRiScResultDTO(
     riScId: String,
     status: ProcessingStatus,
     statusMessage: String,
-    val pendingApproval: PendingApprovalDTO?,
+    val pullRequestObject: PullRequestObject?,
 ) : RiScResult(riScId, status, statusMessage)
 
 data class PendingApprovalDTO(
@@ -587,7 +588,7 @@ class RiScService(
                         riScId,
                         status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
                         "RiSc was updated and does not require approval - pull request was created",
-                        riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
+                        riScApprovalPRStatus.pullRequest.toPullRequestObject(),
                     )
 
                 null ->
@@ -645,7 +646,7 @@ class RiScService(
                     riScId,
                     ProcessingStatus.CreatedPullRequest,
                     "Pull request was created",
-                    pullRequestObject.toPendingApprovalDTO(),
+                    pullRequestObject.toPullRequestObject(),
                 )
 
             else ->
@@ -657,10 +658,4 @@ class RiScService(
                 )
         }
     }
-
-    private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =
-        PendingApprovalDTO(
-            pullRequestUrl = this.url,
-            pullRequestName = this.head.ref,
-        )
 }
