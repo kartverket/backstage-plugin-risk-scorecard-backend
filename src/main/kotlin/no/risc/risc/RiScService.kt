@@ -382,30 +382,30 @@ class RiScService(
                         }
                     }.awaitAll()
                     .filterNotNull()
-                    .map {
-                        if (it.status == ContentStatus.Success) {
+                    .map { riScContentResultDTO ->
+                        if (riScContentResultDTO.status == ContentStatus.Success) {
                             LOGGER.info(
-                                "Validating RiSc with id: '${it.riScId}' ${
-                                    it.riScContent?.let {
+                                "Validating RiSc with id: '${riScContentResultDTO.riScId}' ${
+                                    riScContentResultDTO.riScContent?.let {
                                         "content starting with ${it.substring(3, 10)}***"
                                     } ?: "without content"
                                 }",
                             )
                             val validationStatus =
                                 JSONValidator.validateAgainstSchema(
-                                    riScId = it.riScId,
-                                    riScContent = it.riScContent,
+                                    riScId = riScContentResultDTO.riScId,
+                                    riScContent = riScContentResultDTO.riScContent,
                                 )
                             when (validationStatus.valid) {
                                 true -> {
-                                    LOGGER.info("RiSc with id: ${it.riScId} successfully validated")
-                                    it
+                                    LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
+                                    riScContentResultDTO
                                 }
 
                                 false -> {
-                                    LOGGER.info("RiSc with id: ${it.riScId} failed validation")
+                                    LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
                                     RiScContentResultDTO(
-                                        it.riScId,
+                                        riScContentResultDTO.riScId,
                                         ContentStatus.SchemaValidationFailed,
                                         null,
                                         null,
@@ -413,7 +413,7 @@ class RiScService(
                                 }
                             }
                         } else {
-                            it
+                            riScContentResultDTO
                         }
                     }
             riScs

@@ -69,9 +69,9 @@ class CryptoServiceIntegration(
                 "Successfully decrypted ciphertext ${
                     ciphertext.substring(
                         0,
-                        14,
+                        20,
                     )
-                } to ${decryptedFile.substring(3, 10)}",
+                } to ${decryptedFile.substring(0, 20)}",
             )
             decryptedFile
         } catch (e: Exception) {
