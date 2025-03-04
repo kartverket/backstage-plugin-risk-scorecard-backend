@@ -20,7 +20,6 @@ import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
-import no.risc.sops.model.SopsConfigDTO
 import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException

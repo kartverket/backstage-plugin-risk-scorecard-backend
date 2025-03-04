@@ -205,7 +205,7 @@ class SopsService(
                                 }
                                 SopsConfigDTO(
                                     gcpCryptoKey,
-                                    sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey)
+                                    sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
                                 )
                             } else {
                                 null

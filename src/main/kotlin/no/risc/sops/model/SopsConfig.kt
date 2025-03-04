@@ -3,6 +3,7 @@ package no.risc.sops.model
 import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+
 // {key_groups:[{gcp_kms:[{resourse, createdat, enc}], age:[{recipient, enc}]}, age: [{recipient, enc},{recipient, enc}]}, age: [{recipient, enc}]], shamir_threshold: number, lastmodified: "2025-01-31T09:41:08Z", version: string}
 @Serializable
 data class SopsConfig(

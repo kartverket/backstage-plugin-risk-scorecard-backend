@@ -21,7 +21,7 @@ class AccessTokenValidationFilter(
     ) {
         try {
             if (request.method.lowercase() != "get") {
-            val repository =
+                val repository =
                     Repository(
                         repositoryOwner = request.requestURI.split("/")[3],
                         repositoryName = request.requestURI.split("/")[4],
