@@ -357,7 +357,7 @@ class SopsService(
                 .firstOrNull { !it.gcp_kms.isNullOrEmpty() }
                 ?.gcp_kms
                 ?.firstOrNull()
-                ?.resourceId
+                ?.resource_id
                 ?: throw NoResourceIdFoundException(
                     "No gcp kms resource id could be found",
                     ProcessRiScResultDTO(

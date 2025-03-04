@@ -29,8 +29,8 @@ data class SopsConfig(
 
 @Serializable
 data class GcpKmsEntry(
-    @JsonProperty("resource_id") val resourceId: String,
-    @JsonProperty("created_at") val createdAt: String? = null,
+    @JsonProperty("resource_id") val resource_id: String,
+    @JsonProperty("created_at") val created_at: String? = null,
     @JsonProperty("enc") val enc: String? = null,
 )
 
@@ -49,5 +49,5 @@ data class KeyGroup(
 
 @Serializable
 data class ResourceId(
-    @JsonProperty("resource_id") val resourceId: String,
+    @JsonProperty("resource_id") val resource_id: String,
 )
