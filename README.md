@@ -1,8 +1,11 @@
 # Running locally
 
 ## Run with intellij
-We recommend using IntelliJ for local development. The following environment variable must be available to run the application:
+We recommend using IntelliJ for local development. The following environment variables must be available in `.env.local` to run the application:
 - `BACKEND_PUBLIC_KEY`: The public key part used for encryption of RiSc's.
+- `GITHUB_APP_ID`: App-ID of the GitHub app used by users of RiSc-plugin without GitHub account
+- `GITHUB_APP_INSTALLATION_ID`: Installation ID of the GitHub app used by users of RiSc-plugin without GitHub account
+- `GITHUB_APP_PRIVATE_KEY`: Private key of the GitHub app used by users of RiSc-plugin without GitHub account
 
 To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
 

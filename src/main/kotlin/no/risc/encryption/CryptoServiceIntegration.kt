@@ -74,9 +74,9 @@ class CryptoServiceIntegration(
                 "Successfully decrypted ciphertext ${
                     ciphertext.substring(
                         0,
-                        14,
+                        20,
                     )
-                } to ${decryptedFileWithConfig.riSc.toString().substring(3, 10)}",
+                } to ${decryptedFileWithConfig.riSc.toString().substring(0, 20)}",
             )
             println("\n\n")
             println(decryptedFileWithConfig.sopsConfig)
