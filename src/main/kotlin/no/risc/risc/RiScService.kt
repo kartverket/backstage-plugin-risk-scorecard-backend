@@ -54,6 +54,7 @@ data class CreateRiScResultDTO(
     val status: ProcessingStatus,
     val statusMessage: String,
     val riScContent: String?,
+    val sopsConfig: SopsConfig,
 )
 
 @Serializable
@@ -515,6 +516,7 @@ class RiScService(
                     ProcessingStatus.CreatedRiSc,
                     "New RiSc was created",
                     riScContentWrapperObject.riSc,
+                    riScContentWrapperObject.sopsConfig,
                 )
             } else {
                 throw CreatingRiScException(
