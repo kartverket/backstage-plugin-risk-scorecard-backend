@@ -95,17 +95,18 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ) = riScService.updateRiSc(
-        repositoryOwner,
-        repositoryName,
-        id,
-        riSc,
-        AccessTokens(
+    ) =
+        riScService.updateRiSc(
+            repositoryOwner,
+            repositoryName,
+            id,
+            riSc,
+            AccessTokens(
             gcpAccessToken = GCPAccessToken(gcpAccessToken),
             githubAccessToken = GithubAccessToken(gitHubAccessToken),
         ),
-        githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
-    )
+            githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     fun sendRiScForPublishing(
