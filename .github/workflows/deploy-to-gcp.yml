@@ -1,0 +1,56 @@
+name: Build and deploy to Spire Cloud Run
+on:
+  push:
+    paths-ignore:
+      - docker-compose.yaml
+      - README**
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ${{ github.repository }}
+  PROJECT_ID: 'spire-ros-5lmr'
+  AR_REPO_LOCATION: 'europe-north1'
+  AR_URL: 'europe-north1-docker.pkg.dev/spire-ros-5lmr/risc-plugin'
+  SERVICE_ACCOUNT: 'risc-plugin-github-actions@spire-ros-5lmr.iam.gserviceaccount.com'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/457384642040/locations/global/workloadIdentityPools/github-actions-pool/providers/github'
+
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  push_to_ar:
+    name: 'Docker build and push to GCP'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - id: auth
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: Configure Docker to use the gcloud command-line tool as a credential helper
+        run: gcloud auth configure-docker ${{ env.AR_REPO_LOCATION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Build the Docker image
+        run: |
+          docker build -t "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" .
+
+      - name: Push the Docker image to Google Artifact Registry
+        run: |
+          docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
