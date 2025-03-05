@@ -53,4 +53,6 @@ jobs:
 
       - name: Push the Docker image to Google Artifact Registry
         run: |
-          docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          fi

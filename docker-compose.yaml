@@ -3,6 +3,9 @@ services:
     build: .
     ports:
       - "8080:8080"
+    environment:
+      - CRYPTO_SERVICE_URL=http://host.docker.internal:8084
+      - INIT_RISC_URL=http://host.docker.internal:8085
     env_file:
       - .env
       - .env.local
