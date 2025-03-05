@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.infra.connector.models.GitHubPermission
-import no.risc.risc.ProcessingStatus
 import no.risc.utils.Repository
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
@@ -40,7 +39,7 @@ class AccessTokenValidationFilter(
             filterChain.doFilter(request, response)
         } catch (e: IndexOutOfBoundsException) {
             throw InvalidAccessTokensException(
-                "${request.requestURI} does not have access token}"
+                "${request.requestURI} does not have access token}",
             )
         }
     }
