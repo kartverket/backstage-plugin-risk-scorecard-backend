@@ -81,6 +81,6 @@ class SecurityConfig(
             "http://localhost:3000/",
             "https://sandbox.kartverket.dev",
             "https://kartverket.dev",
-            "https://kv-ros-backstage-245zlcbrnq-lz.a.run.app",
+            "https://risc-457384642040.europe-north1.run.app",
         )
 }
