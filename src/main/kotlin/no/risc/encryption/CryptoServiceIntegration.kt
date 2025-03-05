@@ -76,10 +76,8 @@ class CryptoServiceIntegration(
                         0,
                         20,
                     )
-                } to ${decryptedFileWithConfig.riSc.toString().substring(0, 20)}",
+                } to ${decryptedFileWithConfig.riSc.substring(0, 20)}",
             )
-            println("\n\n")
-            println(decryptedFileWithConfig.sopsConfig)
             decryptedFileWithConfig
         } catch (e: Exception) {
             throw e
