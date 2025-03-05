@@ -19,4 +19,7 @@ http-client.private.env.json
 
 
 # Env
-.env.local
+.env*
+!.env.example
+
+.history/
