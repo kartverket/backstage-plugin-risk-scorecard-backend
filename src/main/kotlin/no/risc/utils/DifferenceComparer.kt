@@ -52,9 +52,7 @@ object FlatMapRiScUtil {
         fun returnString(
             key: String,
             value: String,
-        ): String {
-            return "/$key: $value"
-        }
+        ): String = "/$key: $value"
 
         return map.flatMap { entry ->
 
@@ -103,11 +101,11 @@ object FlatMapRiScUtil {
     }
 }
 
-private fun List<String>.toDifferenceMap(): Map<String, Any> {
-    return this.associate { it.split(": ").first() to it.split(": ").last() }
-}
+private fun List<String>.toDifferenceMap(): Map<String, Any> = this.associate { it.split(": ").first() to it.split(": ").last() }
 
-class DifferenceException(message: String) : Exception(message)
+class DifferenceException(
+    message: String,
+) : Exception(message)
 
 @Throws(DifferenceException::class)
 fun diff(

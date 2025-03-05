@@ -1,34 +1,54 @@
 package no.risc.sops.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
+// {key_groups:[{gcp_kms:[{resourse, createdat, enc}], age:[{recipient, enc}]}, age: [{recipient, enc},{recipient, enc}]}, age: [{recipient, enc}]], shamir_threshold: number, lastmodified: "2025-01-31T09:41:08Z", version: string}
+@Serializable
 data class SopsConfig(
-    @JsonProperty("creation_rules") val creationRules: List<CreationRule>,
+    @JsonProperty("shamir_threshold") val shamir_threshold: Int,
+    @JsonProperty("key_groups") val key_groups: List<KeyGroup>,
+    @JsonProperty("kms") val kms: List<JsonElement>? = null,
+    @JsonProperty("gcp_kms") val gcpKms: List<GcpKmsEntry>? = null,
+    @JsonProperty("age") val age: List<AgeEntry>? = null,
+    @JsonProperty("lastmodified") val lastModified: String? = null,
+    @JsonProperty("mac") val mac: String? = null,
+    @JsonProperty("unencrypted_suffix") val unencryptedSuffix: String? = null,
+    @JsonProperty("version") val version: String? = null,
 ) {
     fun getDeveloperPublicKeys(backendPublicAgeKey: String): List<PublicAgeKey> =
-        this.creationRules
-            .firstOrNull()
-            ?.keyGroups
-            ?.firstOrNull {
-                it.gcpKms.isNullOrEmpty() &&
-                    it.age?.all { ageKey -> ageKey != backendPublicAgeKey } == true
+        this.key_groups
+            .firstOrNull {
+                it.gcp_kms.isNullOrEmpty() &&
+                    it.age?.all { ageKey -> ageKey.recipient != backendPublicAgeKey } == true
             }?.age
             ?.map {
-                PublicAgeKey(it)
+                PublicAgeKey(it.recipient)
             } ?: emptyList()
 }
 
-data class CreationRule(
-    @JsonProperty("path_regex") val pathRegex: String,
-    @JsonProperty("shamir_threshold") val shamirThreshold: Int,
-    @JsonProperty("key_groups") val keyGroups: List<KeyGroup>,
+@Serializable
+data class GcpKmsEntry(
+    @JsonProperty("resource_id") val resource_id: String,
+    @JsonProperty("created_at") val created_at: String? = null,
+    @JsonProperty("enc") val enc: String? = null,
 )
 
+@Serializable
+data class AgeEntry(
+    val recipient: String,
+    val enc: String? = null,
+)
+
+@Serializable
 data class KeyGroup(
-    val age: List<String>? = null,
-    @JsonProperty("gcp_kms") val gcpKms: List<ResourceId>? = null,
+    @JsonProperty("gcp_kms") val gcp_kms: List<GcpKmsEntry>? = null,
+    @JsonProperty("hc_vault") val hc_vault: List<JsonElement>? = null,
+    @JsonProperty("age") val age: List<AgeEntry>? = null,
 )
 
+@Serializable
 data class ResourceId(
-    @JsonProperty("resource_id") val resourceId: String,
+    @JsonProperty("resource_id") val resource_id: String,
 )

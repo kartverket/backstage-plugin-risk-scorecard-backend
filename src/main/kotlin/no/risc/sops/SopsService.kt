@@ -11,6 +11,9 @@ import no.risc.exception.exceptions.NoResourceIdFoundException
 import no.risc.github.GithubConnector
 import no.risc.google.GoogleServiceIntegration
 import no.risc.google.model.GcpIamPermission
+import no.risc.google.model.getRiScCryptoKey
+import no.risc.google.model.getRiScCryptoKeyResourceId
+import no.risc.google.model.getRiScKeyRing
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -141,7 +144,6 @@ class SopsService(
                         "Failed to fetch GCP projects",
                         ProcessingStatus.FailedToFetchGcpProjectIds,
                     )
-
             val cryptoKeys =
                 gcpProjectIds
                     .filter { it.value.contains("-prod-") }
@@ -159,6 +161,7 @@ class SopsService(
                             gcpProjectId.value,
                             gcpProjectId.getRiScKeyRing(),
                             gcpProjectId.getRiScCryptoKey(),
+                            gcpProjectId.getRiScCryptoKeyResourceId(),
                             hasAccess.await(),
                         )
                     }.toMutableList()
@@ -203,9 +206,6 @@ class SopsService(
                                 SopsConfigDTO(
                                     gcpCryptoKey,
                                     sopsConfig.getDeveloperPublicKeys(sopsServiceConfig.backendPublicKey),
-                                    sopsBranch == defaultBranch,
-                                    sopsBranch,
-                                    pullRequests.firstOrNull { it.head.ref == sopsBranch }?.toPullRequestObject(),
                                 )
                             } else {
                                 null
@@ -292,9 +292,6 @@ class SopsService(
             SopsConfigDTO(
                 gcpCryptoKey,
                 publicAgeKeys,
-                false,
-                branch,
-                null,
             ),
         )
     }
@@ -356,13 +353,11 @@ class SopsService(
         gcpAccessToken: GCPAccessToken,
     ): GcpCryptoKeyObject {
         val resourceId =
-            sopsConfig.creationRules
-                .firstOrNull()
-                ?.keyGroups
-                ?.firstOrNull { !it.gcpKms.isNullOrEmpty() }
-                ?.gcpKms
+            sopsConfig.key_groups
+                .firstOrNull { !it.gcp_kms.isNullOrEmpty() }
+                ?.gcp_kms
                 ?.firstOrNull()
-                ?.resourceId
+                ?.resource_id
                 ?: throw NoResourceIdFoundException(
                     "No gcp kms resource id could be found",
                     ProcessRiScResultDTO(
@@ -375,6 +370,7 @@ class SopsService(
             resourceId.split("/")[1],
             resourceId.split("/")[5],
             resourceId.split("/").last(),
+            resourceId,
             googleServiceIntegration.testIamPermissions(
                 resourceId,
                 gcpAccessToken,
