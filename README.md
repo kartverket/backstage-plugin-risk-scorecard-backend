@@ -1,5 +1,19 @@
 # Running locally
 
+## Run with docker-compose
+
+Start the backend with a local Backstage as JWT issuer by running
+```shell
+docker-compose up
+```
+This requires some env-vars to be listed in `.env.local`:
+```env
+BACKEND_PUBLIC_KEY
+GITHUB_APP_ID
+GITHUB_APP_INSTALLATION_ID
+GITHUB_APP_PRIVATE_KEY
+```
+
 ## Run with intellij
 We recommend using IntelliJ for local development. The following environment variables must be available in `.env.local` to run the application:
 - `BACKEND_PUBLIC_KEY`: The public key part used for encryption of RiSc's.
