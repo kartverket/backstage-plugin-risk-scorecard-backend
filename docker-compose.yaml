@@ -6,6 +6,9 @@ services:
     environment:
       - CRYPTO_SERVICE_URL=http://host.docker.internal:8084
       - INIT_RISC_URL=http://host.docker.internal:8085
+      - ISSUER_URI=http://host.docker.internal:7007/api/auth
+      - RISC_FOLDER_PATH=.security/risc
+      - FILENAME_PREFIX=risc
+      - FILENAME_POSTFIX=risc
     env_file:
-      - .env
       - .env.local
