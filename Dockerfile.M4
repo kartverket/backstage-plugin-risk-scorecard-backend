@@ -13,7 +13,9 @@ COPY --from=build /build/libs/*.jar /app/backend.jar
 # Install socat only if running locally.
 ARG LOCAL
 ENV LOCAL $LOCAL
-RUN [ $LOCAL ] && apk --no-cache add socat
+RUN if [ "$LOCAL" ] ; then \
+        apk --no-cache add socat ; \
+    fi
 
 # Add non-root user and change permissions.
 RUN adduser -D user && chown -R user:user /app /app/logs /app/tmp
