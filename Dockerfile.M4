@@ -1,9 +1,9 @@
-# Make sure the logic is in sync with Dockerfile.M4 
-FROM eclipse-temurin:21.0.2_13-jre-alpine AS build
+# Make sure the logic is in sync with Dockerfile.
+FROM amazoncorretto:21-alpine AS build
 COPY . .
 RUN ./gradlew build -x test
 
-FROM eclipse-temurin:21
+FROM amazoncorretto:21-alpine
 
 # Create application directory and subdirectories.
 RUN mkdir -p /app /app/logs /app/tmp
@@ -16,8 +16,7 @@ ENV LOCAL $LOCAL
 RUN [ $LOCAL ] && apk --no-cache add socat
 
 # Add non-root user and change permissions.
-RUN useradd user && chown -R user:user /app /app/logs /app/tmp
-
+RUN adduser -D user && chown -R user:user /app /app/logs /app/tmp
 
 # Switch to non-root user.
 USER user
