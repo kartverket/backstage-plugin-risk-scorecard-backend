@@ -500,22 +500,22 @@ class RiScService(
         try {
             val result =
                 updateOrCreateRiSc(
-                    owner,
-                    repository,
-                    uniqueRiScId,
-                    riScContentWrapperObject,
-                    content.sopsConfig,
-                    accessTokens,
-                    defaultBranch,
+                    owner = owner,
+                    repository = repository,
+                    riScId = uniqueRiScId,
+                    content = riScContentWrapperObject,
+                    sopsConfig = content.sopsConfig,
+                    accessTokens = accessTokens,
+                    defaultBranch = defaultBranch,
                 )
 
             if (result.status == ProcessingStatus.UpdatedRiSc) {
                 return CreateRiScResultDTO(
-                    uniqueRiScId,
-                    ProcessingStatus.CreatedRiSc,
-                    "New RiSc was created",
-                    riScContentWrapperObject.riSc,
-                    riScContentWrapperObject.sopsConfig,
+                    riScId = uniqueRiScId,
+                    status = ProcessingStatus.CreatedRiSc,
+                    statusMessage = "New RiSc was created",
+                    riScContent = riScContentWrapperObject.riSc,
+                    sopsConfig = riScContentWrapperObject.sopsConfig,
                 )
             } else {
                 throw CreatingRiScException(
@@ -618,6 +618,7 @@ class RiScService(
         riScId: String,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
+        baseBranch: String,
     ): PublishRiScResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForRiSc(
@@ -627,6 +628,7 @@ class RiScService(
                 requiresNewApproval = true,
                 accessTokens = accessTokens,
                 userInfo = userInfo,
+                baseBranch = baseBranch,
             )
 
         return when (pullRequestObject) {

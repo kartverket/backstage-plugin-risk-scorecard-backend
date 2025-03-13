@@ -35,13 +35,14 @@ class RiScController(
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> =
         riScService.fetchAllRiScs(
-            repositoryOwner,
-            repositoryName,
-            AccessTokens(
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
-            ),
-            "4",
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+            latestSupportedVersion = "4",
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -54,13 +55,14 @@ class RiScController(
     ): List<RiScContentResultDTO> {
         val result =
             riScService.fetchAllRiScs(
-                repositoryOwner,
-                repositoryName,
-                AccessTokens(
-                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
-                ),
-                latestSupportedVersion,
+                owner = repositoryOwner,
+                repository = repositoryName,
+                accessTokens =
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                    ),
+                latestSupportedVersion = latestSupportedVersion,
             )
         return result
     }
@@ -83,7 +85,12 @@ class RiScController(
                     githubAccessToken = GithubAccessToken(gitHubAccessToken),
                 ),
             content = riSc,
-            defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+            defaultBranch =
+                githubConnector.fetchDefaultBranch(
+                    repositoryOwner = repositoryOwner,
+                    repositoryName = repositoryName,
+                    gitHubAccessToken = gitHubAccessToken,
+                ),
             generateDefault = generateDefault,
         )
 
@@ -96,15 +103,21 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
     ) = riScService.updateRiSc(
-        repositoryOwner,
-        repositoryName,
-        id,
-        riSc,
-        AccessTokens(
-            gcpAccessToken = GCPAccessToken(gcpAccessToken),
-            githubAccessToken = GithubAccessToken(gitHubAccessToken),
-        ),
-        githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, gitHubAccessToken),
+        owner = repositoryOwner,
+        repository = repositoryName,
+        riScId = id,
+        content = riSc,
+        accessTokens =
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
+        defaultBranch =
+            githubConnector.fetchDefaultBranch(
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                gitHubAccessToken = gitHubAccessToken,
+            ),
     )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
@@ -127,6 +140,12 @@ class RiScController(
                         githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 userInfo = userInfo,
+                baseBranch =
+                    githubConnector.fetchDefaultBranch(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ),
             )
 
         return when (result.status) {
