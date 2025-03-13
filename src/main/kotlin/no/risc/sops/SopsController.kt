@@ -5,12 +5,10 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.sops.model.CreateSopsConfigResponseBody
-import no.risc.sops.model.GetSopsConfigResponseBody
 import no.risc.sops.model.SopsConfigRequestBody
 import no.risc.sops.model.UpdateSopsConfigResponseBody
 import no.risc.utils.Validator
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -27,22 +25,6 @@ class SopsController(
     private val sopsService: SopsService,
     private val gitHubAppService: GitHubAppService,
 ) {
-    @GetMapping("/{repositoryOwner}/{repositoryName}")
-    suspend fun getSopsConfig(
-        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
-        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
-        @PathVariable("repositoryOwner") repositoryOwner: String,
-        @PathVariable("repositoryName") repositoryName: String,
-    ): GetSopsConfigResponseBody =
-        sopsService.getSopsConfigs(
-            repositoryOwner,
-            repositoryName,
-            AccessTokens(
-                githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-            ),
-        )
-
     @PutMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createSopsConfig(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
