@@ -10,7 +10,7 @@ data class SopsConfig(
     @JsonProperty("shamir_threshold") val shamir_threshold: Int,
     @JsonProperty("key_groups") val key_groups: List<KeyGroup>?,
     @JsonProperty("kms") val kms: List<JsonElement>? = null,
-    @JsonProperty("gcp_kms") val gcpKms: List<GcpKmsEntry>,
+    @JsonProperty("gcp_kms") val gcp_kms: List<GcpKmsEntry>,
     @JsonProperty("age") val age: List<AgeEntry>? = null,
     @JsonProperty("lastmodified") val lastModified: String? = null,
     @JsonProperty("mac") val mac: String? = null,
