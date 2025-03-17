@@ -57,6 +57,7 @@ internal class GlobalExceptionHandler {
                 ContentStatus.SchemaNotFound,
                 null,
                 null,
+                null,
             )
         }
     }
@@ -81,6 +82,7 @@ internal class GlobalExceptionHandler {
         return RiScContentResultDTO(
             ex.riScId,
             ContentStatus.SchemaValidationFailed,
+            null,
             null,
             null,
         )

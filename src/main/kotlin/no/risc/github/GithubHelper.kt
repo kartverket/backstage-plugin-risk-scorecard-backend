@@ -308,4 +308,6 @@ class GithubHelper(
         repository: String,
         riScId: String,
     ): String = "/$owner/$repository/commits?sha=main&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
+
+    fun uriToFetchGeneralCommitsOnMainSince(owner: String, repository: String, since: String): String = "/$owner/$repository/commits?since=$since"
 }

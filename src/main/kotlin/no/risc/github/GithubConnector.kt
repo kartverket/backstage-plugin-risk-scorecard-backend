@@ -115,7 +115,7 @@ class GithubConnector(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     private val githubHelper: GithubHelper,
-) : WebClientConnector("https://api.github.com/repos") {
+) : WebClientConnector("https://api.github.com/repos/") {
     companion object {
         val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
     }
@@ -316,6 +316,24 @@ class GithubConnector(
             response.riScIdentifiersDrafted()
         } catch (e: Exception) {
             emptyList()
+        }
+
+
+    internal suspend fun fetchGeneralCommitsOnMainSinceLastModified(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        since: String,
+    ): Int? =
+        try {
+            val response =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchGeneralCommitsOnMainSince(owner, repository, since),
+                    accessToken,
+                ).awaitBody<List<GithubRefShaDTO>>()
+            response.size
+        } catch (e: Exception) {
+            null
         }
 
     internal fun updateOrCreateDraft(

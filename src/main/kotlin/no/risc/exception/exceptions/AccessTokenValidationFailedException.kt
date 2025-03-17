@@ -17,6 +17,7 @@ data class AccessTokenValidationFailedException(
                     riScStatus = null,
                     riScContent = null,
                     pullRequestUrl = null,
+                    numOfCommitsBehindMain = null,
                 )
 
             GitHubPermission.WRITE ->

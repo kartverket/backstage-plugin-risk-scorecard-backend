@@ -31,6 +31,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper
+import org.springframework.cglib.util.StringSwitcher
 import org.springframework.stereotype.Service
 
 class ProcessRiScResultDTO(
@@ -61,6 +62,7 @@ data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
+    val numOfGeneralCommitsBehindMain: Int?,
     val riScContent: String?,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
@@ -226,6 +228,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
+                    numOfCommitsBehindMain = null
                 )
         val result: InternDifference =
             when (response.status) {
@@ -362,12 +365,24 @@ class RiScService(
                                         }
                                     }
                                 processedContent?.let { nonNullContent ->
+                                    val lastModifiedDate =
+                                        nonNullContent.data
+                                            .toString()
+                                            .substringAfterLast("lastmodified: ")
+                                            .substringBefore("mac")
+                                            .trimEnd()
+
+                                    val countSinceLastModifiedDate = githubConnector.fetchGeneralCommitsOnMainSinceLastModified(
+                                        owner, repository, accessTokens.githubAccessToken.value, lastModifiedDate
+                                    )
+
                                     nonNullContent
                                         .responseToRiScResult(
                                             id.id,
                                             id.status,
                                             accessTokens.gcpAccessToken,
                                             id.pullRequestUrl,
+                                            countSinceLastModifiedDate
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
@@ -375,6 +390,7 @@ class RiScService(
                                     riScId = id.id,
                                     status = ContentStatus.Failure,
                                     riScStatus = id.status,
+                                    numOfGeneralCommitsBehindMain = null,
                                     riScContent = null,
                                     pullRequestUrl = null,
                                 )
@@ -409,6 +425,7 @@ class RiScService(
                                         ContentStatus.SchemaValidationFailed,
                                         null,
                                         null,
+                                        null,
                                     )
                                 }
                             }
@@ -424,6 +441,7 @@ class RiScService(
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
+        numOfCommitsBehindMain: Int?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -433,6 +451,7 @@ class RiScService(
                         riScId,
                         ContentStatus.Success,
                         riScStatus,
+                        numOfCommitsBehindMain,
                         decryptedContent.riSc,
                         decryptedContent.sopsConfig,
                         pullRequestUrl,
@@ -441,18 +460,18 @@ class RiScService(
                     LOGGER.error("An error occured when decrypting: ${e.message}")
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null, null)
 
                         else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, null)
                     }
                 }
 
             GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
+                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null, null)
 
             else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, null)
         }
 
     private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
