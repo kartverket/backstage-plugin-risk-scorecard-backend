@@ -17,7 +17,7 @@ data class RepositoryAccessException(
                     riScStatus = null,
                     riScContent = null,
                     pullRequestUrl = null,
-                    numOfCommitsBehindMain = null,
+                    numOfGeneralCommitsBehindMain = null,
                 )
 
             GitHubPermission.WRITE ->
