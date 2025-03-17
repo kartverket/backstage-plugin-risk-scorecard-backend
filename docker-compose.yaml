@@ -1,14 +1,43 @@
 services:
-  risc-backend:
-    build: .
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - LOCAL=true
     ports:
       - "8080:8080"
-    environment:
-      - CRYPTO_SERVICE_URL=http://host.docker.internal:8084
-      - INIT_RISC_URL=http://host.docker.internal:8085
-      - ISSUER_URI=http://host.docker.internal:7007/api/auth
-      - RISC_FOLDER_PATH=.security/risc
-      - FILENAME_PREFIX=risc
-      - FILENAME_POSTFIX=risc
+      - "8081:8081"
     env_file:
-      - .env.local
+      - .env
+
+  appm4:
+    # This app is made for Mac M4.
+    # Conditionals are difficult in Dockerfiles, we therefore opted for a separate setup
+    # for M4 architecture until the original image has patched whatever caused issues.
+    build:
+      context: .
+      dockerfile: Dockerfile.M4
+      args:
+        - LOCAL=true
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    env_file:
+      - .env
+
+  skip:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ISSUER_URI=${ISSUER_URI}
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
+      - GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED}
+      - RISC_FOLDER_PATH=${RISC_FOLDER_PATH}
+      - FILENAME_PREFIX=${FILENAME_PREFIX}
+      - FILENAME_POSTFIX=${FILENAME_POSTFIX}
+    ports:
+      - "8080:8080"
+      - "8081:8081"
