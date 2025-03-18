@@ -2,6 +2,7 @@ package no.risc.github
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
@@ -34,10 +35,9 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -762,8 +762,9 @@ class GithubConnector(
     private fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
-        LOGGER.info("GET to GitHub contents-API responded with ${awaitBodilessEntity().statusCode}")
-        val fileContentDTO: FileContentDTO? = awaitBodyOrNull<FileContentDTO>()
+        val response = toEntity<FileContentDTO>().awaitSingle()
+        LOGGER.info("GET to GitHub contents-API responded with ${response.statusCode}")
+        val fileContentDTO: FileContentDTO? = response.body
         LOGGER.info("RiSc content: ${fileContentDTO?.content?.substring(0, 10)}")
         return fileContentDTO?.content?.decodeBase64()
     }
