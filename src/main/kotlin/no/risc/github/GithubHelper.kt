@@ -260,7 +260,7 @@ class GithubHelper(
 
     fun bodyToClosePullRequest(): String =
         "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. " +
-            "New approval from risk owner is required.\",  \"state\": \"closed\"}"
+                "New approval from risk owner is required.\",  \"state\": \"closed\"}"
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
@@ -272,7 +272,7 @@ class GithubHelper(
             when (requiresNewApproval) {
                 true ->
                     "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. " +
-                        "Merge the pull request to include the changes in the main branch."
+                            "Merge the pull request to include the changes in the main branch."
 
                 false -> "The risk scorecard has been updated, but does not require new approval."
             }
@@ -291,7 +291,8 @@ class GithubHelper(
         latestShaAtMain: String,
     ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$branchName", latestShaAtMain)
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
+    fun uriToGetAccessTokenFromInstallation(installationId: String): String =
+        "/installations/$installationId/access_tokens"
 
     fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
         GithubCreateNewAccessTokenForRepository(repositoryName)
