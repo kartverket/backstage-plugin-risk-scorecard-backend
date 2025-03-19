@@ -483,7 +483,6 @@ class GithubConnector(
         accessToken: String,
         defaultBranch: String,
     ): String? {
-        LOGGER.info("Using GitHub access token: $accessToken")
         val latestShaForDefaultBranch =
             fetchLatestShaForDefaultBranch(owner, repository, accessToken, defaultBranch) ?: return null
         return postNewBranchToGithub(
