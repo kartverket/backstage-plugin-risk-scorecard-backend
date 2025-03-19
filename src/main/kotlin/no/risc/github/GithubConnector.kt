@@ -344,11 +344,11 @@ class GithubConnector(
 
         // "requires new approval" is used to determine if new PR can be created through updating.
         val commitMessage =
-            if (latestShaForDraft == null && latestShaForPublished == null)
+            if (latestShaForDraft == null && latestShaForPublished == null) {
                 "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-            else
+            } else {
                 "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-
+            }
 
         putFileRequestToGithub(
             owner,
@@ -364,28 +364,30 @@ class GithubConnector(
             runBlocking {
                 val prExistsDeferred = async { pullRequestForRiScExists(owner, repository, riScId, accessToken) }
 
-                val commitsAheadOfDefaultRequiresApprovalDeferred = async {
-                    // Latest commit timestamp on default branch that includes changes on this riSc
-                    val latestCommitTimestamp =
-                        fetchLatestCommitTimestampOnDefault(
-                            owner = owner,
-                            repository = repository,
-                            accessToken = accessToken,
-                            riScId = riScId,
-                            branch = defaultBranch
-                        )
+                val commitsAheadOfDefaultRequiresApprovalDeferred =
+                    async {
+                        // Latest commit timestamp on default branch that includes changes on this riSc
+                        val latestCommitTimestamp =
+                            fetchLatestCommitTimestampOnDefault(
+                                owner = owner,
+                                repository = repository,
+                                accessToken = accessToken,
+                                riScId = riScId,
+                                branch = defaultBranch,
+                            )
 
-                    // Check if previous commits on draft branch ahead of default branch requires approval.
-                    latestCommitTimestamp?.let { it ->
-                        fetchCommitsSinceLastCommit(
-                            owner,
-                            repository,
-                            accessToken,
-                            riScId,
-                            it,
-                        ).filterNot { it.commit.committer.date == latestCommitTimestamp }
-                    }?.any { it.commit.message.contains("requires new approval") } ?: true
-                }
+                        // Check if previous commits on draft branch ahead of default branch requires approval.
+                        latestCommitTimestamp
+                            ?.let { it ->
+                                fetchCommitsSinceLastCommit(
+                                    owner,
+                                    repository,
+                                    accessToken,
+                                    riScId,
+                                    it,
+                                ).filterNot { it.commit.committer.date == latestCommitTimestamp }
+                            }?.any { it.commit.message.contains("requires new approval") } ?: true
+                    }
 
                 val prExists = prExistsDeferred.await()
                 val commitsAheadOfDefaultRequiresApproval = commitsAheadOfDefaultRequiresApprovalDeferred.await()
