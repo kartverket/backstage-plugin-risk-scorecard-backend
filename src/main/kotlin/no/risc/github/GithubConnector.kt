@@ -883,7 +883,7 @@ class GithubConnector(
         repositoryName: String,
         gitHubAccessToken: String,
     ) = fetchRepositoryInfo(
-        uri = githubHelper.uriToGetRepositoryInfo(repositoryOwner, repositoryName),
+        uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
 
@@ -893,14 +893,18 @@ class GithubConnector(
         gitHubAccessToken: GithubAccessToken,
         pullRequest: GithubPullRequestObject,
     ) = getGithubResponse(
-        githubHelper.uriToFetchPullRequestFiles(repositoryOwner, repositoryName, pullRequest.number),
+        githubHelper.uriToFetchPullRequestFiles(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            pullRequestNumber = pullRequest.number,
+        ),
         gitHubAccessToken.value,
     ).toPullRequestFilesDTO() ?: throw GitHubFetchException(
         "Unable to fetch files changed in pull request number ${pullRequest.number} for $repositoryOwner/$repositoryName",
         ProcessRiScResultDTO(
-            "",
-            ProcessingStatus.FailedToCreateSops,
-            ProcessingStatus.FailedToCreateSops.message,
+            riScId = "",
+            status = ProcessingStatus.FailedToCreateSops,
+            statusMessage = ProcessingStatus.FailedToCreateSops.message,
         ),
     )
 
@@ -912,8 +916,8 @@ class GithubConnector(
         branches: List<String>,
     ): List<GithubPullRequestObject> =
         getGithubResponse(
-            githubHelper.uriToFetchAllPullRequests(repositoryOwner, repositoryName),
-            gitHubAccessToken.value,
+            uri = githubHelper.uriToFetchAllPullRequests(owner = repositoryOwner, repository = repositoryName),
+            accessToken = gitHubAccessToken.value,
         ).toPullRequestResponseDTOs()
             .filter {
                 it.head.ref in branches &&
@@ -925,7 +929,7 @@ class GithubConnector(
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
     ) = getGithubResponse(
-        githubHelper.uriToFindAllBranches(repositoryOwner, repositoryName),
+        githubHelper.uriToFindAllBranches(owner = repositoryOwner, repository = repositoryName),
         gitHubAccessToken.value,
     ).toRepositoryBranchDTO()
 
@@ -937,14 +941,14 @@ class GithubConnector(
         val fileContentPaths =
             try {
                 getGithubResponse(
-                    githubHelper.uriToFindRiScFiles(repositoryOwner, repositoryName),
+                    githubHelper.uriToFindRiScFiles(owner = repositoryOwner, repository = repositoryName),
                     gitHubAccessToken.value,
                 ).toFileContentsDTO() ?: throw GitHubFetchException(
                     "Unable to fetch RiScs file paths on default branch for $repositoryOwner/$repositoryName",
                     ProcessRiScResultDTO(
-                        "",
-                        ProcessingStatus.FailedToCreateSops,
-                        ProcessingStatus.FailedToCreateSops.message,
+                        riScId = "",
+                        status = ProcessingStatus.FailedToCreateSops,
+                        statusMessage = ProcessingStatus.FailedToCreateSops.message,
                     ),
                 )
             } catch (e: WebClientResponseException.NotFound) {
@@ -954,17 +958,23 @@ class GithubConnector(
             .filter { it.name.endsWith("$filenamePostfix.json") || it.name.endsWith("$filenamePostfix.yaml") }
             .associateWith {
                 getGithubResponse(
-                    githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, it.path),
-                    gitHubAccessToken.value,
+                    uri =
+                        githubHelper.repositoryContentsUri(
+                            owner = repositoryOwner,
+                            repository = repositoryName,
+                            path = it.path,
+                        ),
+                    accessToken = gitHubAccessToken.value,
                 ).toFileContentDTO()
                     ?.content
                     ?.decodeBase64() ?: throw GitHubFetchException(
-                    "Unable to fetch RiScs file content from default branch for $repositoryOwner/$repositoryName",
-                    ProcessRiScResultDTO(
-                        "",
-                        ProcessingStatus.FailedToCreateSops,
-                        ProcessingStatus.FailedToCreateSops.message,
-                    ),
+                    message = "Unable to fetch RiScs file content from default branch for $repositoryOwner/$repositoryName",
+                    response =
+                        ProcessRiScResultDTO(
+                            riScId = "",
+                            status = ProcessingStatus.FailedToCreateSops,
+                            statusMessage = ProcessingStatus.FailedToCreateSops.message,
+                        ),
                 )
             }
     }

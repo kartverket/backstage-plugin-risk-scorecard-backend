@@ -33,7 +33,12 @@ class CryptoServiceIntegration(
         riScId: String,
     ): String {
         val encryptionRequest =
-            EncryptionRequest(text = text, config = sopsConfig, gcpAccessToken = gcpAccessToken.value, riScId = riScId)
+            EncryptionRequest(
+                text = text,
+                config = sopsConfig,
+                gcpAccessToken = gcpAccessToken.value,
+                riScId = riScId,
+            )
 
         return try {
             cryptoServiceConnector.webClient
@@ -43,11 +48,10 @@ class CryptoServiceIntegration(
                 .retrieve()
                 .bodyToMono(String::class.java)
                 .block()
-                ?.toString()
-                ?: throw SopsEncryptionException(
-                    message = "Failed to encrypt file",
-                    riScId = riScId,
-                )
+                ?.toString() ?: throw SopsEncryptionException(
+                message = "Failed to encrypt file",
+                riScId = riScId,
+            )
         } catch (e: Exception) {
             throw SopsEncryptionException(
                 message = e.stackTraceToString(),
