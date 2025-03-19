@@ -34,9 +34,9 @@ data class GithubReferenceObject(
 
 data class GithubCreateNewBranchPayload(
     val nameOfNewBranch: String,
-    val shaOfLatestMain: String,
+    val shaOfLatestDefault: String,
 ) {
-    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestMain\" }"
+    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestDefault\" }"
 }
 
 data class GithubCreateNewPullRequestPayload(
@@ -264,15 +264,16 @@ class GithubHelper(
 
     fun bodyToCreateNewPullRequest(
         repositoryOwner: String,
-        riScId: String,
         requiresNewApproval: Boolean,
         riScRiskOwner: UserInfo,
+        branch: String,
+        baseBranch: String,
     ): GithubCreateNewPullRequestPayload {
         val body =
             when (requiresNewApproval) {
                 true ->
                     "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. " +
-                        "Merge the pull request to include the changes in the main branch."
+                        "Merge the pull request to include the changes in the default branch."
 
                 false -> "The risk scorecard has been updated, but does not require new approval."
             }
@@ -280,21 +281,25 @@ class GithubHelper(
         return GithubCreateNewPullRequestPayload(
             title = "Updated risk scorecard",
             body = body,
-            repositoryOwner,
-            riScId,
-            baseBranch = "main",
+            repositoryOwner = repositoryOwner,
+            branch = branch,
+            baseBranch = baseBranch,
         )
     }
 
-    fun bodyToCreateNewBranchFromMain(
+    fun bodyToCreateNewBranchFromDefault(
         branchName: String,
-        latestShaAtMain: String,
-    ): GithubCreateNewBranchPayload = GithubCreateNewBranchPayload("refs/heads/$branchName", latestShaAtMain)
+        latestShaAtDefault: String,
+    ): GithubCreateNewBranchPayload =
+        GithubCreateNewBranchPayload(
+            nameOfNewBranch = "refs/heads/$branchName",
+            shaOfLatestDefault = latestShaAtDefault,
+        )
 
     fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
 
     fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
-        GithubCreateNewAccessTokenForRepository(repositoryName)
+        GithubCreateNewAccessTokenForRepository(repositoryName = repositoryName)
 
     fun uriToFetchAllCommitsOnBranchSince(
         owner: String,
@@ -303,9 +308,10 @@ class GithubHelper(
         since: String,
     ): String = "/$owner/$repository/commits?sha=$branchName&since=$since"
 
-    fun uriToFetchCommitOnMain(
+    fun uriToFetchCommit(
         owner: String,
         repository: String,
         riScId: String,
-    ): String = "/$owner/$repository/commits?sha=main&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
+        branch: String,
+    ): String = "/$owner/$repository/commits?sha=$branch&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
 }
