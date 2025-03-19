@@ -326,24 +326,26 @@ class GithubConnector(
     ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
         // Attempt to get SHA for the existing draft
-        var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-        val latestShaForPublished: String?
+        val latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+        var latestShaForPublished: String? = null
 
-        // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
-        // through updating.
+        // A new branch is needed if an existing branch was not found
+        if (latestShaForDraft == null) {
+            runBlocking {
+                val newBranchDeferred = async { createNewBranch(owner, repository, riScId, accessToken, defaultBranch) }
+
+                // Determine if the change is an update or create request
+                latestShaForPublished =
+                    async { getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken) }.await()
+
+                newBranchDeferred.await()
+            }
+        }
+
+        // "requires new approval" is used to determine if new PR can be created through updating.
         val commitMessage =
-            if (latestShaForDraft == null) {
-                createNewBranch(owner, repository, riScId, accessToken, defaultBranch)
-                // Fetch again after creating branch as it will return null if no branch exists
-                latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-
-                // Fetch to determine if update or create
-                latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
-                if (latestShaForPublished != null) {
-                    "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-                } else {
-                    "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-                }
+            if (latestShaForDraft == null && latestShaForPublished == null) {
+                "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             } else {
                 "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             }
@@ -360,32 +362,35 @@ class GithubConnector(
 
         val riScApprovalPRStatus =
             runBlocking {
-                val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
+                val prExistsDeferred = async { pullRequestForRiScExists(owner, repository, riScId, accessToken) }
 
-                // Latest commit timestamp on default branch that includes changes on this riSc.
-                val latestCommitTimestamp =
-                    fetchLatestCommitTimestampOnDefault(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                        riScId = riScId,
-                        branch = defaultBranch,
-                    )
+                val commitsAheadOfDefaultRequiresApprovalDeferred =
+                    async {
+                        // Latest commit timestamp on default branch that includes changes on this riSc
+                        val latestCommitTimestamp =
+                            fetchLatestCommitTimestampOnDefault(
+                                owner = owner,
+                                repository = repository,
+                                accessToken = accessToken,
+                                riScId = riScId,
+                                branch = defaultBranch,
+                            )
 
-                // Check if previous commits on draft branch ahead of default branch requires approval.
-                val commitMessages =
-                    latestCommitTimestamp?.let { it ->
-                        fetchCommitsSinceLastCommit(
-                            owner,
-                            repository,
-                            accessToken,
-                            riScId,
-                            it,
-                        ).map { it.commit }.filterNot { it.committer.date == latestCommitTimestamp }
+                        // Check if previous commits on draft branch ahead of default branch requires approval.
+                        latestCommitTimestamp
+                            ?.let { it ->
+                                fetchCommitsSinceLastCommit(
+                                    owner,
+                                    repository,
+                                    accessToken,
+                                    riScId,
+                                    it,
+                                ).filterNot { it.commit.committer.date == latestCommitTimestamp }
+                            }?.any { it.commit.message.contains("requires new approval") } ?: true
                     }
 
-                val commitsAheadOfDefaultRequiresApproval =
-                    commitMessages?.any { it.message.contains("requires new approval") } ?: true
+                val prExists = prExistsDeferred.await()
+                val commitsAheadOfDefaultRequiresApproval = commitsAheadOfDefaultRequiresApprovalDeferred.await()
 
                 // If no PR already exists and the update does not require new approval, as the usual case
                 // is that approving the RiSc from the plugin triggers the creation of a new PR, and no commits ahead
