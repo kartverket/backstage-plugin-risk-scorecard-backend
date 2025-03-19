@@ -72,17 +72,25 @@ class SopsService(
         accessTokens: AccessTokens,
     ): CreateSopsConfigResponseBody {
         val defaultBranch =
-            githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, accessTokens.githubAccessToken.value)
+            githubConnector.fetchDefaultBranch(
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                gitHubAccessToken = accessTokens.githubAccessToken.value,
+            )
         LOGGER.info("Generating SOPS config for $repositoryOwner/$repositoryName")
-        val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpCryptoKey, publicAgeKeys)
+        val newSopsConfig =
+            initRiScServiceIntegration.generateSopsConfig(
+                gcpCryptoKey = gcpCryptoKey,
+                publicAgeKeys = publicAgeKeys,
+            )
         LOGGER.info("Generated SOPS config for $repositoryOwner/$repositoryName")
         val branch = generateSopsId()
         githubConnector.createNewBranch(
-            repositoryOwner,
-            repositoryName,
-            branch,
-            accessTokens.githubAccessToken.value,
-            defaultBranch,
+            owner = repositoryOwner,
+            repository = repositoryName,
+            newBranchName = branch,
+            accessToken = accessTokens.githubAccessToken.value,
+            defaultBranch = defaultBranch,
         ) ?: throw CreateNewBranchException(
             "Unable to create new branch for generate SOPS config",
             response =
@@ -95,11 +103,11 @@ class SopsService(
 
         LOGGER.info("Writing SOPS config github.com/$repositoryOwner/$repositoryName")
         githubConnector.writeSopsConfig(
-            newSopsConfig,
-            repositoryOwner,
-            repositoryName,
-            accessTokens.githubAccessToken,
-            branch,
+            sopsConfig = newSopsConfig,
+            repositoryOwner = repositoryOwner,
+            repositoryName = repositoryName,
+            gitHubAccessToken = accessTokens.githubAccessToken,
+            branch = branch,
         )
 
         // TODO: This will be the block needed to re-encrypt existing RiSc on default branch with the newly generated SOPS configuration
@@ -139,8 +147,8 @@ class SopsService(
             ProcessingStatus.CreatedSops,
             ProcessingStatus.CreatedSops.message,
             SopsConfigDTO(
-                gcpCryptoKey,
-                publicAgeKeys,
+                gcpCryptoKey = gcpCryptoKey,
+                publicAgeKeys = publicAgeKeys,
             ),
         )
     }
@@ -155,15 +163,15 @@ class SopsService(
     ): UpdateSopsConfigResponseBody {
         val newSopsConfig = initRiScServiceIntegration.generateSopsConfig(gcpCryptoKey, publicAgeKeys)
         githubConnector.writeSopsConfig(
-            newSopsConfig,
-            repositoryOwner,
-            repositoryName,
-            accessTokens.githubAccessToken,
-            branch,
+            sopsConfig = newSopsConfig,
+            repositoryOwner = repositoryOwner,
+            repositoryName = repositoryName,
+            gitHubAccessToken = accessTokens.githubAccessToken,
+            branch = branch,
         )
         return UpdateSopsConfigResponseBody(
-            ProcessingStatus.UpdatedSops,
-            ProcessingStatus.UpdatedSops.message,
+            status = ProcessingStatus.UpdatedSops,
+            statusMessage = ProcessingStatus.UpdatedSops.message,
         )
     }
 
@@ -173,27 +181,32 @@ class SopsService(
         sopsId: String,
         githubAccessToken: GithubAccessToken,
     ): OpenPullRequestForSopsConfigResponseBody {
-        val defaultBranch = githubConnector.fetchDefaultBranch(repositoryOwner, repositoryName, githubAccessToken.value)
+        val defaultBranch =
+            githubConnector.fetchDefaultBranch(
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                gitHubAccessToken = githubAccessToken.value,
+            )
         val pullRequestObject =
             githubConnector
                 .createPullRequestForSopsConfig(
-                    repositoryOwner,
-                    repositoryName,
-                    sopsId,
-                    githubAccessToken,
-                    defaultBranch,
+                    owner = repositoryOwner,
+                    repository = repositoryName,
+                    sopsId = sopsId,
+                    gitHubAccessToken = githubAccessToken,
+                    defaultBranch = defaultBranch,
                 )?.toPullRequestObject() ?: throw GitHubFetchException(
                 "Unable to create pull request for sops config with branch: $sopsId",
                 ProcessRiScResultDTO(
-                    "",
-                    ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    ProcessingStatus.ErrorWhenCreatingPullRequest.message,
+                    riScId = "",
+                    status = ProcessingStatus.ErrorWhenCreatingPullRequest,
+                    statusMessage = ProcessingStatus.ErrorWhenCreatingPullRequest.message,
                 ),
             )
         return OpenPullRequestForSopsConfigResponseBody(
-            ProcessingStatus.OpenedPullRequest,
-            ProcessingStatus.OpenedPullRequest.message,
-            pullRequestObject,
+            status = ProcessingStatus.OpenedPullRequest,
+            statusMessage = ProcessingStatus.OpenedPullRequest.message,
+            pullRequest = pullRequestObject,
         )
     }
 }

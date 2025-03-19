@@ -234,13 +234,13 @@ class RiScService(
                         InternDifference(
                             status = DifferenceStatus.Success,
                             differenceState = diff("${response.riScContent}", headRiSc),
-                            "",
+                            errorMessage = "",
                         )
                     } catch (e: DifferenceException) {
                         InternDifference(
                             status = DifferenceStatus.JsonFailure,
                             Difference(),
-                            "${e.message}",
+                            errorMessage = "${e.message}",
                         )
                     }
                 }
@@ -254,42 +254,42 @@ class RiScService(
                     InternDifference(
                         status = DifferenceStatus.GithubFileNotFound,
                         differenceState = Difference(),
-                        "Encountered Github problem: File not found",
+                        errorMessage = "Encountered Github problem: File not found",
                     )
 
                 ContentStatus.DecryptionFailed ->
                     InternDifference(
                         status = DifferenceStatus.DecryptionFailure,
                         differenceState = Difference(),
-                        "Encountered ROS problem: Could not decrypt content",
+                        errorMessage = "Encountered ROS problem: Could not decrypt content",
                     )
 
                 ContentStatus.Failure ->
                     InternDifference(
                         status = DifferenceStatus.GithubFailure,
                         differenceState = Difference(),
-                        "Encountered Github problem: Github failure",
+                        errorMessage = "Encountered Github problem: Github failure",
                     )
 
                 ContentStatus.NoReadAccess ->
                     InternDifference(
                         status = DifferenceStatus.NoReadAccess,
                         differenceState = Difference(),
-                        "No read access to repository",
+                        errorMessage = "No read access to repository",
                     )
 
                 ContentStatus.SchemaNotFound ->
                     InternDifference(
                         status = DifferenceStatus.SchemaNotFound,
                         differenceState = Difference(),
-                        "Could not fetch JSON schema",
+                        errorMessage = "Could not fetch JSON schema",
                     )
 
                 ContentStatus.SchemaValidationFailed ->
                     InternDifference(
                         status = DifferenceStatus.SchemaValidationFailed,
                         differenceState = Difference(),
-                        "SchemaValidation failed",
+                        errorMessage = "SchemaValidation failed",
                     )
             }
         return result.toDTO(lastModifiedDate)
@@ -305,9 +305,9 @@ class RiScService(
             val riScIds =
                 githubConnector
                     .fetchAllRiScIdentifiersInRepository(
-                        owner,
-                        repository,
-                        accessTokens.githubAccessToken.value,
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessTokens.githubAccessToken.value,
                     ).ids
             LOGGER.info("Found RiSc's with id's: ${riScIds.map { it.id }.joinToString(", ")}")
             val riScContents =
@@ -364,10 +364,10 @@ class RiScService(
                                 processedContent?.let { nonNullContent ->
                                     nonNullContent
                                         .responseToRiScResult(
-                                            id.id,
-                                            id.status,
-                                            accessTokens.gcpAccessToken,
-                                            id.pullRequestUrl,
+                                            riScId = id.id,
+                                            riScStatus = id.status,
+                                            gcpAccessToken = accessTokens.gcpAccessToken,
+                                            pullRequestUrl = id.pullRequestUrl,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
@@ -405,10 +405,10 @@ class RiScService(
                                 false -> {
                                     LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
                                     RiScContentResultDTO(
-                                        riScContentResultDTO.riScId,
-                                        ContentStatus.SchemaValidationFailed,
-                                        null,
-                                        null,
+                                        riScId = riScContentResultDTO.riScId,
+                                        status = ContentStatus.SchemaValidationFailed,
+                                        riScStatus = null,
+                                        riScContent = null,
                                     )
                                 }
                             }
@@ -430,29 +430,49 @@ class RiScService(
                 try {
                     val decryptedContent = decryptContent(gcpAccessToken)
                     RiScContentResultDTO(
-                        riScId,
-                        ContentStatus.Success,
-                        riScStatus,
-                        decryptedContent.riSc,
-                        decryptedContent.sopsConfig,
-                        pullRequestUrl,
+                        riScId = riScId,
+                        status = ContentStatus.Success,
+                        riScStatus = riScStatus,
+                        riScContent = decryptedContent.riSc,
+                        sopsConfig = decryptedContent.sopsConfig,
+                        pullRequestUrl = pullRequestUrl,
                     )
                 } catch (e: Exception) {
-                    LOGGER.error("An error occured when decrypting: ${e.message}")
+                    LOGGER.error("An error occurred when decrypting: ${e.message}")
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
+                            RiScContentResultDTO(
+                                riScId = riScId,
+                                status = ContentStatus.DecryptionFailed,
+                                riScStatus = riScStatus,
+                                riScContent = null,
+                            )
 
                         else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                            RiScContentResultDTO(
+                                riScId = riScId,
+                                status = ContentStatus.Failure,
+                                riScStatus = riScStatus,
+                                riScContent = null,
+                            )
                     }
                 }
 
             GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
+                RiScContentResultDTO(
+                    riScId = riScId,
+                    status = ContentStatus.FileNotFound,
+                    riScStatus = riScStatus,
+                    riScContent = null,
+                )
 
             else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
+                RiScContentResultDTO(
+                    riScId = riScId,
+                    status = ContentStatus.Failure,
+                    riScStatus = riScStatus,
+                    riScContent = null,
+                )
         }
 
     private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
@@ -542,9 +562,9 @@ class RiScService(
     ): RiScResult {
         val validationStatus =
             JSONValidator.validateAgainstSchema(
-                riScId,
-                JSONValidator.getSchemaOnUpdate(riScId, content.schemaVersion),
-                content.riSc,
+                riScId = riScId,
+                schema = JSONValidator.getSchemaOnUpdate(riScId, content.schemaVersion),
+                riScContent = content.riSc,
             )
         if (!validationStatus.valid) {
             val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
@@ -556,7 +576,12 @@ class RiScService(
         }
 
         val encryptedData: String =
-            cryptoService.encrypt(content.riSc, sopsConfig, accessTokens.gcpAccessToken, riScId)
+            cryptoService.encrypt(
+                text = content.riSc,
+                sopsConfig = sopsConfig,
+                gcpAccessToken = accessTokens.gcpAccessToken,
+                riScId = riScId,
+            )
 
         try {
             val riScApprovalPRStatus =
@@ -574,27 +599,28 @@ class RiScService(
             return when (riScApprovalPRStatus.pullRequest) {
                 is GithubPullRequestObject ->
                     PublishRiScResultDTO(
-                        riScId,
+                        riScId = riScId,
                         status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
-                        "RiSc was updated and does not require approval - pull request was created",
-                        riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
+                        statusMessage = "RiSc was updated and does not require approval - pull request was created",
+                        pendingApproval = riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
                     )
 
                 null ->
                     ProcessRiScResultDTO(
-                        riScId,
+                        riScId = riScId,
                         status =
                             if (riScApprovalPRStatus.hasClosedPr) {
                                 ProcessingStatus.UpdatedRiScRequiresNewApproval
                             } else {
                                 ProcessingStatus.UpdatedRiSc
                             },
-                        "Risk scorecard was updated" +
-                            if (riScApprovalPRStatus.hasClosedPr) {
-                                " and has to be approved by av risk owner again"
-                            } else {
-                                ""
-                            },
+                        statusMessage =
+                            "Risk scorecard was updated" +
+                                if (riScApprovalPRStatus.hasClosedPr) {
+                                    " and has to be approved by av risk owner again"
+                                } else {
+                                    ""
+                                },
                     )
 
                 else -> {
@@ -634,18 +660,18 @@ class RiScService(
         return when (pullRequestObject) {
             is GithubPullRequestObject ->
                 PublishRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.CreatedPullRequest,
-                    "Pull request was created",
-                    pullRequestObject.toPendingApprovalDTO(),
+                    riScId = riScId,
+                    status = ProcessingStatus.CreatedPullRequest,
+                    statusMessage = "Pull request was created",
+                    pendingApproval = pullRequestObject.toPendingApprovalDTO(),
                 )
 
             else ->
                 PublishRiScResultDTO(
-                    riScId,
-                    ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    "Could not create pull request",
-                    null,
+                    riScId = riScId,
+                    status = ProcessingStatus.ErrorWhenCreatingPullRequest,
+                    statusMessage = "Could not create pull request",
+                    pendingApproval = null,
                 )
         }
     }
