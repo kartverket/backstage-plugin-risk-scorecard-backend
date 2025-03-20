@@ -115,7 +115,7 @@ class GithubConnector(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     private val githubHelper: GithubHelper,
-) : WebClientConnector("https://api.github.com/repos/") {
+) : WebClientConnector("https://api.github.com/repos") {
     companion object {
         val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
     }
