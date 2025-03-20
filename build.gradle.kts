@@ -5,8 +5,12 @@ plugins {
     id("io.spring.dependency-management") version "1.1.6"
     kotlin("jvm") version "2.1.10"
     kotlin("plugin.spring") version "2.1.10"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
+    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
     kotlin("plugin.serialization") version "2.1.10"
+}
+
+ktlint {
+    version.set("1.5.0")
 }
 
 group = "no"
