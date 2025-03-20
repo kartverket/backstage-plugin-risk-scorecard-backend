@@ -322,12 +322,10 @@ class GithubConnector(
         since: String,
     ): Int? =
         try {
-            val response =
-                getGithubResponseSuspend(
-                    githubHelper.uriToFetchGeneralCommitsSince(owner, repository, since),
-                    accessToken,
-                ).awaitBody<List<GithubRefShaDTO>>()
-            response.size
+            getGithubResponseSuspend(
+                githubHelper.uriToFetchGeneralCommitsSince(owner, repository, since),
+                accessToken,
+            ).awaitBody<List<GithubRefShaDTO>>().size
         } catch (e: Exception) {
             null
         }

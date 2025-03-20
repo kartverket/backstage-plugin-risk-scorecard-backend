@@ -61,7 +61,7 @@ data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
-    val numOfGeneralCommitsBehind: Int?,
+    val numOfGeneralCommitsBehind: Int? = null,
     val riScContent: String?,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
@@ -389,7 +389,6 @@ class RiScService(
                                     riScId = id.id,
                                     status = ContentStatus.Failure,
                                     riScStatus = id.status,
-                                    numOfGeneralCommitsBehind = null,
                                     riScContent = null,
                                     pullRequestUrl = null,
                                 )
