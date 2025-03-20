@@ -302,6 +302,7 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
+            val r = 1
             val riScIds =
                 githubConnector
                     .fetchAllRiScIdentifiersInRepository(
