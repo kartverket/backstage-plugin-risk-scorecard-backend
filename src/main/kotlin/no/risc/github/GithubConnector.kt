@@ -2,6 +2,7 @@ package no.risc.github
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.runBlocking
 import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
@@ -34,10 +35,9 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
-import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -131,19 +131,15 @@ class GithubConnector(
             try {
                 LOGGER.info("Trying to get sops config from branch: $branch")
                 getGithubResponseSuspend(
-                    "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
-                    githubAccessToken.value,
-                ).toFileContentDTO()
-                    ?.content
-                    ?.decodeBase64()
+                    uri = "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
+                    accessToken = githubAccessToken.value,
+                ).toFileContentDTO()?.content?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
                 LOGGER.info("Trying to get sops config from default branch")
                 getGithubResponseSuspend(
-                    githubHelper.uriToFindSopsConfig(owner, repository),
-                    githubAccessToken.value,
-                ).toFileContentDTO()
-                    ?.content
-                    ?.decodeBase64()
+                    uri = githubHelper.uriToFindSopsConfig(owner, repository),
+                    accessToken = githubAccessToken.value,
+                ).toFileContentDTO()?.content?.decodeBase64()
             }
         return when (sopsConfig) {
             null -> throw SopsConfigFetchException(
@@ -163,8 +159,8 @@ class GithubConnector(
     ): GithubContentResponse {
         val sopsConfig =
             getGithubResponse(
-                githubHelper.uriToFindSopsConfig(repositoryOwner, repositoryName),
-                githubAccessToken.value,
+                uri = githubHelper.uriToFindSopsConfig(repositoryOwner, repositoryName),
+                accessToken = githubAccessToken.value,
             ).bodyToMono<FileContentDTO>()
                 .block()
                 ?.content
@@ -319,7 +315,7 @@ class GithubConnector(
         }
 
 
-    internal suspend fun fetchGeneralCommitsOnMainSinceLastModified(
+    internal suspend fun fetchGeneralCommitsSinceLastModified(
         owner: String,
         repository: String,
         accessToken: String,
@@ -328,7 +324,7 @@ class GithubConnector(
         try {
             val response =
                 getGithubResponseSuspend(
-                    githubHelper.uriToFetchGeneralCommitsOnMainSince(owner, repository, since),
+                    githubHelper.uriToFetchGeneralCommitsSince(owner, repository, since),
                     accessToken,
                 ).awaitBody<List<GithubRefShaDTO>>()
             response.size
@@ -348,24 +344,26 @@ class GithubConnector(
     ): RiScApprovalPRStatus {
         val accessToken = accessTokens.githubAccessToken.value
         // Attempt to get SHA for the existing draft
-        var latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-        val latestShaForPublished: String?
+        val latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
+        var latestShaForPublished: String? = null
 
-        // Determine if a new branch is needed. "requires new approval" is used to determine if new PR can be created
-        // through updating.
+        // A new branch is needed if an existing branch was not found
+        if (latestShaForDraft == null) {
+            runBlocking {
+                val newBranchDeferred = async { createNewBranch(owner, repository, riScId, accessToken, defaultBranch) }
+
+                // Determine if the change is an update or create request
+                latestShaForPublished =
+                    async { getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken) }.await()
+
+                newBranchDeferred.await()
+            }
+        }
+
+        // "requires new approval" is used to determine if new PR can be created through updating.
         val commitMessage =
-            if (latestShaForDraft == null) {
-                createNewBranch(owner, repository, riScId, accessToken, defaultBranch)
-                // Fetch again after creating branch as it will return null if no branch exists
-                latestShaForDraft = getSHAForExistingRiScDraftOrNull(owner, repository, riScId, accessToken)
-
-                // Fetch to determine if update or create
-                latestShaForPublished = getSHAForPublishedRiScOrNull(owner, repository, riScId, accessToken)
-                if (latestShaForPublished != null) {
-                    "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-                } else {
-                    "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
-                }
+            if (latestShaForDraft == null && latestShaForPublished == null) {
+                "Create new RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             } else {
                 "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             }
@@ -382,41 +380,52 @@ class GithubConnector(
 
         val riScApprovalPRStatus =
             runBlocking {
-                val prExists = pullRequestForRiScExists(owner, repository, riScId, accessToken)
+                val prExistsDeferred = async { pullRequestForRiScExists(owner, repository, riScId, accessToken) }
 
-                // Latest commit timestamp on default branch that includes changes on this riSc
-                val latestCommitTimestamp = fetchLatestCommitTimestampOnDefault(owner, repository, accessToken, riScId)
+                val commitsAheadOfDefaultRequiresApprovalDeferred =
+                    async {
+                        // Latest commit timestamp on default branch that includes changes on this riSc
+                        val latestCommitTimestamp =
+                            fetchLatestCommitTimestampOnDefault(
+                                owner = owner,
+                                repository = repository,
+                                accessToken = accessToken,
+                                riScId = riScId,
+                                branch = defaultBranch,
+                            )
 
-                // Check if previous commits on draft branch ahead of main requires approval
-                val commitMessages =
-                    latestCommitTimestamp?.let { it ->
-                        fetchCommitsSinceLastCommitOnMain(
-                            owner,
-                            repository,
-                            accessToken,
-                            riScId,
-                            it,
-                        ).map { it.commit }.filterNot { it.committer.date == latestCommitTimestamp }
+                        // Check if previous commits on draft branch ahead of default branch requires approval.
+                        latestCommitTimestamp
+                            ?.let { it ->
+                                fetchCommitsSinceLastCommit(
+                                    owner,
+                                    repository,
+                                    accessToken,
+                                    riScId,
+                                    it,
+                                ).filterNot { it.commit.committer.date == latestCommitTimestamp }
+                            }?.any { it.commit.message.contains("requires new approval") } ?: true
                     }
 
-                val commitsAheadOfMainRequiresApproval =
-                    commitMessages?.any { it.message.contains("requires new approval") } ?: true
+                val prExists = prExistsDeferred.await()
+                val commitsAheadOfDefaultRequiresApproval = commitsAheadOfDefaultRequiresApprovalDeferred.await()
 
                 // If no PR already exists and the update does not require new approval, as the usual case
                 // is that approving the RiSc from the plugin triggers the creation of a new PR, and no commits ahead
-                // of main requires approval, then create a new PR.
+                // of default requires approval, then create a new PR.
 
                 // else if a pull request already exists (meaning the RiSc has been approved)
                 // close it if the update requires new approval
-                if (!requiresNewApproval && !prExists && !commitsAheadOfMainRequiresApproval) {
+                if (!requiresNewApproval && !prExists && !commitsAheadOfDefaultRequiresApproval) {
                     val pullRequest =
                         createPullRequestForRiSc(
-                            owner,
-                            repository,
-                            riScId,
-                            requiresNewApproval,
-                            accessTokens,
-                            userInfo,
+                            owner = owner,
+                            repository = repository,
+                            riScId = riScId,
+                            requiresNewApproval = requiresNewApproval,
+                            accessTokens = accessTokens,
+                            userInfo = userInfo,
+                            baseBranch = defaultBranch,
                         )
                     RiScApprovalPRStatus(pullRequest, false)
                 } else if (requiresNewApproval && prExists) {
@@ -497,13 +506,16 @@ class GithubConnector(
         accessToken: String,
         defaultBranch: String,
     ): String? {
-        LOGGER.info("Using GitHub access token: $accessToken")
-        val latestShaForMainBranch =
+        val latestShaForDefaultBranch =
             fetchLatestShaForDefaultBranch(owner, repository, accessToken, defaultBranch) ?: return null
         return postNewBranchToGithub(
             uri = githubHelper.uriToCreateNewBranchForRiSc(owner, repository),
             accessToken = accessToken,
-            branchPayload = githubHelper.bodyToCreateNewBranchFromMain(newBranchName, latestShaForMainBranch),
+            branchPayload =
+                githubHelper.bodyToCreateNewBranchFromDefault(
+                    branchName = newBranchName,
+                    latestShaAtDefault = latestShaForDefaultBranch,
+                ),
         ).bodyToMono<String>().block()
     }
 
@@ -519,7 +531,7 @@ class GithubConnector(
             emptyList()
         }
 
-    private fun fetchCommitsSinceLastCommitOnMain(
+    private fun fetchCommitsSinceLastCommit(
         owner: String,
         repository: String,
         accessToken: String,
@@ -528,8 +540,14 @@ class GithubConnector(
     ): List<GithubCommitObject> =
         try {
             getGithubResponse(
-                githubHelper.uriToFetchAllCommitsOnBranchSince(owner, repository, riScId, since),
-                accessToken,
+                uri =
+                    githubHelper.uriToFetchAllCommitsOnBranchSince(
+                        owner = owner,
+                        repository = repository,
+                        branchName = riScId,
+                        since = since,
+                    ),
+                accessToken = accessToken,
             ).bodyToMono<List<GithubCommitObject>>()
                 .block() ?: emptyList()
         } catch (e: Exception) {
@@ -541,10 +559,19 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         riScId: String,
+        branch: String,
     ): String? =
         try {
-            getGithubResponse(githubHelper.uriToFetchCommitOnMain(owner, repository, riScId), accessToken)
-                .timeStampLatestCommitResponse()
+            getGithubResponse(
+                uri =
+                    githubHelper.uriToFetchCommit(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId,
+                        branch = branch,
+                    ),
+                accessToken = accessToken,
+            ).timeStampLatestCommitResponse()
         } catch (e: Exception) {
             null
         }
@@ -556,6 +583,7 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
+        baseBranch: String,
     ): GithubPullRequestObject? =
         try {
             postNewPullRequestToGithub(
@@ -563,10 +591,11 @@ class GithubConnector(
                 accessToken = accessTokens.githubAccessToken.value,
                 pullRequestPayload =
                     githubHelper.bodyToCreateNewPullRequest(
-                        owner,
-                        riScId,
-                        requiresNewApproval,
-                        userInfo,
+                        repositoryOwner = owner,
+                        branch = riScId,
+                        requiresNewApproval = requiresNewApproval,
+                        riScRiskOwner = userInfo,
+                        baseBranch = baseBranch,
                     ),
             ).pullRequestResponseDTO()
         } catch (e: Exception) {
@@ -584,18 +613,19 @@ class GithubConnector(
         defaultBranch: String,
     ): GithubPullRequestObject? =
         postNewPullRequestToGithub(
-            uri = githubHelper.uriToCreatePullRequest(owner, repository),
+            uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
             accessToken = gitHubAccessToken.value,
             pullRequestPayload =
                 GithubCreateNewPullRequestPayload(
-                    "Update SOPS configuration",
-                    "This pull request updates the SOPS configuration that is needed to encrypt and decrypt RiSc's in " +
-                        "[Risk Scorecard in Kartverket.dev](https://kartverket.dev/catalog/default/component/$repository/risc). " +
-                        "Merge this PR in order to use the new SOPS configuration in the " +
-                        "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
-                    owner,
-                    sopsId,
-                    defaultBranch,
+                    title = "Update SOPS configuration",
+                    body =
+                        "This pull request updates the SOPS configuration that is needed to encrypt and decrypt RiSc's in " +
+                            "[Risk Scorecard in Kartverket.dev](https://kartverket.dev/catalog/default/component/$repository/risc). " +
+                            "Merge this PR in order to use the new SOPS configuration in the " +
+                            "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
+                    repositoryOwner = owner,
+                    branch = sopsId,
+                    baseBranch = defaultBranch,
                 ),
         ).pullRequestResponseDTO()
 
@@ -654,7 +684,14 @@ class GithubConnector(
             GithubWriteToFilePayload(
                 message = message,
                 content = content,
-                sha = fetchFileInfo(repositoryOwner, repositoryName, gitHubAccessToken, filePath, branch)?.sha,
+                sha =
+                    fetchFileInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                        filePath = filePath,
+                        branch = branch,
+                    )?.sha,
                 branchName = branch,
             )
 
@@ -781,8 +818,9 @@ class GithubConnector(
     private fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
-        LOGGER.info("GET to GitHub contents-API responded with ${awaitBodilessEntity().statusCode}")
-        val fileContentDTO: FileContentDTO? = awaitBodyOrNull<FileContentDTO>()
+        val response = toEntity<FileContentDTO>().awaitSingle()
+        LOGGER.info("GET to GitHub contents-API responded with ${response.statusCode}")
+        val fileContentDTO: FileContentDTO? = response.body
         LOGGER.info("RiSc content: ${fileContentDTO?.content?.substring(0, 10)}")
         return fileContentDTO?.content?.decodeBase64()
     }

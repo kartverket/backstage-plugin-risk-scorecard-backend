@@ -31,7 +31,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper
-import org.springframework.cglib.util.StringSwitcher
 import org.springframework.stereotype.Service
 
 class ProcessRiScResultDTO(
@@ -62,7 +61,7 @@ data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
-    val numOfGeneralCommitsBehindMain: Int?,
+    val numOfGeneralCommitsBehind: Int?,
     val riScContent: String?,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
@@ -372,7 +371,7 @@ class RiScService(
                                             .substringBefore("mac")
                                             .trimEnd()
 
-                                    val countSinceLastModifiedDate = githubConnector.fetchGeneralCommitsOnMainSinceLastModified(
+                                    val countSinceLastModifiedDate = githubConnector.fetchGeneralCommitsSinceLastModified(
                                         owner, repository, accessTokens.githubAccessToken.value, lastModifiedDate
                                     )
 
@@ -390,7 +389,7 @@ class RiScService(
                                     riScId = id.id,
                                     status = ContentStatus.Failure,
                                     riScStatus = id.status,
-                                    numOfGeneralCommitsBehindMain = null,
+                                    numOfGeneralCommitsBehind = null,
                                     riScContent = null,
                                     pullRequestUrl = null,
                                 )
@@ -519,22 +518,22 @@ class RiScService(
         try {
             val result =
                 updateOrCreateRiSc(
-                    owner,
-                    repository,
-                    uniqueRiScId,
-                    riScContentWrapperObject,
-                    content.sopsConfig,
-                    accessTokens,
-                    defaultBranch,
+                    owner = owner,
+                    repository = repository,
+                    riScId = uniqueRiScId,
+                    content = riScContentWrapperObject,
+                    sopsConfig = content.sopsConfig,
+                    accessTokens = accessTokens,
+                    defaultBranch = defaultBranch,
                 )
 
             if (result.status == ProcessingStatus.UpdatedRiSc) {
                 return CreateRiScResultDTO(
-                    uniqueRiScId,
-                    ProcessingStatus.CreatedRiSc,
-                    "New RiSc was created",
-                    riScContentWrapperObject.riSc,
-                    riScContentWrapperObject.sopsConfig,
+                    riScId = uniqueRiScId,
+                    status = ProcessingStatus.CreatedRiSc,
+                    statusMessage = "New RiSc was created",
+                    riScContent = riScContentWrapperObject.riSc,
+                    sopsConfig = riScContentWrapperObject.sopsConfig,
                 )
             } else {
                 throw CreatingRiScException(
@@ -637,6 +636,7 @@ class RiScService(
         riScId: String,
         accessTokens: AccessTokens,
         userInfo: UserInfo,
+        baseBranch: String,
     ): PublishRiScResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForRiSc(
@@ -646,6 +646,7 @@ class RiScService(
                 requiresNewApproval = true,
                 accessTokens = accessTokens,
                 userInfo = userInfo,
+                baseBranch = baseBranch,
             )
 
         return when (pullRequestObject) {
