@@ -24,8 +24,8 @@ repositories {
 }
 
 val kotlinVersion = "2.1.10"
-val springBootVersion = "3.4.1"
-val springSecurityVersion = "6.4.1"
+val springBootVersion = "3.4.3"
+val springSecurityVersion = "6.4.4"
 val kotlinxSerializationVersion = "1.7.3"
 val kotlinxCoroutinesVersion = "1.9.0"
 val nettyVersion = "4.1.115.Final"
