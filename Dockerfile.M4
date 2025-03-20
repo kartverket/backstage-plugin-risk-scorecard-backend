@@ -1,6 +1,10 @@
 # Make sure the logic is in sync with Dockerfile.
 FROM amazoncorretto:21-alpine AS build
 COPY . .
+
+# Get security updates
+RUN apk update && apk upgrade
+
 RUN ./gradlew build -x test
 
 FROM amazoncorretto:21-alpine
@@ -9,6 +13,9 @@ FROM amazoncorretto:21-alpine
 RUN mkdir -p /app /app/logs /app/tmp
 
 COPY --from=build /build/libs/*.jar /app/backend.jar
+
+# Get security updates
+RUN apk update && apk upgrade
 
 # Install socat only if running locally.
 ARG LOCAL

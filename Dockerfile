@@ -1,6 +1,10 @@
 # Make sure the logic is in sync with Dockerfile.M4
 FROM eclipse-temurin:21.0.2_13-jre-alpine AS build
 COPY . .
+
+# Get security updates
+RUN apk update && apk upgrade
+
 RUN ./gradlew build -x test
 
 FROM eclipse-temurin:21
@@ -10,11 +14,14 @@ RUN mkdir -p /app /app/logs /app/tmp
 
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
+# Get security updates
+RUN apt -y update && apt -y upgrade
+
 # Install socat only if running locally.
 ARG LOCAL
 ENV LOCAL $LOCAL
 RUN if [ "$LOCAL" ] ; then \
-        apt update && apt install -y socat ; \
+        apt install -y socat ; \
     fi
 
 # Add non-root user and change permissions.
