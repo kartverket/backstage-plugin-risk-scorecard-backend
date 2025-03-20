@@ -51,7 +51,7 @@ IntelliJ supports code actions on save. <br>
 This project uses `ktlint` for code quality checking.
 It can be installed as a plugin from marketplace https://plugins.jetbrains.com/plugin/15057-ktlint.
 
-`ktlint` is also available in command line as tasks in `gradlew` <br>
+`ktlint` is also available on the command line as tasks in `gradlew` <br>
 `./gradlew ktlintCheck` <br>
 `./gradlew ktlintFormat` <br>
 
