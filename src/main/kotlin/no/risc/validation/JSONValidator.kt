@@ -14,8 +14,7 @@ import org.slf4j.LoggerFactory
 enum class SchemaVersion {
     VERSION_3_2,
     VERSION_3_3,
-    VERSION_4_0,
-    ;
+    VERSION_4_0, ;
 
     fun toExpectedString() =
         when (this) {
@@ -71,8 +70,13 @@ object JSONValidator {
         } else {
             if (schema == null) {
                 SchemaVersion.entries.forEach {
-                    val currentSchema = getSchemaOnFetch(riScId, it)
-                    val output = validateJson(riScId, currentSchema, riScContent)
+                    val currentSchema = getSchemaOnFetch(riScId = riScId, schemaVersion = it)
+                    val output =
+                        validateJson(
+                            riScId = riScId,
+                            schema = currentSchema,
+                            riScContent = riScContent,
+                        )
                     if (output.valid) {
                         return output
                     }
@@ -80,7 +84,11 @@ object JSONValidator {
                 LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
                 BasicOutput(false)
             } else {
-                validateJson(riScId, schema, riScContent)
+                validateJson(
+                    riScId = riScId,
+                    schema = schema,
+                    riScContent = riScContent,
+                )
             }
         }
 
@@ -95,7 +103,7 @@ object JSONValidator {
             when (e) {
                 is JSONException -> {
                     if (e.message?.contains("Illegal JSON syntax") == true) {
-                        val riscAsJson = yamlToJsonConverter(riScId, riScContent)
+                        val riscAsJson = yamlToJsonConverter(riScId = riScId, yamlString = riScContent)
                         JSONSchema.parse(schema).validateBasic(riscAsJson)
                     } else {
                         throw RiScNotValidOnFetchException(

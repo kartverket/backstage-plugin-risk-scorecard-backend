@@ -29,7 +29,11 @@ class InitRiScServiceIntegration(
             .bodyToMono<String>()
             .block() ?: throw SopsConfigGenerateFetchException(
             "Failed to generate default RiSc",
-            ProcessRiScResultDTO("", ProcessingStatus.ErrorWhenCreatingRiSc, ProcessingStatus.ErrorWhenCreatingRiSc.message),
+            ProcessRiScResultDTO(
+                riScId = "",
+                status = ProcessingStatus.ErrorWhenCreatingRiSc,
+                statusMessage = ProcessingStatus.ErrorWhenCreatingRiSc.message,
+            ),
         )
 
     fun generateSopsConfig(
@@ -42,18 +46,23 @@ class InitRiScServiceIntegration(
             .body(
                 BodyInserters.fromValue(
                     GenerateSopsConfigRequestBody(
-                        GenerateSopsConfigGcpCryptoKeyObject(
-                            gcpCryptoKey.projectId,
-                            gcpCryptoKey.keyRing,
-                            gcpCryptoKey.name,
-                        ),
-                        publicAgeKeys,
+                        gcpCryptoKey =
+                            GenerateSopsConfigGcpCryptoKeyObject(
+                                projectId = gcpCryptoKey.projectId,
+                                keyRing = gcpCryptoKey.keyRing,
+                                name = gcpCryptoKey.name,
+                            ),
+                        publicAgeKeys = publicAgeKeys,
                     ),
                 ),
             ).retrieve()
             .bodyToMono<String>()
             .block() ?: throw SopsConfigGenerateFetchException(
             "Failed to generate sops config by calling init risc service",
-            ProcessRiScResultDTO("", ProcessingStatus.FailedToCreateSops, ProcessingStatus.FailedToCreateSops.message),
+            ProcessRiScResultDTO(
+                riScId = "",
+                status = ProcessingStatus.FailedToCreateSops,
+                statusMessage = ProcessingStatus.FailedToCreateSops.message,
+            ),
         )
 }
