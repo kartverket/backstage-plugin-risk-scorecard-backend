@@ -127,6 +127,7 @@ jobs:
 
   pharos:
     name: Run Pharos on docker image
+    if: ${{ !github.event.pull_request.draft }}
     needs: build
     permissions:
       actions: read
