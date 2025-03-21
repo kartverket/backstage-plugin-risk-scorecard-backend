@@ -61,8 +61,8 @@ data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
-    val numOfGeneralCommitsBehind: Int? = null,
     val riScContent: String?,
+    val numOfGeneralCommitsBehind: Int? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
@@ -227,7 +227,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
-                    numOfCommitsBehindMain = null,
+                    numOfGeneralCommitsBehind = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -378,8 +378,6 @@ class RiScService(
                                             accessTokens.githubAccessToken.value,
                                             lastModifiedDate,
                                         )
-                                    println(countSinceLastModifiedDate)
-
                                     nonNullContent
                                         .responseToRiScResult(
                                             id.id,
@@ -428,7 +426,6 @@ class RiScService(
                                         ContentStatus.SchemaValidationFailed,
                                         null,
                                         null,
-                                        null,
                                     )
                                 }
                             }
@@ -444,7 +441,7 @@ class RiScService(
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
-        numOfCommitsBehindMain: Int?,
+        numOfGeneralCommitsBehind: Int?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -454,8 +451,8 @@ class RiScService(
                         riScId,
                         ContentStatus.Success,
                         riScStatus,
-                        numOfCommitsBehindMain,
                         decryptedContent.riSc,
+                        numOfGeneralCommitsBehind,
                         decryptedContent.sopsConfig,
                         pullRequestUrl,
                     )
@@ -463,18 +460,18 @@ class RiScService(
                     LOGGER.error("An error occured when decrypting: ${e.message}")
                     when (e) {
                         is SOPSDecryptionException ->
-                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null, null)
+                            RiScContentResultDTO(riScId, ContentStatus.DecryptionFailed, riScStatus, null)
 
                         else ->
-                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, null)
+                            RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
                     }
                 }
 
             GithubStatus.NotFound ->
-                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null, null)
+                RiScContentResultDTO(riScId, ContentStatus.FileNotFound, riScStatus, null)
 
             else ->
-                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null, null)
+                RiScContentResultDTO(riScId, ContentStatus.Failure, riScStatus, null)
         }
 
     private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
