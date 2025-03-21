@@ -62,6 +62,7 @@ data class RiScContentResultDTO(
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
+    val numOfGeneralCommitsBehind: Int? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
@@ -226,6 +227,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
+                    numOfGeneralCommitsBehind = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -362,12 +364,27 @@ class RiScService(
                                         }
                                     }
                                 processedContent?.let { nonNullContent ->
+                                    val lastModifiedDate =
+                                        nonNullContent.data
+                                            .toString()
+                                            .substringAfterLast("lastmodified: ")
+                                            .substringBefore("mac")
+                                            .trimEnd()
+
+                                    val countSinceLastModifiedDate =
+                                        githubConnector.fetchGeneralCommitsSinceLastModified(
+                                            owner,
+                                            repository,
+                                            accessTokens.githubAccessToken.value,
+                                            lastModifiedDate,
+                                        )
                                     nonNullContent
                                         .responseToRiScResult(
                                             id.id,
                                             id.status,
                                             accessTokens.gcpAccessToken,
                                             id.pullRequestUrl,
+                                            countSinceLastModifiedDate,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
@@ -424,6 +441,7 @@ class RiScService(
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
+        numOfGeneralCommitsBehind: Int?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -434,6 +452,7 @@ class RiScService(
                         ContentStatus.Success,
                         riScStatus,
                         decryptedContent.riSc,
+                        numOfGeneralCommitsBehind,
                         decryptedContent.sopsConfig,
                         pullRequestUrl,
                     )

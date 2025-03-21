@@ -314,6 +314,21 @@ class GithubConnector(
             emptyList()
         }
 
+    internal suspend fun fetchGeneralCommitsSinceLastModified(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        since: String,
+    ): Int? =
+        try {
+            getGithubResponseSuspend(
+                githubHelper.uriToFetchGeneralCommitsSince(owner, repository, since),
+                accessToken,
+            ).awaitBody<List<GithubRefShaDTO>>().size
+        } catch (e: Exception) {
+            null
+        }
+
     internal fun updateOrCreateDraft(
         owner: String,
         repository: String,
