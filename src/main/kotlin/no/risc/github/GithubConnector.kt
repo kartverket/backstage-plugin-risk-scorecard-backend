@@ -314,7 +314,6 @@ class GithubConnector(
             emptyList()
         }
 
-
     internal suspend fun fetchGeneralCommitsSinceLastModified(
         owner: String,
         repository: String,

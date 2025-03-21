@@ -227,7 +227,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
-                    numOfCommitsBehindMain = null
+                    numOfCommitsBehindMain = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -371,9 +371,14 @@ class RiScService(
                                             .substringBefore("mac")
                                             .trimEnd()
 
-                                    val countSinceLastModifiedDate = githubConnector.fetchGeneralCommitsSinceLastModified(
-                                        owner, repository, accessTokens.githubAccessToken.value, lastModifiedDate
-                                    )
+                                    val countSinceLastModifiedDate =
+                                        githubConnector.fetchGeneralCommitsSinceLastModified(
+                                            owner,
+                                            repository,
+                                            accessTokens.githubAccessToken.value,
+                                            lastModifiedDate,
+                                        )
+                                    println(countSinceLastModifiedDate)
 
                                     nonNullContent
                                         .responseToRiScResult(
@@ -381,7 +386,7 @@ class RiScService(
                                             id.status,
                                             accessTokens.gcpAccessToken,
                                             id.pullRequestUrl,
-                                            countSinceLastModifiedDate
+                                            countSinceLastModifiedDate,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
