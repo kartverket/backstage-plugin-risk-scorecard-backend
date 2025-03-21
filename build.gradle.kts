@@ -1,12 +1,16 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "3.4.0"
+    id("org.springframework.boot") version "3.4.3"
     id("io.spring.dependency-management") version "1.1.6"
-    kotlin("jvm") version "2.0.21"
-    kotlin("plugin.spring") version "2.0.21"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
-    kotlin("plugin.serialization") version "2.0.21"
+    kotlin("jvm") version "2.1.10"
+    kotlin("plugin.spring") version "2.1.10"
+    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
+    kotlin("plugin.serialization") version "2.1.10"
+}
+
+ktlint {
+    version.set("1.5.0")
 }
 
 group = "no"
@@ -23,21 +27,21 @@ repositories {
     }
 }
 
-val kotlinVersion = "2.0.21"
-val springBootVersion = "3.4.1"
-val springSecurityVersion = "6.4.1"
-val kotlinxSerializationVersion = "1.7.3"
-val kotlinxCoroutinesVersion = "1.9.0"
-val nettyVersion = "4.1.115.Final"
-val micrometerVersion = "1.14.1"
-val fasterXmlJacksonVersion = "2.18.2"
+val kotlinVersion = "2.1.10"
+val springBootVersion = "3.4.3"
+val springSecurityVersion = "6.4.4"
+val kotlinxSerializationVersion = "1.8.0"
+val kotlinxCoroutinesVersion = "1.10.1"
+val nettyVersion = "4.1.118.Final"
+val micrometerVersion = "1.14.3"
+val fasterXmlJacksonVersion = "2.18.3"
 val kotlinJsonSchemaVersion = "0.48"
 val apacheCommonsVersion = "3.17.0"
-val googleGsonVersion = "2.11.0"
-val googleAuthVersion = "1.30.0"
-val googleGuavaVersion = "33.3.1-jre"
-val nimbusdsVersion = "9.47"
-val bouncyCastleVersion = "1.79"
+val googleGsonVersion = "2.12.1"
+val googleAuthVersion = "1.33.1"
+val googleGuavaVersion = "33.4.0-jre"
+val nimbusdsVersion = "10.0.2"
+val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
 val ninjaSquadVersion = "4.0.2"
 
@@ -45,7 +49,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("org.apache.tomcat.embed:tomcat-embed-core") {
         version {
-            strictly("10.1.34")
+            strictly("11.0.5")
         }
     }
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
@@ -81,7 +85,6 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
     testImplementation("com.ninja-squad:springmockk:$ninjaSquadVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 }
 
