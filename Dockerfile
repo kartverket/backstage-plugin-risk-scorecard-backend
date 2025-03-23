@@ -1,13 +1,14 @@
 # Make sure the logic is in sync with Dockerfile.M4
-FROM eclipse-temurin:21.0.2_13-jre-alpine AS build
-COPY . .
+ARG BUILD_IMAGE=eclipse-temurin:23.0.2_7-jdk-alpine-3.21
+ARG IMAGE=eclipse-temurin:23.0.2_7-jre-alpine-3.21
 
+FROM ${BUILD_IMAGE} AS build
+COPY . .
 # Get security updates
 RUN apk update && apk upgrade
-
 RUN ./gradlew build -x test
 
-FROM eclipse-temurin:21
+FROM ${IMAGE}
 
 # Create application directory and subdirectories.
 RUN mkdir -p /app /app/logs /app/tmp
