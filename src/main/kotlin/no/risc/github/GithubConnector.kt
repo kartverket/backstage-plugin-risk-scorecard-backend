@@ -4,7 +4,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.runBlocking
-import net.pwall.log.getLogger
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -434,7 +433,7 @@ class GithubConnector(
                     closePullRequestBody = githubHelper.bodyToClosePullRequest(),
                 ).bodyToMono<String>().block()
             } catch (e: Exception) {
-                getLogger().error("Could not close pull request with error message: ${e.message}.")
+                LOGGER.error("Could not close pull request with error message: ${e.message}.")
                 null
             }
         }

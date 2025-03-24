@@ -3,7 +3,7 @@ package no.risc.validation
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import net.pwall.json.JSONException
+import io.kjson.JSONException
 import net.pwall.json.schema.JSONSchema
 import net.pwall.json.schema.output.BasicOutput
 import no.risc.exception.exceptions.JSONSchemaFetchException
@@ -94,7 +94,7 @@ object JSONValidator {
         } catch (e: Exception) {
             when (e) {
                 is JSONException -> {
-                    if (e.message?.contains("Illegal JSON syntax") == true) {
+                    if (e.message.contains("Illegal JSON syntax")) {
                         val riscAsJson = yamlToJsonConverter(riScId, riScContent)
                         JSONSchema.parse(schema).validateBasic(riscAsJson)
                     } else {
