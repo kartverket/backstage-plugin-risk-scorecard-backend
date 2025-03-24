@@ -3,7 +3,7 @@ package no.risc.validation
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import net.pwall.json.JSONException
+import io.kjson.JSONException
 import net.pwall.json.schema.JSONSchema
 import net.pwall.json.schema.output.BasicOutput
 import no.risc.exception.exceptions.JSONSchemaFetchException
@@ -91,24 +91,17 @@ object JSONValidator {
     ): BasicOutput =
         try {
             JSONSchema.parse(schema).validateBasic(riScContent)
-        } catch (e: Exception) {
-            when (e) {
-                is JSONException -> {
-                    if (e.message?.contains("Illegal JSON syntax") == true) {
-                        val riscAsJson = yamlToJsonConverter(riScId, riScContent)
-                        JSONSchema.parse(schema).validateBasic(riscAsJson)
-                    } else {
-                        throw RiScNotValidOnFetchException(
-                            "RiSc with id: $riScId could not be validated against schema after being successfully converted to JSON",
-                            riScId,
-                        )
-                    }
-                }
-                else -> throw RiScNotValidOnFetchException(
-                    "RiSc with id: $riScId could not be validated against schema",
+        } catch (e: JSONException) {
+            if (!e.message.contains("Illegal JSON syntax")) {
+                throw RiScNotValidOnFetchException(
+                    "RiSc with id: $riScId could not be validated against schema after being successfully converted to JSON",
                     riScId,
                 )
             }
+            val riscAsJson = yamlToJsonConverter(riScId, riScContent)
+            JSONSchema.parse(schema).validateBasic(riscAsJson)
+        } catch (e: Exception) {
+            throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be validated against schema", riScId)
         }
 
     private fun yamlToJsonConverter(
