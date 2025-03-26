@@ -2,7 +2,6 @@ package no.risc.utils
 
 import com.google.common.collect.Maps
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -54,43 +53,34 @@ object FlatMapRiScUtil {
             value: String,
         ): String = "/$key: $value"
 
-        return map.flatMap { entry ->
-
-            when (val value = entry.value) {
+        return map.flatMap { (key, value) ->
+            when (value) {
                 is List<*> -> {
                     // When we encounter a List<*> we know that the value comes from a parsed JsonElement and is therefore a JsonArray.
                     val list = parseJSONToElement(value.toString()).jsonArray
 
                     // We should show empty lists
                     if (list.size == 0) {
-                        listOf(returnString(entry.key, value.toString()))
+                        listOf(returnString(key, value.toString()))
                     } else {
                         // Convert the list to a Map<String, Any?> and recursively call flatten
-                        val newMap = value.indices.associate { "${entry.key}/$it" to list[it] }
-                        flatten(newMap)
+                        flatten(list.withIndex().associate { "$key/${it.index}" to it.value })
                     }
                 }
 
                 is JsonElement -> {
                     // When we encounter a JsonElement, we want to try and parse it.
                     val json = parseJSONToElement(value.toString())
-                    when (json) {
-                        is JsonObject -> {
-                            // then, if the element is another JsonObject we want to flatten its content.
-                            if (json.keys.isEmpty()) {
-                                // Unless it is empty, there is no content to flatten.
-                                listOf(returnString(entry.key, value.toString()))
-                            } else {
-                                // Runs flatten recursively on JsonObjects content.
-                                json.flatMap { flatten(mapOf("${entry.key}/${it.key}" to it.value)) }
-                            }
-                        }
-                        // If the element is a normal value, stop the recursion.
-                        else -> listOf(returnString(entry.key, value.toString()))
+                    if (json is JsonObject && json.keys.isNotEmpty()) {
+                        // If the element is a JsonObject and has keys, then it must be handled recursively
+                        json.flatMap { flatten(mapOf("$key/${it.key}" to it.value)) }
+                    } else {
+                        // Otherwise, the element is empty or is a normal value
+                        listOf(returnString(key, value.toString()))
                     }
                 }
                 // Failsafe for unhandled value types.
-                else -> listOf("${entry.key} - $value is Unknown")
+                else -> listOf("/$key - $value is Unknown")
             }
         }
     }
@@ -109,8 +99,8 @@ fun diff(
 ): Difference {
     try {
         // Parse JsonObjects from riscs and transfrom to maps.
-        val baseJsonObject = parseJSONToElement(base).jsonObject.toMap()
-        val headJsonObject = parseJSONToElement(head).jsonObject.toMap()
+        val baseJsonObject = parseJSONToElement(base).jsonObject
+        val headJsonObject = parseJSONToElement(head).jsonObject
 
         // Flatten out the structures and transform to maps.
         val result1 = FlatMapRiScUtil.flatten(baseJsonObject).toDifferenceMap()
