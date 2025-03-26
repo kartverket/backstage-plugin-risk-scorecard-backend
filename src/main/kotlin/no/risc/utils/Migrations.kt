@@ -12,39 +12,57 @@ import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.MigrationStatus
 import no.risc.risc.RiScContentResultDTO
 
-fun migrate(
-    obj: RiScContentResultDTO,
-    latestSupportedVersion: String,
-): RiScContentResultDTO {
-    if (obj.riScContent == null) {
-        return obj
+// Instantiate formatters once, rather than every time migrate is called
+private val JSONParseFormat = Json { ignoreUnknownKeys = true }
+
+@OptIn(ExperimentalSerializationApi::class)
+private val JSONPrintFormat =
+    Json {
+        prettyPrint = true
+        prettyPrintIndent = "    "
     }
 
-    val content = obj.riScContent
+/**
+ * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
+ * performed as a number of steps. The method currently supports the following steps:
+ * - 3.2 -> 3.3
+ * - 3.3 -> 4.0 (breaking changes)
+ */
+fun migrate(
+    content: RiScContentResultDTO,
+    latestSupportedVersion: String,
+): RiScContentResultDTO {
+    if (content.riScContent == null) return content
 
-    val json = Json { ignoreUnknownKeys = true }
-    val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
+    val schemaVersion =
+        JSONParseFormat
+            .parseToJsonElement(content.riScContent)
+            .jsonObject
+            .getOrElse("schemaVersion") {
+                // If schemaVersion is not present, we cannot determine which version to migrate from
+                return content
+            }.jsonPrimitive
+            .content
 
-    val schemaVersion = jsonObject["schemaVersion"]?.jsonPrimitive?.content ?: return obj
-
+    // Only perform migration if not already at the desired version
     if (schemaVersion == latestSupportedVersion) {
-        if (obj.migrationStatus.migrationVersions.fromVersion != null) {
+        if (content.migrationStatus.migrationVersions.fromVersion != null) {
             // Set the toVersion to the latestSupportedVersion
-            obj.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
+            content.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
         }
-        return obj
+        return content
     }
 
     // Set the fromVersion only if it's not already set
-    if (obj.migrationStatus.migrationVersions.fromVersion == null) {
-        obj.migrationStatus.migrationVersions.fromVersion = schemaVersion
+    if (content.migrationStatus.migrationVersions.fromVersion == null) {
+        content.migrationStatus.migrationVersions.fromVersion = schemaVersion
     }
 
     val nextVersionObj =
         when (schemaVersion) {
-            "3.2" -> migrateTo32To33(obj)
-            "3.3" -> migrateFrom33To40(obj)
-            else -> return obj
+            "3.2" -> migrateTo32To33(content)
+            "3.3" -> migrateFrom33To40(content)
+            else -> return content
         }
 
     return migrate(nextVersionObj, latestSupportedVersion)
@@ -73,88 +91,22 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "owner" and "deadline" from actions
  * Remove "existingActions" from scenarios
  */
-@OptIn(ExperimentalSerializationApi::class)
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-    var content = obj.riScContent!!
-
-    val json = Json { ignoreUnknownKeys = true }
-    val jsonObject = json.parseToJsonElement(content).jsonObject.toMutableMap()
+    val jsonObject = JSONParseFormat.parseToJsonElement(obj.riScContent!!).jsonObject.toMutableMap()
 
     // Replace schemaVersion
     jsonObject["schemaVersion"] = JsonPrimitive("4.0")
 
-    // Update scenarios
-    val scenarios = jsonObject["scenarios"]?.jsonArray ?: JsonArray(emptyList())
-    val updatedScenarios =
-        scenarios.map { scenario ->
-            val scenarioObject = scenario.jsonObject.toMutableMap()
-
-            // Remove "existingActions"
-            val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap()
-            scenarioDetails?.remove("existingActions")
-
-            // Replace values in vulnerabilities array
-            val vulnerabilitiesArray = scenarioDetails?.get("vulnerabilities")?.jsonArray?.toMutableList()
-            if (vulnerabilitiesArray != null) {
-                val replacementMap =
-                    mapOf(
-                        "User repudiation" to "Unmonitored use",
-                        "Compromised admin user" to "Unauthorized access",
-                        "Escalation of rights" to "Unauthorized access",
-                        "Disclosed secret" to "Information leak",
-                        "Denial of service" to "Excessive use",
-                    )
-
-                val newVulnerabilities =
-                    vulnerabilitiesArray
-                        .map { it.jsonPrimitive.content }
-                        .toMutableSet()
-
-                replacementMap.forEach { (oldValue, newValue) ->
-                    if (newVulnerabilities.contains(oldValue)) {
-                        newVulnerabilities.remove(oldValue)
-                        newVulnerabilities.add(newValue)
-                    }
-                }
-
-                // Convert back to JsonArray
-                val updatedVulnerabilitiesArray = JsonArray(newVulnerabilities.map { JsonPrimitive(it) })
-                scenarioDetails["vulnerabilities"] = updatedVulnerabilitiesArray
-            }
-
-            // Remove "owner" and "deadline" from actions
-            val actionsArray = scenarioDetails?.get("actions")?.jsonArray?.toMutableList()
-            actionsArray?.forEachIndexed { index, actionElement ->
-                val actionObject = actionElement.jsonObject.toMutableMap()
-                actionObject["action"]
-                    ?.jsonObject
-                    ?.toMutableMap()
-                    ?.apply {
-                        this.remove("owner")
-                        this.remove("deadline")
-                    }?.let { updatedAction ->
-                        actionObject["action"] = JsonObject(updatedAction)
-                    }
-                actionsArray[index] = JsonObject(actionObject)
-            }
-            actionsArray?.let { scenarioDetails["actions"] = JsonArray(it) }
-
-            scenarioDetails?.let { scenarioObject["scenario"] = JsonObject(it) }
-            JsonObject(scenarioObject)
-        }
-
-    jsonObject["scenarios"] = JsonArray(updatedScenarios)
-
-    // Convert the updated JSON object back to string with pretty printing
-    val prettyJson =
-        Json {
-            prettyPrint = true
-            prettyPrintIndent = "    "
-        }
-    content = prettyJson.encodeToString(JsonObject(jsonObject))
+    // Update scenarios, if any are present
+    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
+        scenarios
+            .jsonArray
+            .map { updateScenarioFrom33To40(it.jsonObject) }
+            .let(::JsonArray)
+    }
 
     return obj.copy(
-        riScContent = content,
+        riScContent = JSONPrintFormat.encodeToString(JsonObject(jsonObject)),
         migrationStatus =
             MigrationStatus(
                 migrationChanges = true,
@@ -162,4 +114,66 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
                 migrationVersions = obj.migrationStatus.migrationVersions,
             ),
     )
+}
+
+/**
+ * Updates a scenario with the changes from 3.3 to 4.0.
+ *
+ * Replace values in vulnerabilities:
+ * - User repudiation -> Unmonitored use
+ * - Compromised admin user -> Unauthorized access
+ * - Escalation of rights -> Unauthorized access
+ * - Disclosed secret -> Information leak
+ * - Denial of service -> Excessive use
+ *
+ * Remove "owner" and "deadline" from actions
+ * Remove "existingActions" from scenarios
+ *
+ */
+private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
+    val scenarioObject = scenario.toMutableMap()
+
+    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+
+    // Remove "existingActions"
+    scenarioDetails.remove("existingActions")
+
+    // Changed vulnerability names from 3.3 to 4.0
+    val replacementMap =
+        mapOf(
+            "User repudiation" to "Unmonitored use",
+            "Compromised admin user" to "Unauthorized access",
+            "Escalation of rights" to "Unauthorized access",
+            "Disclosed secret" to "Information leak",
+            "Denial of service" to "Excessive use",
+        )
+
+    // Replace values in vulnerabilities array, if any vulnerabilities are present
+    scenarioDetails.computeIfPresent("vulnerabilities") { _, vulnerabilitiesArray ->
+        vulnerabilitiesArray
+            .jsonArray
+            .map { it.jsonPrimitive.content }
+            .map { replacementMap.getOrDefault(it, it) }
+            .distinct()
+            .map(::JsonPrimitive)
+            .let(::JsonArray)
+    }
+
+    // Remove "owner" and "deadline" from actions, if there are any actions
+    scenarioDetails.computeIfPresent("actions") { _, actionsArray ->
+        actionsArray
+            .jsonArray
+            .map { it.jsonObject.toMutableMap() }
+            .onEach {
+                it.computeIfPresent("action") { _, actionObject ->
+                    actionObject.jsonObject
+                        .filter { (key, _) -> key != "owner" && key != "deadline" }
+                        .let(::JsonObject)
+                }
+            }.map(::JsonObject)
+            .let(::JsonArray)
+    }
+
+    scenarioObject["scenario"] = JsonObject(scenarioDetails)
+    return JsonObject(scenarioObject)
 }
