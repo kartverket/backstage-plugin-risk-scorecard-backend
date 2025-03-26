@@ -1,4 +1,4 @@
-# Running eple
+# Running eple.
 
 > Prerequisites:
 >
