@@ -1,6 +1,5 @@
 package no.risc.utils
 
-import com.google.common.collect.Maps
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -92,6 +91,12 @@ class DifferenceException(
     message: String,
 ) : Exception(message)
 
+/**
+ * Computes the difference between the two JSON objects provided.
+ *
+ * @param base: The JSON object prior to the changes
+ * @param head: The JSON object after the changes
+ */
 @Throws(DifferenceException::class)
 fun diff(
     base: String,
@@ -106,13 +111,20 @@ fun diff(
         val result1 = FlatMapRiScUtil.flatten(baseJsonObject).toDifferenceMap()
         val result2 = FlatMapRiScUtil.flatten(headJsonObject).toDifferenceMap()
 
-        // Calculate the difference.
-        val difference = Maps.difference(result1, result2)
+        val entriesDiffering = mutableListOf<String>()
+        val entriesOnLeft = mutableListOf<String>()
 
-        // Transform the differences to string lists.
-        val entriesDiffering: List<String> = difference.entriesDiffering().entries.map { it.key + ": " + it.value }
-        val entriesOnLeft = difference.entriesOnlyOnLeft().entries.map { it.key + ": " + it.value }
-        val entriesOnRight = difference.entriesOnlyOnRight().entries.map { it.key + ": " + it.value }
+        result1.forEach { (key, value) ->
+            if (result2.containsKey(key)) {
+                if (result2[key] != value) {
+                    entriesDiffering.add("$key: ($value, ${result2[key]})")
+                }
+            } else {
+                entriesOnLeft.add("$key: $value")
+            }
+        }
+
+        val entriesOnRight = result2.filterKeys { !result1.containsKey(it) }.map { "${it.key}: ${it.value}" }
 
         return Difference(
             entriesOnLeft = entriesOnLeft,
