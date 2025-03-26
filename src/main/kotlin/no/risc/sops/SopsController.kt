@@ -7,7 +7,7 @@ import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.sops.model.CreateSopsConfigResponseBody
 import no.risc.sops.model.SopsConfigRequestBody
 import no.risc.sops.model.UpdateSopsConfigResponseBody
-import no.risc.utils.Validator
+import no.risc.validation.getValidationResult
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -33,7 +33,7 @@ class SopsController(
         @PathVariable("repositoryName") repositoryName: String,
         @RequestBody requestBody: SopsConfigRequestBody,
     ): CreateSopsConfigResponseBody {
-        val validationResult = Validator.validate(requestBody)
+        val validationResult = requestBody.getValidationResult()
         return if (validationResult.isValid) {
             sopsService.createSopsConfig(
                 repositoryOwner = repositoryOwner,
@@ -56,7 +56,7 @@ class SopsController(
         @RequestBody requestBody: SopsConfigRequestBody,
         @RequestParam ref: String,
     ): UpdateSopsConfigResponseBody {
-        val validationResult = Validator.validate(requestBody)
+        val validationResult = requestBody.getValidationResult()
         return if (validationResult.isValid) {
             sopsService.updateSopsConfig(
                 repositoryOwner = repositoryOwner,

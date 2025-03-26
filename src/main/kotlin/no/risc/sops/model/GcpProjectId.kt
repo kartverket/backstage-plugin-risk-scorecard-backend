@@ -1,6 +1,6 @@
 package no.risc.sops.model
 
-import no.risc.utils.ValidationResult
+import no.risc.validation.ValidationResult
 
 @JvmInline
 value class GcpProjectId(
