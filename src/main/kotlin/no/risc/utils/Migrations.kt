@@ -1,8 +1,5 @@
 package no.risc.utils
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -11,16 +8,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.MigrationStatus
 import no.risc.risc.RiScContentResultDTO
-
-// Instantiate formatters once, rather than every time migrate is called
-private val JSONParseFormat = Json { ignoreUnknownKeys = true }
-
-@OptIn(ExperimentalSerializationApi::class)
-private val JSONPrintFormat =
-    Json {
-        prettyPrint = true
-        prettyPrintIndent = "    "
-    }
 
 /**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
@@ -35,8 +22,7 @@ fun migrate(
     if (content.riScContent == null) return content
 
     val schemaVersion =
-        JSONParseFormat
-            .parseToJsonElement(content.riScContent)
+        parseJSONToElement(content.riScContent)
             .jsonObject
             .getOrElse("schemaVersion") {
                 // If schemaVersion is not present, we cannot determine which version to migrate from
@@ -92,7 +78,7 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  */
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val jsonObject = JSONParseFormat.parseToJsonElement(obj.riScContent!!).jsonObject.toMutableMap()
+    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
 
     // Replace schemaVersion
     jsonObject["schemaVersion"] = JsonPrimitive("4.0")
@@ -106,7 +92,7 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     }
 
     return obj.copy(
-        riScContent = JSONPrintFormat.encodeToString(JsonObject(jsonObject)),
+        riScContent = serializeJSON(JsonObject(jsonObject)),
         migrationStatus =
             MigrationStatus(
                 migrationChanges = true,
