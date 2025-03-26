@@ -239,7 +239,7 @@ class RiScService(
                     } catch (e: DifferenceException) {
                         InternDifference(
                             status = DifferenceStatus.JsonFailure,
-                            Difference(),
+                            differenceState = Difference(),
                             errorMessage = "${e.message}",
                         )
                     }
