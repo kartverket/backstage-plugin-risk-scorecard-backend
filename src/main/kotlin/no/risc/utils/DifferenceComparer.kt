@@ -59,7 +59,7 @@ object FlatMapRiScUtil {
             when (val value = entry.value) {
                 is List<*> -> {
                     // When we encounter a List<*> we know that the value comes from a parsed JsonElement and is therefore a JsonArray.
-                    val list = jsonParseToElement(value.toString()).jsonArray
+                    val list = parseJSONToElement(value.toString()).jsonArray
 
                     // We should show empty lists
                     if (list.size == 0) {
@@ -73,7 +73,7 @@ object FlatMapRiScUtil {
 
                 is JsonElement -> {
                     // When we encounter a JsonElement, we want to try and parse it.
-                    val json = jsonParseToElement(value.toString())
+                    val json = parseJSONToElement(value.toString())
                     when (json) {
                         is JsonObject -> {
                             // then, if the element is another JsonObject we want to flatten its content.
@@ -94,11 +94,6 @@ object FlatMapRiScUtil {
             }
         }
     }
-
-    fun jsonParseToElement(jsonString: String): JsonElement {
-        val json = Json { ignoreUnknownKeys = true }
-        return json.parseToJsonElement(jsonString)
-    }
 }
 
 private fun List<String>.toDifferenceMap(): Map<String, Any> = this.associate { it.split(": ").first() to it.split(": ").last() }
@@ -112,11 +107,10 @@ fun diff(
     base: String,
     head: String,
 ): Difference {
-    val json = Json { ignoreUnknownKeys = true }
     try {
         // Parse JsonObjects from riscs and transfrom to maps.
-        val baseJsonObject = json.parseToJsonElement(base).jsonObject.toMap()
-        val headJsonObject = json.parseToJsonElement(head).jsonObject.toMap()
+        val baseJsonObject = parseJSONToElement(base).jsonObject.toMap()
+        val headJsonObject = parseJSONToElement(head).jsonObject.toMap()
 
         // Flatten out the structures and transform to maps.
         val result1 = FlatMapRiScUtil.flatten(baseJsonObject).toDifferenceMap()
