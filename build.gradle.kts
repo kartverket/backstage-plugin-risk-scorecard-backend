@@ -39,7 +39,6 @@ val kotlinJsonSchemaVersion = "0.56"
 val apacheCommonsVersion = "3.17.0"
 val googleGsonVersion = "2.12.1"
 val googleAuthVersion = "1.33.1"
-val googleGuavaVersion = "33.4.0-jre"
 val nimbusdsVersion = "10.0.2"
 val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
@@ -74,7 +73,6 @@ dependencies {
 
     implementation("com.google.code.gson:gson:$googleGsonVersion")
     implementation("com.google.auth:google-auth-library-credentials:$googleAuthVersion")
-    implementation("com.google.guava:guava:$googleGuavaVersion")
 
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion")
     implementation("org.bouncycastle:bcpkix-jdk18on:$bouncyCastleVersion")
