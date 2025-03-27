@@ -19,6 +19,11 @@ on:
         required: true
         type: boolean
   pull_request:
+    types:
+      - opened
+      - ready_for_review
+      - reopened
+      - synchronize
     branches:
       - main
     paths:
@@ -84,6 +89,9 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew build
 
+      - name: Run tests
+        run: ./gradlew test
+
       - name: Set tag
         id: set-tag
         env:
@@ -127,6 +135,7 @@ jobs:
 
   pharos:
     name: Run Pharos on docker image
+    if: ${{ !github.event.pull_request.draft }}
     needs: build
     permissions:
       actions: read
@@ -136,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Run Pharos"
-        uses: kartverket/pharos@v0.2.3
+        uses: kartverket/pharos@v0.3.1
         with:
           image_url: ${{ needs.build.outputs.image_url }}
 

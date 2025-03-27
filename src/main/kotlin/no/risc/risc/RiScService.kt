@@ -563,7 +563,7 @@ class RiScService(
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId,
-                JSONValidator.getSchemaOnUpdate(riScId, content),
+                JSONValidator.getSchemaOnUpdate(riScId, content.schemaVersion),
                 content.riSc,
             )
         if (!validationStatus.valid) {

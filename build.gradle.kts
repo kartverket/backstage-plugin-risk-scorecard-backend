@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    id("org.springframework.boot") version "3.4.3"
-    id("io.spring.dependency-management") version "1.1.6"
-    kotlin("jvm") version "2.1.10"
-    kotlin("plugin.spring") version "2.1.10"
+    id("org.springframework.boot") version "3.4.4"
+    id("io.spring.dependency-management") version "1.1.7"
+    kotlin("jvm") version "2.1.20"
+    kotlin("plugin.spring") version "2.1.20"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
-    kotlin("plugin.serialization") version "2.1.10"
+    kotlin("plugin.serialization") version "2.1.20"
 }
 
 ktlint {
@@ -27,15 +27,15 @@ repositories {
     }
 }
 
-val kotlinVersion = "2.1.10"
-val springBootVersion = "3.4.3"
+val kotlinVersion = "2.1.20"
+val springBootVersion = "3.4.4"
 val springSecurityVersion = "6.4.4"
 val kotlinxSerializationVersion = "1.8.0"
 val kotlinxCoroutinesVersion = "1.10.1"
-val nettyVersion = "4.1.118.Final"
-val micrometerVersion = "1.14.3"
+val nettyVersion = "4.1.119.Final"
+val micrometerVersion = "1.14.5"
 val fasterXmlJacksonVersion = "2.18.3"
-val kotlinJsonSchemaVersion = "0.48"
+val kotlinJsonSchemaVersion = "0.56"
 val apacheCommonsVersion = "3.17.0"
 val googleGsonVersion = "2.12.1"
 val googleAuthVersion = "1.33.1"

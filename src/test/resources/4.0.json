@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "3.3",
+  "title": "Transformasjon",
+  "scope": "Sikkerhet av backend.",
+  "valuations": [],
+  "scenarios": [
+    {
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
+      "scenario": {
+        "ID": "14Kap",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "threatActors": [
+          "Organised crime"
+        ],
+        "vulnerabilities": [
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
+        ],
+        "risk": {
+          "summary": "",
+          "probability": 1,
+          "consequence": 1000
+        },
+        "actions": [
+          {
+            "title": "",
+            "action": {
+              "ID": "w100Q",
+              "description": "Innlogging. ",
+              "status": "Not started"
+            }
+          }
+        ],
+        "remainingRisk": {
+          "summary": "",
+          "probability": 0.1,
+          "consequence": 1000
+        }
+      }
+    }
+  ]
+}
