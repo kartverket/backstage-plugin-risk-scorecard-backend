@@ -47,16 +47,16 @@ internal class GlobalExceptionHandler {
         logger.error(ex.message, ex)
         return if (ex.onUpdateOfRiSC) {
             ProcessRiScResultDTO(
-                ex.riScId,
-                ProcessingStatus.ErrorWhenUpdatingRiSc,
-                "Could not fetch JSON schema",
+                riScId = ex.riScId,
+                status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+                statusMessage = "Could not fetch JSON schema",
             )
         } else {
             RiScContentResultDTO(
-                ex.riScId,
-                ContentStatus.SchemaNotFound,
-                null,
-                null,
+                riScId = ex.riScId,
+                status = ContentStatus.SchemaNotFound,
+                riScStatus = null,
+                riScContent = null,
             )
         }
     }
@@ -67,9 +67,9 @@ internal class GlobalExceptionHandler {
     fun handleRiScNotValidOnUpdateException(ex: RiScNotValidOnUpdateException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenUpdatingRiSc,
-            ex.validationError,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+            statusMessage = ex.validationError,
         )
     }
 
@@ -79,10 +79,10 @@ internal class GlobalExceptionHandler {
     fun handleRiScNotValidOnFetchException(ex: RiScNotValidOnFetchException): RiScContentResultDTO {
         logger.error(ex.message, ex)
         return RiScContentResultDTO(
-            ex.riScId,
-            ContentStatus.SchemaValidationFailed,
-            null,
-            null,
+            riScId = ex.riScId,
+            status = ContentStatus.SchemaValidationFailed,
+            riScStatus = null,
+            riScContent = null,
         )
     }
 
@@ -92,9 +92,9 @@ internal class GlobalExceptionHandler {
     fun handleSopsConfigFetchException(ex: SopsConfigFetchException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenUpdatingRiSc,
-            ex.responseMessage,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+            statusMessage = ex.responseMessage,
         )
     }
 
@@ -104,9 +104,9 @@ internal class GlobalExceptionHandler {
     fun handleSopsEncryptionException(ex: SopsEncryptionException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenUpdatingRiSc,
-            "Could not encrypt RiSc",
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+            statusMessage = "Could not encrypt RiSc",
         )
     }
 
@@ -116,8 +116,8 @@ internal class GlobalExceptionHandler {
     fun handleSopsDecryptionException(ex: SOPSDecryptionException): DecryptionFailure {
         logger.error(ex.message, ex)
         return DecryptionFailure(
-            ContentStatus.DecryptionFailed,
-            ex.message,
+            status = ContentStatus.DecryptionFailed,
+            message = ex.message,
         )
     }
 
@@ -127,9 +127,9 @@ internal class GlobalExceptionHandler {
     fun handleUpdatingRiScException(ex: UpdatingRiScException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenUpdatingRiSc,
-            ex.message,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+            statusMessage = ex.message,
         )
     }
 
@@ -147,9 +147,9 @@ internal class GlobalExceptionHandler {
     fun handleCreatePullRequestException(ex: CreatePullRequestException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenCreatingPullRequest,
-            ex.message,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenCreatingPullRequest,
+            statusMessage = ex.message,
         )
     }
 
@@ -159,9 +159,9 @@ internal class GlobalExceptionHandler {
     fun handleCreatingRiScException(ex: CreatingRiScException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenCreatingRiSc,
-            ex.message,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenCreatingRiSc,
+            statusMessage = ex.message,
         )
     }
 
@@ -171,9 +171,9 @@ internal class GlobalExceptionHandler {
     fun handleGenerateInitialRiScException(ex: GenerateInitialRiScException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            ex.riScId,
-            ProcessingStatus.ErrorWhenGeneratingInitialRiSc,
-            ex.message,
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenGeneratingInitialRiSc,
+            statusMessage = ex.message,
         )
     }
 
@@ -262,9 +262,9 @@ internal class GlobalExceptionHandler {
     fun handleFetchException(ex: FetchException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            "",
-            ex.status,
-            ex.status.message,
+            riScId = "",
+            status = ex.status,
+            statusMessage = ex.status.message,
         )
     }
 }

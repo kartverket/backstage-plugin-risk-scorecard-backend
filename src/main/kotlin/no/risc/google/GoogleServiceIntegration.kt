@@ -139,18 +139,18 @@ class GoogleServiceIntegration(
                     it to
                         async(Dispatchers.IO) {
                             testIamPermissions(
-                                it.getRiScCryptoKeyResourceId(),
-                                gcpAccessToken,
-                                GcpIamPermission.ENCRYPT_DECRYPT,
+                                cryptoKeyResourceId = it.getRiScCryptoKeyResourceId(),
+                                gcpAccessToken = gcpAccessToken,
+                                permissions = GcpIamPermission.ENCRYPT_DECRYPT,
                             )
                         }
                 }.map { (gcpProjectId, hasAccess) ->
                     GcpCryptoKeyObject(
-                        gcpProjectId.value,
-                        gcpProjectId.getRiScKeyRing(),
-                        gcpProjectId.getRiScCryptoKey(),
-                        gcpProjectId.getRiScCryptoKeyResourceId(),
-                        hasAccess.await(),
+                        projectId = gcpProjectId.value,
+                        keyRing = gcpProjectId.getRiScKeyRing(),
+                        name = gcpProjectId.getRiScCryptoKey(),
+                        resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
+                        hasEncryptDecryptAccess = hasAccess.await(),
                     )
                 }.toMutableList()
         }
