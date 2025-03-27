@@ -36,7 +36,6 @@ val nettyVersion = "4.1.119.Final"
 val micrometerVersion = "1.14.5"
 val fasterXmlJacksonVersion = "2.18.3"
 val kotlinJsonSchemaVersion = "0.56"
-val apacheCommonsVersion = "3.17.0"
 val googleGsonVersion = "2.12.1"
 val googleAuthVersion = "1.33.1"
 val nimbusdsVersion = "10.0.2"
@@ -69,7 +68,6 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$fasterXmlJacksonVersion")
     implementation("net.pwall.json:json-kotlin-schema:$kotlinJsonSchemaVersion")
-    implementation("org.apache.commons:commons-lang3:$apacheCommonsVersion")
 
     implementation("com.google.code.gson:gson:$googleGsonVersion")
     implementation("com.google.auth:google-auth-library-credentials:$googleAuthVersion")
