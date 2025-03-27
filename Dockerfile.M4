@@ -1,5 +1,5 @@
 # Make sure the logic is in sync with Dockerfile.
-FROM amazoncorretto:21-alpine AS build
+FROM amazoncorretto:24-alpine AS build
 COPY . .
 
 # Get security updates
@@ -7,7 +7,7 @@ RUN apk update && apk upgrade
 
 RUN ./gradlew build -x test
 
-FROM amazoncorretto:21-alpine
+FROM amazoncorretto:24-alpine
 
 # Create application directory and subdirectories.
 RUN mkdir -p /app /app/logs /app/tmp
