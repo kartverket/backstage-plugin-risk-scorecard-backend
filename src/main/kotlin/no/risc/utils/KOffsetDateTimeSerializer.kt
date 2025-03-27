@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-object KOffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
+class KOffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
     private val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("OffsetDateTime", PrimitiveKind.STRING)
 
