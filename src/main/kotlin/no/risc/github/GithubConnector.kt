@@ -20,10 +20,7 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
-import no.risc.risc.RiScIdentifier
-import no.risc.risc.RiScStatus
+import no.risc.risc.*
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
@@ -314,20 +311,40 @@ class GithubConnector(
             emptyList()
         }
 
-    internal suspend fun fetchGeneralCommitsSinceLastModified(
+    internal suspend fun fetchLastPublishedRiScDateAndCommitNumber(
         owner: String,
         repository: String,
         accessToken: String,
-        since: String,
-    ): Int? =
-        try {
-            getGithubResponseSuspend(
-                githubHelper.uriToFetchGeneralCommitsSince(owner, repository, since),
-                accessToken,
-            ).awaitBody<List<GithubRefShaDTO>>().size
+        path: String,
+    ): LastPublished? {
+        return try {
+            val lastCommitOnPath =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchCommits(
+                        owner = owner,
+                        repository = repository,
+                        path = path,
+                    ),
+                    accessToken,
+                ).awaitBody<List<GithubRefShaDTO>>()[0]
+
+            val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
+
+            val numberOfCommitsSinceDateTime =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchCommitsSinceLastPublishedRiScDateTime(
+                        owner = owner,
+                        repository = repository,
+                        lastPublishedRiScDateTime = dateOfLastPublished,
+                    ),
+                    accessToken,
+                ).awaitBody<List<GithubRefShaDTO>>().size
+
+            return LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
         } catch (e: Exception) {
             null
         }
+    }
 
     internal fun updateOrCreateDraft(
         owner: String,

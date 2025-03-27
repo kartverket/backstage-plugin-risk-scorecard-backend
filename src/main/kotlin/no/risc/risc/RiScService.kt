@@ -1,5 +1,4 @@
 package no.risc.risc
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -23,6 +22,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
+import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
+import java.time.OffsetDateTime
 
 class ProcessRiScResultDTO(
     riScId: String,
@@ -57,12 +58,19 @@ data class CreateRiScResultDTO(
 )
 
 @Serializable
+data class LastPublished(
+    @Serializable(KOffsetDateTimeSerializer::class)
+    val dateTime: OffsetDateTime,
+    val numberOfCommits: Int,
+)
+
+@Serializable
 data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
-    val numOfGeneralCommitsBehind: Int? = null,
+    val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
@@ -227,7 +235,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
-                    numOfGeneralCommitsBehind = null,
+                    lastPublished = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -364,19 +372,12 @@ class RiScService(
                                         }
                                     }
                                 processedContent?.let { nonNullContent ->
-                                    val lastModifiedDate =
-                                        nonNullContent.data
-                                            .toString()
-                                            .substringAfterLast("lastmodified: ")
-                                            .substringBefore("mac")
-                                            .trimEnd()
-
-                                    val countSinceLastModifiedDate =
-                                        githubConnector.fetchGeneralCommitsSinceLastModified(
+                                    val lastPublished =
+                                        githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
                                             owner,
                                             repository,
                                             accessTokens.githubAccessToken.value,
-                                            lastModifiedDate,
+                                            ".security/risc/${id.id}.risc.yaml",
                                         )
                                     nonNullContent
                                         .responseToRiScResult(
@@ -384,7 +385,7 @@ class RiScService(
                                             id.status,
                                             accessTokens.gcpAccessToken,
                                             id.pullRequestUrl,
-                                            countSinceLastModifiedDate,
+                                            lastPublished,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
@@ -441,7 +442,7 @@ class RiScService(
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
-        numOfGeneralCommitsBehind: Int?,
+        lastPublished: LastPublished?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -452,7 +453,7 @@ class RiScService(
                         ContentStatus.Success,
                         riScStatus,
                         decryptedContent.riSc,
-                        numOfGeneralCommitsBehind,
+                        lastPublished,
                         decryptedContent.sopsConfig,
                         pullRequestUrl,
                     )
