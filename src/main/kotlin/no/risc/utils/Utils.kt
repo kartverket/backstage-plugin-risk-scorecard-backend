@@ -9,12 +9,24 @@ data class Repository(
     val repositoryName: String,
 )
 
+/**
+ * Encodes the string as Base64.
+ */
 fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArray())
 
+/**
+ * Decodes the string from Base64.
+ */
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
+/**
+ * Generates a RiScId on the following format `<filenamePrefix>-<5-letter-alphanumeric-string>`.
+ */
 fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${generateRandomAlphanumericString(5)}"
 
+/**
+ * Generates a SopsId on the following format `sops-<5-letter-alphanumeric-string>`.
+ */
 fun generateSopsId() = "sops-${generateRandomAlphanumericString(5)}"
 
 private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
