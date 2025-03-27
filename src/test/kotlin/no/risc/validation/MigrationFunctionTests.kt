@@ -1,4 +1,4 @@
-package no.risc
+package no.risc.validation
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
