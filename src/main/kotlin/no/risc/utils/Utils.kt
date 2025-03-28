@@ -1,58 +1,48 @@
 package no.risc.utils
 
-import no.risc.github.models.FileNameDTO
-import org.apache.commons.lang3.RandomStringUtils
 import java.util.Base64
-
-fun getFileNameWithHighestVersion(files: List<FileNameDTO>): String? =
-    files
-        .maxByOrNull { dto ->
-            val version = dto.value.substringAfterLast("_v").substringBefore(".json")
-            val (major, minor) = version.split("_").map { it.toInt() }
-            MajorMinorVersion(major, minor)
-        }?.value
-
-data class MajorMinorVersion(
-    val major: Int,
-    val minor: Int,
-) : Comparable<MajorMinorVersion> {
-    override fun compareTo(other: MajorMinorVersion): Int =
-        if (major != other.major) {
-            major.compareTo(other.major)
-        } else {
-            minor.compareTo(other.minor)
-        }
-}
+import java.util.stream.Stream
+import kotlin.random.Random
 
 data class Repository(
     val repositoryOwner: String,
     val repositoryName: String,
 )
 
+/**
+ * Encodes the string as Base64.
+ */
 fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArray())
 
+/**
+ * Decodes the string from Base64.
+ */
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
-fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${RandomStringUtils.randomAlphanumeric(5)}"
+/**
+ * Generates a RiScId on the following format `<filenamePrefix>-<5-letter-alphanumeric-string>`.
+ */
+fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${generateRandomAlphanumericString(5)}"
 
-fun generateSopsId() = "sops-${RandomStringUtils.randomAlphanumeric(5)}"
+/**
+ * Generates a SopsId on the following format `sops-<5-letter-alphanumeric-string>`.
+ */
+fun generateSopsId() = "sops-${generateRandomAlphanumericString(5)}"
 
-fun removePathRegex(config: String): String {
-    val regex = "(?<pathregex>path_regex:.*)".toRegex()
+private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
-    val matchResult = regex.find(config)
-
-    // On match with pathregex, remove the parameter from the config. The backend is not working with a filesystem.
-    return if (matchResult?.groups?.get("pathregex") != null) {
-        config.replace(matchResult.groups["pathregex"]!!.value, "")
-    } else {
-        config
-    }
-}
-
-fun modifySopsConfigForGitHub(config: String) =
-    config
-        .lines()
-        .drop(1) // Remove the first line (---)
-        .joinToString("\n")
-        .replace("\"\\\\.risc\\\\.yaml$\"", "\\.risc\\.yaml$")
+/**
+ * Generates a random alphanumeric string
+ *
+ * @param length The number of characters in the generated string
+ * @param random The random number generator to use, defaults to `Random.Default` if not supplied.
+ */
+fun generateRandomAlphanumericString(
+    length: Int,
+    random: Random = Random,
+): String =
+    Stream
+        .generate { alphaNumericChars.random(random) }
+        .limit(length.toLong())
+        .toArray()
+        .joinToString(separator = "")

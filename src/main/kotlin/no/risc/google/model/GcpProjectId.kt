@@ -1,6 +1,6 @@
 package no.risc.google.model
 
-import no.risc.utils.ValidationResult
+import no.risc.validation.ValidationResult
 
 data class GcpProjectId(
     val value: String = "",
