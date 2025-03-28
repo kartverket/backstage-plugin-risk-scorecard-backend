@@ -1,4 +1,4 @@
-package no.risc.validation
+package no.risc.utils
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -9,9 +9,6 @@ import no.risc.risc.MigrationStatus
 import no.risc.risc.MigrationVersions
 import no.risc.risc.RiScContentResultDTO
 import no.risc.risc.RiScStatus
-import no.risc.utils.migrate
-import no.risc.utils.migrateFrom33To40
-import no.risc.utils.migrateTo32To33
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
