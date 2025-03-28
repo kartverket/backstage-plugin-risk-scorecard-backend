@@ -1,10 +1,7 @@
-package no.risc.validation
+package no.risc.utils
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import no.risc.utils.DifferenceException
-import no.risc.utils.FlatMapRiScUtil
-import no.risc.utils.diff
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
 import org.junit.jupiter.api.Assertions.assertTrue
