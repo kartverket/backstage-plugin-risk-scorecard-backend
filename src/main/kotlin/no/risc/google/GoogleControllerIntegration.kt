@@ -24,6 +24,6 @@ class GoogleControllerIntegration(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
     ): List<GcpCryptoKeyObject> {
         LOGGER.info("Fetching GCP crypto keys")
-        return googleServiceIntegration.getGcpCryptoKeys(GCPAccessToken(gcpAccessToken))
+        return googleServiceIntegration.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken(gcpAccessToken))
     }
 }

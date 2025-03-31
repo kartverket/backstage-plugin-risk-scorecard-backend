@@ -29,11 +29,11 @@ class AccessTokenValidationFilter(
                     )
 
                 validationService.validateAccessTokens(
-                    request.getHeader("GCP-Access-Token"),
-                    request.getHeader("GitHub-Access-Token"),
-                    GitHubPermission.WRITE,
-                    repository.repositoryOwner,
-                    repository.repositoryName,
+                    gcpAccessToken = request.getHeader("GCP-Access-Token"),
+                    gitHubAccessToken = request.getHeader("GitHub-Access-Token"),
+                    gitHubPermissionNeeded = GitHubPermission.WRITE,
+                    repositoryOwner = repository.repositoryOwner,
+                    repositoryName = repository.repositoryName,
                 )
             }
             filterChain.doFilter(request, response)

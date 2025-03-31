@@ -90,7 +90,13 @@ data class GithubPullRequestObject(
     val number: Int,
     val user: GitHubPullRequestUser,
 ) {
-    fun toPullRequestObject() = PullRequestObject(url, title, user.login, createdAt)
+    fun toPullRequestObject() =
+        PullRequestObject(
+            url = url,
+            title = title,
+            openedBy = user.login,
+            createdAt = createdAt,
+        )
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)

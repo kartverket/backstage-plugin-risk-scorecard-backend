@@ -36,11 +36,11 @@ class SopsController(
         val validationResult = Validator.validate(requestBody)
         return if (validationResult.isValid) {
             sopsService.createSopsConfig(
-                repositoryOwner,
-                repositoryName,
-                requestBody.gcpCryptoKey,
-                requestBody.publicAgeKeys,
-                AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                gcpCryptoKey = requestBody.gcpCryptoKey,
+                publicAgeKeys = requestBody.publicAgeKeys,
+                accessTokens = AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )
         } else {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, validationResult.message)
@@ -59,12 +59,12 @@ class SopsController(
         val validationResult = Validator.validate(requestBody)
         return if (validationResult.isValid) {
             sopsService.updateSopsConfig(
-                repositoryOwner,
-                repositoryName,
-                ref,
-                requestBody.gcpCryptoKey,
-                requestBody.publicAgeKeys,
-                AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                branch = ref,
+                gcpCryptoKey = requestBody.gcpCryptoKey,
+                publicAgeKeys = requestBody.publicAgeKeys,
+                accessTokens = AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)),
             )
         } else {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, validationResult.message)
@@ -79,9 +79,13 @@ class SopsController(
         @PathVariable("repositoryName") repositoryName: String,
         @PathVariable("branch") branch: String,
     ) = sopsService.openPullRequest(
-        repositoryOwner,
-        repositoryName,
-        branch,
-        AccessTokens(GithubAccessToken(gitHubAccessToken), GCPAccessToken(gcpAccessToken)).githubAccessToken,
+        repositoryOwner = repositoryOwner,
+        repositoryName = repositoryName,
+        sopsId = branch,
+        githubAccessToken =
+            AccessTokens(
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+            ).githubAccessToken,
     )
 }
