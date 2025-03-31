@@ -318,15 +318,15 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-        path: String,
-    ): LastPublished? =
-       try {
+        riScId: String,
+    ): LastPublished? {
+        return try {
             val lastCommitOnPath =
                 getGithubResponseSuspend(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
-                        path = path,
+                        riScId = riScId,
                     ),
                     accessToken,
                 ).awaitBody<List<GithubRefShaDTO>>()[0]
@@ -335,10 +335,10 @@ class GithubConnector(
 
             val numberOfCommitsSinceDateTime =
                 getGithubResponseSuspend(
-                    githubHelper.uriToFetchCommitsSinceLastPublishedRiScDateTime(
+                    githubHelper.uriToFetchCommitsSince(
                         owner = owner,
                         repository = repository,
-                        lastPublishedRiScDateTime = dateOfLastPublished,
+                        since = dateOfLastPublished,
                     ),
                     accessToken,
                 ).awaitBody<List<GithubRefShaDTO>>().size
@@ -347,6 +347,7 @@ class GithubConnector(
         } catch (e: Exception) {
             null
         }
+    }
 
     internal fun updateOrCreateDraft(
         owner: String,

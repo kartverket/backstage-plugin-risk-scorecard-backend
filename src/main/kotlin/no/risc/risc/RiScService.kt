@@ -377,7 +377,7 @@ class RiScService(
                                             owner,
                                             repository,
                                             accessTokens.githubAccessToken.value,
-                                            ".security/risc/${id.id}.risc.yaml",
+                                            id.id,
                                         )
                                     nonNullContent
                                         .responseToRiScResult(

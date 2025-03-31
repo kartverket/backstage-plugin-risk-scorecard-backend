@@ -329,13 +329,15 @@ class GithubHelper(
     fun uriToFetchCommits(
         owner: String,
         repository: String,
+        riScId: String? = null,
         branch: String? = null,
-        path: String? = null,
     ): String =
-        if (branch == null && path == null) {
+        if (branch == null && riScId == null) {
             "/$owner/$repository/commits"
         } else {
-            "/$owner/$repository/commits?${ branch?.let { "sha=$branch" } ?: ""}&${ path?.let { "path=$path" } ?: "" }"
+            "/$owner/$repository/commits?${ branch?.let {
+                "sha=$branch"
+            } ?: ""}&${ riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml\"" } ?: "" }"
         }
 
     fun uriToFetchCommitsSince(
