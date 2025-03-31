@@ -319,8 +319,8 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         path: String,
-    ): LastPublished? {
-        return try {
+    ): LastPublished? =
+       try {
             val lastCommitOnPath =
                 getGithubResponseSuspend(
                     githubHelper.uriToFetchCommits(
@@ -347,7 +347,6 @@ class GithubConnector(
         } catch (e: Exception) {
             null
         }
-    }
 
     internal fun updateOrCreateDraft(
         owner: String,
