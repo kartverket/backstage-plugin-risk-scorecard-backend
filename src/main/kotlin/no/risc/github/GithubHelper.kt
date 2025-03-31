@@ -338,9 +338,9 @@ class GithubHelper(
             "/$owner/$repository/commits?${ branch?.let { "sha=$branch" } ?: ""}&${ path?.let { "path=$path" } ?: "" }"
         }
 
-    fun uriToFetchCommitsSinceLastPublishedRiScDateTime(
+    fun uriToFetchCommitsSince(
         owner: String,
         repository: String,
-        lastPublishedRiScDateTime: OffsetDateTime,
-    ): String = "/$owner/$repository/commits?since=$lastPublishedRiScDateTime"
+        since: OffsetDateTime,
+    ): String = "/$owner/$repository/commits?since=$since"
 }
