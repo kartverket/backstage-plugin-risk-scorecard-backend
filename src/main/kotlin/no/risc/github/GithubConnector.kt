@@ -353,7 +353,7 @@ class GithubConnector(
                         riScId = riScId,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefShaDTO>>()[0]
+                ).awaitBody<List<GithubRefCommitDTO>>()[0]
 
             val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
 
@@ -365,7 +365,7 @@ class GithubConnector(
                         since = dateOfLastPublished,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefShaDTO>>().size
+                ).awaitBody<List<GithubRefCommitDTO>>().size
 
             return LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
         } catch (e: Exception) {

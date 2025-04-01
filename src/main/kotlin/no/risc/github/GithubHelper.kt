@@ -34,6 +34,12 @@ data class GithubRefShaCommit(
 data class GithubRefShaDTO(
     val sha: String,
     val url: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubRefCommitDTO(
+    val sha: String,
+    val url: String,
     val commit: GithubRefShaCommit,
 )
 
