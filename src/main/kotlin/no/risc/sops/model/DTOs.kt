@@ -53,5 +53,3 @@ data class GcpCryptoKeyObject(
     val resourceId: String,
     val hasEncryptDecryptAccess: Boolean,
 )
-
-fun GcpCryptoKeyObject.getValidationResult() = GcpProjectId(projectId).getValidationResult()

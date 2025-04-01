@@ -1,9 +1,10 @@
-package no.risc
+package no.risc.utils
 
-import no.risc.utils.DifferenceException
-import no.risc.utils.diff
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrowsExactly
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class DifferenceComparerTests {
@@ -31,5 +32,38 @@ class DifferenceComparerTests {
 
         // Act & Assert
         assertThrowsExactly(DifferenceException::class.java) { diff(baseContent, corruptContent) }
+    }
+
+    @Test
+    fun `test flatten JSON`() {
+        val json =
+            "{ \"firstKey\": \"hello\", \"secondKey\": { \"thirdKey\": [ \"world\", \"and\", \"others\"], \"fourthKey\": 4 } }"
+        val jsonObject = Json.parseToJsonElement(json).jsonObject
+
+        val flattened = FlatMapRiScUtil.flatten(jsonObject)
+
+        assertEquals(flattened.size, flattened.distinct().size, "No element should be repeated in the flattened JSON.")
+
+        val expectedValues =
+            listOf(
+                "/firstKey: \"hello\"",
+                "/secondKey/thirdKey/0: \"world\"",
+                "/secondKey/thirdKey/1: \"and\"",
+                "/secondKey/thirdKey/2: \"others\"",
+                "/secondKey/fourthKey: 4",
+            )
+
+        assertEquals(expectedValues.size, flattened.size, "The flattened JSON contains too few/many items")
+        assertTrue(flattened.toSet().containsAll(expectedValues), "The flattened JSON does not contain all the expected items")
+    }
+
+    @Test
+    fun `test flatten JSON handles unknown types`() {
+        val obj = Object()
+        val map = mapOf("object" to obj)
+        val flattened = FlatMapRiScUtil.flatten(map)
+
+        assertEquals(1, flattened.size)
+        assertTrue(flattened.contains("/object - $obj is Unknown"))
     }
 }
