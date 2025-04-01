@@ -343,7 +343,7 @@ class GithubHelper(
         } else {
             "/$owner/$repository/commits?${ branch?.let {
                 "sha=$branch"
-            } ?: ""}&${ riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml\"" } ?: "" }"
+            } ?: ""}&${ riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: "" }"
         }
 
     fun uriToFetchCommitsSince(

@@ -374,10 +374,10 @@ class RiScService(
                                 processedContent?.let { nonNullContent ->
                                     val lastPublished =
                                         githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                            owner,
-                                            repository,
-                                            accessTokens.githubAccessToken.value,
-                                            id.id,
+                                            owner = owner,
+                                            repository = repository,
+                                            accessToken = accessTokens.githubAccessToken.value,
+                                            riScId = id.id,
                                         )
                                     nonNullContent
                                         .responseToRiScResult(
