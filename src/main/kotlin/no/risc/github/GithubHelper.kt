@@ -21,9 +21,26 @@ data class GithubReferenceObjectDTO(
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubRefShaCommitCommiter(
+    @JsonProperty("date") val dateTime: OffsetDateTime,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubRefShaCommit(
+    val committer: GithubRefShaCommitCommiter,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubRefShaDTO(
     val sha: String,
     val url: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GithubRefCommitDTO(
+    val sha: String,
+    val url: String,
+    val commit: GithubRefShaCommit,
 )
 
 data class GithubReferenceObject(
@@ -320,4 +337,24 @@ class GithubHelper(
         riScId: String,
         branch: String,
     ): String = "/$owner/$repository/commits?sha=$branch&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
+
+    fun uriToFetchCommits(
+        owner: String,
+        repository: String,
+        riScId: String? = null,
+        branch: String? = null,
+    ): String =
+        if (branch == null && riScId == null) {
+            "/$owner/$repository/commits"
+        } else {
+            "/$owner/$repository/commits?${ branch?.let {
+                "sha=$branch"
+            } ?: ""}&${ riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: "" }"
+        }
+
+    fun uriToFetchCommitsSince(
+        owner: String,
+        repository: String,
+        since: OffsetDateTime,
+    ): String = "/$owner/$repository/commits?since=$since"
 }
