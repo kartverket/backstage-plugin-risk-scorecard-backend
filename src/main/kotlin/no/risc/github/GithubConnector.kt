@@ -19,6 +19,7 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
+import no.risc.risc.LastPublished
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScIdentifier
@@ -336,6 +337,41 @@ class GithubConnector(
         } catch (e: Exception) {
             emptyList()
         }
+
+    internal suspend fun fetchLastPublishedRiScDateAndCommitNumber(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        riScId: String,
+    ): LastPublished? {
+        return try {
+            val lastCommitOnPath =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchCommits(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId,
+                    ),
+                    accessToken,
+                ).awaitBody<List<GithubRefCommitDTO>>()[0]
+
+            val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
+
+            val numberOfCommitsSinceDateTime =
+                getGithubResponseSuspend(
+                    githubHelper.uriToFetchCommitsSince(
+                        owner = owner,
+                        repository = repository,
+                        since = dateOfLastPublished,
+                    ),
+                    accessToken,
+                ).awaitBody<List<GithubRefCommitDTO>>().size
+
+            return LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     internal fun updateOrCreateDraft(
         owner: String,
