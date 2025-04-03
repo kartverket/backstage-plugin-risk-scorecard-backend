@@ -4,22 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - LOCAL=true
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    env_file:
-      - .env
-
-  appm4:
-    # This app is made for Mac M4.
-    # Conditionals are difficult in Dockerfiles, we therefore opted for a separate setup
-    # for M4 architecture until the original image has patched whatever caused issues.
-    build:
-      context: .
-      dockerfile: Dockerfile.M4
-      args:
-        - LOCAL=true
+        LOCAL: true
+        BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:23-jre-alpine}
+        IMAGE: ${IMAGE:-eclipse-temurin:23-alpine}
     ports:
       - "8080:8080"
       - "8081:8081"

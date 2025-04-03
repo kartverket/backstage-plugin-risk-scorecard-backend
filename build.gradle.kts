@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("org.springframework.boot") version "3.4.4"
     id("io.spring.dependency-management") version "1.1.7"
@@ -16,8 +14,15 @@ ktlint {
 group = "no"
 version = "0.0.1-SNAPSHOT"
 
+kotlin {
+    jvmToolchain(23)
+    compilerOptions {
+        freeCompilerArgs.add("-Xjsr305=strict")
+    }
+}
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_23
 }
 
 repositories {
@@ -82,13 +87,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
     testImplementation("com.ninja-squad:springmockk:$ninjaSquadVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "21"
-    }
 }
 
 tasks.withType<Test> {
