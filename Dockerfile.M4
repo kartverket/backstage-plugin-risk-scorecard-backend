@@ -1,13 +1,16 @@
 # Make sure the logic is in sync with Dockerfile.
-FROM amazoncorretto:21-alpine AS build
+FROM amazoncorretto:23-alpine AS build
 COPY . .
+
+# Need to remove local build files from the container. Use `COPY --exclude=./build . .` when --exclude becomes available.
+RUN rm -rf /build
 
 # Get security updates
 RUN apk update && apk upgrade
 
 RUN ./gradlew build -x test
 
-FROM amazoncorretto:21-alpine
+FROM amazoncorretto:23-alpine
 
 # Create application directory and subdirectories.
 RUN mkdir -p /app /app/logs /app/tmp
