@@ -2,9 +2,6 @@
 FROM eclipse-temurin:23-jre-alpine AS build
 COPY . .
 
-# Need to remove local build files from the container. Use `COPY --exclude=./build . .` when --exclude becomes available.
-RUN rm -rf /build
-
 # Get security updates
 RUN apk update && apk upgrade
 
