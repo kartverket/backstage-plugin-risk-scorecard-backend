@@ -35,7 +35,7 @@ repositories {
 val kotlinVersion = "2.1.20"
 val springBootVersion = "3.4.4"
 val springSecurityVersion = "6.4.4"
-val kotlinxSerializationVersion = "1.8.0"
+val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.1"
 val nettyVersion = "4.1.119.Final"
 val micrometerVersion = "1.14.5"
@@ -65,6 +65,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$kotlinxCoroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:$kotlinxSerializationVersion")
 
     implementation("io.netty:netty-all:$nettyVersion")
 
