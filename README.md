@@ -21,11 +21,10 @@ cp .env.example .env
 
 ## Run with docker
 
-The docker-compose setup contains three different containers (services):
+The docker-compose setup contains two different containers (services):
 
-- `app`: Default development container for non-M4 Mac machines.
-- `appm4` Temporary container for M4 until image used in `app` is patched.
-- `skip`: TODO, but looks like a container aimed at production.
+- `app`: Development container.
+- `skip`: Production container in [SKIP](https://skip.kartverket.no/).
 
 To run, use these commands:
 
