@@ -1,6 +1,5 @@
 plugins {
     id("org.springframework.boot") version "3.4.4"
-    id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.spring") version "2.1.20"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
@@ -35,7 +34,7 @@ repositories {
 val kotlinVersion = "2.1.20"
 val springBootVersion = "3.4.4"
 val springSecurityVersion = "6.4.4"
-val kotlinxSerializationVersion = "1.8.0"
+val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.1"
 val nettyVersion = "4.1.119.Final"
 val micrometerVersion = "1.14.5"
