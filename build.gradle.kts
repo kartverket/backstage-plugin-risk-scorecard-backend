@@ -46,6 +46,7 @@ val nimbusdsVersion = "10.1"
 val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
 val ninjaSquadVersion = "4.0.2"
+val mockkVersion = "1.13.17"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -86,6 +87,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
     testImplementation("com.ninja-squad:springmockk:$ninjaSquadVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    testImplementation("io.mockk:mockk:$mockkVersion")
 }
 
 tasks.withType<Test> {
