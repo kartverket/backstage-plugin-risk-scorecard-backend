@@ -134,6 +134,7 @@ class GoogleServiceIntegration(
                         ProcessingStatus.FailedToFetchGcpProjectIds,
                     )
             gcpProjectIds
+                .filter { it.value.contains("-prod-") }
                 .map {
                     it to
                         async(Dispatchers.IO) {
