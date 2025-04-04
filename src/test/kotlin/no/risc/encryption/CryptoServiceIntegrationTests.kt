@@ -119,7 +119,7 @@ class CryptoServiceIntegrationTests {
     }
 
     @Test
-    fun `test decrypt unexpected answer`() {
+    fun `test decrypt unexpected answer format`() {
         webClient.queueResponse(MockableResponse("{\"test\": \"test\"}"))
         runBlocking {
             assertThrows<SOPSDecryptionException>("Should throw a SOPSDecryptionException on unexpected content") {
