@@ -121,7 +121,7 @@ class RiScController(
     )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
-    fun sendRiScForPublishing(
+    suspend fun sendRiScForPublishing(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,

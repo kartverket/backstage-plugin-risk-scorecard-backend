@@ -658,7 +658,7 @@ class RiScService(
         }
     }
 
-    fun publishRiSc(
+    suspend fun publishRiSc(
         owner: String,
         repository: String,
         riScId: String,
