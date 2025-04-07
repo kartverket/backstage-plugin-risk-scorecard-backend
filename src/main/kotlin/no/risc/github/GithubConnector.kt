@@ -27,6 +27,7 @@ import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
+import no.risc.utils.tryOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
@@ -343,8 +344,8 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         riScId: String,
-    ): LastPublished? {
-        return try {
+    ): LastPublished? =
+        tryOrNull {
             val lastCommitOnPath =
                 getGithubResponseSuspend(
                     githubHelper.uriToFetchCommits(
@@ -367,11 +368,8 @@ class GithubConnector(
                     accessToken,
                 ).awaitBody<List<GithubRefCommitDTO>>().size
 
-            return LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
-        } catch (e: Exception) {
-            null
+            LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
         }
-    }
 
     internal fun updateOrCreateDraft(
         owner: String,
@@ -543,18 +541,11 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ) = try {
+    ) = tryOrNull {
         getGithubResponse(
-            uri =
-                githubHelper.uriToFindRiScOnDraftBranch(
-                    owner = owner,
-                    repository = repository,
-                    riScId = riScId,
-                ),
+            uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
             accessToken = accessToken,
         ).shaResponseDTO()
-    } catch (e: Exception) {
-        null
     }
 
     private fun getSHAForPublishedRiScOrNull(
@@ -562,18 +553,11 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ) = try {
+    ) = tryOrNull {
         getGithubResponse(
-            uri =
-                githubHelper.uriToFindRiSc(
-                    owner = owner,
-                    repository = repository,
-                    id = riScId,
-                ),
+            uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
             accessToken = accessToken,
         ).shaResponseDTO()
-    } catch (e: Exception) {
-        null
     }
 
     private suspend fun pullRequestForRiScExists(
@@ -674,7 +658,7 @@ class GithubConnector(
         riScId: String,
         branch: String,
     ): String? =
-        try {
+        tryOrNull {
             getGithubResponse(
                 uri =
                     githubHelper.uriToFetchCommit(
@@ -685,8 +669,6 @@ class GithubConnector(
                     ),
                 accessToken = accessToken,
             ).timeStampLatestCommitResponse()
-        } catch (e: Exception) {
-            null
         }
 
     fun createPullRequestForRiSc(

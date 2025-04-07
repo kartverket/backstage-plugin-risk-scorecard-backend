@@ -46,3 +46,14 @@ fun generateRandomAlphanumericString(
         .limit(length.toLong())
         .toArray()
         .joinToString(separator = "")
+
+/**
+ * Returns the result of the provided function, unless the provided function throws an exception. If an exception is
+ * thrown, then null is returned.
+ */
+inline fun <T> tryOrNull(func: () -> T?) =
+    try {
+        func()
+    } catch (_: Exception) {
+        null
+    }
