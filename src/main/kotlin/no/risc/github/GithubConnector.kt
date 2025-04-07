@@ -30,7 +30,10 @@ import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec
+import org.springframework.web.reactive.function.client.WebClient.RequestHeadersSpec
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
@@ -502,18 +505,14 @@ class GithubConnector(
     ): String? =
         fetchAllPullRequests(owner, repository, accessToken).find { it.head.ref == riScId }?.let {
             try {
-                closePullRequest(
-                    uri =
-                        githubHelper.uriToEditPullRequest(
-                            owner = owner,
-                            repository = repository,
-                            pullRequestNumber = it.number,
-                        ),
+                requestToGithubWithJSONBody(
+                    uri = githubHelper.uriToEditPullRequest(owner, repository, it.number),
                     accessToken = accessToken,
-                    closePullRequestBody = githubHelper.bodyToClosePullRequest(),
+                    content = githubHelper.bodyToClosePullRequest(),
+                    method = HttpMethod.PATCH,
                 ).bodyToMono<String>().block()
             } catch (e: Exception) {
-                LOGGER.error("Could not close pull request with error message: ${e.message}.")
+                LOGGER.error("Could not close pull request #${it.number} with error message: ${e.message}.")
                 null
             }
         }
@@ -570,6 +569,15 @@ class GithubConnector(
             accessToken = accessToken,
         ).shaResponseDTO()
 
+    /**
+     * Creates a new branch through the GitHub API by branching out of the default branch.
+     *
+     * @param owner: The owner (user/organisation) of the repository.
+     * @param repository: The name of the repository to make the branch in.
+     * @param newBranchName: The name of the new branch.
+     * @param accessToken: The GitHub access token to use for authorization.
+     * @param defaultBranch: The name of the default branch.
+     */
     fun createNewBranch(
         owner: String,
         repository: String,
@@ -583,16 +591,18 @@ class GithubConnector(
                 repository = repository,
                 accessToken = accessToken,
                 defaultBranch = defaultBranch,
-            )
-                ?: return null
-        return postNewBranchToGithub(
-            uri = githubHelper.uriToCreateNewBranchForRiSc(owner = owner, repository = repository),
+            ) ?: return null
+
+        return requestToGithubWithJSONBody(
+            uri = githubHelper.uriToCreateNewBranch(owner = owner, repository = repository),
             accessToken = accessToken,
-            branchPayload =
-                githubHelper.bodyToCreateNewBranchFromDefault(
-                    branchName = newBranchName,
-                    latestShaAtDefault = latestShaForDefaultBranch,
-                ),
+            content =
+                githubHelper
+                    .bodyToCreateNewBranchFromDefault(
+                        branchName = newBranchName,
+                        latestShaAtDefault = latestShaForDefaultBranch,
+                    ).toContentBody(),
+            method = HttpMethod.POST,
         ).bodyToMono<String>().block()
     }
 
@@ -663,8 +673,9 @@ class GithubConnector(
         baseBranch: String,
     ): GithubPullRequestObject? =
         try {
-            postNewPullRequestToGithub(
-                uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
+            createNewPullRequest(
+                owner = owner,
+                repository = repository,
                 accessToken = accessTokens.githubAccessToken.value,
                 pullRequestPayload =
                     githubHelper.bodyToCreateNewPullRequest(
@@ -689,8 +700,9 @@ class GithubConnector(
         gitHubAccessToken: GithubAccessToken,
         defaultBranch: String,
     ): GithubPullRequestObject? =
-        postNewPullRequestToGithub(
-            uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
+        createNewPullRequest(
+            owner = owner,
+            repository = repository,
             accessToken = gitHubAccessToken.value,
             pullRequestPayload =
                 GithubCreateNewPullRequestPayload(
@@ -706,47 +718,26 @@ class GithubConnector(
                 ),
         ).pullRequestResponseDTO()
 
-    private fun postNewPullRequestToGithub(
-        uri: String,
+    /**
+     * Creates a request to create a new pull request through the GitHub API.
+     *
+     * @param owner: The owner (user/organisation) of the repository.
+     * @param repository: The name of the repository to make the pull request in.
+     * @param accessToken: The GitHub access token to use for authorization.
+     * @param pullRequestPayload: The content of the pull request.
+     */
+    private fun createNewPullRequest(
+        owner: String,
+        repository: String,
         accessToken: String,
         pullRequestPayload: GithubCreateNewPullRequestPayload,
-    ) = webClient
-        .post()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(pullRequestPayload.toContentBody()), String::class.java)
-        .retrieve()
-
-    private fun closePullRequest(
-        uri: String,
-        accessToken: String,
-        closePullRequestBody: String,
-    ) = webClient
-        .patch()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(closePullRequestBody), String::class.java)
-        .retrieve()
-
-    private fun postNewBranchToGithub(
-        uri: String,
-        accessToken: String,
-        branchPayload: GithubCreateNewBranchPayload,
-    ) = webClient
-        .post()
-        .uri(uri)
-        .header("Accept", "application/vnd.github+json")
-        .header("Authorization", "token $accessToken")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("Content-Type", "application/json")
-        .body(Mono.just(branchPayload.toContentBody()), String::class.java)
-        .retrieve()
+    ): ResponseSpec =
+        requestToGithubWithJSONBody(
+            uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
+            accessToken = accessToken,
+            content = pullRequestPayload.toContentBody(),
+            method = HttpMethod.POST,
+        )
 
     fun putFileRequestToGithub(
         repositoryOwner: String,
@@ -756,37 +747,31 @@ class GithubConnector(
         branch: String,
         message: String,
         content: String,
-    ): ResponseSpec {
-        val payload =
-            GithubWriteToFilePayload(
-                message = message,
-                content = content,
-                sha =
-                    fetchFileInfo(
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubAccessToken = gitHubAccessToken,
-                        filePath = filePath,
-                        branch = branch,
-                    )?.sha,
-                branchName = branch,
+    ): ResponseSpec =
+        try {
+            requestToGithubWithJSONBody(
+                uri = githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, filePath, branch),
+                accessToken = gitHubAccessToken.value,
+                content =
+                    GithubWriteToFilePayload(
+                        message = message,
+                        content = content,
+                        sha =
+                            fetchFileInfo(
+                                repositoryOwner = repositoryOwner,
+                                repositoryName = repositoryName,
+                                gitHubAccessToken = gitHubAccessToken,
+                                filePath = filePath,
+                                branch = branch,
+                            )?.sha,
+                        branchName = branch,
+                    ).toContentBody(),
+                method = HttpMethod.PUT,
             )
-
-        return try {
-            webClient
-                .put()
-                .uri(githubHelper.repositoryContentsUri(repositoryOwner, repositoryName, filePath, branch))
-                .header("Accept", "application/vnd.github+json")
-                .header("Authorization", "token ${gitHubAccessToken.value}")
-                .header("X-GitHub-Api-Version", "2022-11-28")
-                .header("Content-Type", "application/json")
-                .body(Mono.just(payload.toContentBody()), String::class.java)
-                .retrieve()
         } catch (e: WebClientResponseException.BadRequest) {
             LOGGER.error("Got 400 bad request for filePath: $filePath with message: ${e.message}")
             throw e
         }
-    }
 
     fun writeSopsConfig(
         sopsConfig: String,
@@ -842,18 +827,62 @@ class GithubConnector(
         null
     }
 
-    private fun getGithubResponse(
+    /**
+     * Constructs a request to the given URI at the GitHub API with standard headers:
+     * - Accept: application/vnd.github.json
+     * - Authorization: token <accessToken>
+     * - X-GitHub-Api-Version: <current-GitHub-api-version>
+     *
+     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken: The GitHub Access Token to use for authorization.
+     * @param method: The HTTP method to make the request with.
+     * @param attachBody: A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
+     */
+    private inline fun githubRequest(
         uri: String,
         accessToken: String,
+        method: HttpMethod,
+        attachBody: (RequestBodySpec) -> RequestHeadersSpec<*> = { it },
     ): ResponseSpec =
         webClient
-            .get()
+            .method(method)
             .uri(uri)
             .header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .let(attachBody)
             .retrieve()
-            .also { LOGGER.info("Sending GET-request to $uri") }
+            .also { LOGGER.info("Sending ${method.name()}-request to $uri") }
+
+    /**
+     * Constructs a GET-request to the specified URI at GitHub with standard headers.
+     *
+     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken: The GitHub Access Token to use for authorization.
+     */
+    private fun getGithubResponse(
+        uri: String,
+        accessToken: String,
+    ): ResponseSpec = githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET)
+
+    /**
+     * Constructs a request to the specified URI at GitHub with standard headers and the provided JSON body. Uses
+     * the supplied HTTP method to make the call.
+     *
+     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken: The GitHub Access Token to use for authorization.
+     * @param content: The JSON formatted content to send as the body of the request.
+     * @param method: The HTTP method to make the call with.
+     */
+    private fun requestToGithubWithJSONBody(
+        uri: String,
+        accessToken: String,
+        content: String,
+        method: HttpMethod,
+    ): ResponseSpec =
+        githubRequest(uri = uri, accessToken = accessToken, method = method, attachBody = {
+            it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
+        })
 
     private fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
