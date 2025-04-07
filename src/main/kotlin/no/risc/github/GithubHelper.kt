@@ -254,7 +254,7 @@ class GithubHelper(
         branchName: String,
     ): String = "/$owner/$repository/commits/$branchName/status"
 
-    fun uriToCreateNewBranchForRiSc(
+    fun uriToCreateNewBranch(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/git/refs"
