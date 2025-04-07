@@ -73,28 +73,10 @@ data class GithubWriteToFilePayload(
     val author: Author? = null,
 ) {
     fun toContentBody(): String =
-        when (author) {
-            null ->
-                when (sha) {
-                    null ->
-                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\"}"
-
-                    else ->
-                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"sha\":\"$sha\"}"
-                }
-
-            else ->
-                when (sha) {
-                    null ->
-                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                            "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }"
-
-                    else ->
-                        "{\"message\":\"$message\", \"content\":\"$content\", \"branch\": \"$branchName\", \"committer\": " +
-                            "{ \"name\":\"${author.name}\", \"email\":\"${author.email}\", \"date\":\"${author.formattedDate()}\" }, " +
-                            "\"sha\":\"$sha\""
-                }
-        }
+        "{\"message\": \"$message\", \"content\": \"$content\", \"branch\": \"$branchName\"" +
+            (author?.let { ", \"committer\": ${author.toJSONString()}" } ?: "") +
+            (sha?.let { ", \"sha\": \"$sha\"" } ?: "") +
+            "}"
 }
 
 data class Author(
@@ -102,7 +84,9 @@ data class Author(
     val email: String?,
     val date: Date,
 ) {
-    fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
+    private fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
+
+    fun toJSONString(): String = "{ \"name\":\"${name}\", \"email\":\"${email}\", \"date\":\"${formattedDate()}\" }"
 }
 
 data class RiScApprovalPRStatus(
@@ -142,15 +126,15 @@ class GithubConnector(
                     accessToken = githubAccessToken.value,
                 ).toFileContentDTO()?.content?.decodeBase64()
             }
-        return when (sopsConfig) {
-            null -> throw SopsConfigFetchException(
+        if (sopsConfig == null) {
+            throw SopsConfigFetchException(
                 message = "Fetch of sops config responded with 200 OK but file contents was null",
                 riScId = branch,
                 responseMessage = "Could not fetch SOPS config",
             )
-
-            else -> GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
         }
+
+        return GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
     }
 
     fun fetchSopsConfigFromDefaultBranch(
@@ -166,15 +150,15 @@ class GithubConnector(
                 .block()
                 ?.content
                 ?.decodeBase64()
-        return when (sopsConfig) {
-            null -> throw SopsConfigFetchException(
+
+        if (sopsConfig == null) {
+            throw SopsConfigFetchException(
                 message = "Fetch of sops config responded with 200 OK but file contents was null",
                 riScId = "",
                 responseMessage = "Could not fetch SOPS config",
             )
-
-            else -> GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
         }
+        return GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
     }
 
     suspend fun fetchAllRiScIdentifiersInRepository(
@@ -260,10 +244,11 @@ class GithubConnector(
                     uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
                     accessToken = accessToken,
                 ).decodedFileContentSuspend()
-            when (fileContent) {
-                null -> GithubContentResponse(data = null, status = GithubStatus.ContentIsEmpty)
-                else -> GithubContentResponse(data = fileContent, status = GithubStatus.Success)
-            }
+
+            GithubContentResponse(
+                data = fileContent,
+                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
+            )
         } catch (e: Exception) {
             GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
         }
@@ -280,10 +265,10 @@ class GithubConnector(
                     uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
                     accessToken = accessToken,
                 ).decodedFileContentSuspend()
-            when (fileContent) {
-                null -> GithubContentResponse(data = null, status = GithubStatus.ContentIsEmpty)
-                else -> GithubContentResponse(data = fileContent, status = GithubStatus.Success)
-            }
+            GithubContentResponse(
+                data = fileContent,
+                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
+            )
         } catch (e: Exception) {
             GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
         }
@@ -939,23 +924,22 @@ class GithubConnector(
     private fun ResponseSpec.toFileContentsDTO(): List<FileContentsDTO>? = this.bodyToMono<List<FileContentsDTO>>().block()
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
-        when (e) {
-            is WebClientResponseException ->
-                when (e) {
-                    is WebClientResponseException.NotFound -> GithubStatus.NotFound
-                    is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
-                    is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                    else -> {
-                        if (e.message.contains("DataBufferLimitException")) {
-                            LOGGER.error(e.message)
-                            GithubStatus.ResponseBodyTooLargeForWebClientError
-                        } else {
-                            GithubStatus.InternalError
-                        }
+        if (e !is WebClientResponseException) {
+            GithubStatus.InternalError
+        } else {
+            when (e) {
+                is WebClientResponseException.NotFound -> GithubStatus.NotFound
+                is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
+                is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
+                else -> {
+                    if (e.message.contains("DataBufferLimitException")) {
+                        LOGGER.error(e.message)
+                        GithubStatus.ResponseBodyTooLargeForWebClientError
+                    } else {
+                        GithubStatus.InternalError
                     }
                 }
-
-            else -> GithubStatus.InternalError
+            }
         }
 
     private fun fetchRepositoryInfo(
@@ -986,20 +970,22 @@ class GithubConnector(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
                 gitHubAccessToken = gitHubAccessToken,
             )
-        if (repositoryDTO.permissions.pull) {
-            if (repositoryDTO.permissions.push) {
-                return RepositoryInfo(
-                    defaultBranch = repositoryDTO.defaultBranch,
-                    permissions = GitHubPermission.entries.toList(),
-                )
-            }
-            return RepositoryInfo(
-                defaultBranch = repositoryDTO.defaultBranch,
-                permissions = listOf(GitHubPermission.READ),
+
+        if (!repositoryDTO.permissions.pull) {
+            throw PermissionDeniedOnGitHubException(
+                "Request on $repositoryOwner/$repositoryName denied since user did not have pull or push permissions",
             )
         }
-        throw PermissionDeniedOnGitHubException(
-            "Request on $repositoryOwner/$repositoryName denied since user did not have pull or push permissions",
+
+        if (repositoryDTO.permissions.push) {
+            return RepositoryInfo(
+                defaultBranch = repositoryDTO.defaultBranch,
+                permissions = GitHubPermission.entries.toList(),
+            )
+        }
+        return RepositoryInfo(
+            defaultBranch = repositoryDTO.defaultBranch,
+            permissions = listOf(GitHubPermission.READ),
         )
     }
 
