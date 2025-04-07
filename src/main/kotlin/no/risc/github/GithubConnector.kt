@@ -30,10 +30,7 @@ import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpHeaders
 import org.springframework.stereotype.Component
-import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
@@ -115,13 +112,13 @@ class GithubConnector(
         val sopsConfig =
             try {
                 LOGGER.info("Trying to get sops config from branch: $branch")
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
                     accessToken = githubAccessToken.value,
                 ).toFileContentDTO()?.content?.decodeBase64()
             } catch (e: WebClientResponseException.NotFound) {
                 LOGGER.info("Trying to get sops config from default branch")
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFindSopsConfig(owner, repository),
                     accessToken = githubAccessToken.value,
                 ).toFileContentDTO()?.content?.decodeBase64()
@@ -240,7 +237,7 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
                     accessToken = accessToken,
                 ).decodedFileContentSuspend()
@@ -261,7 +258,7 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             val fileContent =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
                     accessToken = accessToken,
                 ).decodedFileContentSuspend()
@@ -280,7 +277,7 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         try {
             val response =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFindRiScFiles(owner, repository),
                     accessToken = accessToken,
                 ).awaitBody<List<FileNameDTO>>()
@@ -297,7 +294,7 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         try {
             val response =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                     accessToken = accessToken,
                 ).awaitBody<List<GithubPullRequestObject>>()
@@ -314,7 +311,7 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         try {
             val response =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
                     accessToken = accessToken,
                 ).awaitBody<List<GithubReferenceObjectDTO>>().map { it.toInternal() }
@@ -332,7 +329,7 @@ class GithubConnector(
     ): LastPublished? =
         tryOrNull {
             val lastCommitOnPath =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
@@ -344,7 +341,7 @@ class GithubConnector(
             val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
 
             val numberOfCommitsSinceDateTime =
-                getGithubResponseSuspend(
+                getGithubResponse(
                     githubHelper.uriToFetchCommitsSince(
                         owner = owner,
                         repository = repository,
@@ -845,20 +842,6 @@ class GithubConnector(
         null
     }
 
-    private suspend fun getGithubResponseSuspend(
-        uri: String,
-        accessToken: String,
-    ): ResponseSpec {
-        LOGGER.info("Sending GET-request to $uri")
-        return webClient
-            .get()
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
-            .header("Authorization", "token $accessToken")
-            .header("X-GitHub-Api-Version", "2022-11-28")
-            .retrieve()
-    }
-
     private fun getGithubResponse(
         uri: String,
         accessToken: String,
@@ -870,6 +853,7 @@ class GithubConnector(
             .header("Authorization", "token $accessToken")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .retrieve()
+            .also { LOGGER.info("Sending GET-request to $uri") }
 
     private fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
@@ -945,20 +929,9 @@ class GithubConnector(
     private fun fetchRepositoryInfo(
         uri: String,
         gitHubAccessToken: String,
-    ) = RestClient
-        .builder()
-        .baseUrl("https://api.github.com/repos")
-        .defaultHeader(HttpHeaders.AUTHORIZATION, "token $gitHubAccessToken")
-        .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github.json")
-        .defaultHeader("X-GitHub-Api-Version", "2022-11-28")
-        .build()
-        .get()
-        .uri { uriBuilder ->
-            uriBuilder
-                .path(uri)
-                .build()
-        }.retrieve()
-        .body(object : ParameterizedTypeReference<RepositoryDTO>() {})!!
+    ) = getGithubResponse(uri, gitHubAccessToken)
+        .bodyToMono<RepositoryDTO>()
+        .block()!!
 
     fun fetchRepositoryInfo(
         gitHubAccessToken: String,
