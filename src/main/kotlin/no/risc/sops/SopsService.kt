@@ -2,13 +2,11 @@ package no.risc.sops
 
 import no.risc.config.SopsServiceConfig
 import no.risc.exception.exceptions.CreateNewBranchException
-import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.github.GithubConnector
 import no.risc.google.GoogleServiceIntegration
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
 import no.risc.infra.connector.models.AccessTokens
-import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
@@ -179,13 +177,13 @@ class SopsService(
         repositoryOwner: String,
         repositoryName: String,
         sopsId: String,
-        githubAccessToken: GithubAccessToken,
+        gitHubAccessToken: String,
     ): OpenPullRequestForSopsConfigResponseBody {
         val defaultBranch =
             githubConnector.fetchDefaultBranch(
                 repositoryOwner = repositoryOwner,
                 repositoryName = repositoryName,
-                gitHubAccessToken = githubAccessToken.value,
+                gitHubAccessToken = gitHubAccessToken,
             )
         val pullRequestObject =
             githubConnector
@@ -193,16 +191,9 @@ class SopsService(
                     owner = repositoryOwner,
                     repository = repositoryName,
                     sopsId = sopsId,
-                    gitHubAccessToken = githubAccessToken,
-                    defaultBranch = defaultBranch,
-                )?.toPullRequestObject() ?: throw GitHubFetchException(
-                "Unable to create pull request for sops config with branch: $sopsId",
-                ProcessRiScResultDTO(
-                    riScId = "",
-                    status = ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    statusMessage = ProcessingStatus.ErrorWhenCreatingPullRequest.message,
-                ),
-            )
+                    gitHubAccessToken = gitHubAccessToken,
+                    baseBranch = defaultBranch,
+                ).toPullRequestObject()
         return OpenPullRequestForSopsConfigResponseBody(
             status = ProcessingStatus.OpenedPullRequest,
             statusMessage = ProcessingStatus.OpenedPullRequest.message,

@@ -147,7 +147,7 @@ internal class GlobalExceptionHandler {
     fun handleCreatePullRequestException(ex: CreatePullRequestException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            riScId = ex.riScId,
+            riScId = "",
             status = ProcessingStatus.ErrorWhenCreatingPullRequest,
             statusMessage = ex.message,
         )

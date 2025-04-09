@@ -82,10 +82,6 @@ class SopsController(
         repositoryOwner = repositoryOwner,
         repositoryName = repositoryName,
         sopsId = branch,
-        githubAccessToken =
-            AccessTokens(
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-            ).githubAccessToken,
+        gitHubAccessToken = gitHubAccessToken,
     )
 }
