@@ -24,6 +24,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
@@ -98,7 +99,7 @@ class GithubConnector(
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
-        val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
     }
 
     suspend fun fetchAllRiScIdentifiersInRepository(
@@ -151,26 +152,13 @@ class GithubConnector(
         draftRiScList: List<RiScIdentifier>,
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
-    ): List<RiScIdentifier> {
-        val sentForApprovalsIds = sentForApprovalList.map { it.id }.toSet()
-
-        val combinedList = mutableListOf<RiScIdentifier>()
-        combinedList.addAll(sentForApprovalList)
-
-        for (published in publishedRiScList) {
-            if (published.id !in sentForApprovalsIds) {
-                combinedList.add(published)
-            }
+    ): List<RiScIdentifier> =
+        sentForApprovalList.map { it.id }.toSet().let { sentForApprovalIds ->
+            listOf<RiScIdentifier>()
+                .plus(sentForApprovalList)
+                .plus(publishedRiScList.filter { it.id !in sentForApprovalIds })
+                .plus(draftRiScList.filter { it.id !in sentForApprovalIds })
         }
-
-        for (draft in draftRiScList) {
-            if (draft.id !in sentForApprovalsIds) {
-                combinedList.add(draft)
-            }
-        }
-
-        return combinedList
-    }
 
     suspend fun fetchPublishedRiSc(
         owner: String,
@@ -271,7 +259,7 @@ class GithubConnector(
         riScId: String,
     ): LastPublished? =
         tryOrNull {
-            val lastCommitOnPath =
+            val dateOfLastPublished =
                 getGithubResponse(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
@@ -279,9 +267,7 @@ class GithubConnector(
                         riScId = riScId,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>()[0]
-
-            val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
+                ).awaitBody<List<GithubRefCommitDTO>>().first().commit.committer.dateTime
 
             val numberOfCommitsSinceDateTime =
                 getGithubResponse(
@@ -555,7 +541,7 @@ class GithubConnector(
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
-            ).toPullRequestResponseDTOs()
+            ).awaitBody<List<GithubPullRequestObject>>()
         } catch (e: Exception) {
             emptyList()
         }
@@ -725,7 +711,7 @@ class GithubConnector(
                     branch = branch,
                 ),
             accessToken = gitHubAccessToken.value,
-        ).toFileContentDTO() ?: throw GitHubFetchException(
+        ).awaitBodyOrNull<FileContentDTO>() ?: throw GitHubFetchException(
             message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
             response =
                 ProcessRiScResultDTO(
@@ -795,9 +781,6 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
-    private suspend fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
-        this.awaitBodyOrNull<List<GithubPullRequestObject>>() ?: emptyList()
-
     private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this
             .awaitBodyOrNull<List<GithubCommitObject>>()
@@ -826,17 +809,16 @@ class GithubConnector(
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
-    private suspend fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.awaitBodyOrNull<FileContentDTO>()
+    private suspend fun ResponseSpec.decodedFileContentSuspend(): String? =
+        toEntity<FileContentDTO>()
+            .awaitSingle()
+            .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
+            .body
+            .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
+            ?.content
+            ?.decodeBase64()
 
-    private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
-        val response = toEntity<FileContentDTO>().awaitSingle()
-        LOGGER.info("GET to GitHub contents-API responded with ${response.statusCode}")
-        val fileContentDTO: FileContentDTO? = response.body
-        LOGGER.info("RiSc content: ${fileContentDTO?.content?.substring(0, 10)}")
-        return fileContentDTO?.content?.decodeBase64()
-    }
-
-    private suspend fun ResponseSpec.shaResponseDTO(): String? = this.awaitBodyOrNull<ShaResponseDTO>()?.value
+    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.value
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
