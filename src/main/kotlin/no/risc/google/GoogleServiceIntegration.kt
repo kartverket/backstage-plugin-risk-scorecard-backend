@@ -21,7 +21,7 @@ import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
-import no.risc.sops.model.GcpCryptoKeyObject
+import no.risc.google.model.GcpCryptoKeyObject
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component

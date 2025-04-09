@@ -1,7 +1,5 @@
 package no.risc.risc.models
 
-import no.risc.sops.model.SopsConfig
-
 data class RiScWrapperObject(
     val riSc: String,
     val isRequiresNewApproval: Boolean,

@@ -1,7 +1,7 @@
 package no.risc.google
 
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.sops.model.GcpCryptoKeyObject
+import no.risc.google.model.GcpCryptoKeyObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping

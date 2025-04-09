@@ -5,7 +5,7 @@ import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.models.RiScWithConfig
-import no.risc.sops.model.SopsConfig
+import no.risc.risc.models.SopsConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
