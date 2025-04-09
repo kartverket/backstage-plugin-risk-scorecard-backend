@@ -48,7 +48,7 @@ class SopsController(
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}")
-    fun updateSopsConfig(
+    suspend fun updateSopsConfig(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable("repositoryOwner") repositoryOwner: String,
@@ -72,7 +72,7 @@ class SopsController(
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/openPullRequest/{branch}")
-    fun openPullRequest(
+    suspend fun openPullRequest(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @PathVariable("repositoryOwner") repositoryOwner: String,

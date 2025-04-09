@@ -3,7 +3,6 @@ package no.risc.github
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -37,7 +36,7 @@ import org.springframework.web.reactive.function.client.WebClient.RequestHeaders
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
@@ -137,7 +136,7 @@ class GithubConnector(
         return GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
     }
 
-    fun fetchSopsConfigFromDefaultBranch(
+    suspend fun fetchSopsConfigFromDefaultBranch(
         repositoryOwner: String,
         repositoryName: String,
         githubAccessToken: GithubAccessToken,
@@ -146,8 +145,7 @@ class GithubConnector(
             getGithubResponse(
                 uri = githubHelper.uriToFindSopsConfig(owner = repositoryOwner, repository = repositoryName),
                 accessToken = githubAccessToken.value,
-            ).bodyToMono<FileContentDTO>()
-                .block()
+            ).awaitBodyOrNull<FileContentDTO>()
                 ?.content
                 ?.decodeBase64()
 
@@ -356,7 +354,7 @@ class GithubConnector(
             LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
         }
 
-    internal fun updateOrCreateDraft(
+    internal suspend fun updateOrCreateDraft(
         owner: String,
         repository: String,
         riScId: String,
@@ -379,7 +377,7 @@ class GithubConnector(
 
         // A new branch is needed if an existing branch was not found
         if (latestShaForDraft == null) {
-            runBlocking {
+            coroutineScope {
                 val newBranchDeferred =
                     async {
                         createNewBranch(
@@ -422,10 +420,10 @@ class GithubConnector(
             branch = riScId,
             message = commitMessage,
             content = fileContent.encodeBase64(),
-        ).bodyToMono<String>().block()
+        ).awaitBodyOrNull<String>()
 
         val riScApprovalPRStatus =
-            runBlocking {
+            coroutineScope {
                 val prExistsDeferred =
                     async {
                         pullRequestForRiScExists(
@@ -497,7 +495,7 @@ class GithubConnector(
         return riScApprovalPRStatus
     }
 
-    private fun closePullRequestForRiSc(
+    private suspend fun closePullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -510,14 +508,14 @@ class GithubConnector(
                     accessToken = accessToken,
                     content = githubHelper.bodyToClosePullRequest(),
                     method = HttpMethod.PATCH,
-                ).bodyToMono<String>().block()
+                ).awaitBodyOrNull<String>()
             } catch (e: Exception) {
                 LOGGER.error("Could not close pull request #${it.number} with error message: ${e.message}.")
                 null
             }
         }
 
-    private fun getSHAForExistingRiScDraftOrNull(
+    private suspend fun getSHAForExistingRiScDraftOrNull(
         owner: String,
         repository: String,
         riScId: String,
@@ -529,7 +527,7 @@ class GithubConnector(
         ).shaResponseDTO()
     }
 
-    private fun getSHAForPublishedRiScOrNull(
+    private suspend fun getSHAForPublishedRiScOrNull(
         owner: String,
         repository: String,
         riScId: String,
@@ -553,7 +551,7 @@ class GithubConnector(
             accessToken = accessToken,
         ).any { it.id == riScId }
 
-    private fun fetchLatestShaForDefaultBranch(
+    private suspend fun fetchLatestShaForDefaultBranch(
         owner: String,
         repository: String,
         accessToken: String,
@@ -578,7 +576,7 @@ class GithubConnector(
      * @param accessToken: The GitHub access token to use for authorization.
      * @param defaultBranch: The name of the default branch.
      */
-    fun createNewBranch(
+    suspend fun createNewBranch(
         owner: String,
         repository: String,
         newBranchName: String,
@@ -603,10 +601,10 @@ class GithubConnector(
                         latestShaAtDefault = latestShaForDefaultBranch,
                     ).toContentBody(),
             method = HttpMethod.POST,
-        ).bodyToMono<String>().block()
+        ).awaitBodyOrNull<String>()
     }
 
-    fun fetchAllPullRequests(
+    suspend fun fetchAllPullRequests(
         owner: String,
         repository: String,
         accessToken: String,
@@ -620,7 +618,7 @@ class GithubConnector(
             emptyList()
         }
 
-    private fun fetchCommitsSinceLastCommit(
+    private suspend fun fetchCommitsSinceLastCommit(
         owner: String,
         repository: String,
         accessToken: String,
@@ -637,13 +635,12 @@ class GithubConnector(
                         since = since,
                     ),
                 accessToken = accessToken,
-            ).bodyToMono<List<GithubCommitObject>>()
-                .block() ?: emptyList()
+            ).awaitBodyOrNull<List<GithubCommitObject>>() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
 
-    private fun fetchLatestCommitTimestampOnDefault(
+    private suspend fun fetchLatestCommitTimestampOnDefault(
         owner: String,
         repository: String,
         accessToken: String,
@@ -663,7 +660,7 @@ class GithubConnector(
             ).timeStampLatestCommitResponse()
         }
 
-    fun createPullRequestForRiSc(
+    suspend fun createPullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -693,7 +690,7 @@ class GithubConnector(
             )
         }
 
-    fun createPullRequestForSopsConfig(
+    suspend fun createPullRequestForSopsConfig(
         owner: String,
         repository: String,
         sopsId: String,
@@ -726,7 +723,7 @@ class GithubConnector(
      * @param accessToken: The GitHub access token to use for authorization.
      * @param pullRequestPayload: The content of the pull request.
      */
-    private fun createNewPullRequest(
+    private suspend fun createNewPullRequest(
         owner: String,
         repository: String,
         accessToken: String,
@@ -739,7 +736,7 @@ class GithubConnector(
             method = HttpMethod.POST,
         )
 
-    fun putFileRequestToGithub(
+    suspend fun putFileRequestToGithub(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
@@ -773,7 +770,7 @@ class GithubConnector(
             throw e
         }
 
-    fun writeSopsConfig(
+    suspend fun writeSopsConfig(
         sopsConfig: String,
         repositoryOwner: String,
         repositoryName: String,
@@ -788,7 +785,7 @@ class GithubConnector(
             branch = branch,
             message = "Update SOPS configuration",
             content = sopsConfig.encodeBase64(),
-        ).bodyToMono<String>().block() ?: throw UnableToWriteSopsConfigException(
+        ).awaitBodyOrNull<String>() ?: throw UnableToWriteSopsConfigException(
             message = "Failed to put new sops config on branch: '$branch'",
             response =
                 ProcessRiScResultDTO(
@@ -798,7 +795,7 @@ class GithubConnector(
                 ),
         )
 
-    private fun fetchFileInfo(
+    private suspend fun fetchFileInfo(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
@@ -838,7 +835,7 @@ class GithubConnector(
      * @param method: The HTTP method to make the request with.
      * @param attachBody: A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
      */
-    private inline fun githubRequest(
+    private suspend inline fun githubRequest(
         uri: String,
         accessToken: String,
         method: HttpMethod,
@@ -860,7 +857,7 @@ class GithubConnector(
      * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
      * @param accessToken: The GitHub Access Token to use for authorization.
      */
-    private fun getGithubResponse(
+    private suspend fun getGithubResponse(
         uri: String,
         accessToken: String,
     ): ResponseSpec = githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET)
@@ -874,7 +871,7 @@ class GithubConnector(
      * @param content: The JSON formatted content to send as the body of the request.
      * @param method: The HTTP method to make the call with.
      */
-    private fun requestToGithubWithJSONBody(
+    private suspend fun requestToGithubWithJSONBody(
         uri: String,
         accessToken: String,
         content: String,
@@ -884,17 +881,17 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
-    private fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
-        this.bodyToMono<List<GithubPullRequestObject>>().block() ?: emptyList()
+    private suspend fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
+        this.awaitBodyOrNull<List<GithubPullRequestObject>>() ?: emptyList()
 
-    private fun ResponseSpec.toPullRequestFilesDTO(): List<PullRequestFileObject>? = this.bodyToMono<List<PullRequestFileObject>>().block()
+    private suspend fun ResponseSpec.toPullRequestFilesDTO(): List<PullRequestFileObject>? =
+        this.awaitBodyOrNull<List<PullRequestFileObject>>()
 
-    fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.bodyToMono<GithubPullRequestObject>().block()
+    suspend fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.awaitBodyOrNull<GithubPullRequestObject>()
 
-    private fun ResponseSpec.timeStampLatestCommitResponse(): String? =
+    private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this
-            .bodyToMono<List<GithubCommitObject>>()
-            .block()
+            .awaitBodyOrNull<List<GithubCommitObject>>()
             ?.firstOrNull()
             ?.commit
             ?.committer
@@ -920,7 +917,7 @@ class GithubConnector(
     private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
         this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
-    private fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.bodyToMono<FileContentDTO>().block()
+    private suspend fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.awaitBodyOrNull<FileContentDTO>()
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
         val response = toEntity<FileContentDTO>().awaitSingle()
@@ -930,11 +927,11 @@ class GithubConnector(
         return fileContentDTO?.content?.decodeBase64()
     }
 
-    private fun ResponseSpec.shaResponseDTO(): String? = this.bodyToMono<ShaResponseDTO>().block()?.value
+    private suspend fun ResponseSpec.shaResponseDTO(): String? = this.awaitBodyOrNull<ShaResponseDTO>()?.value
 
-    private fun ResponseSpec.toRepositoryBranchDTO(): List<RepositoryBranchDTO>? = this.bodyToMono<List<RepositoryBranchDTO>>().block()
+    private suspend fun ResponseSpec.toRepositoryBranchDTO(): List<RepositoryBranchDTO>? = this.awaitBodyOrNull<List<RepositoryBranchDTO>>()
 
-    private fun ResponseSpec.toFileContentsDTO(): List<FileContentsDTO>? = this.bodyToMono<List<FileContentsDTO>>().block()
+    private suspend fun ResponseSpec.toFileContentsDTO(): List<FileContentsDTO>? = this.awaitBodyOrNull<List<FileContentsDTO>>()
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
@@ -955,14 +952,12 @@ class GithubConnector(
             }
         }
 
-    private fun fetchRepositoryInfo(
+    private suspend fun fetchRepositoryInfo(
         uri: String,
         gitHubAccessToken: String,
-    ) = getGithubResponse(uri, gitHubAccessToken)
-        .bodyToMono<RepositoryDTO>()
-        .block()!!
+    ) = getGithubResponse(uri, gitHubAccessToken).awaitBody<RepositoryDTO>()
 
-    fun fetchRepositoryInfo(
+    suspend fun fetchRepositoryInfo(
         gitHubAccessToken: String,
         repositoryOwner: String,
         repositoryName: String,
@@ -991,7 +986,7 @@ class GithubConnector(
         )
     }
 
-    fun fetchDefaultBranch(
+    suspend fun fetchDefaultBranch(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: String,
@@ -1000,7 +995,7 @@ class GithubConnector(
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
 
-    fun fetchFilesUpdatedInPullRequest(
+    suspend fun fetchFilesUpdatedInPullRequest(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
@@ -1021,7 +1016,7 @@ class GithubConnector(
         ),
     )
 
-    fun fetchPullRequestsForBranches(
+    suspend fun fetchPullRequestsForBranches(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
@@ -1034,7 +1029,7 @@ class GithubConnector(
         ).toPullRequestResponseDTOs()
             .filter { it.head.ref in branches && it.base.ref == defaultBranch }
 
-    fun fetchAllBranches(
+    suspend fun fetchAllBranches(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
@@ -1043,7 +1038,7 @@ class GithubConnector(
         accessToken = gitHubAccessToken.value,
     ).toRepositoryBranchDTO()
 
-    fun fetchAllRiScsOnDefaultBranch(
+    suspend fun fetchAllRiScsOnDefaultBranch(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,

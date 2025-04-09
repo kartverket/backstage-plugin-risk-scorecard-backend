@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.annotation.WebFilter
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.utils.Repository
@@ -28,13 +29,15 @@ class AccessTokenValidationFilter(
                         repositoryName = request.requestURI.split("/")[4],
                     )
 
-                validationService.validateAccessTokens(
-                    gcpAccessToken = request.getHeader("GCP-Access-Token"),
-                    gitHubAccessToken = request.getHeader("GitHub-Access-Token"),
-                    gitHubPermissionNeeded = GitHubPermission.WRITE,
-                    repositoryOwner = repository.repositoryOwner,
-                    repositoryName = repository.repositoryName,
-                )
+                runBlocking {
+                    validationService.validateAccessTokens(
+                        gcpAccessToken = request.getHeader("GCP-Access-Token"),
+                        gitHubAccessToken = request.getHeader("GitHub-Access-Token"),
+                        gitHubPermissionNeeded = GitHubPermission.WRITE,
+                        repositoryOwner = repository.repositoryOwner,
+                        repositoryName = repository.repositoryName,
+                    )
+                }
             }
             filterChain.doFilter(request, response)
         } catch (e: IndexOutOfBoundsException) {
