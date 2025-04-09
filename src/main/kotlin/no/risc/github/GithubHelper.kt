@@ -169,11 +169,6 @@ class GithubHelper(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
 ) {
-    fun uriToFindSopsConfig(
-        owner: String,
-        repository: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
-
     fun uriToFindRiScFiles(
         owner: String,
         repository: String,
@@ -185,12 +180,6 @@ class GithubHelper(
         path: String,
         branch: String? = null,
     ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
-
-    fun uriToFindSopsConfig(
-        owner: String,
-        repository: String,
-        id: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
 
     fun uriToFindRiSc(
         owner: String,
@@ -220,25 +209,12 @@ class GithubHelper(
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
-    fun uriToFindSopsConfigOnDraftBranch(
-        owner: String,
-        repository: String,
-        riScId: String,
-        draftBranch: String = riScId,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
-
     fun uriToPutRiScOnDraftBranch(
         owner: String,
         repository: String,
         riScId: String,
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
-
-    fun uriToPutSopsConfigOnDraftBranch(
-        owner: String,
-        repository: String,
-        draftBranch: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
 
     fun uriToPutFileToGitHub(
         owner: String,
@@ -292,11 +268,6 @@ class GithubHelper(
             nameOfNewBranch = "refs/heads/$branchName",
             shaOfLatestDefault = latestShaAtDefault,
         )
-
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
-
-    fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
-        GithubCreateNewAccessTokenForRepository(repositoryName = repositoryName)
 
     fun uriToFetchAllCommitsOnBranchSince(
         owner: String,
