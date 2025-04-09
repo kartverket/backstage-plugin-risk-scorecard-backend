@@ -6,10 +6,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
-import no.risc.exception.exceptions.SopsConfigFetchException
-import no.risc.exception.exceptions.UnableToWriteSopsConfigException
 import no.risc.github.models.FileContentDTO
-import no.risc.github.models.FileContentsDTO
 import no.risc.github.models.FileNameDTO
 import no.risc.github.models.RepositoryDTO
 import no.risc.github.models.ShaResponseDTO
@@ -102,61 +99,6 @@ class GithubConnector(
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
         val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
-    }
-
-    suspend fun fetchSopsConfig(
-        owner: String,
-        repository: String,
-        githubAccessToken: GithubAccessToken,
-        branch: String,
-    ): GithubContentResponse {
-        LOGGER.info("Trying to get sops config from branch: $branch")
-        val sopsConfig =
-            try {
-                LOGGER.info("Trying to get sops config from branch: $branch")
-                getGithubResponse(
-                    uri = "${githubHelper.uriToFindSopsConfig(owner, repository)}?ref=$branch",
-                    accessToken = githubAccessToken.value,
-                ).toFileContentDTO()?.content?.decodeBase64()
-            } catch (e: WebClientResponseException.NotFound) {
-                LOGGER.info("Trying to get sops config from default branch")
-                getGithubResponse(
-                    uri = githubHelper.uriToFindSopsConfig(owner, repository),
-                    accessToken = githubAccessToken.value,
-                ).toFileContentDTO()?.content?.decodeBase64()
-            }
-        if (sopsConfig == null) {
-            throw SopsConfigFetchException(
-                message = "Fetch of sops config responded with 200 OK but file contents was null",
-                riScId = branch,
-                responseMessage = "Could not fetch SOPS config",
-            )
-        }
-
-        return GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
-    }
-
-    suspend fun fetchSopsConfigFromDefaultBranch(
-        repositoryOwner: String,
-        repositoryName: String,
-        githubAccessToken: GithubAccessToken,
-    ): GithubContentResponse {
-        val sopsConfig =
-            getGithubResponse(
-                uri = githubHelper.uriToFindSopsConfig(owner = repositoryOwner, repository = repositoryName),
-                accessToken = githubAccessToken.value,
-            ).awaitBodyOrNull<FileContentDTO>()
-                ?.content
-                ?.decodeBase64()
-
-        if (sopsConfig == null) {
-            throw SopsConfigFetchException(
-                message = "Fetch of sops config responded with 200 OK but file contents was null",
-                riScId = "",
-                responseMessage = "Could not fetch SOPS config",
-            )
-        }
-        return GithubContentResponse(data = sopsConfig, status = GithubStatus.Success)
     }
 
     suspend fun fetchAllRiScIdentifiersInRepository(
@@ -704,42 +646,6 @@ class GithubConnector(
         )
 
     /**
-     * Creates a pull request for the SOPS configuration with the given sopsId. That is, a pull request is created from
-     * the branch `sopsId` to `baseBranch` with a default title and text for SOPS configuration updates.
-     *
-     * @param owner: The user/organisation that own the repository to make the pull request in.
-     * @param repository: The repository to make the pull request in.
-     * @param sopsId: The id of the change to the SOPS configuration.
-     * @param gitHubAccessToken: The GitHub access token for authorization.
-     * @param baseBranch: The branch to make the pull request to.
-     * @throws CreatePullRequestException If creation of the pull request failed.
-     */
-    suspend fun createPullRequestForSopsConfig(
-        owner: String,
-        repository: String,
-        sopsId: String,
-        gitHubAccessToken: String,
-        baseBranch: String,
-    ): GithubPullRequestObject =
-        createNewPullRequest(
-            owner = owner,
-            repository = repository,
-            accessToken = gitHubAccessToken,
-            pullRequestPayload =
-                GithubCreateNewPullRequestPayload(
-                    title = "Update SOPS configuration",
-                    body =
-                        "This pull request updates the SOPS configuration that is needed to encrypt and decrypt RiSc's in " +
-                            "[Risk Scorecard in Kartverket.dev](https://kartverket.dev/catalog/default/component/$repository/risc). " +
-                            "Merge this PR in order to use the new SOPS configuration in the " +
-                            "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
-                    repositoryOwner = owner,
-                    branch = sopsId,
-                    baseBranch = baseBranch,
-                ),
-        )
-
-    /**
      * Creates a request to create a new pull request through the GitHub API.
      *
      * @param owner: The owner (user/organisation) of the repository.
@@ -802,31 +708,6 @@ class GithubConnector(
             LOGGER.error("Got 400 bad request for filePath: $filePath with message: ${e.message}")
             throw e
         }
-
-    suspend fun writeSopsConfig(
-        sopsConfig: String,
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: GithubAccessToken,
-        branch: String,
-    ): String =
-        putFileRequestToGithub(
-            repositoryOwner = repositoryOwner,
-            repositoryName = repositoryName,
-            gitHubAccessToken = gitHubAccessToken,
-            filePath = "$riScFolderPath/.sops.yaml",
-            branch = branch,
-            message = "Update SOPS configuration",
-            content = sopsConfig.encodeBase64(),
-        ).awaitBodyOrNull<String>() ?: throw UnableToWriteSopsConfigException(
-            message = "Failed to put new sops config on branch: '$branch'",
-            response =
-                ProcessRiScResultDTO(
-                    riScId = "",
-                    status = ProcessingStatus.FailedToCreateSops,
-                    statusMessage = ProcessingStatus.FailedToCreateSops.message,
-                ),
-        )
 
     private suspend fun fetchFileInfo(
         repositoryOwner: String,
@@ -917,9 +798,6 @@ class GithubConnector(
     private suspend fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
         this.awaitBodyOrNull<List<GithubPullRequestObject>>() ?: emptyList()
 
-    private suspend fun ResponseSpec.toPullRequestFilesDTO(): List<PullRequestFileObject>? =
-        this.awaitBodyOrNull<List<PullRequestFileObject>>()
-
     private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this
             .awaitBodyOrNull<List<GithubCommitObject>>()
@@ -959,10 +837,6 @@ class GithubConnector(
     }
 
     private suspend fun ResponseSpec.shaResponseDTO(): String? = this.awaitBodyOrNull<ShaResponseDTO>()?.value
-
-    private suspend fun ResponseSpec.toRepositoryBranchDTO(): List<RepositoryBranchDTO>? = this.awaitBodyOrNull<List<RepositoryBranchDTO>>()
-
-    private suspend fun ResponseSpec.toFileContentsDTO(): List<FileContentsDTO>? = this.awaitBodyOrNull<List<FileContentsDTO>>()
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
@@ -1025,93 +899,4 @@ class GithubConnector(
         uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
-
-    suspend fun fetchFilesUpdatedInPullRequest(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: GithubAccessToken,
-        pullRequest: GithubPullRequestObject,
-    ) = getGithubResponse(
-        githubHelper.uriToFetchPullRequestFiles(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            pullRequestNumber = pullRequest.number,
-        ),
-        gitHubAccessToken.value,
-    ).toPullRequestFilesDTO() ?: throw GitHubFetchException(
-        "Unable to fetch files changed in pull request number ${pullRequest.number} for $repositoryOwner/$repositoryName",
-        ProcessRiScResultDTO(
-            riScId = "",
-            status = ProcessingStatus.FailedToCreateSops,
-            statusMessage = ProcessingStatus.FailedToCreateSops.message,
-        ),
-    )
-
-    suspend fun fetchPullRequestsForBranches(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: GithubAccessToken,
-        defaultBranch: String,
-        branches: List<String>,
-    ): List<GithubPullRequestObject> =
-        getGithubResponse(
-            uri = githubHelper.uriToFetchAllPullRequests(owner = repositoryOwner, repository = repositoryName),
-            accessToken = gitHubAccessToken.value,
-        ).toPullRequestResponseDTOs()
-            .filter { it.head.ref in branches && it.base.ref == defaultBranch }
-
-    suspend fun fetchAllBranches(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: GithubAccessToken,
-    ) = getGithubResponse(
-        uri = githubHelper.uriToFindAllBranches(owner = repositoryOwner, repository = repositoryName),
-        accessToken = gitHubAccessToken.value,
-    ).toRepositoryBranchDTO()
-
-    suspend fun fetchAllRiScsOnDefaultBranch(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: GithubAccessToken,
-    ): Map<FileContentsDTO, String> {
-        val fileContentPaths =
-            try {
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiScFiles(owner = repositoryOwner, repository = repositoryName),
-                    accessToken = gitHubAccessToken.value,
-                ).toFileContentsDTO() ?: throw GitHubFetchException(
-                    "Unable to fetch RiScs file paths on default branch for $repositoryOwner/$repositoryName",
-                    ProcessRiScResultDTO(
-                        riScId = "",
-                        status = ProcessingStatus.FailedToCreateSops,
-                        statusMessage = ProcessingStatus.FailedToCreateSops.message,
-                    ),
-                )
-            } catch (e: WebClientResponseException.NotFound) {
-                emptyList()
-            }
-        return fileContentPaths
-            .filter { it.name.endsWith("$filenamePostfix.json") || it.name.endsWith("$filenamePostfix.yaml") }
-            .associateWith {
-                getGithubResponse(
-                    uri =
-                        githubHelper.repositoryContentsUri(
-                            owner = repositoryOwner,
-                            repository = repositoryName,
-                            path = it.path,
-                        ),
-                    accessToken = gitHubAccessToken.value,
-                ).toFileContentDTO()
-                    ?.content
-                    ?.decodeBase64() ?: throw GitHubFetchException(
-                    message = "Unable to fetch RiScs file content from default branch for $repositoryOwner/$repositoryName",
-                    response =
-                        ProcessRiScResultDTO(
-                            riScId = "",
-                            status = ProcessingStatus.FailedToCreateSops,
-                            statusMessage = ProcessingStatus.FailedToCreateSops.message,
-                        ),
-                )
-            }
-    }
 }

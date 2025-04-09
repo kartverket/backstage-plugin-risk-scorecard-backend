@@ -1,10 +1,7 @@
 package no.risc.github
 
-import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonValue
-import no.risc.sops.model.PullRequestObject
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.OffsetDateTime
@@ -66,23 +63,6 @@ data class GithubCreateNewPullRequestPayload(
         "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$branch\", \"base\": \"$baseBranch\" }"
 }
 
-data class GithubCreateNewAccessTokenForRepository(
-    val repositoryName: String,
-    val permissions: Map<String, String> =
-        mapOf(
-            "contents" to "write",
-            "pull_requests" to "write",
-            "statuses" to "read",
-        ),
-) {
-    fun toContentBody(): String =
-        "{ \"repositories\": [\"$repositoryName\"], \"permissions\": { ${
-            permissions.map {
-                "\"${it.key}\":\"${it.value}\""
-            }.joinToString(",")
-        }}}"
-}
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubPullRequestObject(
     @JsonProperty("html_url")
@@ -94,51 +74,11 @@ data class GithubPullRequestObject(
     val base: GithubPullRequestHead,
     val number: Int,
     val user: GitHubPullRequestUser,
-) {
-    fun toPullRequestObject() =
-        PullRequestObject(
-            url = url,
-            title = title,
-            openedBy = user.login,
-            createdAt = createdAt,
-        )
-}
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GitHubPullRequestUser(
     val login: String,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class RepositoryBranchDTO(
-    val name: String,
-)
-
-enum class PullRequestFileStatus(
-    val value: String,
-) {
-    Added("added"),
-    Removed("removed"),
-    Modified("modified"),
-    Renamed("renamed"),
-    Copied("copied"),
-    Changed("changed"),
-    Unchanged("unchanged"),
-    ;
-
-    companion object {
-        @JsonCreator
-        fun fromValue(value: String): PullRequestFileStatus? = entries.firstOrNull { it.value == value }
-    }
-
-    @JsonValue
-    fun toValue(): String = value
-}
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class PullRequestFileObject(
-    val filename: String,
-    val status: PullRequestFileStatus,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -169,11 +109,6 @@ class GithubHelper(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
 ) {
-    fun uriToFindSopsConfig(
-        owner: String,
-        repository: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
-
     fun uriToFindRiScFiles(
         owner: String,
         repository: String,
@@ -186,12 +121,6 @@ class GithubHelper(
         branch: String? = null,
     ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
 
-    fun uriToFindSopsConfig(
-        owner: String,
-        repository: String,
-        id: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml"
-
     fun uriToFindRiSc(
         owner: String,
         repository: String,
@@ -202,11 +131,6 @@ class GithubHelper(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
-
-    fun uriToFindAllBranches(
-        owner: String,
-        repository: String,
-    ): String = "/$owner/$repository/branches?per_page=100"
 
     fun uriToGetRepositoryInfo(
         owner: String,
@@ -219,33 +143,6 @@ class GithubHelper(
         riScId: String,
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
-
-    fun uriToFindSopsConfigOnDraftBranch(
-        owner: String,
-        repository: String,
-        riScId: String,
-        draftBranch: String = riScId,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
-
-    fun uriToPutRiScOnDraftBranch(
-        owner: String,
-        repository: String,
-        riScId: String,
-        draftBranch: String = riScId,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
-
-    fun uriToPutSopsConfigOnDraftBranch(
-        owner: String,
-        repository: String,
-        draftBranch: String,
-    ): String = "/$owner/$repository/contents/$riScFolderPath/.sops.yaml?ref=$draftBranch"
-
-    fun uriToPutFileToGitHub(
-        owner: String,
-        repository: String,
-        path: String,
-        branch: String? = null,
-    ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
 
     fun uriToGetCommitStatus(
         owner: String,
@@ -262,12 +159,6 @@ class GithubHelper(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/pulls"
-
-    fun uriToFetchPullRequestFiles(
-        owner: String,
-        repository: String,
-        pullRequestNumber: Int,
-    ): String = "/$owner/$repository/pulls/$pullRequestNumber/files"
 
     fun uriToCreatePullRequest(
         owner: String,
@@ -293,11 +184,6 @@ class GithubHelper(
             shaOfLatestDefault = latestShaAtDefault,
         )
 
-    fun uriToGetAccessTokenFromInstallation(installationId: String): String = "/installations/$installationId/access_tokens"
-
-    fun bodyToGetAccessToken(repositoryName: String): GithubCreateNewAccessTokenForRepository =
-        GithubCreateNewAccessTokenForRepository(repositoryName = repositoryName)
-
     fun uriToFetchAllCommitsOnBranchSince(
         owner: String,
         repository: String,
@@ -321,9 +207,11 @@ class GithubHelper(
         if (branch == null && riScId == null) {
             "/$owner/$repository/commits"
         } else {
-            "/$owner/$repository/commits?${ branch?.let {
-                "sha=$branch"
-            } ?: ""}&${ riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: "" }"
+            "/$owner/$repository/commits?${
+                branch?.let {
+                    "sha=$branch"
+                } ?: ""
+            }&${riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: ""}"
         }
 
     fun uriToFetchCommitsSince(

@@ -19,8 +19,8 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.KOffsetDateTimeSerializer
@@ -143,10 +143,8 @@ enum class ProcessingStatus(
 ) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
-    CreatedSops("Created SOPS configuration successfully"),
     InitializedGeneratedRiSc("Created new auto-generated risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
-    UpdatedSops("Updated SOPS configuration successfully"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     OpenedPullRequest("Opened pull request successfully"),
@@ -157,11 +155,8 @@ enum class ProcessingStatus(
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
     AccessTokensValidationFailure("Failure when validating access tokens"),
     ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
-    NoGcpKeyInSopsConfigFound("No GCP KMS resource ID was found in sops config"),
-    FetchedSopsConfig("Fetched sops config successfully"),
     FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
     FailedToCreateSops("Failed to create SOPS configuration"),
-    NoSopsConfigFound("No SOPS config found in repo"),
 }
 
 data class RiScIdentifier(
@@ -529,6 +524,7 @@ class RiScService(
         generateDefault: Boolean,
     ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
+        LOGGER.info("Generating default content")
         val riScContentWrapperObject =
             content.copy(
                 riSc =
@@ -538,6 +534,7 @@ class RiScService(
                         content.riSc
                     },
             )
+        LOGGER.info("Generated default content")
         try {
             val result =
                 updateOrCreateRiSc(
