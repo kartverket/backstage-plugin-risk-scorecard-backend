@@ -839,21 +839,25 @@ class GithubConnector(
             }
         }
 
-    private suspend fun fetchRepositoryInfo(
-        uri: String,
-        gitHubAccessToken: String,
-    ) = getGithubResponse(uri, gitHubAccessToken).awaitBody<RepositoryDTO>()
-
+    /**
+     * Retrieves information about the given repository "/<repositoryOwner>/<repositoryName>". The information contains
+     * information about the default branch and which permissions the user for the repository.
+     *
+     * @param repositoryOwner The name of the user/organisation owning the repository
+     * @param repositoryName The name of the repository to fetch information for
+     * @param gitHubAccessToken The GitHub access token to use for fetching the information
+     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
+     */
     suspend fun fetchRepositoryInfo(
         gitHubAccessToken: String,
         repositoryOwner: String,
         repositoryName: String,
     ): RepositoryInfo {
         val repositoryDTO =
-            fetchRepositoryInfo(
+            getGithubResponse(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
-                gitHubAccessToken = gitHubAccessToken,
-            )
+                accessToken = gitHubAccessToken,
+            ).awaitBody<RepositoryDTO>()
 
         if (!repositoryDTO.permissions.pull) {
             throw PermissionDeniedOnGitHubException(
@@ -861,24 +865,32 @@ class GithubConnector(
             )
         }
 
-        if (repositoryDTO.permissions.push) {
-            return RepositoryInfo(
-                defaultBranch = repositoryDTO.defaultBranch,
-                permissions = GitHubPermission.entries.toList(),
-            )
-        }
         return RepositoryInfo(
             defaultBranch = repositoryDTO.defaultBranch,
-            permissions = listOf(GitHubPermission.READ),
+            permissions =
+                if (repositoryDTO.permissions.push) {
+                    GitHubPermission.entries.toList()
+                } else {
+                    listOf(GitHubPermission.READ)
+                },
         )
     }
 
+    /**
+     * Finds the default branch for the given repository "/<repositoryOwner>/<repositoryName>".
+     *
+     * @param repositoryOwner The name of the user/organisation owning the repository
+     * @param repositoryName The name of the repository to fetch information for
+     * @param gitHubAccessToken The GitHub access token to use for fetching the information
+     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
+     */
     suspend fun fetchDefaultBranch(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: String,
     ) = fetchRepositoryInfo(
-        uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
+        repositoryOwner = repositoryOwner,
+        repositoryName = repositoryName,
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
 }
