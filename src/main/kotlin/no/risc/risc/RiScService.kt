@@ -1,5 +1,4 @@
 package no.risc.risc
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -23,6 +22,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
+import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
+import java.time.OffsetDateTime
 
 class ProcessRiScResultDTO(
     riScId: String,
@@ -57,11 +58,19 @@ data class CreateRiScResultDTO(
 )
 
 @Serializable
+data class LastPublished(
+    @Serializable(KOffsetDateTimeSerializer::class)
+    val dateTime: OffsetDateTime,
+    val numberOfCommits: Int,
+)
+
+@Serializable
 data class RiScContentResultDTO(
     val riScId: String,
     val status: ContentStatus,
     val riScStatus: RiScStatus?,
     val riScContent: String?,
+    val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
     val migrationStatus: MigrationStatus =
@@ -226,6 +235,7 @@ class RiScService(
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
                     pullRequestUrl = null,
+                    lastPublished = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -362,12 +372,20 @@ class RiScService(
                                         }
                                     }
                                 processedContent?.let { nonNullContent ->
+                                    val lastPublished =
+                                        githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                                            owner = owner,
+                                            repository = repository,
+                                            accessToken = accessTokens.githubAccessToken.value,
+                                            riScId = id.id,
+                                        )
                                     nonNullContent
                                         .responseToRiScResult(
                                             riScId = id.id,
                                             riScStatus = id.status,
                                             gcpAccessToken = accessTokens.gcpAccessToken,
                                             pullRequestUrl = id.pullRequestUrl,
+                                            lastPublished = lastPublished,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
                             } catch (e: Exception) {
@@ -424,6 +442,7 @@ class RiScService(
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
         pullRequestUrl: String?,
+        lastPublished: LastPublished?,
     ): RiScContentResultDTO =
         when (status) {
             GithubStatus.Success ->
@@ -436,6 +455,7 @@ class RiScService(
                         riScContent = decryptedContent.riSc,
                         sopsConfig = decryptedContent.sopsConfig,
                         pullRequestUrl = pullRequestUrl,
+                        lastPublished = lastPublished,
                     )
                 } catch (e: Exception) {
                     LOGGER.error("An error occurred when decrypting: ${e.message}")
@@ -638,7 +658,7 @@ class RiScService(
         }
     }
 
-    fun publishRiSc(
+    suspend fun publishRiSc(
         owner: String,
         repository: String,
         riScId: String,

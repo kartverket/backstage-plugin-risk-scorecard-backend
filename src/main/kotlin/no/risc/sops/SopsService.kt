@@ -153,7 +153,7 @@ class SopsService(
         )
     }
 
-    fun updateSopsConfig(
+    suspend fun updateSopsConfig(
         repositoryOwner: String,
         repositoryName: String,
         branch: String,
@@ -175,7 +175,7 @@ class SopsService(
         )
     }
 
-    fun openPullRequest(
+    suspend fun openPullRequest(
         repositoryOwner: String,
         repositoryName: String,
         sopsId: String,

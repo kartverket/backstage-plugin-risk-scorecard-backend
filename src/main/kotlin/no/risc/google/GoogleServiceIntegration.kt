@@ -23,6 +23,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
 import no.risc.sops.model.GcpCryptoKeyObject
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.bodyToMono
@@ -33,6 +34,7 @@ class GoogleServiceIntegration(
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
     private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
+    @Value("\${googleService.additionalAllowedGCPKeyNames}") private val additionalAllowedGCPKeyNames: List<String>,
 ) {
     companion object {
         val LOGGER = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
@@ -134,6 +136,7 @@ class GoogleServiceIntegration(
                         ProcessingStatus.FailedToFetchGcpProjectIds,
                     )
             gcpProjectIds
+                .filter { it.value.contains("-prod-") || additionalAllowedGCPKeyNames.contains(it.value) }
                 .map {
                     it to
                         async(Dispatchers.IO) {

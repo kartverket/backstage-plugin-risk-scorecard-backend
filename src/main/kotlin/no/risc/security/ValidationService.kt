@@ -14,7 +14,7 @@ class ValidationService(
     private val githubConnector: GithubConnector,
     private val googleServiceIntegration: GoogleServiceIntegration,
 ) {
-    fun validateAccessTokens(
+    suspend fun validateAccessTokens(
         gcpAccessToken: String,
         gitHubAccessToken: String,
         gitHubPermissionNeeded: GitHubPermission,

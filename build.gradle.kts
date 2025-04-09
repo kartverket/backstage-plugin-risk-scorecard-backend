@@ -1,8 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("org.springframework.boot") version "3.4.4"
-    id("io.spring.dependency-management") version "1.1.7"
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.spring") version "2.1.20"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
@@ -16,8 +13,15 @@ ktlint {
 group = "no"
 version = "0.0.1-SNAPSHOT"
 
+kotlin {
+    jvmToolchain(23)
+    compilerOptions {
+        freeCompilerArgs.add("-Xjsr305=strict")
+    }
+}
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_23
 }
 
 repositories {
@@ -30,18 +34,19 @@ repositories {
 val kotlinVersion = "2.1.20"
 val springBootVersion = "3.4.4"
 val springSecurityVersion = "6.4.4"
-val kotlinxSerializationVersion = "1.8.0"
-val kotlinxCoroutinesVersion = "1.10.1"
-val nettyVersion = "4.1.119.Final"
+val kotlinxSerializationVersion = "1.8.1"
+val kotlinxCoroutinesVersion = "1.10.2"
+val nettyVersion = "4.2.0.Final"
 val micrometerVersion = "1.14.5"
 val fasterXmlJacksonVersion = "2.18.3"
 val kotlinJsonSchemaVersion = "0.56"
 val googleGsonVersion = "2.12.1"
 val googleAuthVersion = "1.33.1"
-val nimbusdsVersion = "10.0.2"
+val nimbusdsVersion = "10.1"
 val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
 val ninjaSquadVersion = "4.0.2"
+val mockkVersion = "1.13.17"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -82,13 +87,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
     testImplementation("com.ninja-squad:springmockk:$ninjaSquadVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "21"
-    }
+    testImplementation("io.mockk:mockk:$mockkVersion")
 }
 
 tasks.withType<Test> {
