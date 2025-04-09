@@ -46,7 +46,7 @@ val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
 val ninjaSquadVersion = "4.0.2"
-val mockkVersion = "1.13.17"
+val mockkVersion = "1.14.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
