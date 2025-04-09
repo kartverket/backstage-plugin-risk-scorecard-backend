@@ -1,4 +1,5 @@
 package no.risc.risc
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -662,7 +663,7 @@ class RiScService(
         owner: String,
         repository: String,
         riScId: String,
-        accessTokens: AccessTokens,
+        gitHubAccessToken: String,
         userInfo: UserInfo,
         baseBranch: String,
     ): PublishRiScResultDTO {
@@ -672,28 +673,17 @@ class RiScService(
                 repository = repository,
                 riScId = riScId,
                 requiresNewApproval = true,
-                accessTokens = accessTokens,
+                gitHubAccessToken = gitHubAccessToken,
                 userInfo = userInfo,
                 baseBranch = baseBranch,
             )
 
-        return when (pullRequestObject) {
-            is GithubPullRequestObject ->
-                PublishRiScResultDTO(
-                    riScId = riScId,
-                    status = ProcessingStatus.CreatedPullRequest,
-                    statusMessage = "Pull request was created",
-                    pendingApproval = pullRequestObject.toPendingApprovalDTO(),
-                )
-
-            else ->
-                PublishRiScResultDTO(
-                    riScId = riScId,
-                    status = ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    statusMessage = "Could not create pull request",
-                    pendingApproval = null,
-                )
-        }
+        return PublishRiScResultDTO(
+            riScId = riScId,
+            status = ProcessingStatus.CreatedPullRequest,
+            statusMessage = "Pull request was created",
+            pendingApproval = pullRequestObject.toPendingApprovalDTO(),
+        )
     }
 
     private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =

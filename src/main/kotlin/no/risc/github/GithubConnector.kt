@@ -475,7 +475,7 @@ class GithubConnector(
                             repository = repository,
                             riScId = riScId,
                             requiresNewApproval = requiresNewApproval,
-                            accessTokens = accessTokens,
+                            gitHubAccessToken = accessToken,
                             userInfo = userInfo,
                             baseBranch = defaultBranch,
                         )
@@ -660,47 +660,71 @@ class GithubConnector(
             ).timeStampLatestCommitResponse()
         }
 
+    /**
+     * Creates a pull request for the changes to a RiSc with the given riScId. That is, a pull request is created from
+     * the branch `riScId` to `baseBranch` with a title and text dependent on if the changes have been approved or do
+     * not require approval
+     *
+     * @param owner: The user/organisation that own the repository to make the pull request in.
+     * @param repository: The repository to make the pull request in.
+     * @param riScId: The id of the RiSc.
+     * @param requiresNewApproval Indicates if the changes to the new.
+     * @param gitHubAccessToken: The GitHub access token for authorization.
+     * @param userInfo: Information about the user that is creating the pull request, i.e., the user who has approved the changes.
+     * @param baseBranch: The branch to make the pull request to.
+     * @throws CreatePullRequestException If creation of the pull request failed.
+     */
     suspend fun createPullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
         requiresNewApproval: Boolean,
-        accessTokens: AccessTokens,
+        gitHubAccessToken: String,
         userInfo: UserInfo,
         baseBranch: String,
-    ): GithubPullRequestObject? =
-        try {
-            createNewPullRequest(
-                owner = owner,
-                repository = repository,
-                accessToken = accessTokens.githubAccessToken.value,
-                pullRequestPayload =
-                    githubHelper.bodyToCreateNewPullRequest(
-                        repositoryOwner = owner,
-                        branch = riScId,
-                        requiresNewApproval = requiresNewApproval,
-                        riScRiskOwner = userInfo,
-                        baseBranch = baseBranch,
-                    ),
-            ).pullRequestResponseDTO()
-        } catch (e: Exception) {
-            throw CreatePullRequestException(
-                message = "Failed with error ${e.message} when creating pull request for RiSc with id: $riScId",
-                riScId = riScId,
-            )
-        }
+    ): GithubPullRequestObject =
+        createNewPullRequest(
+            owner = owner,
+            repository = repository,
+            accessToken = gitHubAccessToken,
+            pullRequestPayload =
+                GithubCreateNewPullRequestPayload(
+                    title = "Updated risk scorecard",
+                    repositoryOwner = owner,
+                    body =
+                        if (requiresNewApproval) {
+                            "${userInfo.name} (${userInfo.email}) has approved the risk scorecard. " +
+                                "Merge the pull request to include the changes in the default branch."
+                        } else {
+                            "The risk scorecard has been updated, but does not require new approval."
+                        },
+                    branch = riScId,
+                    baseBranch = baseBranch,
+                ),
+        )
 
+    /**
+     * Creates a pull request for the SOPS configuration with the given sopsId. That is, a pull request is created from
+     * the branch `sopsId` to `baseBranch` with a default title and text for SOPS configuration updates.
+     *
+     * @param owner: The user/organisation that own the repository to make the pull request in.
+     * @param repository: The repository to make the pull request in.
+     * @param sopsId: The id of the change to the SOPS configuration.
+     * @param gitHubAccessToken: The GitHub access token for authorization.
+     * @param baseBranch: The branch to make the pull request to.
+     * @throws CreatePullRequestException If creation of the pull request failed.
+     */
     suspend fun createPullRequestForSopsConfig(
         owner: String,
         repository: String,
         sopsId: String,
-        gitHubAccessToken: GithubAccessToken,
-        defaultBranch: String,
-    ): GithubPullRequestObject? =
+        gitHubAccessToken: String,
+        baseBranch: String,
+    ): GithubPullRequestObject =
         createNewPullRequest(
             owner = owner,
             repository = repository,
-            accessToken = gitHubAccessToken.value,
+            accessToken = gitHubAccessToken,
             pullRequestPayload =
                 GithubCreateNewPullRequestPayload(
                     title = "Update SOPS configuration",
@@ -711,9 +735,9 @@ class GithubConnector(
                             "[Risk Scorecard plugin](https://kartverket.dev/catalog/default/component/$repository/risc).",
                     repositoryOwner = owner,
                     branch = sopsId,
-                    baseBranch = defaultBranch,
+                    baseBranch = baseBranch,
                 ),
-        ).pullRequestResponseDTO()
+        )
 
     /**
      * Creates a request to create a new pull request through the GitHub API.
@@ -722,19 +746,28 @@ class GithubConnector(
      * @param repository: The name of the repository to make the pull request in.
      * @param accessToken: The GitHub access token to use for authorization.
      * @param pullRequestPayload: The content of the pull request.
+     * @throws CreatePullRequestException If creation of the pull request failed.
      */
     private suspend fun createNewPullRequest(
         owner: String,
         repository: String,
         accessToken: String,
         pullRequestPayload: GithubCreateNewPullRequestPayload,
-    ): ResponseSpec =
-        requestToGithubWithJSONBody(
-            uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
-            accessToken = accessToken,
-            content = pullRequestPayload.toContentBody(),
-            method = HttpMethod.POST,
-        )
+    ): GithubPullRequestObject =
+        try {
+            requestToGithubWithJSONBody(
+                uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
+                accessToken = accessToken,
+                content = pullRequestPayload.toContentBody(),
+                method = HttpMethod.POST,
+            ).awaitBody<GithubPullRequestObject>()
+        } catch (e: Exception) {
+            throw CreatePullRequestException(
+                message =
+                    "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.branch}" +
+                        "to ${pullRequestPayload.baseBranch} with title \"${pullRequestPayload.title}\"",
+            )
+        }
 
     suspend fun putFileRequestToGithub(
         repositoryOwner: String,
@@ -886,8 +919,6 @@ class GithubConnector(
 
     private suspend fun ResponseSpec.toPullRequestFilesDTO(): List<PullRequestFileObject>? =
         this.awaitBodyOrNull<List<PullRequestFileObject>>()
-
-    suspend fun ResponseSpec.pullRequestResponseDTO(): GithubPullRequestObject? = this.awaitBodyOrNull<GithubPullRequestObject>()
 
     private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import no.risc.risc.models.UserInfo
 import no.risc.sops.model.PullRequestObject
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -284,31 +283,6 @@ class GithubHelper(
     fun bodyToClosePullRequest(): String =
         "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. " +
             "New approval from risk owner is required.\",  \"state\": \"closed\"}"
-
-    fun bodyToCreateNewPullRequest(
-        repositoryOwner: String,
-        requiresNewApproval: Boolean,
-        riScRiskOwner: UserInfo,
-        branch: String,
-        baseBranch: String,
-    ): GithubCreateNewPullRequestPayload {
-        val body =
-            when (requiresNewApproval) {
-                true ->
-                    "${riScRiskOwner.name} (${riScRiskOwner.email}) has approved the risk scorecard. " +
-                        "Merge the pull request to include the changes in the default branch."
-
-                false -> "The risk scorecard has been updated, but does not require new approval."
-            }
-
-        return GithubCreateNewPullRequestPayload(
-            title = "Updated risk scorecard",
-            body = body,
-            repositoryOwner = repositoryOwner,
-            branch = branch,
-            baseBranch = baseBranch,
-        )
-    }
 
     fun bodyToCreateNewBranchFromDefault(
         branchName: String,
