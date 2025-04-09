@@ -10,8 +10,8 @@ import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.risc.models.RiScWithConfig
 import no.risc.risc.models.GcpKmsEntry
+import no.risc.risc.models.RiScWithConfig
 import no.risc.risc.models.SopsConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

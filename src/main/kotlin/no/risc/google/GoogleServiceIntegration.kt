@@ -7,6 +7,7 @@ import no.risc.exception.exceptions.FetchException
 import no.risc.google.model.FetchCryptoKeysResponse
 import no.risc.google.model.FetchGcpKeyRingsResponse
 import no.risc.google.model.FetchGcpProjectIdsResponse
+import no.risc.google.model.GcpCryptoKeyObject
 import no.risc.google.model.GcpIamPermission
 import no.risc.google.model.GcpKeyRing
 import no.risc.google.model.GcpLocation
@@ -21,7 +22,6 @@ import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
-import no.risc.google.model.GcpCryptoKeyObject
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component

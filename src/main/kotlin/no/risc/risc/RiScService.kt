@@ -19,8 +19,8 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
-import no.risc.risc.models.UserInfo
 import no.risc.risc.models.SopsConfig
+import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.KOffsetDateTimeSerializer
