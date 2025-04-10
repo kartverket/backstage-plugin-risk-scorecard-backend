@@ -148,6 +148,14 @@ class GithubConnector(
             )
         }
 
+    /**
+     * Combines the draft, published and sent for approval RiSc identifiers. Draft and published identifiers that have
+     * an ID that is equivalent to one for a sent for approval identifier, are ignored.
+     *
+     * @param draftRiScList RiSc identifiers for RiScs with pending changes
+     * @param sentForApprovalList RiSc identifiers for RiScs with pending pull requests
+     * @param publishedRiScList RiSc identifiers with RiSc files found in the default branch
+     */
     private fun combinePublishedDraftAndSentForApproval(
         draftRiScList: List<RiScIdentifier>,
         sentForApprovalList: List<RiScIdentifier>,
@@ -201,53 +209,85 @@ class GithubConnector(
             GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
         }
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that is published, i.e., on the default branch.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchPublishedRiScIdentifiers(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiScFiles(owner, repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<FileNameDTO>>()
-
-            response.riScIdentifiersPublished()
+            getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
+                .awaitBody<List<FileNameDTO>>()
+                // All RiSc files end in ".<filenamePostfix>.yaml".
+                .filter { it.value.endsWith(".$filenamePostfix.yaml") }
+                .map {
+                    RiScIdentifier(
+                        // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
+                        id = it.value.substringBefore(".$filenamePostfix"),
+                        status = RiScStatus.Published,
+                    )
+                }
         } catch (e: Exception) {
             emptyList()
         }
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that has a pull request open.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchRiScIdentifiersSentForApproval(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<GithubPullRequestObject>>()
-
-            response.riScIdentifiersSentForApproval()
+            getGithubResponse(
+                uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
+                accessToken = accessToken,
+            ).awaitBody<List<GithubPullRequestObject>>()
+                .map {
+                    RiScIdentifier(
+                        // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
+                        id = it.head.ref.substringAfterLast('/'),
+                        status = RiScStatus.SentForApproval,
+                        pullRequestUrl = it.url,
+                    )
+                    // Every RiSc identifier starts with "<filenamePrefix>-".
+                }.filter { it.id.startsWith("$filenamePrefix-") }
         } catch (e: Exception) {
             emptyList()
         }
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
+     * default branch. These are all RiScs that have a separate branch connect to them.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchRiScIdentifiersDrafted(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<GithubReferenceObjectDTO>>().map { it.toInternal() }
-
-            response.riScIdentifiersDrafted()
+            getGithubResponse(
+                // This URI retrieves only branches that start with "<filenamePrefix>-"
+                uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
+                accessToken = accessToken,
+            ).awaitBody<List<GithubReferenceObjectDTO>>()
+                // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
+                .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
         } catch (e: Exception) {
             emptyList()
         }
@@ -788,26 +828,6 @@ class GithubConnector(
             ?.commit
             ?.committer
             ?.date
-
-    private fun List<FileNameDTO>.riScIdentifiersPublished(): List<RiScIdentifier> =
-        this
-            .filter { it.value.endsWith(".$filenamePostfix.yaml") }
-            .map { RiScIdentifier(it.value.substringBefore(".$filenamePostfix"), RiScStatus.Published) }
-
-    private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
-        this
-            .map {
-                RiScIdentifier(
-                    it.head.ref
-                        .split("/")
-                        .last(),
-                    RiScStatus.SentForApproval,
-                    it.url,
-                )
-            }.filter { it.id.startsWith("$filenamePrefix-") }
-
-    private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
 
     private suspend fun ResponseSpec.decodedFileContentSuspend(): String? =
         toEntity<FileContentDTO>()
