@@ -168,46 +168,72 @@ class GithubConnector(
                 .plus(draftRiScList.filter { it.id !in sentForApprovalIds })
         }
 
+    /**
+     * Fetches the content of the RiSc at the given GitHub Contents-API uri.
+     *
+     * @param uri The GitHub Contents-API uri for the file of the given RiSc.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
+    private suspend fun fetchRiScContent(
+        uri: String,
+        accessToken: String,
+    ): GithubContentResponse =
+        try {
+            getGithubResponse(uri = uri, accessToken = accessToken)
+                .toEntity<FileContentDTO>()
+                .awaitSingle()
+                .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
+                .body
+                .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
+                ?.content
+                ?.decodeBase64()
+                .let { fileContent ->
+                    GithubContentResponse(
+                        data = fileContent,
+                        status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
+                    )
+                }
+        } catch (e: Exception) {
+            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
+        }
+
+    /**
+     * Fetches the content of a published RiSc from the default branch of the given repository using the GitHub Contents-API.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc belongs to.
+     * @param id The ID of the RiSC.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchPublishedRiSc(
         owner: String,
         repository: String,
         id: String,
         accessToken: String,
     ): GithubContentResponse =
-        try {
-            val fileContent =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
-                    accessToken = accessToken,
-                ).decodedFileContentSuspend()
+        fetchRiScContent(
+            uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
+            accessToken = accessToken,
+        )
 
-            GithubContentResponse(
-                data = fileContent,
-                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
-            )
-        } catch (e: Exception) {
-            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
-        }
-
+    /**
+     * Fetches the content of the pending changes to a RiSc from the given repository using the GitHub Contents-API.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc belongs to.
+     * @param id The ID of the RiSC.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchDraftedRiScContent(
         owner: String,
         repository: String,
         id: String,
         accessToken: String,
     ): GithubContentResponse =
-        try {
-            val fileContent =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
-                    accessToken = accessToken,
-                ).decodedFileContentSuspend()
-            GithubContentResponse(
-                data = fileContent,
-                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
-            )
-        } catch (e: Exception) {
-            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
-        }
+        fetchRiScContent(
+            uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
+            accessToken = accessToken,
+        )
 
     /**
      * Finds the identifiers of every RiSc in a repository that is published, i.e., on the default branch.
@@ -828,15 +854,6 @@ class GithubConnector(
             ?.commit
             ?.committer
             ?.date
-
-    private suspend fun ResponseSpec.decodedFileContentSuspend(): String? =
-        toEntity<FileContentDTO>()
-            .awaitSingle()
-            .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
-            .body
-            .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
-            ?.content
-            ?.decodeBase64()
 
     private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.value
 
