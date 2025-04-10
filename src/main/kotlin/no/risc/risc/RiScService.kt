@@ -315,7 +315,7 @@ class RiScService(
                         repository = repository,
                         accessToken = accessTokens.githubAccessToken.value,
                     ).ids
-            LOGGER.info("Found RiSc's with id's: ${riScIds.map { it.id }.joinToString(", ")}")
+            LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
             val riScContents =
                 riScIds
                     .associateWith { id ->

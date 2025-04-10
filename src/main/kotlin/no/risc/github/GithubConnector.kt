@@ -105,7 +105,12 @@ class GithubConnector(
     /**
      * Fetches all RiSc identifiers in the given repository. There are three types, drafts (RiScs that have pending
      * updates), sent for approval (RiScs that have pending pull requests) and published (RiScs that have been approved,
-     * i.e., appear in the default branch of the repository).
+     * i.e., appear in the default branch of the repository). If there exists multiple RiSc Identifiers with the same
+     * ID, they are prioritised in the following order:
+     *
+     * 1. Sent for approval
+     * 2. Draft
+     * 3. Published
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to fetch RiSc identifiers from.
@@ -136,8 +141,13 @@ class GithubConnector(
         }
 
     /**
-     * Combines the draft, published and sent for approval RiSc identifiers. Draft and published identifiers that have
-     * an ID that is equivalent to one for a sent for approval identifier, are ignored.
+     * Combines the draft, published and sent for approval RiSc identifiers. Identifiers are added in the order:
+     *
+     * 1. Sent for approval
+     * 2. Draft
+     * 3. Published
+     *
+     * Later identifiers are ignored if there already exists an identifier with the same ID.
      *
      * @param draftRiScList RiSc identifiers for RiScs with pending changes
      * @param sentForApprovalList RiSc identifiers for RiScs with pending pull requests
@@ -148,12 +158,13 @@ class GithubConnector(
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
     ): List<RiScIdentifier> =
-        sentForApprovalList.map { it.id }.toSet().let { sentForApprovalIds ->
-            listOf<RiScIdentifier>()
-                .plus(sentForApprovalList)
-                .plus(publishedRiScList.filter { it.id !in sentForApprovalIds })
-                .plus(draftRiScList.filter { it.id !in sentForApprovalIds })
-        }
+        mutableMapOf<String, RiScIdentifier>()
+            .also { identifiers ->
+                sentForApprovalList.map { identifiers.putIfAbsent(it.id, it) }
+                draftRiScList.map { identifiers.putIfAbsent(it.id, it) }
+                publishedRiScList.map { identifiers.putIfAbsent(it.id, it) }
+            }.values
+            .toList()
 
     /**
      * Fetches the content of the RiSc at the given GitHub Contents-API uri.
