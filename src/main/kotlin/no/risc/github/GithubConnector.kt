@@ -102,48 +102,35 @@ class GithubConnector(
         val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
     }
 
+    /**
+     * Fetches all RiSc identifiers in the given repository. There are three types, drafts (RiScs that have pending
+     * updates), sent for approval (RiScs that have pending pull requests) and published (RiScs that have been approved,
+     * i.e., appear in the default branch of the repository).
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchAllRiScIdentifiersInRepository(
         owner: String,
         repository: String,
         accessToken: String,
     ): GithubRiScIdentifiersResponse =
         coroutineScope {
-            val draftRiScsDeferred =
-                async {
-                    fetchRiScIdentifiersDrafted(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-            val publishedRiScsDeferred =
-                async {
-                    fetchPublishedRiScIdentifiers(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-            val riScsSentForApprovalDeferred =
-                async {
-                    fetchRiScIdentifiersSentForApproval(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-
-            val draftRiScs = draftRiScsDeferred.await()
-            val publishedRiScs = publishedRiScsDeferred.await()
-            val riScsSentForApproval = riScsSentForApprovalDeferred.await()
+            val draftRiScs =
+                async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
+            val publishedRiScs =
+                async { fetchPublishedRiScIdentifiers(owner = owner, repository = repository, accessToken = accessToken) }
+            val riScsSentForApproval =
+                async { fetchRiScIdentifiersSentForApproval(owner = owner, repository = repository, accessToken = accessToken) }
 
             GithubRiScIdentifiersResponse(
                 status = GithubStatus.Success,
                 ids =
                     combinePublishedDraftAndSentForApproval(
-                        draftRiScList = draftRiScs,
-                        sentForApprovalList = riScsSentForApproval,
-                        publishedRiScList = publishedRiScs,
+                        draftRiScList = draftRiScs.await(),
+                        sentForApprovalList = riScsSentForApproval.await(),
+                        publishedRiScList = publishedRiScs.await(),
                     ),
             )
         }
