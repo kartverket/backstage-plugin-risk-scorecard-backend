@@ -12,9 +12,7 @@ data class GithubReferenceObjectDTO(
     val url: String,
     @JsonProperty("object")
     val shaObject: GithubRefShaDTO,
-) {
-    fun toInternal(): GithubReferenceObject = GithubReferenceObject(ref, url, shaObject.sha)
-}
+)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class GithubRefShaCommitCommiter(
@@ -37,12 +35,6 @@ data class GithubRefCommitDTO(
     val sha: String,
     val url: String,
     val commit: GithubRefShaCommit,
-)
-
-data class GithubReferenceObject(
-    val ref: String,
-    val url: String,
-    val sha: String,
 )
 
 data class GithubCreateNewBranchPayload(

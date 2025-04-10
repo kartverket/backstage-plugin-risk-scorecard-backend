@@ -24,6 +24,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
@@ -98,168 +99,219 @@ class GithubConnector(
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
-        val LOGGER = LoggerFactory.getLogger(GithubConnector::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
     }
 
+    /**
+     * Fetches all RiSc identifiers in the given repository. There are three types, drafts (RiScs that have pending
+     * updates), sent for approval (RiScs that have pending pull requests) and published (RiScs that have been approved,
+     * i.e., appear in the default branch of the repository). If there exists multiple RiSc Identifiers with the same
+     * ID, they are prioritised in the following order:
+     *
+     * 1. Sent for approval
+     * 2. Draft
+     * 3. Published
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchAllRiScIdentifiersInRepository(
         owner: String,
         repository: String,
         accessToken: String,
     ): GithubRiScIdentifiersResponse =
         coroutineScope {
-            val draftRiScsDeferred =
-                async {
-                    fetchRiScIdentifiersDrafted(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-            val publishedRiScsDeferred =
-                async {
-                    fetchPublishedRiScIdentifiers(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-            val riScsSentForApprovalDeferred =
-                async {
-                    fetchRiScIdentifiersSentForApproval(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-
-            val draftRiScs = draftRiScsDeferred.await()
-            val publishedRiScs = publishedRiScsDeferred.await()
-            val riScsSentForApproval = riScsSentForApprovalDeferred.await()
+            val draftRiScs =
+                async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
+            val publishedRiScs =
+                async { fetchPublishedRiScIdentifiers(owner = owner, repository = repository, accessToken = accessToken) }
+            val riScsSentForApproval =
+                async { fetchRiScIdentifiersSentForApproval(owner = owner, repository = repository, accessToken = accessToken) }
 
             GithubRiScIdentifiersResponse(
                 status = GithubStatus.Success,
                 ids =
                     combinePublishedDraftAndSentForApproval(
-                        draftRiScList = draftRiScs,
-                        sentForApprovalList = riScsSentForApproval,
-                        publishedRiScList = publishedRiScs,
+                        draftRiScList = draftRiScs.await(),
+                        sentForApprovalList = riScsSentForApproval.await(),
+                        publishedRiScList = publishedRiScs.await(),
                     ),
             )
         }
 
+    /**
+     * Combines the draft, published and sent for approval RiSc identifiers. Identifiers are added in the order:
+     *
+     * 1. Sent for approval
+     * 2. Draft
+     * 3. Published
+     *
+     * Later identifiers are ignored if there already exists an identifier with the same ID.
+     *
+     * @param draftRiScList RiSc identifiers for RiScs with pending changes
+     * @param sentForApprovalList RiSc identifiers for RiScs with pending pull requests
+     * @param publishedRiScList RiSc identifiers with RiSc files found in the default branch
+     */
     private fun combinePublishedDraftAndSentForApproval(
         draftRiScList: List<RiScIdentifier>,
         sentForApprovalList: List<RiScIdentifier>,
         publishedRiScList: List<RiScIdentifier>,
-    ): List<RiScIdentifier> {
-        val sentForApprovalsIds = sentForApprovalList.map { it.id }.toSet()
+    ): List<RiScIdentifier> =
+        mutableMapOf<String, RiScIdentifier>()
+            .also { identifiers ->
+                sentForApprovalList.map { identifiers.putIfAbsent(it.id, it) }
+                draftRiScList.map { identifiers.putIfAbsent(it.id, it) }
+                publishedRiScList.map { identifiers.putIfAbsent(it.id, it) }
+            }.values
+            .toList()
 
-        val combinedList = mutableListOf<RiScIdentifier>()
-        combinedList.addAll(sentForApprovalList)
-
-        for (published in publishedRiScList) {
-            if (published.id !in sentForApprovalsIds) {
-                combinedList.add(published)
-            }
+    /**
+     * Fetches the content of the RiSc at the given GitHub Contents-API uri.
+     *
+     * @param uri The GitHub Contents-API uri for the file of the given RiSc.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
+    private suspend fun fetchRiScContent(
+        uri: String,
+        accessToken: String,
+    ): GithubContentResponse =
+        try {
+            getGithubResponse(uri = uri, accessToken = accessToken)
+                .toEntity<FileContentDTO>()
+                .awaitSingle()
+                .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
+                .body
+                .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
+                ?.content
+                ?.decodeBase64()
+                .let { fileContent ->
+                    GithubContentResponse(
+                        data = fileContent,
+                        status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
+                    )
+                }
+        } catch (e: Exception) {
+            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
         }
 
-        for (draft in draftRiScList) {
-            if (draft.id !in sentForApprovalsIds) {
-                combinedList.add(draft)
-            }
-        }
-
-        return combinedList
-    }
-
+    /**
+     * Fetches the content of a published RiSc from the default branch of the given repository using the GitHub Contents-API.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc belongs to.
+     * @param id The ID of the RiSC.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchPublishedRiSc(
         owner: String,
         repository: String,
         id: String,
         accessToken: String,
     ): GithubContentResponse =
-        try {
-            val fileContent =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
-                    accessToken = accessToken,
-                ).decodedFileContentSuspend()
+        fetchRiScContent(
+            uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
+            accessToken = accessToken,
+        )
 
-            GithubContentResponse(
-                data = fileContent,
-                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
-            )
-        } catch (e: Exception) {
-            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
-        }
-
+    /**
+     * Fetches the content of the pending changes to a RiSc from the given repository using the GitHub Contents-API.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc belongs to.
+     * @param id The ID of the RiSC.
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchDraftedRiScContent(
         owner: String,
         repository: String,
         id: String,
         accessToken: String,
     ): GithubContentResponse =
-        try {
-            val fileContent =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
-                    accessToken = accessToken,
-                ).decodedFileContentSuspend()
-            GithubContentResponse(
-                data = fileContent,
-                status = if (fileContent == null) GithubStatus.ContentIsEmpty else GithubStatus.Success,
-            )
-        } catch (e: Exception) {
-            GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
-        }
+        fetchRiScContent(
+            uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
+            accessToken = accessToken,
+        )
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that is published, i.e., on the default branch.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchPublishedRiScIdentifiers(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiScFiles(owner, repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<FileNameDTO>>()
-
-            response.riScIdentifiersPublished()
+            getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
+                .awaitBody<List<FileNameDTO>>()
+                // All RiSc files end in ".<filenamePostfix>.yaml".
+                .filter { it.value.endsWith(".$filenamePostfix.yaml") }
+                .map {
+                    RiScIdentifier(
+                        // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
+                        id = it.value.substringBefore(".$filenamePostfix"),
+                        status = RiScStatus.Published,
+                    )
+                }
         } catch (e: Exception) {
             emptyList()
         }
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that has a pull request open.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchRiScIdentifiersSentForApproval(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<GithubPullRequestObject>>()
-
-            response.riScIdentifiersSentForApproval()
+            getGithubResponse(
+                uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
+                accessToken = accessToken,
+            ).awaitBody<List<GithubPullRequestObject>>()
+                .map {
+                    RiScIdentifier(
+                        // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
+                        id = it.head.ref.substringAfterLast('/'),
+                        status = RiScStatus.SentForApproval,
+                        pullRequestUrl = it.url,
+                    )
+                    // Every RiSc identifier starts with "<filenamePrefix>-".
+                }.filter { it.id.startsWith("$filenamePrefix-") }
         } catch (e: Exception) {
             emptyList()
         }
 
+    /**
+     * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
+     * default branch. These are all RiScs that have a separate branch connect to them.
+     *
+     * @param owner: The user/organisation the repository belongs to.
+     * @param repository: The repository to check.
+     * @param accessToken: The GitHub access token to use for authorization.
+     */
     private suspend fun fetchRiScIdentifiersDrafted(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
         try {
-            val response =
-                getGithubResponse(
-                    uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
-                    accessToken = accessToken,
-                ).awaitBody<List<GithubReferenceObjectDTO>>().map { it.toInternal() }
-
-            response.riScIdentifiersDrafted()
+            getGithubResponse(
+                // This URI retrieves only branches that start with "<filenamePrefix>-"
+                uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
+                accessToken = accessToken,
+            ).awaitBody<List<GithubReferenceObjectDTO>>()
+                // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
+                .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
         } catch (e: Exception) {
             emptyList()
         }
@@ -271,7 +323,7 @@ class GithubConnector(
         riScId: String,
     ): LastPublished? =
         tryOrNull {
-            val lastCommitOnPath =
+            val dateOfLastPublished =
                 getGithubResponse(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
@@ -279,9 +331,7 @@ class GithubConnector(
                         riScId = riScId,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>()[0]
-
-            val dateOfLastPublished = lastCommitOnPath.commit.committer.dateTime
+                ).awaitBody<List<GithubRefCommitDTO>>().first().commit.committer.dateTime
 
             val numberOfCommitsSinceDateTime =
                 getGithubResponse(
@@ -555,7 +605,7 @@ class GithubConnector(
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
-            ).toPullRequestResponseDTOs()
+            ).awaitBody<List<GithubPullRequestObject>>()
         } catch (e: Exception) {
             emptyList()
         }
@@ -725,7 +775,7 @@ class GithubConnector(
                     branch = branch,
                 ),
             accessToken = gitHubAccessToken.value,
-        ).toFileContentDTO() ?: throw GitHubFetchException(
+        ).awaitBodyOrNull<FileContentDTO>() ?: throw GitHubFetchException(
             message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
             response =
                 ProcessRiScResultDTO(
@@ -795,9 +845,6 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
-    private suspend fun ResponseSpec.toPullRequestResponseDTOs(): List<GithubPullRequestObject> =
-        this.awaitBodyOrNull<List<GithubPullRequestObject>>() ?: emptyList()
-
     private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
         this
             .awaitBodyOrNull<List<GithubCommitObject>>()
@@ -806,37 +853,7 @@ class GithubConnector(
             ?.committer
             ?.date
 
-    private fun List<FileNameDTO>.riScIdentifiersPublished(): List<RiScIdentifier> =
-        this
-            .filter { it.value.endsWith(".$filenamePostfix.yaml") }
-            .map { RiScIdentifier(it.value.substringBefore(".$filenamePostfix"), RiScStatus.Published) }
-
-    private fun List<GithubPullRequestObject>.riScIdentifiersSentForApproval(): List<RiScIdentifier> =
-        this
-            .map {
-                RiScIdentifier(
-                    it.head.ref
-                        .split("/")
-                        .last(),
-                    RiScStatus.SentForApproval,
-                    it.url,
-                )
-            }.filter { it.id.startsWith("$filenamePrefix-") }
-
-    private fun List<GithubReferenceObject>.riScIdentifiersDrafted(): List<RiScIdentifier> =
-        this.map { RiScIdentifier(it.ref.split("/").last(), RiScStatus.Draft) }
-
-    private suspend fun ResponseSpec.toFileContentDTO(): FileContentDTO? = this.awaitBodyOrNull<FileContentDTO>()
-
-    private suspend fun ResponseSpec.decodedFileContentSuspend(): String? {
-        val response = toEntity<FileContentDTO>().awaitSingle()
-        LOGGER.info("GET to GitHub contents-API responded with ${response.statusCode}")
-        val fileContentDTO: FileContentDTO? = response.body
-        LOGGER.info("RiSc content: ${fileContentDTO?.content?.substring(0, 10)}")
-        return fileContentDTO?.content?.decodeBase64()
-    }
-
-    private suspend fun ResponseSpec.shaResponseDTO(): String? = this.awaitBodyOrNull<ShaResponseDTO>()?.value
+    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.value
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
@@ -857,21 +874,25 @@ class GithubConnector(
             }
         }
 
-    private suspend fun fetchRepositoryInfo(
-        uri: String,
-        gitHubAccessToken: String,
-    ) = getGithubResponse(uri, gitHubAccessToken).awaitBody<RepositoryDTO>()
-
+    /**
+     * Retrieves information about the given repository "/<repositoryOwner>/<repositoryName>". The information contains
+     * information about the default branch and which permissions the user for the repository.
+     *
+     * @param repositoryOwner The name of the user/organisation owning the repository
+     * @param repositoryName The name of the repository to fetch information for
+     * @param gitHubAccessToken The GitHub access token to use for fetching the information
+     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
+     */
     suspend fun fetchRepositoryInfo(
         gitHubAccessToken: String,
         repositoryOwner: String,
         repositoryName: String,
     ): RepositoryInfo {
         val repositoryDTO =
-            fetchRepositoryInfo(
+            getGithubResponse(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
-                gitHubAccessToken = gitHubAccessToken,
-            )
+                accessToken = gitHubAccessToken,
+            ).awaitBody<RepositoryDTO>()
 
         if (!repositoryDTO.permissions.pull) {
             throw PermissionDeniedOnGitHubException(
@@ -879,24 +900,32 @@ class GithubConnector(
             )
         }
 
-        if (repositoryDTO.permissions.push) {
-            return RepositoryInfo(
-                defaultBranch = repositoryDTO.defaultBranch,
-                permissions = GitHubPermission.entries.toList(),
-            )
-        }
         return RepositoryInfo(
             defaultBranch = repositoryDTO.defaultBranch,
-            permissions = listOf(GitHubPermission.READ),
+            permissions =
+                if (repositoryDTO.permissions.push) {
+                    GitHubPermission.entries.toList()
+                } else {
+                    listOf(GitHubPermission.READ)
+                },
         )
     }
 
+    /**
+     * Finds the default branch for the given repository "/<repositoryOwner>/<repositoryName>".
+     *
+     * @param repositoryOwner The name of the user/organisation owning the repository
+     * @param repositoryName The name of the repository to fetch information for
+     * @param gitHubAccessToken The GitHub access token to use for fetching the information
+     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
+     */
     suspend fun fetchDefaultBranch(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: String,
     ) = fetchRepositoryInfo(
-        uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
+        repositoryOwner = repositoryOwner,
+        repositoryName = repositoryName,
         gitHubAccessToken = gitHubAccessToken,
     ).defaultBranch
 }
