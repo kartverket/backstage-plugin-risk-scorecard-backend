@@ -45,8 +45,8 @@ val googleAuthVersion = "1.33.1"
 val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
 val jsonWebTokenVersion = "0.12.6"
-val ninjaSquadVersion = "4.0.2"
 val mockkVersion = "1.14.0"
+val junitVersion = "5.12.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -84,9 +84,12 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jsonWebTokenVersion")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jsonWebTokenVersion")
 
-    testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
-    testImplementation("com.ninja-squad:springmockk:$ninjaSquadVersion")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
+        because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
+    }
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     testImplementation("io.mockk:mockk:$mockkVersion")
 }
 
