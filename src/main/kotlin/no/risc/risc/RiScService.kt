@@ -585,7 +585,6 @@ class RiScService(
                 riScContent = content.riSc,
             )
         if (!validationStatus.isValid) {
-            // val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
             val validationError =
                 validationStatus.details.joinToString("\n") { detail ->
                     detail.errors.values.joinToString("\n") { error -> "${detail.instanceLocation}: $error" }
