@@ -26,9 +26,6 @@ java {
 
 repositories {
     mavenCentral()
-    maven {
-        url = uri("https://dist.wso2.org/maven2/public")
-    }
 }
 
 val kotlinVersion = "2.1.20"
