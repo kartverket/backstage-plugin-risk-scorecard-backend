@@ -410,7 +410,7 @@ class RiScService(
                                     riScId = riScContentResultDTO.riScId,
                                     riScContent = riScContentResultDTO.riScContent,
                                 )
-                            when (validationStatus.valid) {
+                            when (validationStatus.isValid) {
                                 true -> {
                                     LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                                     riScContentResultDTO
@@ -584,8 +584,12 @@ class RiScService(
                 schema = JSONValidator.getSchemaOnUpdate(riScId, content.schemaVersion),
                 riScContent = content.riSc,
             )
-        if (!validationStatus.valid) {
-            val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
+        if (!validationStatus.isValid) {
+            // val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
+            val validationError =
+                validationStatus.details.joinToString("\n") { detail ->
+                    detail.errors.values.joinToString("\n") { error -> "${detail.instanceLocation}: $error" }
+                }
             throw RiScNotValidOnUpdateException(
                 message = "Failed when validating RiSc with error message: $validationError",
                 riScId = riScId,

@@ -1,11 +1,10 @@
 package no.risc.validation
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import io.kjson.JSONException
-import net.pwall.json.schema.JSONSchema
-import net.pwall.json.schema.output.BasicOutput
+import com.networknt.schema.InputFormat
+import com.networknt.schema.JsonSchemaFactory
+import com.networknt.schema.OutputFormat
+import com.networknt.schema.SpecVersion
+import com.networknt.schema.output.OutputUnit
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import org.slf4j.Logger
@@ -26,6 +25,7 @@ enum class SchemaVersion {
 
 object JSONValidator {
     private val LOGGER: Logger = LoggerFactory.getLogger(JSONValidator::class.java)
+    private val schemaFactory: JsonSchemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
 
     /**
      * Retrieves the JSON schema for the specified RiSC version from disc.
@@ -70,7 +70,7 @@ object JSONValidator {
     fun validateAgainstSchema(
         riScId: String,
         riScContent: String?,
-    ): BasicOutput =
+    ): OutputUnit =
         SchemaVersion.entries
             .asSequence()
             .map {
@@ -79,8 +79,12 @@ object JSONValidator {
                     schema = readSchema(schemaVersion = it.toExpectedString(), riScId = riScId, isUpdate = false),
                     riScContent = riScContent,
                 )
-            }.filter { it.valid }
-            .firstOrNull() ?: BasicOutput(false).also { LOGGER.error("RiSc with id: $riScId failed validation against all schemas.") }
+            }.filter { it.isValid }
+            .firstOrNull()
+            ?: OutputUnit().also {
+                it.isValid = false
+                LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
+            }
 
     /**
      * Validates the content of a RiSc against the provided JSON schema.
@@ -93,41 +97,22 @@ object JSONValidator {
         riScId: String,
         schema: String,
         riScContent: String?,
-    ): BasicOutput {
+    ): OutputUnit {
         if (riScContent == null) {
             LOGGER.error(
-                "RiSc with id: $riScId has riScContent equals null. Probably because of size-limitations of response-body in response.",
+                "RiSc with id: $riScId has riScContent equal to null. Probably because of size-limitations of response-body in response.",
             )
-            return BasicOutput(false)
+            return OutputUnit().also { it.isValid = false }
         }
 
         try {
-            return JSONSchema.parse(schema).validateBasic(riScContent)
-        } catch (e: JSONException) {
-            if (!e.message.contains("Illegal JSON syntax")) {
-                throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be validated against schema", riScId)
+            return try {
+                schemaFactory.getSchema(schema).validate(riScContent, InputFormat.JSON, OutputFormat.LIST)
+            } catch (e: IllegalArgumentException) {
+                schemaFactory.getSchema(schema).validate(riScContent, InputFormat.YAML, OutputFormat.LIST)
             }
-            val riscAsJson = yamlToJsonConverter(riScId, riScContent)
-            return JSONSchema.parse(schema).validateBasic(riscAsJson)
         } catch (e: Exception) {
             throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be validated against schema", riScId)
         }
     }
-
-    /**
-     * Converts the provided YAML to JSON
-     *
-     * @param yamlString The YAML to be converted
-     * @param riScId The ID of the connected RiSC, for error handling
-     */
-    private fun yamlToJsonConverter(
-        riScId: String,
-        yamlString: String,
-    ): String =
-        try {
-            val jsonNode = ObjectMapper(YAMLFactory()).registerKotlinModule().readTree(yamlString)
-            ObjectMapper().registerKotlinModule().writeValueAsString(jsonNode)
-        } catch (e: Exception) {
-            throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be converted from YAML to JSON", riScId)
-        }
 }
