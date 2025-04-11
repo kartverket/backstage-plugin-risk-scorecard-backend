@@ -68,8 +68,6 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
 
-    implementation("com.google.auth:google-auth-library-credentials:$googleAuthVersion")
-
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion")
     implementation("org.bouncycastle:bcpkix-jdk18on:$bouncyCastleVersion")
 
