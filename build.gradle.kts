@@ -65,7 +65,9 @@ dependencies {
 
     implementation("io.netty:netty-all:$nettyVersion")
 
-    implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion")
+    implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion") {
+        because("Provides endpoints for health and event monitoring that are used in SKIP.")
+    }
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$fasterXmlJacksonVersion")
