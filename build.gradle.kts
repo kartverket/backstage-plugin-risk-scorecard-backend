@@ -41,7 +41,6 @@ val googleGsonVersion = "2.12.1"
 val googleAuthVersion = "1.33.1"
 val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
-val jsonWebTokenVersion = "0.12.6"
 val mockkVersion = "1.14.0"
 val junitVersion = "5.12.1"
 
@@ -76,10 +75,6 @@ dependencies {
 
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion")
     implementation("org.bouncycastle:bcpkix-jdk18on:$bouncyCastleVersion")
-
-    implementation("io.jsonwebtoken:jjwt-api:$jsonWebTokenVersion")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:$jsonWebTokenVersion")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jsonWebTokenVersion")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
