@@ -42,20 +42,20 @@ class JSONValidatorTests {
     @Test
     fun `test validate against schema without output`() {
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = null)
-        assertFalse(output.valid, "When no risc content is provided, validation should be false")
+        assertFalse(output.isValid, "When no risc content is provided, validation should be false")
     }
 
     @Test
     fun `test validate against unspecified schema with invalid content`() {
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = "{ \"a\": 123 }")
-        assertFalse(output.valid)
+        assertFalse(output.isValid)
     }
 
     @Test
     fun `test validate against specified schema with invalid content`() {
         val output =
             JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = "{ \"a\": 123 }", schema = testSchema)
-        assertFalse(output.valid)
+        assertFalse(output.isValid)
     }
 
     @Test
@@ -66,7 +66,7 @@ class JSONValidatorTests {
                 riScContent = "{ \"a\": 123, \"b\": [\"abc\", \"cde\"] }",
                 schema = testSchema,
             )
-        assertTrue(output.valid)
+        assertTrue(output.isValid)
     }
 
     @Test
@@ -104,14 +104,14 @@ class JSONValidatorTests {
             """.trimIndent()
 
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = validYAML, schema = testSchema)
-        assertTrue(output.valid, "Valid YAML should return a validation output with valid set to true")
+        assertTrue(output.isValid, "Valid YAML should return a validation output with valid set to true")
     }
 
     @Test
     fun `test validate version 3_2 without specifying scheme`() {
         val content = getResource("3.2.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content)
-        assertTrue(output.valid, "Content adhering to version 3.2 should successfully be validated")
+        assertTrue(output.isValid, "Content adhering to version 3.2 should successfully be validated")
     }
 
     @Test
@@ -120,7 +120,7 @@ class JSONValidatorTests {
         val content = getResource("3.2.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
         assertTrue(
-            output.valid,
+            output.isValid,
             "Content adhering to version 3.2 should be successfully validated against the version 3.2 schema.",
         )
     }
@@ -129,7 +129,7 @@ class JSONValidatorTests {
     fun `test validate version 3_3 without specifying scheme`() {
         val content = getResource("3.3.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content)
-        assertTrue(output.valid, "Content adhering to version 3.3 should successfully be validated")
+        assertTrue(output.isValid, "Content adhering to version 3.3 should successfully be validated")
     }
 
     @Test
@@ -138,7 +138,7 @@ class JSONValidatorTests {
         val content = getResource("3.3.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
         assertTrue(
-            output.valid,
+            output.isValid,
             "Content adhering to version 3.3 should be successfully validated against the version 3.3 schema.",
         )
     }
@@ -149,7 +149,7 @@ class JSONValidatorTests {
         val content = getResource("4.0.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
         assertFalse(
-            output.valid,
+            output.isValid,
             "Content adhering to version 4.0 should fail validation against the version 3.3 schema.",
         )
     }
@@ -158,7 +158,7 @@ class JSONValidatorTests {
     fun `test validate version 4_0 without specifying scheme`() {
         val content = getResource("4.0.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content)
-        assertTrue(output.valid, "Content adhering to version 4.0 should successfully be validated")
+        assertTrue(output.isValid, "Content adhering to version 4.0 should successfully be validated")
     }
 
     @Test
@@ -167,7 +167,7 @@ class JSONValidatorTests {
         val content = getResource("4.0.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
         assertTrue(
-            output.valid,
+            output.isValid,
             "Content adhering to version 4.0 should be successfully validated against the version 4.0 schema.",
         )
     }
@@ -178,7 +178,7 @@ class JSONValidatorTests {
         val content = getResource("3.3.json")
         val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
         assertFalse(
-            output.valid,
+            output.isValid,
             "Content adhering to version 3.3 should fail validation against the version 4.0 schema.",
         )
     }
