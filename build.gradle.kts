@@ -41,7 +41,7 @@ val googleAuthVersion = "1.33.1"
 val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
 val mockkVersion = "1.14.0"
-val junitVersion = "5.12.1"
+val junitVersion = "5.12.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
