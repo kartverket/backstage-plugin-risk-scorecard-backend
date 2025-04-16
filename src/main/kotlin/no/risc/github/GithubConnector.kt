@@ -315,7 +315,7 @@ class GithubConnector(
         } catch (e: Exception) {
             emptyList()
         }
-
+    
     internal suspend fun fetchLastPublishedRiScDateAndCommitNumber(
         owner: String,
         repository: String,
@@ -323,7 +323,7 @@ class GithubConnector(
         riScId: String,
     ): LastPublished? =
         tryOrNull {
-            val dateOfLastPublished =
+            val lastPublishedDate =
                 getGithubResponse(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
@@ -332,18 +332,22 @@ class GithubConnector(
                     ),
                     accessToken,
                 ).awaitBody<List<GithubRefCommitDTO>>().first().commit.committer.dateTime
-
-            val numberOfCommitsSinceDateTime =
+            
+            val commits =
                 getGithubResponse(
                     githubHelper.uriToFetchCommitsSince(
                         owner = owner,
                         repository = repository,
-                        since = dateOfLastPublished,
+                        since = lastPublishedDate,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>().size
-
-            LastPublished(dateOfLastPublished, numberOfCommitsSinceDateTime)
+                ).awaitBody<List<GithubRefCommitDTO>>()
+            
+            val commitsAfterPublish = commits.filter {
+                it.commit.committer.dateTime.isAfter(lastPublishedDate)
+            }
+            
+            LastPublished(lastPublishedDate, commitsAfterPublish.size)
         }
 
     internal suspend fun updateOrCreateDraft(
