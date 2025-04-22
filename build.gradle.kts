@@ -39,7 +39,6 @@ val fasterXmlJacksonVersion = "2.18.3"
 val jsonSchemaValidatorVersion = "1.5.6"
 val googleAuthVersion = "1.33.1"
 val nimbusdsVersion = "10.2"
-val bouncyCastleVersion = "1.80"
 val mockkVersion = "1.14.0"
 val junitVersion = "5.12.2"
 
@@ -72,8 +71,6 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
-
-    implementation("org.bouncycastle:bcpkix-jdk18on:$bouncyCastleVersion")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
