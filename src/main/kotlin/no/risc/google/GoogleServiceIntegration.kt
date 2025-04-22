@@ -17,6 +17,7 @@ import no.risc.infra.connector.GcpKmsApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -31,7 +32,7 @@ class GoogleServiceIntegration(
     @Value("\${googleService.additionalAllowedGCPKeyNames}") private val additionalAllowedGCPKeyNames: List<String>,
 ) {
     companion object {
-        val LOGGER = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
     }
 
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
