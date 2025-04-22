@@ -6,7 +6,7 @@ FROM ${BUILD_IMAGE} AS build
 COPY . .
 
 # Get security updates
-RUN apk update && apk upgrade
+RUN apk upgrade --no-cache
 
 RUN ./gradlew build -x test
 
@@ -18,7 +18,7 @@ RUN mkdir -p /app /app/logs /app/tmp
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
 # Get security updates
-RUN apk update && apk upgrade
+RUN apk upgrade --no-cache
 
 # Install socat only if running locally.
 ARG LOCAL
