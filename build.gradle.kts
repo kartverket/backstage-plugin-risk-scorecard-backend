@@ -58,6 +58,9 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion") {
         because("spring-security-oauth2-jose requires an external library for JWT encoding, like Nimbus-JOSE-JWT.")
     }
+    runtimeOnly("org.bouncycastle:bcprov-jdk18on:1.80") {
+        because("com.nimbusds:nimbus-jose-jwt requires an external library for JcaPEMKeyConverter")
+    }
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$kotlinxCoroutinesVersion")
