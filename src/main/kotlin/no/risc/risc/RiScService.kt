@@ -1,4 +1,5 @@
 package no.risc.risc
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,8 +19,8 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
+import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.sops.model.SopsConfig
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.KOffsetDateTimeSerializer
@@ -142,10 +143,8 @@ enum class ProcessingStatus(
 ) {
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
-    CreatedSops("Created SOPS configuration successfully"),
     InitializedGeneratedRiSc("Created new auto-generated risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
-    UpdatedSops("Updated SOPS configuration successfully"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     OpenedPullRequest("Opened pull request successfully"),
@@ -156,11 +155,8 @@ enum class ProcessingStatus(
     ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
     AccessTokensValidationFailure("Failure when validating access tokens"),
     ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
-    NoGcpKeyInSopsConfigFound("No GCP KMS resource ID was found in sops config"),
-    FetchedSopsConfig("Fetched sops config successfully"),
     FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
     FailedToCreateSops("Failed to create SOPS configuration"),
-    NoSopsConfigFound("No SOPS config found in repo"),
 }
 
 data class RiScIdentifier(
@@ -319,7 +315,7 @@ class RiScService(
                         repository = repository,
                         accessToken = accessTokens.githubAccessToken.value,
                     ).ids
-            LOGGER.info("Found RiSc's with id's: ${riScIds.map { it.id }.joinToString(", ")}")
+            LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
             val riScContents =
                 riScIds
                     .associateWith { id ->
@@ -414,7 +410,7 @@ class RiScService(
                                     riScId = riScContentResultDTO.riScId,
                                     riScContent = riScContentResultDTO.riScContent,
                                 )
-                            when (validationStatus.valid) {
+                            when (validationStatus.isValid) {
                                 true -> {
                                     LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                                     riScContentResultDTO
@@ -528,6 +524,7 @@ class RiScService(
         generateDefault: Boolean,
     ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
+        LOGGER.info("Generating default content")
         val riScContentWrapperObject =
             content.copy(
                 riSc =
@@ -537,6 +534,7 @@ class RiScService(
                         content.riSc
                     },
             )
+        LOGGER.info("Generated default content")
         try {
             val result =
                 updateOrCreateRiSc(
@@ -586,8 +584,11 @@ class RiScService(
                 schema = JSONValidator.getSchemaOnUpdate(riScId, content.schemaVersion),
                 riScContent = content.riSc,
             )
-        if (!validationStatus.valid) {
-            val validationError = validationStatus.errors?.joinToString("\n") { it.error }.toString()
+        if (!validationStatus.isValid) {
+            val validationError =
+                validationStatus.details.joinToString("\n") { detail ->
+                    detail.errors.values.joinToString("\n") { error -> "${detail.instanceLocation}: $error" }
+                }
             throw RiScNotValidOnUpdateException(
                 message = "Failed when validating RiSc with error message: $validationError",
                 riScId = riScId,
@@ -662,7 +663,7 @@ class RiScService(
         owner: String,
         repository: String,
         riScId: String,
-        accessTokens: AccessTokens,
+        gitHubAccessToken: String,
         userInfo: UserInfo,
         baseBranch: String,
     ): PublishRiScResultDTO {
@@ -672,28 +673,17 @@ class RiScService(
                 repository = repository,
                 riScId = riScId,
                 requiresNewApproval = true,
-                accessTokens = accessTokens,
+                gitHubAccessToken = gitHubAccessToken,
                 userInfo = userInfo,
                 baseBranch = baseBranch,
             )
 
-        return when (pullRequestObject) {
-            is GithubPullRequestObject ->
-                PublishRiScResultDTO(
-                    riScId = riScId,
-                    status = ProcessingStatus.CreatedPullRequest,
-                    statusMessage = "Pull request was created",
-                    pendingApproval = pullRequestObject.toPendingApprovalDTO(),
-                )
-
-            else ->
-                PublishRiScResultDTO(
-                    riScId = riScId,
-                    status = ProcessingStatus.ErrorWhenCreatingPullRequest,
-                    statusMessage = "Could not create pull request",
-                    pendingApproval = null,
-                )
-        }
+        return PublishRiScResultDTO(
+            riScId = riScId,
+            status = ProcessingStatus.CreatedPullRequest,
+            statusMessage = "Pull request was created",
+            pendingApproval = pullRequestObject.toPendingApprovalDTO(),
+        )
     }
 
     private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =

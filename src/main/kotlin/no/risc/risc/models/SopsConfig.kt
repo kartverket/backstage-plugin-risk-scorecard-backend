@@ -1,4 +1,4 @@
-package no.risc.sops.model
+package no.risc.risc.models
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -40,9 +40,4 @@ data class KeyGroup(
     @JsonProperty("gcp_kms") val gcp_kms: List<GcpKmsEntry>? = null,
     @JsonProperty("hc_vault") val hc_vault: List<JsonElement>? = null,
     @JsonProperty("age") val age: List<AgeEntry>? = null,
-)
-
-@Serializable
-data class ResourceId(
-    @JsonProperty("resource_id") val resource_id: String,
 )

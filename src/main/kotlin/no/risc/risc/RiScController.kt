@@ -128,31 +128,20 @@ class RiScController(
         @PathVariable repositoryName: String,
         @PathVariable id: String,
         @RequestBody userInfo: UserInfo,
-    ): ResponseEntity<PublishRiScResultDTO> {
-        val result =
-            riScService.publishRiSc(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                riScId = id,
-                accessTokens =
-                    AccessTokens(
-                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
-                    ),
-                userInfo = userInfo,
-                baseBranch =
-                    githubConnector.fetchDefaultBranch(
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubAccessToken = gitHubAccessToken,
-                    ),
-            )
-
-        return when (result.status) {
-            ProcessingStatus.CreatedPullRequest -> ResponseEntity.ok().body(result)
-            else -> ResponseEntity.internalServerError().body(result)
-        }
-    }
+    ): PublishRiScResultDTO =
+        riScService.publishRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            riScId = id,
+            gitHubAccessToken = gitHubAccessToken,
+            userInfo = userInfo,
+            baseBranch =
+                githubConnector.fetchDefaultBranch(
+                    repositoryOwner = repositoryOwner,
+                    repositoryName = repositoryName,
+                    gitHubAccessToken = gitHubAccessToken,
+                ),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
     suspend fun getDifferenceBetweenTwoRiScs(

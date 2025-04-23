@@ -11,13 +11,6 @@ data class FileContentDTO(
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class FileContentsDTO(
-    val name: String,
-    val path: String,
-    val sha: String,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class ShaResponseDTO(
     @JsonProperty("sha")
     val value: String,

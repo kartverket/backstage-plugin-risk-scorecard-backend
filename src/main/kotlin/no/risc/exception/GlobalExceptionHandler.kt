@@ -1,33 +1,24 @@
 package no.risc.exception
 
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
-import no.risc.exception.exceptions.CreateNewBranchException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.FetchException
-import no.risc.exception.exceptions.GcpProjectIdFetchException
-import no.risc.exception.exceptions.GenerateInitialRiScException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
-import no.risc.exception.exceptions.NoResourceIdFoundException
-import no.risc.exception.exceptions.NoSopsConfigFoundException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
-import no.risc.exception.exceptions.SopsConfigFetchException
 import no.risc.exception.exceptions.SopsEncryptionException
-import no.risc.exception.exceptions.UnableToParseResponseBodyException
-import no.risc.exception.exceptions.UnableToWriteSopsConfigException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.risc.ContentStatus
 import no.risc.risc.DecryptionFailure
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScContentResultDTO
-import no.risc.sops.model.GetSopsConfigResponseBody
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -88,18 +79,6 @@ internal class GlobalExceptionHandler {
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    @ExceptionHandler(SopsConfigFetchException::class)
-    fun handleSopsConfigFetchException(ex: SopsConfigFetchException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ProcessRiScResultDTO(
-            riScId = ex.riScId,
-            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
-            statusMessage = ex.responseMessage,
-        )
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
     @ExceptionHandler(SopsEncryptionException::class)
     fun handleSopsEncryptionException(ex: SopsEncryptionException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
@@ -147,7 +126,7 @@ internal class GlobalExceptionHandler {
     fun handleCreatePullRequestException(ex: CreatePullRequestException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
-            riScId = ex.riScId,
+            riScId = "",
             status = ProcessingStatus.ErrorWhenCreatingPullRequest,
             statusMessage = ex.message,
         )
@@ -163,25 +142,6 @@ internal class GlobalExceptionHandler {
             status = ProcessingStatus.ErrorWhenCreatingRiSc,
             statusMessage = ex.message,
         )
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(GenerateInitialRiScException::class)
-    fun handleGenerateInitialRiScException(ex: GenerateInitialRiScException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ProcessRiScResultDTO(
-            riScId = ex.riScId,
-            status = ProcessingStatus.ErrorWhenGeneratingInitialRiSc,
-            statusMessage = ex.message,
-        )
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(UnableToParseResponseBodyException::class)
-    fun handleUnableToParseResponseBodyException(ex: UnableToParseResponseBodyException) {
-        logger.error(ex.message, ex)
     }
 
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
@@ -204,46 +164,6 @@ internal class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(AccessTokenValidationFailedException::class)
     fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
-        logger.error(ex.message, ex)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(NoResourceIdFoundException::class)
-    fun handleNoResourceIdFoundException(ex: NoResourceIdFoundException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(GcpProjectIdFetchException::class)
-    fun handleGcpProjectIdFetchException(ex: GcpProjectIdFetchException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
-    @ExceptionHandler(NoSopsConfigFoundException::class)
-    fun handleNoSopsConfigFoundException(ex: NoSopsConfigFoundException): GetSopsConfigResponseBody {
-        logger.info(ex.message)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(CreateNewBranchException::class)
-    fun handleCreateNewBranchException(ex: CreateNewBranchException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(UnableToWriteSopsConfigException::class)
-    fun handleUnableToWriteSopsConfigException(ex: UnableToWriteSopsConfigException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ex.response
     }

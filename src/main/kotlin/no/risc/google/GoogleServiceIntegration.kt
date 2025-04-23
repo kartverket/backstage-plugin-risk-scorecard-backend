@@ -4,12 +4,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import no.risc.exception.exceptions.FetchException
-import no.risc.google.model.FetchCryptoKeysResponse
-import no.risc.google.model.FetchGcpKeyRingsResponse
 import no.risc.google.model.FetchGcpProjectIdsResponse
+import no.risc.google.model.GcpCryptoKeyObject
 import no.risc.google.model.GcpIamPermission
-import no.risc.google.model.GcpKeyRing
-import no.risc.google.model.GcpLocation
 import no.risc.google.model.GcpProjectId
 import no.risc.google.model.TestIamPermissionBody
 import no.risc.google.model.getRiScCryptoKey
@@ -17,11 +14,10 @@ import no.risc.google.model.getRiScCryptoKeyResourceId
 import no.risc.google.model.getRiScKeyRing
 import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
-import no.risc.infra.connector.GcpKmsInventoryApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.risc.ProcessingStatus
-import no.risc.sops.model.GcpCryptoKeyObject
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -33,11 +29,10 @@ class GoogleServiceIntegration(
     private val googleOAuthApiConnector: GoogleOAuthApiConnector,
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
-    private val gcpKmsInventoryApiConnector: GcpKmsInventoryApiConnector,
     @Value("\${googleService.additionalAllowedGCPKeyNames}") private val additionalAllowedGCPKeyNames: List<String>,
 ) {
     companion object {
-        val LOGGER = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
+        val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
     }
 
     fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
@@ -88,43 +83,6 @@ class GoogleServiceIntegration(
             false
         }
     }
-
-    fun fetchKeyRings(
-        projectId: GcpProjectId,
-        gcpAccessToken: GCPAccessToken,
-        gcpLocation: GcpLocation = GcpLocation.EUROPE_NORTH1,
-    ) = gcpKmsApiConnector.webClient
-        .get()
-        .uri("/v1/projects/${projectId.value}/locations/${gcpLocation.value}/keyRings")
-        .header("Authorization", "Bearer ${gcpAccessToken.value}")
-        .retrieve()
-        .bodyToMono<FetchGcpKeyRingsResponse>()
-        .block()
-        ?.keyRings
-
-    fun fetchCryptoKeys(
-        gcpKeyRing: GcpKeyRing,
-        gcpAccessToken: GCPAccessToken,
-    ) = gcpKmsApiConnector.webClient
-        .get()
-        .uri("/v1/${gcpKeyRing.resourceId}/cryptoKeys")
-        .header("Authorization", "Bearer ${gcpAccessToken.value}")
-        .retrieve()
-        .bodyToMono<FetchCryptoKeysResponse>()
-        .block()
-        ?.cryptoKeys
-
-    fun fetchCryptoKeys(
-        gcpProjectId: GcpProjectId,
-        gcpAccessToken: GCPAccessToken,
-    ) = gcpKmsInventoryApiConnector.webClient
-        .get()
-        .uri("/v1/projects/$gcpProjectId/cryptoKeys")
-        .header("Authorization", "Bearer ${gcpAccessToken.value}")
-        .retrieve()
-        .bodyToMono<FetchCryptoKeysResponse>()
-        .block()
-        ?.cryptoKeys
 
     suspend fun getGcpCryptoKeys(gcpAccessToken: GCPAccessToken): List<GcpCryptoKeyObject> =
         coroutineScope {
