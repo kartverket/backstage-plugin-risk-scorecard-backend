@@ -37,8 +37,21 @@ class GoogleServiceIntegration(
         val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
     }
 
+    /**
+     * Checks if the provided GCP OAuth2 token is valid by contacting a Google APIs endpoint.
+     *
+     * @param token The OAuth2 token to validate.
+     */
     suspend fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
+    /**
+     * Retrieves information about the provided GCP OAuth2 token from a Google APIs endpoint. If the token is not valid,
+     * a null value is returned. If the token is valid, a serialised JSON object is returned.
+     *
+     * @see <a href="https://cloud.google.com/docs/authentication/token-types#access">Google APIs endpoint documentation</a>
+     *
+     * @param token The OAuth2 token to retrieve information for.
+     */
     private suspend fun fetchTokenInfo(token: String): String? =
         try {
             googleOAuthApiConnector.webClient
@@ -53,6 +66,11 @@ class GoogleServiceIntegration(
             )
         }
 
+    /**
+     * Fetches the IDs of projects that can be accessed by the provided GCP access token.
+     *
+     * @param gcpAccessToken The GCP access token to retrieve project IDs for.
+     */
     private suspend fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId> =
         try {
             gcpCloudResourceApiConnector.webClient
@@ -67,6 +85,13 @@ class GoogleServiceIntegration(
             throw FetchException("Failed to fetch GCP projects", ProcessingStatus.FailedToFetchGcpProjectIds)
         }
 
+    /**
+     * Verifies that the given GCP access token has the provided GCP IAM permissions in the given crypto key resource.
+     *
+     * @param cryptoKeyResourceId The resource ID (GCP project ID) for the crypto key to test permissions for.
+     * @param gcpAccessToken The GCP access token to test permission levels for.
+     * @param permissions The required GCP IAM permissions.
+     */
     private suspend fun testIAMPermissions(
         cryptoKeyResourceId: String,
         gcpAccessToken: GCPAccessToken,
@@ -90,6 +115,12 @@ class GoogleServiceIntegration(
             )
         }
 
+    /**
+     * Retrieves all GCP crypto keys that can be accessed with the provided GCP access token, provided their name
+     * includes either "-prod-" or is configured in the `additionalAllowedGCPKeyNames` property.
+     *
+     * @param gcpAccessToken The GCP access token to retrieve keys for.
+     */
     suspend fun getGcpCryptoKeys(gcpAccessToken: GCPAccessToken): List<GcpCryptoKeyObject> =
         coroutineScope {
             LOGGER.info("Fetching GCP crypto keys")
