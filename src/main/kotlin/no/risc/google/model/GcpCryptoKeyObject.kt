@@ -1,5 +1,8 @@
 package no.risc.google.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class GcpCryptoKeyObject(
     val projectId: String,
     val keyRing: String,
