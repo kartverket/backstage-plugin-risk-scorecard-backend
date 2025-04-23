@@ -1,20 +1,36 @@
-@file:Suppress("ktlint:standard:no-empty-file")
-
 package no.risc.google.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
 data class FetchGcpProjectIdsResponse(
     val projects: List<GcpProject>,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
 data class GcpProject(
     val projectId: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
 data class TestIamPermissionBody(
     val permissions: List<GcpIamPermission>? = null,
 )
+
+@Serializable
+enum class GcpIamPermission {
+    @SerialName("cloudkms.cryptoKeyVersions.useToEncrypt")
+    USE_TO_ENCRYPT,
+
+    @SerialName("cloudkms.cryptoKeyVersions.useToDecrypt")
+    USE_TO_DECRYPT,
+}
