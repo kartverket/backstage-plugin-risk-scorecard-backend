@@ -2,6 +2,7 @@ package no.risc.google
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.exception.exceptions.FetchException
 import no.risc.google.model.FetchGcpProjectIdsResponse
@@ -49,15 +50,22 @@ class GoogleServiceIntegration(
             throw Exception("Invalid access token: $e")
         }
 
-    private suspend fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId>? =
-        gcpCloudResourceApiConnector.webClient
-            .get()
-            .uri("/v1/projects")
-            .header("Authorization", "Bearer ${gcpAccessToken.value}")
-            .retrieve()
-            .awaitBodyOrNull<FetchGcpProjectIdsResponse>()
-            ?.projects
-            ?.map { GcpProjectId(it.projectId) }
+    private suspend fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId> =
+        try {
+            gcpCloudResourceApiConnector.webClient
+                .get()
+                .uri("/v1/projects")
+                .header("Authorization", "Bearer ${gcpAccessToken.value}")
+                .retrieve()
+                .awaitBody<FetchGcpProjectIdsResponse>()
+                .projects
+                .map { GcpProjectId(it.projectId) }
+        } catch (e: Exception) {
+            throw FetchException(
+                "Failed to fetch GCP projects",
+                ProcessingStatus.FailedToFetchGcpProjectIds,
+            )
+        }
 
     private suspend fun testIamPermissions(
         cryptoKeyResourceId: String,
@@ -85,31 +93,25 @@ class GoogleServiceIntegration(
     suspend fun getGcpCryptoKeys(gcpAccessToken: GCPAccessToken): List<GcpCryptoKeyObject> =
         coroutineScope {
             LOGGER.info("Fetching GCP crypto keys")
-            val gcpProjectIds =
-                fetchProjectIds(gcpAccessToken)
-                    ?: throw FetchException(
-                        "Failed to fetch GCP projects",
-                        ProcessingStatus.FailedToFetchGcpProjectIds,
-                    )
-            gcpProjectIds
+            fetchProjectIds(gcpAccessToken)
                 .filter { it.value.contains("-prod-") || additionalAllowedGCPKeyNames.contains(it.value) }
-                .map {
-                    it to
-                        async(Dispatchers.IO) {
+                .map { gcpProjectId ->
+                    async(Dispatchers.IO) {
+                        val hasAccess =
                             testIamPermissions(
-                                cryptoKeyResourceId = it.getRiScCryptoKeyResourceId(),
+                                cryptoKeyResourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
                                 gcpAccessToken = gcpAccessToken,
                                 permissions = listOf(GcpIamPermission.USE_TO_ENCRYPT, GcpIamPermission.USE_TO_DECRYPT),
                             )
-                        }
-                }.map { (gcpProjectId, hasAccess) ->
-                    GcpCryptoKeyObject(
-                        projectId = gcpProjectId.value,
-                        keyRing = gcpProjectId.getRiScKeyRing(),
-                        name = gcpProjectId.getRiScCryptoKey(),
-                        resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
-                        hasEncryptDecryptAccess = hasAccess.await(),
-                    )
-                }.toMutableList()
+
+                        GcpCryptoKeyObject(
+                            projectId = gcpProjectId.value,
+                            keyRing = gcpProjectId.getRiScKeyRing(),
+                            name = gcpProjectId.getRiScCryptoKey(),
+                            resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
+                            hasEncryptDecryptAccess = hasAccess,
+                        )
+                    }
+                }.awaitAll()
         }
 }
