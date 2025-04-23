@@ -7,9 +7,9 @@ import kotlinx.coroutines.coroutineScope
 import no.risc.exception.exceptions.FetchException
 import no.risc.google.model.FetchGcpProjectIdsResponse
 import no.risc.google.model.GcpCryptoKeyObject
-import no.risc.google.model.GcpIamPermission
+import no.risc.google.model.GcpIAMPermission
 import no.risc.google.model.GcpProjectId
-import no.risc.google.model.TestIamPermissionBody
+import no.risc.google.model.TestIAMPermissionBody
 import no.risc.google.model.getRiScCryptoKey
 import no.risc.google.model.getRiScCryptoKeyResourceId
 import no.risc.google.model.getRiScKeyRing
@@ -47,7 +47,10 @@ class GoogleServiceIntegration(
                 .retrieve()
                 .awaitBodyOrNull<String>()
         } catch (e: Exception) {
-            throw Exception("Invalid access token: $e")
+            throw FetchException(
+                "Failed to fetch GCP OAuth2 token information",
+                ProcessingStatus.FailedToFetchGCPOAuth2TokenInformation,
+            )
         }
 
     private suspend fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId> =
@@ -61,32 +64,29 @@ class GoogleServiceIntegration(
                 .projects
                 .map { GcpProjectId(it.projectId) }
         } catch (e: Exception) {
-            throw FetchException(
-                "Failed to fetch GCP projects",
-                ProcessingStatus.FailedToFetchGcpProjectIds,
-            )
+            throw FetchException("Failed to fetch GCP projects", ProcessingStatus.FailedToFetchGcpProjectIds)
         }
 
-    private suspend fun testIamPermissions(
+    private suspend fun testIAMPermissions(
         cryptoKeyResourceId: String,
         gcpAccessToken: GCPAccessToken,
-        permissions: List<GcpIamPermission>,
+        permissions: List<GcpIAMPermission>,
     ): Boolean =
         try {
             gcpKmsApiConnector.webClient
                 .post()
                 .uri("/v1/$cryptoKeyResourceId:testIamPermissions")
-                .body(BodyInserters.fromValue(TestIamPermissionBody(permissions)))
+                .body(BodyInserters.fromValue(TestIAMPermissionBody(permissions)))
                 .header("Authorization", "Bearer ${gcpAccessToken.value}")
                 .retrieve()
-                .awaitBody<TestIamPermissionBody>()
+                .awaitBody<TestIAMPermissionBody>()
                 .let { response ->
                     response.permissions != null && permissions.all { it in response.permissions }
                 }
         } catch (_: Exception) {
             throw FetchException(
-                "Unable to test encrypt/decrypt IAM permissions for $cryptoKeyResourceId",
-                ProcessingStatus.FailedToFetchGcpProjectIds,
+                "Unable to test IAM permissions for $cryptoKeyResourceId",
+                ProcessingStatus.FailedToFetchGCPIAMPermissions,
             )
         }
 
@@ -98,10 +98,10 @@ class GoogleServiceIntegration(
                 .map { gcpProjectId ->
                     async(Dispatchers.IO) {
                         val hasAccess =
-                            testIamPermissions(
+                            testIAMPermissions(
                                 cryptoKeyResourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
                                 gcpAccessToken = gcpAccessToken,
-                                permissions = listOf(GcpIamPermission.USE_TO_ENCRYPT, GcpIamPermission.USE_TO_DECRYPT),
+                                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT, GcpIAMPermission.USE_TO_DECRYPT),
                             )
 
                         GcpCryptoKeyObject(

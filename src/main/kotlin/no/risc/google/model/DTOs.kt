@@ -22,12 +22,12 @@ data class GcpProject(
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
 @JsonIgnoreUnknownKeys
-data class TestIamPermissionBody(
-    val permissions: List<GcpIamPermission>? = null,
+data class TestIAMPermissionBody(
+    val permissions: List<GcpIAMPermission>? = null,
 )
 
 @Serializable
-enum class GcpIamPermission {
+enum class GcpIAMPermission {
     @SerialName("cloudkms.cryptoKeyVersions.useToEncrypt")
     USE_TO_ENCRYPT,
 
