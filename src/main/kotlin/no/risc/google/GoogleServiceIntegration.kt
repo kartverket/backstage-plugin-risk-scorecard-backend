@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.bodyToMono
+import org.springframework.web.reactive.function.client.awaitBody
+import org.springframework.web.reactive.function.client.awaitBodyOrNull
 
 @Component
 class GoogleServiceIntegration(
@@ -35,54 +36,51 @@ class GoogleServiceIntegration(
         val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
     }
 
-    fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
+    suspend fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
-    private fun fetchTokenInfo(token: String): String? =
+    private suspend fun fetchTokenInfo(token: String): String? =
         try {
             googleOAuthApiConnector.webClient
                 .get()
                 .uri("?access_token=$token")
                 .retrieve()
-                .bodyToMono(String::class.java)
-                .block()
+                .awaitBodyOrNull<String>()
         } catch (e: Exception) {
             throw Exception("Invalid access token: $e")
         }
 
-    fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId>? =
+    private suspend fun fetchProjectIds(gcpAccessToken: GCPAccessToken): List<GcpProjectId>? =
         gcpCloudResourceApiConnector.webClient
             .get()
             .uri("/v1/projects")
             .header("Authorization", "Bearer ${gcpAccessToken.value}")
             .retrieve()
-            .bodyToMono<FetchGcpProjectIdsResponse>()
-            .block()
+            .awaitBodyOrNull<FetchGcpProjectIdsResponse>()
             ?.projects
             ?.map { GcpProjectId(it.projectId) }
 
-    fun testIamPermissions(
+    private suspend fun testIamPermissions(
         cryptoKeyResourceId: String,
         gcpAccessToken: GCPAccessToken,
         permissions: List<GcpIamPermission>,
-    ): Boolean {
-        val response =
+    ): Boolean =
+        try {
             gcpKmsApiConnector.webClient
                 .post()
                 .uri("/v1/$cryptoKeyResourceId:testIamPermissions")
                 .body(BodyInserters.fromValue(TestIamPermissionBody(permissions)))
                 .header("Authorization", "Bearer ${gcpAccessToken.value}")
                 .retrieve()
-                .bodyToMono<TestIamPermissionBody>()
-                .block() ?: throw FetchException(
+                .awaitBody<TestIamPermissionBody>()
+                .let { response ->
+                    response.permissions != null && permissions.all { it in response.permissions }
+                }
+        } catch (_: Exception) {
+            throw FetchException(
                 "Unable to test encrypt/decrypt IAM permissions for $cryptoKeyResourceId",
                 ProcessingStatus.FailedToFetchGcpProjectIds,
             )
-        return if (response.permissions != null) {
-            permissions.all { it in response.permissions }
-        } else {
-            false
         }
-    }
 
     suspend fun getGcpCryptoKeys(gcpAccessToken: GCPAccessToken): List<GcpCryptoKeyObject> =
         coroutineScope {
