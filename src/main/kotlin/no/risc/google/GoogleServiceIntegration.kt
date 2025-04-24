@@ -23,8 +23,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.reactive.function.client.awaitBodyOrNull
 
 @Component
 class GoogleServiceIntegration(
@@ -45,8 +45,8 @@ class GoogleServiceIntegration(
     suspend fun validateAccessToken(token: String): Boolean = fetchTokenInfo(token) != null
 
     /**
-     * Retrieves information about the provided GCP OAuth2 token from a Google APIs endpoint. If the token is not valid,
-     * a null value is returned. If the token is valid, a serialised JSON object is returned.
+     * Retrieves information about the provided GCP OAuth2 token from a Google APIs endpoint. If the token is invalid,
+     * `null` is returned. If the token is valid, a serialised JSON object is returned.
      *
      * @see <a href="https://cloud.google.com/docs/authentication/token-types#access">Google APIs endpoint documentation</a>
      *
@@ -58,10 +58,13 @@ class GoogleServiceIntegration(
                 .get()
                 .uri("?access_token=$token")
                 .retrieve()
-                .awaitBodyOrNull<String>()
-        } catch (e: Exception) {
+                .awaitBody<String>()
+        } catch (_: WebClientResponseException.BadRequest) {
+            // The response from the endpoint has a status code of 400 if the access token is invalid.
+            null
+        } catch (_: Exception) {
             throw FetchException(
-                "Failed to fetch GCP OAuth2 token information",
+                "Failed to fetch GCP OAuth2 token information.",
                 ProcessingStatus.FailedToFetchGCPOAuth2TokenInformation,
             )
         }
@@ -81,7 +84,7 @@ class GoogleServiceIntegration(
                 .awaitBody<FetchGcpProjectIdsResponse>()
                 .projects
                 .map { GcpProjectId(it.projectId) }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             throw FetchException("Failed to fetch GCP projects", ProcessingStatus.FailedToFetchGcpProjectIds)
         }
 
