@@ -14,6 +14,7 @@ import no.risc.risc.RiScContentResultDTO
  * performed as a number of steps. The method currently supports the following steps:
  * - 3.2 -> 3.3
  * - 3.3 -> 4.0 (breaking changes)
+ * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  */
 fun migrate(
     content: RiScContentResultDTO,
@@ -48,6 +49,7 @@ fun migrate(
         when (schemaVersion) {
             "3.2" -> migrateTo32To33(content)
             "3.3" -> migrateFrom33To40(content)
+            "4.0" -> migrateFrom40To41(content)
             else -> return content
         }
 
@@ -157,6 +159,99 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
                         .let(::JsonObject)
                 }
             }.map(::JsonObject)
+            .let(::JsonArray)
+    }
+
+    scenarioObject["scenario"] = JsonObject(scenarioDetails)
+    return JsonObject(scenarioObject)
+}
+
+/**
+ * Update RiSc content from version 4.0. to 4.1.
+ *
+ * Changes include:
+ * - Bump schemaVersion to 4.1
+ *
+ * Replace values:
+ * - Probability enum: [0.01, 0.1, 1, 50, 300] -> [0.0025, 0.05, 1, 20, 400]
+ * - Consequence enum: [1000, 30000, 1000000, 30000000, 1000000000] -> [8000, 160000, 3200000, 64000000, 1300000000]
+ */
+fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
+    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
+
+    // Replace schemaVersion
+    jsonObject["schemaVersion"] = JsonPrimitive("4.1")
+
+    // Update scenarios, if any are present
+    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
+        scenarios
+            .jsonArray
+            .map { updateScenarioFrom40To41(it.jsonObject) }
+            .let(::JsonArray)
+    }
+
+    return obj.copy(
+        riScContent = serializeJSON(JsonObject(jsonObject)),
+        migrationStatus =
+            MigrationStatus(
+                migrationChanges = true,
+                migrationRequiresNewApproval = true,
+                migrationVersions = obj.migrationStatus.migrationVersions,
+            ),
+    )
+}
+
+/**
+ * Updates a scenario with the changes from 4.0. to 4.1.
+ *
+ * Replace values:
+ * - Probability enum: [0.01, 0.1, 1, 50, 300] -> [0.0025, 0.05, 1, 20, 400]
+ * - Consequence enum: [1000, 30000, 1000000, 30000000, 1000000000] -> [8000, 160000, 3200000, 64000000, 1300000000]
+ **/
+private fun updateScenarioFrom40To41(scenario: JsonObject): JsonObject {
+    val scenarioObject = scenario.toMutableMap()
+
+    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+
+    // Changed probability values from 4.0 -> 4.1
+    val probabilityReplacementMap =
+        mapOf(
+            0.01 to 0.0025,
+            0.1 to 0.05,
+            1 to 1,
+            50 to 20,
+            300 to 400,
+        )
+
+    // Changed consequence values from 4.0 -> 4.1
+    val consequenceReplacementMap =
+        mapOf(
+            1000 to 8000,
+            30000 to 160000,
+            1000000 to 3200000,
+            30000000 to 64000000,
+            1000000000 to 1300000000,
+        )
+
+    // Replace probability values in scenario
+    scenarioDetails.computeIfPresent("probability") { _, probabilitiesArray ->
+        probabilitiesArray
+            .jsonArray
+            .map { it.jsonPrimitive.content }
+            .map { probabilityReplacementMap.getOrDefault(it, it) }
+            .distinct()
+            .map(::JsonPrimitive)
+            .let(::JsonArray)
+    }
+
+    // Replace consequence values in scenario
+    scenarioDetails.computeIfPresent("consequence") { _, consequenceArray ->
+        consequenceArray
+            .jsonArray
+            .map { it.jsonPrimitive.content }
+            .map { consequenceReplacementMap.getOrDefault(it, it) }
+            .distinct()
+            .map(::JsonPrimitive)
             .let(::JsonArray)
     }
 

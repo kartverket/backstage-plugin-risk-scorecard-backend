@@ -1,13 +1,12 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="✨Local Server" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="ACTIVE_PROFILES" value="local" />
-    <option name="ALTERNATIVE_JRE_PATH" value="temurin-23" />
+    <option name="ALTERNATIVE_JRE_PATH" value="homebrew-23" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/.env" />
     </option>
     <module name="backstage-plugin-risk-scorecard-backend.main" />
-    <option name="PASS_PARENT_ENVS" value="false" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />
     <method v="2">
       <option name="Make" enabled="true" />
