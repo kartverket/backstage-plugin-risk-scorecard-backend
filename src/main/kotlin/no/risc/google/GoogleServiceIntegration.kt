@@ -101,7 +101,7 @@ class GoogleServiceIntegration(
                             testIamPermissions(
                                 cryptoKeyResourceId = it.getRiScCryptoKeyResourceId(),
                                 gcpAccessToken = gcpAccessToken,
-                                permissions = GcpIamPermission.ENCRYPT_DECRYPT,
+                                permissions = listOf(GcpIamPermission.USE_TO_ENCRYPT, GcpIamPermission.USE_TO_DECRYPT),
                             )
                         }
                 }.map { (gcpProjectId, hasAccess) ->

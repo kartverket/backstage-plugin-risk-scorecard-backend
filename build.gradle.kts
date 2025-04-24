@@ -30,7 +30,7 @@ repositories {
 
 val kotlinVersion = "2.1.20"
 val springBootVersion = "3.4.4"
-val springSecurityVersion = "6.4.4"
+val springSecurityVersion = "6.4.5"
 val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.2"
 val nettyVersion = "4.2.0.Final"
@@ -38,6 +38,7 @@ val micrometerVersion = "1.14.6"
 val fasterXmlJacksonVersion = "2.18.3"
 val jsonSchemaValidatorVersion = "1.5.6"
 val nimbusdsVersion = "10.2"
+val bouncyCastleVersion = "1.80"
 val mockkVersion = "1.14.0"
 val junitVersion = "5.12.2"
 
@@ -57,6 +58,9 @@ dependencies {
     implementation("org.springframework.security:spring-security-oauth2-resource-server:$springSecurityVersion")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion") {
         because("spring-security-oauth2-jose requires an external library for JWT encoding, like Nimbus-JOSE-JWT.")
+    }
+    runtimeOnly("org.bouncycastle:bcpkix-jdk18on:$bouncyCastleVersion") {
+        because("Used by nimbus-jose-jwt for parsing of PEM certificates in dev/prod environments.")
     }
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
