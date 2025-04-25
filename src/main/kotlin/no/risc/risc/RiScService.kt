@@ -24,6 +24,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.KOffsetDateTimeSerializer
+import no.risc.utils.baseNumber
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -74,6 +75,7 @@ data class RiScContentResultDTO(
     val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
+    val baseNumber: Int,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,
@@ -328,7 +330,7 @@ class RiScService(
                             fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                         }
                     }.mapValues { it.value.await() }
-
+            // her må du kalle på config for å mappe over tall til index
             val riScs =
                 riScContents
                     .map { (id, contentResponse) ->
@@ -391,6 +393,7 @@ class RiScService(
                                     riScStatus = id.status,
                                     riScContent = null,
                                     pullRequestUrl = null,
+                                    baseNumber = baseNumber,
                                 )
                             }
                         }

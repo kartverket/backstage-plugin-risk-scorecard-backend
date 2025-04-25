@@ -1,0 +1,31 @@
+konfig istedenfor validering + migrering.
+
+så når backend fetcher en risc, så skal den bruke configen til å finne nærmeste verdi, så f.eks. hvis:
+
+
+K = 4/64 millioner.
+
+
+K = 50 millioner ~ 4 (dette gjør configen)
+
+
+må derfor gå over til å lagre K og R som tall, ikke indexer.
+
+
+Så i denne konfigurasjonen kan man endre på grunntall, og matrisen.
+
+I fetching må man bruke denne konfigen og mappe til riktig tall i matrisen (så da bytter man ut tallet som står i riscen til den nærmeste verdien - da får man ingen trøbbel med å bruke indexOf() i frontend).
+
+
+Hva skjer hvis man lager en ny i frontend, må man vite grunntall da?! eller rekker det gå gjennom backend for å sette til riktig verdi.  For da velger man 1 og 3, så må det. man trenger det i frontend hvis man ikke vil sende to tall fra backenden.
+
+
+..
+
+
+
+
+
+
+
+
