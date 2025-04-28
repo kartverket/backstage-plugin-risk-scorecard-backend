@@ -13,7 +13,7 @@ data class RiScValues(
     val consequenceIndex: Int,
 )
 
-const val BASE: Double = 20.0
+const val BASE_NUMBER: Double = 20.0
 
 fun logBase(
     value: Double,
@@ -24,8 +24,8 @@ fun findIndexes(
     probability: Double,
     consequence: Int,
 ): RiScValues {
-    val probabilityIndex = (logBase(probability, BASE) + 3 - 1).roundToInt().coerceIn(0, 4) // min/max (0-4)
-    val consequenceIndex = (logBase(consequence.toDouble(), BASE) - 2 - 1).roundToInt().coerceIn(0, 4) // min/max (0-4)
+    val probabilityIndex = (logBase(probability, BASE_NUMBER) + 3 - 1).roundToInt().coerceIn(0, 4) // min/max (0-4)
+    val consequenceIndex = (logBase(consequence.toDouble(), BASE_NUMBER) - 2 - 1).roundToInt().coerceIn(0, 4) // min/max (0-4)
 
     return RiScValues(probabilityIndex, consequenceIndex)
 }

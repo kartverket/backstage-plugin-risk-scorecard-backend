@@ -49,7 +49,6 @@ fun migrate(
         when (schemaVersion) {
             "3.2" -> migrateTo32To33(content)
             "3.3" -> migrateFrom33To40(content)
-            "4.0" -> migrateFrom40To41(content)
             else -> return content
         }
 

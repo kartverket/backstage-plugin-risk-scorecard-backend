@@ -19,6 +19,7 @@ import no.risc.risc.DecryptionFailure
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScContentResultDTO
+import no.risc.utils.BASE_NUMBER
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -48,6 +49,7 @@ internal class GlobalExceptionHandler {
                 status = ContentStatus.SchemaNotFound,
                 riScStatus = null,
                 riScContent = null,
+                baseNumber = BASE_NUMBER,
             )
         }
     }
@@ -74,6 +76,7 @@ internal class GlobalExceptionHandler {
             status = ContentStatus.SchemaValidationFailed,
             riScStatus = null,
             riScContent = null,
+            baseNumber = BASE_NUMBER,
         )
     }
 

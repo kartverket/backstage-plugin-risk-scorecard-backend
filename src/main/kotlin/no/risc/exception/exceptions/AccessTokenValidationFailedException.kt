@@ -5,6 +5,7 @@ import no.risc.risc.ContentStatus
 import no.risc.risc.ProcessRiScResultDTO
 import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScContentResultDTO
+import no.risc.utils.BASE_NUMBER
 
 data class AccessTokenValidationFailedException(
     val permissionNeeded: GitHubPermission,
@@ -17,6 +18,7 @@ data class AccessTokenValidationFailedException(
                     riScStatus = null,
                     riScContent = null,
                     pullRequestUrl = null,
+                    baseNumber = BASE_NUMBER,
                 )
 
             GitHubPermission.WRITE ->
