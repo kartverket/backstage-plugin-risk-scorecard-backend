@@ -14,12 +14,11 @@ class InitRiScServiceIntegration(
     private val initRiScServiceConnector: InitRiScServiceConnector,
 ) {
     suspend fun generateDefaultRiSc(
-        repositoryName: String,
         initialRiSc: String,
     ): String =
         initRiScServiceConnector.webClient
             .post()
-            .uri("/generate/$repositoryName")
+            .uri("/generate")
             .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(

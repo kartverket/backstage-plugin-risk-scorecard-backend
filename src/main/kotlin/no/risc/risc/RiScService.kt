@@ -529,7 +529,7 @@ class RiScService(
             content.copy(
                 riSc =
                     if (generateDefault) {
-                        initRiScService.generateDefaultRiSc(repository, content.riSc)
+                        initRiScService.generateDefaultRiSc(content.riSc)
                     } else {
                         content.riSc
                     },
