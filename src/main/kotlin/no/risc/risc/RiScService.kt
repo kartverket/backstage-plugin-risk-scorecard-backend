@@ -156,6 +156,8 @@ enum class ProcessingStatus(
     AccessTokensValidationFailure("Failure when validating access tokens"),
     ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
     FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
+    FailedToFetchGCPOAuth2TokenInformation("Failed to fetch GCP OAuth2 token information"),
+    FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
     FailedToCreateSops("Failed to create SOPS configuration"),
 }
 
