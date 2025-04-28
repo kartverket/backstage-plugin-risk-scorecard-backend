@@ -13,9 +13,7 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 class InitRiScServiceIntegration(
     private val initRiScServiceConnector: InitRiScServiceConnector,
 ) {
-    suspend fun generateDefaultRiSc(
-        initialRiSc: String,
-    ): String =
+    suspend fun generateDefaultRiSc(initialRiSc: String): String =
         initRiScServiceConnector.webClient
             .post()
             .uri("/generate")
