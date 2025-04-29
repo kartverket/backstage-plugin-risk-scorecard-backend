@@ -51,7 +51,10 @@ class InitRiScServiceIntegrationTests {
 
         webClient.queueResponse(MockableResponse(content = riSc))
 
-        val response = runBlocking { initRiScServiceIntegration.generateDefaultRiSc("{}") }
+        val response =
+            runBlocking {
+                initRiScServiceIntegration.generateDefaultRiSc("""{ "title": "title", "scope": "scope"}""")
+            }
 
         assertEquals(
             riSc,
