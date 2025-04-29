@@ -14,10 +14,10 @@ class InitRiScServiceIntegration(
     private val initRiScServiceConnector: InitRiScServiceConnector,
 ) {
     /**
-     * Generates a default RiSc based on the passed initial RiSc using the external initialise RiSc service. Returns a
-     * JSON serialised RiSc
+     * Generates a default RiSc based on the passed initial RiSc using the external initialize RiSc service. Returns a
+     * JSON serialized RiSc.
      *
-     * @param initialRiSc A JSON serialised RiSc to base the default RiSc on. Must include the `title` and `scope`
+     * @param initialRiSc A JSON serialized RiSc to base the default RiSc on. Must include the `title` and `scope`
      *                    fields. These are the only fields used from `initialRiSc`.
      */
     suspend fun generateDefaultRiSc(initialRiSc: String): String =
