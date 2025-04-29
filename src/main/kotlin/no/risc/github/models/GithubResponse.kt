@@ -19,15 +19,13 @@ data class FileContentDTO(
 @Serializable
 @JsonIgnoreUnknownKeys
 data class ShaResponseDTO(
-    @SerialName("sha")
-    val value: String,
+    val sha: String,
 )
 
 @Serializable
 @JsonIgnoreUnknownKeys
 data class FileNameDTO(
-    @SerialName("name")
-    val value: String,
+    val name: String,
 )
 
 @Serializable

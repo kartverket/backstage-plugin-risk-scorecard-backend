@@ -258,11 +258,11 @@ class GithubConnector(
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
                 .awaitBody<List<FileNameDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
-                .filter { it.value.endsWith(".$filenamePostfix.yaml") }
+                .filter { it.name.endsWith(".$filenamePostfix.yaml") }
                 .map {
                     RiScIdentifier(
                         // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
-                        id = it.value.substringBefore(".$filenamePostfix"),
+                        id = it.name.substringBefore(".$filenamePostfix"),
                         status = RiScStatus.Published,
                     )
                 }
@@ -868,7 +868,7 @@ class GithubConnector(
             ?.committer
             ?.date
 
-    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.value
+    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.sha
 
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {

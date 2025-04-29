@@ -2,8 +2,6 @@
 
 package no.risc.github
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,13 +11,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.OffsetDateTime
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 @Serializable
 @JsonIgnoreUnknownKeys
 data class GithubReferenceObjectDTO(
     val ref: String,
     val url: String,
-    @JsonProperty("object")
+    @SerialName("object")
     val shaObject: GithubRefShaDTO,
 )
 
