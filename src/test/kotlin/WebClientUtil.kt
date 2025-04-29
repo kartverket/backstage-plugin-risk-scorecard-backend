@@ -11,7 +11,7 @@ import java.net.URI
  * A data class for keeping track of a response that should be returned by the mocked web client.
  */
 data class MockableResponse(
-    val content: String,
+    val content: String?,
     val contentType: MediaType = MediaType.APPLICATION_JSON,
     val httpStatus: HttpStatus = HttpStatus.OK,
 )
@@ -84,13 +84,15 @@ class MockableWebClient {
             response = wildcardResponses.removeFirst()
         }
 
-        return Mono.just(
-            ClientResponse
-                .create(response.httpStatus)
-                .header("content-type", response.contentType.toString())
-                .body(response.content)
-                .build(),
-        )
+        var clientResponse = ClientResponse.create(response.httpStatus)
+        if (response.content != null) {
+            clientResponse =
+                clientResponse
+                    .header("Content-Type", response.contentType.toString())
+                    .body(response.content)
+        }
+
+        return Mono.just(clientResponse.build())
     }
 
     /**
