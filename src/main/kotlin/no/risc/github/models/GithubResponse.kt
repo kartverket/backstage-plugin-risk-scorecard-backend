@@ -56,3 +56,88 @@ data class GitHubAccessTokenResponse(
 )
 
 fun GitHubAccessTokenResponse.isNotExpired(): Boolean = expiresAt.isAfter(OffsetDateTime.now())
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubReferenceObjectDTO(
+    val ref: String,
+    val url: String,
+    @SerialName("object")
+    val shaObject: GithubRefShaDTO,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubRefShaDTO(
+    val sha: String,
+    val url: String,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubRefShaCommitCommiter(
+    @Serializable(KOffsetDateTimeSerializer::class)
+    @SerialName("date")
+    val dateTime: OffsetDateTime,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubRefShaCommit(
+    val committer: GithubRefShaCommitCommiter,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubRefCommitDTO(
+    val sha: String,
+    val url: String,
+    val commit: GithubRefShaCommit,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubCommitObject(
+    val commit: Commit,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class Commit(
+    val message: String,
+    val committer: Committer,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class Committer(
+    val date: String,
+    val name: String,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubPullRequestObject(
+    @SerialName("html_url")
+    val url: String,
+    val title: String,
+    @SerialName("created_at")
+    @Serializable(KOffsetDateTimeSerializer::class)
+    val createdAt: OffsetDateTime,
+    val head: GithubPullRequestHead,
+    val base: GithubPullRequestHead,
+    val number: Int,
+    val user: GitHubPullRequestUser,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GitHubPullRequestUser(
+    val login: String,
+)
+
+@Serializable
+@JsonIgnoreUnknownKeys
+data class GithubPullRequestHead(
+    val ref: String,
+)

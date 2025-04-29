@@ -3,13 +3,21 @@ package no.risc.github
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
-import kotlinx.serialization.Serializable
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.github.models.FileContentDTO
 import no.risc.github.models.FileNameDTO
+import no.risc.github.models.GithubCommitObject
+import no.risc.github.models.GithubContentResponse
+import no.risc.github.models.GithubCreateNewPullRequestPayload
+import no.risc.github.models.GithubPullRequestObject
+import no.risc.github.models.GithubRefCommitDTO
+import no.risc.github.models.GithubReferenceObjectDTO
+import no.risc.github.models.GithubStatus
+import no.risc.github.models.GithubWriteToFilePayload
 import no.risc.github.models.RepositoryDTO
+import no.risc.github.models.RiScApprovalPRStatus
 import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -22,7 +30,6 @@ import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
-import no.risc.utils.KDateSerializer
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
@@ -39,66 +46,6 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
-import java.text.SimpleDateFormat
-import java.util.Date
-
-@Serializable
-data class GithubContentResponse(
-    val data: String?,
-    val status: GithubStatus,
-) {
-    fun data(): String = data!!
-}
-
-@Serializable
-data class GithubRiScIdentifiersResponse(
-    val ids: List<RiScIdentifier>,
-    val status: GithubStatus,
-)
-
-@Serializable
-enum class GithubStatus {
-    NotFound,
-    Unauthorized,
-    ContentIsEmpty,
-    Success,
-    RequestResponseBodyError,
-    ResponseBodyTooLargeForWebClientError,
-    InternalError,
-}
-
-@Serializable
-data class GithubWriteToFilePayload(
-    val message: String,
-    val content: String,
-    val sha: String? = null,
-    val branchName: String,
-    val author: Author? = null,
-) {
-    fun toContentBody(): String =
-        "{\"message\": \"$message\", \"content\": \"$content\", \"branch\": \"$branchName\"" +
-            (author?.let { ", \"committer\": ${author.toJSONString()}" } ?: "") +
-            (sha?.let { ", \"sha\": \"$sha\"" } ?: "") +
-            "}"
-}
-
-@Serializable
-data class Author(
-    val name: String?,
-    val email: String?,
-    @Serializable(KDateSerializer::class)
-    val date: Date,
-) {
-    private fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
-
-    fun toJSONString(): String = "{ \"name\":\"${name}\", \"email\":\"${email}\", \"date\":\"${formattedDate()}\" }"
-}
-
-@Serializable
-data class RiScApprovalPRStatus(
-    val pullRequest: GithubPullRequestObject?,
-    val hasClosedPr: Boolean,
-)
 
 @Component
 class GithubConnector(
@@ -129,7 +76,7 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): GithubRiScIdentifiersResponse =
+    ): List<RiScIdentifier> =
         coroutineScope {
             val draftRiScs =
                 async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
@@ -138,14 +85,10 @@ class GithubConnector(
             val riScsSentForApproval =
                 async { fetchRiScIdentifiersSentForApproval(owner = owner, repository = repository, accessToken = accessToken) }
 
-            GithubRiScIdentifiersResponse(
-                status = GithubStatus.Success,
-                ids =
-                    combinePublishedDraftAndSentForApproval(
-                        draftRiScList = draftRiScs.await(),
-                        sentForApprovalList = riScsSentForApproval.await(),
-                        publishedRiScList = publishedRiScs.await(),
-                    ),
+            combinePublishedDraftAndSentForApproval(
+                draftRiScList = draftRiScs.await(),
+                sentForApprovalList = riScsSentForApproval.await(),
+                publishedRiScList = publishedRiScs.await(),
             )
         }
 
