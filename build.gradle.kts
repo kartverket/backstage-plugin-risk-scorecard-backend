@@ -39,7 +39,7 @@ val fasterXmlJacksonVersion = "2.19.0"
 val jsonSchemaValidatorVersion = "1.5.6"
 val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
-val mockkVersion = "1.14.0"
+val mockkVersion = "1.14.2"
 val junitVersion = "5.12.2"
 
 dependencies {
