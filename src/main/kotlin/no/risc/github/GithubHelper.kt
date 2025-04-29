@@ -1,12 +1,21 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package no.risc.github
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
+import no.risc.utils.KOffsetDateTimeSerializer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.OffsetDateTime
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubReferenceObjectDTO(
     val ref: String,
     val url: String,
@@ -14,29 +23,36 @@ data class GithubReferenceObjectDTO(
     val shaObject: GithubRefShaDTO,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubRefShaCommitCommiter(
-    @JsonProperty("date") val dateTime: OffsetDateTime,
+    @Serializable(KOffsetDateTimeSerializer::class)
+    @SerialName("date")
+    val dateTime: OffsetDateTime,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubRefShaCommit(
     val committer: GithubRefShaCommitCommiter,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubRefShaDTO(
     val sha: String,
     val url: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubRefCommitDTO(
     val sha: String,
     val url: String,
     val commit: GithubRefShaCommit,
 )
 
+@Serializable
 data class GithubCreateNewBranchPayload(
     val nameOfNewBranch: String,
     val shaOfLatestDefault: String,
@@ -44,6 +60,7 @@ data class GithubCreateNewBranchPayload(
     fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestDefault\" }"
 }
 
+@Serializable
 data class GithubCreateNewPullRequestPayload(
     val title: String,
     val body: String,
@@ -55,12 +72,14 @@ data class GithubCreateNewPullRequestPayload(
         "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$branch\", \"base\": \"$baseBranch\" }"
 }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubPullRequestObject(
-    @JsonProperty("html_url")
+    @SerialName("html_url")
     val url: String,
     val title: String,
-    @JsonProperty("created_at")
+    @SerialName("created_at")
+    @Serializable(KOffsetDateTimeSerializer::class)
     val createdAt: OffsetDateTime,
     val head: GithubPullRequestHead,
     val base: GithubPullRequestHead,
@@ -68,29 +87,34 @@ data class GithubPullRequestObject(
     val user: GitHubPullRequestUser,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GitHubPullRequestUser(
     val login: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubCommitObject(
     val commit: Commit,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class Commit(
     val message: String,
     val committer: Committer,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class Committer(
     val date: String,
     val name: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GithubPullRequestHead(
     val ref: String,
 )

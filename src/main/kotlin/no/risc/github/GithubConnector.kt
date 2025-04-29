@@ -3,6 +3,7 @@ package no.risc.github
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.serialization.Serializable
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -21,6 +22,7 @@ import no.risc.risc.ProcessingStatus
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
+import no.risc.utils.KDateSerializer
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrNull
@@ -40,6 +42,7 @@ import reactor.core.publisher.Mono
 import java.text.SimpleDateFormat
 import java.util.Date
 
+@Serializable
 data class GithubContentResponse(
     val data: String?,
     val status: GithubStatus,
@@ -47,11 +50,13 @@ data class GithubContentResponse(
     fun data(): String = data!!
 }
 
+@Serializable
 data class GithubRiScIdentifiersResponse(
     val ids: List<RiScIdentifier>,
     val status: GithubStatus,
 )
 
+@Serializable
 enum class GithubStatus {
     NotFound,
     Unauthorized,
@@ -62,6 +67,7 @@ enum class GithubStatus {
     InternalError,
 }
 
+@Serializable
 data class GithubWriteToFilePayload(
     val message: String,
     val content: String,
@@ -76,9 +82,11 @@ data class GithubWriteToFilePayload(
             "}"
 }
 
+@Serializable
 data class Author(
     val name: String?,
     val email: String?,
+    @Serializable(KDateSerializer::class)
     val date: Date,
 ) {
     private fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
@@ -86,6 +94,7 @@ data class Author(
     fun toJSONString(): String = "{ \"name\":\"${name}\", \"email\":\"${email}\", \"date\":\"${formattedDate()}\" }"
 }
 
+@Serializable
 data class RiScApprovalPRStatus(
     val pullRequest: GithubPullRequestObject?,
     val hasClosedPr: Boolean,

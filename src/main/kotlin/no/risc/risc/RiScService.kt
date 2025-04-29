@@ -161,6 +161,7 @@ enum class ProcessingStatus(
     FailedToCreateSops("Failed to create SOPS configuration"),
 }
 
+@Serializable
 data class RiScIdentifier(
     val id: String,
     var status: RiScStatus,

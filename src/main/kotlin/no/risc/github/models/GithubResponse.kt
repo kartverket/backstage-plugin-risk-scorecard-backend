@@ -1,34 +1,45 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package no.risc.github.models
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
+import no.risc.utils.KOffsetDateTimeSerializer
 import java.time.OffsetDateTime
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class FileContentDTO(
     val content: String,
     val sha: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class ShaResponseDTO(
-    @JsonProperty("sha")
+    @SerialName("sha")
     val value: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class FileNameDTO(
-    @JsonProperty("name")
+    @SerialName("name")
     val value: String,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class RepositoryDTO(
-    @JsonProperty("default_branch") val defaultBranch: String,
+    @SerialName("default_branch")
+    val defaultBranch: String,
     val permissions: RepositoryPermissions,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class RepositoryPermissions(
     val admin: Boolean,
     val maintain: Boolean,
@@ -37,10 +48,13 @@ data class RepositoryPermissions(
     val pull: Boolean,
 )
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@JsonIgnoreUnknownKeys
 data class GitHubAccessTokenResponse(
     val token: String,
-    @JsonProperty("expires_at") val expiresAt: OffsetDateTime,
+    @Serializable(KOffsetDateTimeSerializer::class)
+    @SerialName("expires_at")
+    val expiresAt: OffsetDateTime,
 )
 
 fun GitHubAccessTokenResponse.isNotExpired(): Boolean = expiresAt.isAfter(OffsetDateTime.now())
