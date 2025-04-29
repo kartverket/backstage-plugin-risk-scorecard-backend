@@ -103,11 +103,13 @@
         },
         "probability": {
           "description": "Number of events/day",
-          "type": "number" //min 0?
+          "type": "number",
+          "minimum": 0
         },
         "consequence": {
           "description": "Monetary amount per day",
-          "type": "number" //min 0? evt. legge til enum listen igjen for å få dropdown, men uten anyOf.
+          "type": "number",
+          "minimum": 0 //evt. legge til enum listen igjen for å få dropdown, men uten anyOf.
         }
       },
       "required": [
