@@ -6,19 +6,16 @@ import kotlinx.coroutines.reactor.awaitSingle
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
-import no.risc.github.models.FileContentDTO
-import no.risc.github.models.FileNameDTO
 import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubCreateNewPullRequestPayload
+import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestObject
-import no.risc.github.models.GithubRefCommitDTO
 import no.risc.github.models.GithubReferenceObjectDTO
+import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubStatus
 import no.risc.github.models.GithubWriteToFilePayload
-import no.risc.github.models.RepositoryDTO
 import no.risc.github.models.RiScApprovalPRStatus
-import no.risc.github.models.ShaResponseDTO
 import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
@@ -46,6 +43,7 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
+import java.time.OffsetDateTime
 
 @Component
 class GithubConnector(
@@ -81,9 +79,21 @@ class GithubConnector(
             val draftRiScs =
                 async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
             val publishedRiScs =
-                async { fetchPublishedRiScIdentifiers(owner = owner, repository = repository, accessToken = accessToken) }
+                async {
+                    fetchPublishedRiScIdentifiers(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessToken,
+                    )
+                }
             val riScsSentForApproval =
-                async { fetchRiScIdentifiersSentForApproval(owner = owner, repository = repository, accessToken = accessToken) }
+                async {
+                    fetchRiScIdentifiersSentForApproval(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessToken,
+                    )
+                }
 
             combinePublishedDraftAndSentForApproval(
                 draftRiScList = draftRiScs.await(),
@@ -130,7 +140,7 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             getGithubResponse(uri = uri, accessToken = accessToken)
-                .toEntity<FileContentDTO>()
+                .toEntity<GithubFileDTO>()
                 .awaitSingle()
                 .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
                 .body
@@ -199,7 +209,7 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         try {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
-                .awaitBody<List<FileNameDTO>>()
+                .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
                 .filter { it.name.endsWith(".$filenamePostfix.yaml") }
                 .map {
@@ -283,7 +293,7 @@ class GithubConnector(
                         riScId = riScId,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>().first().commit.committer.dateTime
+                ).awaitBody<List<GithubCommitObject>>().first().commit.committer.date
 
             val commits =
                 getGithubResponse(
@@ -293,11 +303,11 @@ class GithubConnector(
                         since = lastPublishedDate,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>()
+                ).awaitBody<List<GithubCommitObject>>()
 
             val commitsAfterPublish =
                 commits.filter {
-                    it.commit.committer.dateTime
+                    it.commit.committer.date
                         .isAfter(lastPublishedDate)
                 }
 
@@ -404,8 +414,11 @@ class GithubConnector(
                                     repository = repository,
                                     accessToken = accessToken,
                                     riScId = riScId,
-                                    since = it,
-                                ).filterNot { it.commit.committer.date == latestCommitTimestamp }
+                                    since = it.toString(),
+                                ).filter {
+                                    it.commit.committer.date
+                                        .isAfter(latestCommitTimestamp)
+                                }
                             }?.any { it.commit.message.contains("requires new approval") } ?: true
                     }
 
@@ -474,7 +487,7 @@ class GithubConnector(
         getGithubResponse(
             uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
     private suspend fun getSHAForPublishedRiScOrNull(
@@ -486,7 +499,7 @@ class GithubConnector(
         getGithubResponse(
             uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
     private suspend fun pullRequestForRiScExists(
@@ -515,7 +528,7 @@ class GithubConnector(
                     branchName = defaultBranch,
                 ),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubFileDTO>()?.sha
 
     /**
      * Creates a new branch through the GitHub API by branching out of the default branch.
@@ -596,7 +609,7 @@ class GithubConnector(
         accessToken: String,
         riScId: String,
         branch: String,
-    ): String? =
+    ): OffsetDateTime? =
         tryOrNull {
             getGithubResponse(
                 uri =
@@ -607,7 +620,11 @@ class GithubConnector(
                         branch = branch,
                     ),
                 accessToken = accessToken,
-            ).timeStampLatestCommitResponse()
+            ).awaitBodyOrNull<List<GithubCommitObject>>()
+                ?.firstOrNull()
+                ?.commit
+                ?.committer
+                ?.date
         }
 
     /**
@@ -733,7 +750,7 @@ class GithubConnector(
                     branch = branch,
                 ),
             accessToken = gitHubAccessToken.value,
-        ).awaitBodyOrNull<FileContentDTO>() ?: throw GitHubFetchException(
+        ).awaitBodyOrNull<GithubFileDTO>() ?: throw GitHubFetchException(
             message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
             response =
                 ProcessRiScResultDTO(
@@ -803,16 +820,6 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
-    private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
-        this
-            .awaitBodyOrNull<List<GithubCommitObject>>()
-            ?.firstOrNull()
-            ?.commit
-            ?.committer
-            ?.date
-
-    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.sha
-
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
             GithubStatus.InternalError
@@ -850,7 +857,7 @@ class GithubConnector(
             getGithubResponse(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
                 accessToken = gitHubAccessToken,
-            ).awaitBody<RepositoryDTO>()
+            ).awaitBody<GithubRepositoryDTO>()
 
         if (!repositoryDTO.permissions.pull) {
             throw PermissionDeniedOnGitHubException(
