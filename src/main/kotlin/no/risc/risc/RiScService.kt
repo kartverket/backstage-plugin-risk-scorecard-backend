@@ -11,9 +11,9 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
-import no.risc.github.GithubContentResponse
-import no.risc.github.GithubPullRequestObject
-import no.risc.github.GithubStatus
+import no.risc.github.models.GithubContentResponse
+import no.risc.github.models.GithubPullRequestObject
+import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
@@ -161,6 +161,7 @@ enum class ProcessingStatus(
     FailedToCreateSops("Failed to create SOPS configuration"),
 }
 
+@Serializable
 data class RiScIdentifier(
     val id: String,
     var status: RiScStatus,
@@ -316,7 +317,7 @@ class RiScService(
                         owner = owner,
                         repository = repository,
                         accessToken = accessTokens.githubAccessToken.value,
-                    ).ids
+                    )
             LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
             val riScContents =
                 riScIds
