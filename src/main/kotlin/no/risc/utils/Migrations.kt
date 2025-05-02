@@ -168,7 +168,7 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
 
 // Update RiSc scenarios from schemaVersion 4.0 to 4.1. This is necessary because the values of probability
 // and consequence are updated to using base number 20
-fun migrateTo40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
+fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
     val migratedSchemaVersion = obj.riScContent!!.replace("\"schemaVersion\": \"4.0\"", "\"schemaVersion\": \"4.1\"")
     return obj.copy(riScContent = migratedSchemaVersion)
 }
