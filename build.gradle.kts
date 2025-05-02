@@ -1,5 +1,5 @@
 plugins {
-    id("org.springframework.boot") version "3.4.4"
+    id("org.springframework.boot") version "3.4.5"
     kotlin("jvm") version "2.1.20"
     kotlin("plugin.spring") version "2.1.20"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
@@ -29,17 +29,17 @@ repositories {
 }
 
 val kotlinVersion = "2.1.20"
-val springBootVersion = "3.4.4"
+val springBootVersion = "3.4.5"
 val springSecurityVersion = "6.4.5"
 val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.2"
 val nettyVersion = "4.2.0.Final"
 val micrometerVersion = "1.14.6"
-val fasterXmlJacksonVersion = "2.18.3"
+val fasterXmlJacksonVersion = "2.19.0"
 val jsonSchemaValidatorVersion = "1.5.6"
 val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
-val mockkVersion = "1.14.0"
+val mockkVersion = "1.14.2"
 val junitVersion = "5.12.2"
 
 dependencies {

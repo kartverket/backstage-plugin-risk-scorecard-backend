@@ -1,99 +1,12 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package no.risc.github
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.ExperimentalSerializationApi
+import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.OffsetDateTime
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubReferenceObjectDTO(
-    val ref: String,
-    val url: String,
-    @JsonProperty("object")
-    val shaObject: GithubRefShaDTO,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefShaCommitCommiter(
-    @JsonProperty("date") val dateTime: OffsetDateTime,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefShaCommit(
-    val committer: GithubRefShaCommitCommiter,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefShaDTO(
-    val sha: String,
-    val url: String,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubRefCommitDTO(
-    val sha: String,
-    val url: String,
-    val commit: GithubRefShaCommit,
-)
-
-data class GithubCreateNewBranchPayload(
-    val nameOfNewBranch: String,
-    val shaOfLatestDefault: String,
-) {
-    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestDefault\" }"
-}
-
-data class GithubCreateNewPullRequestPayload(
-    val title: String,
-    val body: String,
-    val repositoryOwner: String,
-    val branch: String,
-    val baseBranch: String,
-) {
-    fun toContentBody(): String =
-        "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$branch\", \"base\": \"$baseBranch\" }"
-}
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubPullRequestObject(
-    @JsonProperty("html_url")
-    val url: String,
-    val title: String,
-    @JsonProperty("created_at")
-    val createdAt: OffsetDateTime,
-    val head: GithubPullRequestHead,
-    val base: GithubPullRequestHead,
-    val number: Int,
-    val user: GitHubPullRequestUser,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GitHubPullRequestUser(
-    val login: String,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubCommitObject(
-    val commit: Commit,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class Commit(
-    val message: String,
-    val committer: Committer,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class Committer(
-    val date: String,
-    val name: String,
-)
-
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class GithubPullRequestHead(
-    val ref: String,
-)
 
 @Component
 class GithubHelper(

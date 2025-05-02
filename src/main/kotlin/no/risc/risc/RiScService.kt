@@ -11,9 +11,9 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
-import no.risc.github.GithubContentResponse
-import no.risc.github.GithubPullRequestObject
-import no.risc.github.GithubStatus
+import no.risc.github.models.GithubContentResponse
+import no.risc.github.models.GithubPullRequestObject
+import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
@@ -158,9 +158,12 @@ enum class ProcessingStatus(
     AccessTokensValidationFailure("Failure when validating access tokens"),
     ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
     FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
+    FailedToFetchGCPOAuth2TokenInformation("Failed to fetch GCP OAuth2 token information"),
+    FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
     FailedToCreateSops("Failed to create SOPS configuration"),
 }
 
+@Serializable
 data class RiScIdentifier(
     val id: String,
     var status: RiScStatus,
@@ -316,7 +319,7 @@ class RiScService(
                         owner = owner,
                         repository = repository,
                         accessToken = accessTokens.githubAccessToken.value,
-                    ).ids
+                    )
             LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
             val riScContents =
                 riScIds
@@ -538,7 +541,7 @@ class RiScService(
             content.copy(
                 riSc =
                     if (generateDefault) {
-                        initRiScService.generateDefaultRiSc(repository, content.riSc)
+                        initRiScService.generateDefaultRiSc(content.riSc)
                     } else {
                         content.riSc
                     },
