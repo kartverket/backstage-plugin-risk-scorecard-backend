@@ -21,7 +21,6 @@ import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.utils.BASE_NUMBER
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.KOffsetDateTimeSerializer
@@ -75,7 +74,6 @@ data class RiScContentResultDTO(
     val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
-    val baseNumber: Double,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,
@@ -396,7 +394,6 @@ class RiScService(
                                     riScStatus = id.status,
                                     riScContent = null,
                                     pullRequestUrl = null,
-                                    baseNumber = BASE_NUMBER,
                                 )
                             }
                         }
@@ -429,7 +426,6 @@ class RiScService(
                                         status = ContentStatus.SchemaValidationFailed,
                                         riScStatus = null,
                                         riScContent = null,
-                                        baseNumber = BASE_NUMBER,
                                     )
                                 }
                             }
@@ -459,7 +455,6 @@ class RiScService(
                         sopsConfig = decryptedContent.sopsConfig,
                         pullRequestUrl = pullRequestUrl,
                         lastPublished = lastPublished,
-                        baseNumber = BASE_NUMBER,
                     )
                 } catch (e: Exception) {
                     LOGGER.error("An error occurred when decrypting: ${e.message}")
@@ -470,7 +465,6 @@ class RiScService(
                                 status = ContentStatus.DecryptionFailed,
                                 riScStatus = riScStatus,
                                 riScContent = null,
-                                baseNumber = BASE_NUMBER,
                             )
 
                         else ->
@@ -479,7 +473,6 @@ class RiScService(
                                 status = ContentStatus.Failure,
                                 riScStatus = riScStatus,
                                 riScContent = null,
-                                baseNumber = BASE_NUMBER,
                             )
                     }
                 }
@@ -490,7 +483,6 @@ class RiScService(
                     status = ContentStatus.FileNotFound,
                     riScStatus = riScStatus,
                     riScContent = null,
-                    baseNumber = BASE_NUMBER,
                 )
 
             else ->
@@ -499,7 +491,6 @@ class RiScService(
                     status = ContentStatus.Failure,
                     riScStatus = riScStatus,
                     riScContent = null,
-                    baseNumber = BASE_NUMBER,
                 )
         }
 
