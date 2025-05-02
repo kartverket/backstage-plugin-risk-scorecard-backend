@@ -331,7 +331,6 @@ class RiScService(
                             fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                         }
                     }.mapValues { it.value.await() }
-            // her må du kalle på config for å mappe over tall til index
             val riScs =
                 riScContents
                     .map { (id, contentResponse) ->
