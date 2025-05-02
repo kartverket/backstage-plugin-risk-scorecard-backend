@@ -331,6 +331,7 @@ class RiScService(
                             fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
                         }
                     }.mapValues { it.value.await() }
+
             val riScs =
                 riScContents
                     .map { (id, contentResponse) ->
