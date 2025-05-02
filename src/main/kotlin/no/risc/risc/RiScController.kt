@@ -125,6 +125,32 @@ class RiScController(
                 ).defaultBranch,
     )
 
+    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
+    suspend fun deleteRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable id: String,
+        @PathVariable repositoryName: String,
+        @RequestBody riSc: RiScWrapperObject,
+    ) = riScService.deleteRiSc(
+        owner = repositoryOwner,
+        repository = repositoryName,
+        riScId = id,
+        content = riSc,
+        accessTokens =
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
+        defaultBranch =
+            githubConnector.fetchDefaultBranch(
+                repositoryOwner = repositoryOwner,
+                repositoryName = repositoryName,
+                gitHubAccessToken = gitHubAccessToken,
+            ),
+    )
+
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     suspend fun sendRiScForPublishing(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,

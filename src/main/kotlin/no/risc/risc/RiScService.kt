@@ -338,6 +338,24 @@ class RiScService(
             defaultBranch = defaultBranch,
         )
 
+    suspend fun deleteRiSc(
+        owner: String,
+        repository: String,
+        riScId: String,
+        content: RiScWrapperObject,
+        accessTokens: AccessTokens,
+        defaultBranch: String,
+    ): RiScResult =
+        deleteRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = riScId,
+            content = content,
+            sopsConfig = content.sopsConfig,
+            accessTokens = accessTokens,
+            defaultBranch = defaultBranch,
+        )
+
     /**
      * Creates a new RiSc.
      *
@@ -482,6 +500,70 @@ class RiScService(
             )
         } catch (e: Exception) {
             throw UpdatingRiScException(
+                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
+                riScId = riScId,
+            )
+        }
+    }
+
+    private suspend fun deleteRiSc(
+        owner: String,
+        repository: String,
+        riScId: String,
+        content: RiScWrapperObject,
+        sopsConfig: SopsConfig,
+        accessTokens: AccessTokens,
+        defaultBranch: String,
+    ): RiScResult {
+        try {
+            val riScApprovalPRStatus =
+                githubConnector.deleteRiSc(
+                    owner = owner,
+                    repository = repository,
+                    riScId = riScId,
+                    fileContent = encryptedData,
+                    requiresNewApproval = content.isRequiresNewApproval,
+                    accessTokens = accessTokens,
+                    userInfo = content.userInfo,
+                    defaultBranch = defaultBranch,
+                )
+
+            return when (riScApprovalPRStatus.pullRequest) {
+                is GithubPullRequestObject ->
+                    PublishRiScResultDTO(
+                        riScId = riScId,
+                        status = ProcessingStatus.DeletePullRequest,
+                        statusMessage = "Pull request was created for deleting RiSc",
+                        pendingApproval = riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
+                    )
+
+                null ->
+                    ProcessRiScResultDTO(
+                        riScId = riScId,
+                        status =
+                            if (riScApprovalPRStatus.hasClosedPr) {
+                                ProcessingStatus.UpdatedRiScRequiresNewApproval // change
+                            } else {
+                                ProcessingStatus.UpdatedRiSc // change
+                            },
+                        statusMessage =
+                            "Risk scorecard was deleted" +
+                                if (riScApprovalPRStatus.hasClosedPr) {
+                                    " and has to be approved by av risk owner again"
+                                } else {
+                                    ""
+                                },
+                    )
+
+                else -> {
+                    throw DeletingRiScException(
+                        message = "Failed to delete risk scorecard with id $riScId",
+                        riScId = riScId,
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            throw DeletingRiScException(
                 message = "Failed with error ${e.message} for risk scorecard with id $riScId",
                 riScId = riScId,
             )
