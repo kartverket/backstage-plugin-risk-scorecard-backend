@@ -5,6 +5,7 @@ import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
+import org.springframework.retry.support.RetryTemplate
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -58,22 +59,32 @@ class SecurityConfig(
     @Bean
     fun jwtDecoder(): JwtDecoder? {
         val issuerUri = environment.getProperty("ISSUER_URI")
-        val jwtDecoder =
-            NimbusJwtDecoder
-                .withIssuerLocation(issuerUri)
-                .jwtProcessorCustomizer { customizer ->
-                    customizer.jwsTypeVerifier =
-                        DefaultJOSEObjectTypeVerifier(
-                            JOSEObjectType.JOSE_JSON,
-                            JOSEObjectType.JWT,
-                            JOSEObjectType.JOSE,
-                            // required for tokens issued by Backstage
-                            JOSEObjectType("vnd.backstage.user"),
-                            null,
-                        )
-                }.build()
+        require(!issuerUri.isNullOrBlank()) { "ISSUER_URI must be configured in the environment" }
 
-        return JwtDecoder { token -> jwtDecoder.decode(token) }
+        val retryTemplate =
+            RetryTemplate
+                .builder()
+                .maxAttempts(3)
+                .fixedBackoff(1000)
+                .build()
+
+        return retryTemplate.execute<JwtDecoder?, Exception> {
+            val jwtDecoder =
+                NimbusJwtDecoder
+                    .withIssuerLocation(issuerUri)
+                    .jwtProcessorCustomizer { customizer ->
+                        customizer.jwsTypeVerifier =
+                            DefaultJOSEObjectTypeVerifier(
+                                JOSEObjectType.JOSE_JSON,
+                                JOSEObjectType.JWT,
+                                JOSEObjectType.JOSE,
+                                JOSEObjectType("vnd.backstage.user"),
+                                null,
+                            )
+                    }.build()
+
+            JwtDecoder { token -> jwtDecoder.decode(token) }
+        }
     }
 
     fun getAllowedOrigins(): List<String> =

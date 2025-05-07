@@ -41,6 +41,7 @@ val nimbusdsVersion = "10.2"
 val bouncyCastleVersion = "1.80"
 val mockkVersion = "1.14.2"
 val junitVersion = "5.12.2"
+val retryVersion = "1.3.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -74,6 +75,12 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
+
+    implementation("org.springframework.retry:spring-retry:$retryVersion") {
+        because(
+            "SecurityConfig.jwtDecoder sometimes receives empty jwks.json set. This package enables retries in an attempt to mitigate flaky initialization.",
+        )
+    }
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
