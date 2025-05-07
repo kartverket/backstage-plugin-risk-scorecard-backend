@@ -49,11 +49,17 @@ class GithubHelper(
         draftBranch: String = riScId,
     ): String = "/$owner/$repository/contents/$riScFolderPath/$riScId.$filenamePostfix.yaml?ref=$draftBranch"
 
-    fun uriToGetCommitStatus(
+    /**
+     * Constructs a URI to get the last commit on a provided branch.
+     *
+     * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit">The get a
+     *      commit API reference</a>
+     */
+    fun uriToGetLastCommitOnBranch(
         owner: String,
         repository: String,
         branchName: String,
-    ): String = "/$owner/$repository/commits/$branchName/status"
+    ): String = "/$owner/$repository/commits/heads/$branchName"
 
     fun uriToCreateNewBranch(
         owner: String,
