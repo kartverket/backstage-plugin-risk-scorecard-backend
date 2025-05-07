@@ -300,7 +300,7 @@ class GithubConnector(
 
             val commits =
                 getGithubResponse(
-                    githubHelper.uriToFetchCommitsSince(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
                         since = lastPublishedDate,
@@ -412,7 +412,7 @@ class GithubConnector(
                     async {
                         // Latest commit timestamp on default branch that includes changes on this riSc
                         val latestCommitTimestamp =
-                            fetchLatestCommitTimestampOnDefault(
+                            fetchLatestCommitTimestampOnBranch(
                                 owner = owner,
                                 repository = repository,
                                 accessToken = gitHubAccessToken.value,
@@ -423,12 +423,12 @@ class GithubConnector(
                         // Check if previous commits on draft branch ahead of default branch requires approval.
                         latestCommitTimestamp
                             ?.let { it ->
-                                fetchCommitsSinceLastCommit(
+                                fetchCommitsOnDraftBranchSince(
                                     owner = owner,
                                     repository = repository,
                                     accessToken = gitHubAccessToken.value,
                                     riScId = riScId,
-                                    since = it.toString(),
+                                    since = it,
                                 ).filter {
                                     it.commit.committer.date
                                         .isAfter(latestCommitTimestamp)
@@ -543,7 +543,7 @@ class GithubConnector(
      * @param owner The owner (user/organisation) of the repository.
      * @param repository The name of the repository to make the branch in,
      * @param accessToken The GitHub access token to use for authorization.
-     * @param branchName: The name of the branch to determine the last commit for.
+     * @param branchName The name of the branch to determine the last commit for.
      *
      * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit">The get a
      *      commit API reference</a>
@@ -567,11 +567,11 @@ class GithubConnector(
     /**
      * Creates a new branch through the GitHub API by branching out of the default branch.
      *
-     * @param owner: The owner (user/organisation) of the repository.
-     * @param repository: The name of the repository to make the branch in.
-     * @param newBranchName: The name of the new branch.
-     * @param accessToken: The GitHub access token to use for authorization.
-     * @param defaultBranch: The name of the default branch.
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in.
+     * @param newBranchName The name of the new branch.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param defaultBranch The name of the default branch.
      */
     suspend fun createNewBranch(
         owner: String,
@@ -613,27 +613,45 @@ class GithubConnector(
             ).awaitBody<List<GithubPullRequestObject>>()
         }
 
-    private suspend fun fetchCommitsSinceLastCommit(
+    /**
+     * Fetches all commits made on the draft branch for the given RiSc (`riScId`) since the given time.
+     *
+     * @param owner The user/organisation that owns the repository.
+     * @param repository The repository to find commits in.
+     * @param accessToken The GitHub access token to make the request with
+     * @param riScId The ID of the RiSc to consider
+     * @param since The earliest timestamp to consider for commits.
+     */
+    private suspend fun fetchCommitsOnDraftBranchSince(
         owner: String,
         repository: String,
         accessToken: String,
         riScId: String,
-        since: String,
+        since: OffsetDateTime,
     ): List<GithubCommitObject> =
         tryOrDefault(default = emptyList()) {
             getGithubResponse(
                 uri =
-                    githubHelper.uriToFetchAllCommitsOnBranchSince(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
-                        branchName = riScId,
+                        branch = riScId,
                         since = since,
                     ),
                 accessToken = accessToken,
             ).awaitBodyOrNull<List<GithubCommitObject>>() ?: emptyList()
         }
 
-    private suspend fun fetchLatestCommitTimestampOnDefault(
+    /**
+     * Finds the timestamp of the last commit made to the file associated with the given RiSc on the given branch.
+     *
+     * @param owner The user/organisation that own the repository to make the pull request in.
+     * @param repository The repository to make the pull request in.
+     * @param accessToken The GitHub access token to make the request with.
+     * @param riScId The id of the RiSc.
+     * @param branch The branch to consider.
+     */
+    private suspend fun fetchLatestCommitTimestampOnBranch(
         owner: String,
         repository: String,
         accessToken: String,
@@ -643,7 +661,7 @@ class GithubConnector(
         tryOrNull {
             getGithubResponse(
                 uri =
-                    githubHelper.uriToFetchCommit(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
                         riScId = riScId,
@@ -662,13 +680,13 @@ class GithubConnector(
      * the branch `riScId` to `baseBranch` with a title and text dependent on if the changes have been approved or do
      * not require approval
      *
-     * @param owner: The user/organisation that own the repository to make the pull request in.
-     * @param repository: The repository to make the pull request in.
-     * @param riScId: The id of the RiSc.
+     * @param owner The user/organisation that own the repository to make the pull request in.
+     * @param repository The repository to make the pull request in.
+     * @param riScId The id of the RiSc.
      * @param requiresNewApproval Indicates if the changes to the new.
-     * @param gitHubAccessToken: The GitHub access token for authorization.
-     * @param userInfo: Information about the user that is creating the pull request, i.e., the user who has approved the changes.
-     * @param baseBranch: The branch to make the pull request to.
+     * @param gitHubAccessToken The GitHub access token for authorization.
+     * @param userInfo Information about the user that is creating the pull request, i.e., the user who has approved the changes.
+     * @param baseBranch The branch to make the pull request to.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
     suspend fun createPullRequestForRiSc(
@@ -703,10 +721,10 @@ class GithubConnector(
     /**
      * Creates a request to create a new pull request through the GitHub API.
      *
-     * @param owner: The owner (user/organisation) of the repository.
-     * @param repository: The name of the repository to make the pull request in.
-     * @param accessToken: The GitHub access token to use for authorization.
-     * @param pullRequestPayload: The content of the pull request.
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the pull request in.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param pullRequestPayload The content of the pull request.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
     private suspend fun createNewPullRequest(
@@ -823,10 +841,10 @@ class GithubConnector(
      * - Authorization: token <accessToken>
      * - X-GitHub-Api-Version: <current-GitHub-api-version>
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
-     * @param method: The HTTP method to make the request with.
-     * @param attachBody: A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
+     * @param method The HTTP method to make the request with.
+     * @param attachBody A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
      */
     private inline fun githubRequest(
         uri: String,
@@ -847,8 +865,8 @@ class GithubConnector(
     /**
      * Constructs a GET-request to the specified URI at GitHub with standard headers.
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
      */
     private suspend fun getGithubResponse(
         uri: String,
@@ -859,10 +877,10 @@ class GithubConnector(
      * Constructs a request to the specified URI at GitHub with standard headers and the provided JSON body. Uses
      * the supplied HTTP method to make the call.
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
-     * @param content: The JSON formatted content to send as the body of the request.
-     * @param method: The HTTP method to make the call with.
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
+     * @param content The JSON formatted content to send as the body of the request.
+     * @param method The HTTP method to make the call with.
      */
     private suspend fun requestToGithubWithJSONBody(
         uri: String,

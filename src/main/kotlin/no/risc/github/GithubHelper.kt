@@ -95,39 +95,37 @@ class GithubHelper(
             shaOfLatestDefault = latestShaAtDefault,
         )
 
-    fun uriToFetchAllCommitsOnBranchSince(
-        owner: String,
-        repository: String,
-        branchName: String,
-        since: String,
-    ): String = "/$owner/$repository/commits?sha=$branchName&since=$since"
-
-    fun uriToFetchCommit(
-        owner: String,
-        repository: String,
-        riScId: String,
-        branch: String,
-    ): String = "/$owner/$repository/commits?sha=$branch&path=$riScFolderPath/$riScId.$filenamePostfix.yaml"
-
+    /**
+     * Produces a URL to retrieve commits from the given repository (`owner/repository`). Commits are by default
+     * retrieved for the default branch of the repository, unless a specific branch is given. Similarly, commits are
+     * retrieved for the entire git history, unless a specific start date-time is given. If a RiSc ID is given, only
+     * commits that change the content file for that RiSc are retrieved.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to retrieve commits from.
+     * @param riScId The RiSc to retrieve commits for. Only applicable if given (`!= null`)
+     * @param branch The branch to retrieve commits on. If not given (`!= null`), the default branch is used.
+     * @param since The date-time to retrieve commits since.
+     *
+     * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#list-commits">List commits
+     *      API documentation</a>
+     */
     fun uriToFetchCommits(
         owner: String,
         repository: String,
         riScId: String? = null,
         branch: String? = null,
+        since: OffsetDateTime? = null,
     ): String =
-        if (branch == null && riScId == null) {
+        if (branch == null && riScId == null && since == null) {
             "/$owner/$repository/commits"
         } else {
             "/$owner/$repository/commits?${
-                branch?.let {
-                    "sha=$branch"
-                } ?: ""
-            }&${riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: ""}"
+                branch?.let { "sha=$branch&" } ?: ""
+            }${
+                since?.let { "since=$since&" } ?: ""
+            }${
+                riScId?.let { "path=$riScFolderPath/$riScId.$filenamePostfix.yaml" } ?: ""
+            }"
         }
-
-    fun uriToFetchCommitsSince(
-        owner: String,
-        repository: String,
-        since: OffsetDateTime,
-    ): String = "/$owner/$repository/commits?since=$since"
 }
