@@ -400,7 +400,7 @@ class GithubConnector(
             coroutineScope {
                 val prExistsDeferred =
                     async {
-                        pullRequestForRiScExists(
+                        doesPullRequestForRiScExists(
                             owner = owner,
                             repository = repository,
                             riScId = riScId,
@@ -501,6 +501,15 @@ class GithubConnector(
             }
         }
 
+    /**
+     * Finds the SHA for the last version of the file associated with the given RiSc on the draft branch of that
+     * RiSc (`riScId`).
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
     private suspend fun getSHAForExistingRiScDraftOrNull(
         owner: String,
         repository: String,
@@ -513,6 +522,14 @@ class GithubConnector(
         ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
+    /**
+     * Finds the SHA for the last published version of the file associated with the given RiSc.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
     private suspend fun getSHAForPublishedRiScOrNull(
         owner: String,
         repository: String,
@@ -525,7 +542,16 @@ class GithubConnector(
         ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
-    private suspend fun pullRequestForRiScExists(
+    /**
+     * Determines if there exists a pull request for merging the draft branch of the given RiSc (`riScId`) into another
+     * branch.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
+    private suspend fun doesPullRequestForRiScExists(
         owner: String,
         repository: String,
         riScId: String,
@@ -601,6 +627,13 @@ class GithubConnector(
         ).awaitBodyOrNull<String>()
     }
 
+    /**
+     * Fetches all open pull requests in the repository.
+     *
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in,
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchAllPullRequests(
         owner: String,
         repository: String,
@@ -892,6 +925,11 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
+    /**
+     * Maps exceptions returned by a web client to more descriptive GitHub statuses.
+     *
+     * @param e: The exception to map
+     */
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         if (e !is WebClientResponseException) {
             GithubStatus.InternalError
