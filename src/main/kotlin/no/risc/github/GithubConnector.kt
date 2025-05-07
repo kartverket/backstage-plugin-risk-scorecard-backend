@@ -514,21 +514,32 @@ class GithubConnector(
             accessToken = accessToken,
         ).any { it.id == riScId }
 
-    private suspend fun fetchLatestShaForDefaultBranch(
+    /**
+     * Finds the SHA for the last commit on the provided branch.
+     *
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in,
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param branchName: The name of the branch to determine the last commit for.
+     *
+     * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit">The get a
+     *      commit API reference</a>
+     */
+    private suspend fun getLatestCommitShaForBranch(
         owner: String,
         repository: String,
         accessToken: String,
-        defaultBranch: String,
+        branchName: String,
     ): String? =
         getGithubResponse(
             uri =
-                githubHelper.uriToGetCommitStatus(
+                githubHelper.uriToGetLastCommitOnBranch(
                     owner = owner,
                     repository = repository,
-                    branchName = defaultBranch,
+                    branchName = branchName,
                 ),
             accessToken = accessToken,
-        ).awaitBodyOrNull<GithubFileDTO>()?.sha
+        ).awaitBodyOrNull<GithubCommitObject>()?.sha
 
     /**
      * Creates a new branch through the GitHub API by branching out of the default branch.
@@ -547,11 +558,11 @@ class GithubConnector(
         defaultBranch: String,
     ): String? {
         val latestShaForDefaultBranch =
-            fetchLatestShaForDefaultBranch(
+            getLatestCommitShaForBranch(
                 owner = owner,
                 repository = repository,
                 accessToken = accessToken,
-                defaultBranch = defaultBranch,
+                branchName = defaultBranch,
             ) ?: return null
 
         return requestToGithubWithJSONBody(
