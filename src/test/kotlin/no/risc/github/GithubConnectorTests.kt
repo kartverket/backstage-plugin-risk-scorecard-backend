@@ -10,7 +10,9 @@ import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubReferenceObjectDTO
+import no.risc.github.models.GithubStatus
 import no.risc.risc.RiScStatus
+import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -49,6 +51,10 @@ class GithubConnectorTests {
         every { githubConnector.webClient } returns webClient.webClient
     }
 
+    private fun randomSHA(): String = generateRandomAlphanumericString(41)
+
+    private fun riScFilename(riScId: String) = "$filenamePrefix-$riScId.$filenamePostfix.yaml"
+
     @Nested
     inner class TestFetchAllRiScIdentifiers {
         private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
@@ -79,7 +85,7 @@ class GithubConnectorTests {
                         publishedRiScIDs.map { riScID ->
                             GithubFileDTO(
                                 content = "{}",
-                                sha = generateRandomAlphanumericString(41),
+                                sha = randomSHA(),
                                 name = "$filenamePrefix-$riScID.$filenamePostfix.yaml",
                             )
                         },
@@ -197,6 +203,192 @@ class GithubConnectorTests {
                 }
 
             assertTrue(identifiers.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
+        }
+    }
+
+    @Nested
+    inner class TestFetchRiscContent {
+        private fun pathToRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+
+        private fun pathToRiScContentOnDraftBranch(riScId: String) =
+            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$filenamePrefix-$riScId"
+
+        @Test
+        fun `test fetch RiSc content`() {
+            val riScId = "abcde"
+            val content = """{ "schemaVersion": "4.0" }"""
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubFileDTO(
+                            content = content.encodeBase64(),
+                            sha = randomSHA(),
+                            name = riScFilename(riScId),
+                        ),
+                    ),
+                path = pathToRiScContent(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchPublishedRiSc(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.Success,
+                response.status,
+                "When the RiSc exists the status should be set to Success.",
+            )
+            assertEquals(content, response.data, "When the RiSc exists the data should be set to the content.")
+        }
+
+        @Test
+        fun `test fetch RiSc content does not exist`() {
+            val riScId = "aaaaa"
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToRiScContent(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchPublishedRiSc(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.NotFound,
+                response.status,
+                "When the RiSc does not exist, the status should be set to NotFound.",
+            )
+            assertEquals(null, response.data, "When the RiSc does not exist, there should be no data.")
+        }
+
+        @Test
+        fun `test fetch RiSc content no access`() {
+            val riScId = "aaaaa"
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.UNAUTHORIZED),
+                path = pathToRiScContent(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchPublishedRiSc(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.Unauthorized,
+                response.status,
+                "When the user does not have access, the status should be set to Unauthorized.",
+            )
+            assertEquals(null, response.data, "When the user does not have access, there should be no data.")
+        }
+
+        @Test
+        fun `test fetch draft RiSc content`() {
+            val riScId = "abcde"
+            val content = """{ "schemaVersion": "4.0" }"""
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubFileDTO(
+                            content = content.encodeBase64(),
+                            sha = randomSHA(),
+                            name = riScFilename(riScId),
+                        ),
+                    ),
+                path = pathToRiScContentOnDraftBranch(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchDraftedRiScContent(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.Success,
+                response.status,
+                "When the RiSc exists the status should be set to Success.",
+            )
+            assertEquals(content, response.data, "When the RiSc exists the data should be set to the content.")
+        }
+
+        @Test
+        fun `test fetch draft RiSc content does not exist`() {
+            val riScId = "aaaaa"
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToRiScContentOnDraftBranch(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchDraftedRiScContent(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.NotFound,
+                response.status,
+                "When the RiSc does not exist, the status should be set to NotFound.",
+            )
+            assertEquals(null, response.data, "When the RiSc does not exist, there should be no data.")
+        }
+
+        @Test
+        fun `test fetch draft RiSc content no access`() {
+            val riScId = "aaaaa"
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.UNAUTHORIZED),
+                path = pathToRiScContentOnDraftBranch(riScId),
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchDraftedRiScContent(
+                        owner = owner,
+                        repository = repository,
+                        id = "$filenamePrefix-$riScId",
+                        accessToken = "",
+                    )
+                }
+
+            assertEquals(
+                GithubStatus.Unauthorized,
+                response.status,
+                "When the user does not have access, the status should be set to Unauthorized.",
+            )
+            assertEquals(null, response.data, "When the user does not have access, there should be no data.")
         }
     }
 }
