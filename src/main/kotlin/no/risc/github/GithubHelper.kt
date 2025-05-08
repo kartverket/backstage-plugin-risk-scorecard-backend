@@ -14,6 +14,11 @@ class GithubHelper(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
 ) {
+    /**
+     * Constructs the file path to the file for the given RiSc.
+     *
+     * @param riScId The ID of the RiSc.
+     */
     private fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
 
     /**
