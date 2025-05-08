@@ -11,6 +11,8 @@ build/
 .idea/
 *.iml
 .gradle/
+# See https://kotlinlang.org/docs/whatsnew20.html#new-directory-for-kotlin-data-in-gradle-projects
+.kotlin/
 /out/
 http-client.private.env.json
 .DS_Store
