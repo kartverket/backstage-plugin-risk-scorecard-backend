@@ -6,11 +6,15 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
+import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubReferenceObjectDTO
+import no.risc.github.models.GithubRepositoryDTO
+import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
+import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.RiScStatus
 import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString
@@ -19,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpStatus
 import java.time.OffsetDateTime
 
@@ -389,6 +394,127 @@ class GithubConnectorTests {
                 "When the user does not have access, the status should be set to Unauthorized.",
             )
             assertEquals(null, response.data, "When the user does not have access, there should be no data.")
+        }
+    }
+
+    @Nested
+    inner class TestFetchRepositoryInfo {
+        private val pathToRepository = "/$owner/$repository"
+
+        @Test
+        fun `test fetch repository info with push access`() {
+            val defaultBranch = "default"
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubRepositoryDTO(
+                            defaultBranch = defaultBranch,
+                            permissions =
+                                GithubRepositoryPermissions(
+                                    push = true,
+                                    admin = false,
+                                    maintain = false,
+                                    triage = false,
+                                    pull = true,
+                                ),
+                        ),
+                    ),
+                path = pathToRepository,
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchRepositoryInfo(
+                        gitHubAccessToken = "",
+                        repositoryOwner = owner,
+                        repositoryName = repository,
+                    )
+                }
+
+            assertEquals(
+                defaultBranch,
+                response.defaultBranch,
+                "Default branch should be the one returned from GitHub.",
+            )
+            assertEquals(
+                GitHubPermission.entries.toList(),
+                response.permissions,
+                "If the user has push access to the repository, both push and pull access should be returned.",
+            )
+        }
+
+        @Test
+        fun `test fetch repository info with only pull access`() {
+            val defaultBranch = "default"
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubRepositoryDTO(
+                            defaultBranch = defaultBranch,
+                            permissions =
+                                GithubRepositoryPermissions(
+                                    push = false,
+                                    admin = false,
+                                    maintain = false,
+                                    triage = false,
+                                    pull = true,
+                                ),
+                        ),
+                    ),
+                path = pathToRepository,
+            )
+
+            val response =
+                runBlocking {
+                    githubConnector.fetchRepositoryInfo(
+                        gitHubAccessToken = "",
+                        repositoryOwner = owner,
+                        repositoryName = repository,
+                    )
+                }
+
+            assertEquals(
+                defaultBranch,
+                response.defaultBranch,
+                "Default branch should be the one returned from GitHub.",
+            )
+            assertEquals(
+                listOf(GitHubPermission.READ),
+                response.permissions,
+                "If the user only has pull access to the repository, only pull access should be returned.",
+            )
+        }
+
+        @Test
+        fun `test fetch repository info with no pull access`() {
+            val defaultBranch = "default"
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubRepositoryDTO(
+                            defaultBranch = defaultBranch,
+                            permissions =
+                                GithubRepositoryPermissions(
+                                    push = false,
+                                    admin = false,
+                                    maintain = false,
+                                    triage = false,
+                                    pull = false,
+                                ),
+                        ),
+                    ),
+                path = pathToRepository,
+            )
+
+            assertThrows<PermissionDeniedOnGitHubException>("If the user does not have pull access, an error should be thrown") {
+                runBlocking {
+                    githubConnector.fetchRepositoryInfo(
+                        gitHubAccessToken = "",
+                        repositoryOwner = owner,
+                        repositoryName = repository,
+                    )
+                }
+            }
         }
     }
 }

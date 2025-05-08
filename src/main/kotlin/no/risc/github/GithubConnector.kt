@@ -976,22 +976,4 @@ class GithubConnector(
                 },
         )
     }
-
-    /**
-     * Finds the default branch for the given repository "/<repositoryOwner>/<repositoryName>".
-     *
-     * @param repositoryOwner The name of the user/organisation owning the repository
-     * @param repositoryName The name of the repository to fetch information for
-     * @param gitHubAccessToken The GitHub access token to use for fetching the information
-     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
-     */
-    suspend fun fetchDefaultBranch(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: String,
-    ) = fetchRepositoryInfo(
-        repositoryOwner = repositoryOwner,
-        repositoryName = repositoryName,
-        gitHubAccessToken = gitHubAccessToken,
-    ).defaultBranch
 }
