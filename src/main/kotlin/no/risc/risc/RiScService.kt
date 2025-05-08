@@ -615,7 +615,7 @@ class RiScService(
                     riScId = riScId,
                     fileContent = encryptedData,
                     requiresNewApproval = content.isRequiresNewApproval,
-                    accessTokens = accessTokens,
+                    gitHubAccessToken = accessTokens.githubAccessToken,
                     userInfo = content.userInfo,
                     defaultBranch = defaultBranch,
                 )
