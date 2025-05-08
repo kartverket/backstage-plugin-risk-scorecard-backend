@@ -619,9 +619,9 @@ class GithubConnector(
             accessToken = accessToken,
             content =
                 githubHelper
-                    .bodyToCreateNewBranchFromDefault(
+                    .bodyToCreateNewBranch(
                         branchName = newBranchName,
-                        latestShaAtDefault = latestShaForDefaultBranch,
+                        shaToBranchFrom = latestShaForDefaultBranch,
                     ).toContentBody(),
             method = HttpMethod.POST,
         ).awaitBodyOrNull<String>()
