@@ -11,18 +11,11 @@ import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubReferenceObjectDTO
-
-<<<<<<< HEAD
 import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.RiScIdentifier
-
-=======
-import no.risc.github.models.GithubStatus
-
->>>>>>> aefff86 (Add tests for fetch RiSc content)
 import no.risc.risc.RiScStatus
 import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString
