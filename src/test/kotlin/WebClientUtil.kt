@@ -68,7 +68,9 @@ class MockableWebClient {
             ),
         )
 
-        val requestPath = request.url().path
+        val queryParameters = request.url().query
+        val requestPath =
+            if (queryParameters.isNullOrBlank()) request.url().path else "${request.url().path}?$queryParameters"
 
         // No matching queued up response
         if (requestPath !in responses && wildcardResponses.isEmpty()) return Mono.empty()
