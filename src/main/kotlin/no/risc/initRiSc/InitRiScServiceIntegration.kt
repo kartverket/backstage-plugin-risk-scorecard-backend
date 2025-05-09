@@ -13,13 +13,17 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 class InitRiScServiceIntegration(
     private val initRiScServiceConnector: InitRiScServiceConnector,
 ) {
-    suspend fun generateDefaultRiSc(
-        repositoryName: String,
-        initialRiSc: String,
-    ): String =
+    /**
+     * Generates a default RiSc based on the passed initial RiSc using the external initialize RiSc service. Returns a
+     * JSON serialized RiSc.
+     *
+     * @param initialRiSc A JSON serialized RiSc to base the default RiSc on. Must include the `title` and `scope`
+     *                    fields. These are the only fields used from `initialRiSc`.
+     */
+    suspend fun generateDefaultRiSc(initialRiSc: String): String =
         initRiScServiceConnector.webClient
             .post()
-            .uri("/generate/$repositoryName")
+            .uri("/generate")
             .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(

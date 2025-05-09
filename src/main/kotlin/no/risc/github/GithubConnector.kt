@@ -6,12 +6,17 @@ import kotlinx.coroutines.reactor.awaitSingle
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
-import no.risc.github.models.FileContentDTO
-import no.risc.github.models.FileNameDTO
-import no.risc.github.models.RepositoryDTO
-import no.risc.github.models.ShaResponseDTO
+import no.risc.github.models.GithubCommitObject
+import no.risc.github.models.GithubContentResponse
+import no.risc.github.models.GithubCreateNewPullRequestPayload
+import no.risc.github.models.GithubFileDTO
+import no.risc.github.models.GithubPullRequestObject
+import no.risc.github.models.GithubReferenceObjectDTO
+import no.risc.github.models.GithubRepositoryDTO
+import no.risc.github.models.GithubStatus
+import no.risc.github.models.GithubWriteToFilePayload
+import no.risc.github.models.RiScApprovalPRStatus
 import no.risc.infra.connector.WebClientConnector
-import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
@@ -23,6 +28,7 @@ import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
+import no.risc.utils.tryOrDefault
 import no.risc.utils.tryOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -37,59 +43,7 @@ import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
-import java.text.SimpleDateFormat
-import java.util.Date
-
-data class GithubContentResponse(
-    val data: String?,
-    val status: GithubStatus,
-) {
-    fun data(): String = data!!
-}
-
-data class GithubRiScIdentifiersResponse(
-    val ids: List<RiScIdentifier>,
-    val status: GithubStatus,
-)
-
-enum class GithubStatus {
-    NotFound,
-    Unauthorized,
-    ContentIsEmpty,
-    Success,
-    RequestResponseBodyError,
-    ResponseBodyTooLargeForWebClientError,
-    InternalError,
-}
-
-data class GithubWriteToFilePayload(
-    val message: String,
-    val content: String,
-    val sha: String? = null,
-    val branchName: String,
-    val author: Author? = null,
-) {
-    fun toContentBody(): String =
-        "{\"message\": \"$message\", \"content\": \"$content\", \"branch\": \"$branchName\"" +
-            (author?.let { ", \"committer\": ${author.toJSONString()}" } ?: "") +
-            (sha?.let { ", \"sha\": \"$sha\"" } ?: "") +
-            "}"
-}
-
-data class Author(
-    val name: String?,
-    val email: String?,
-    val date: Date,
-) {
-    private fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
-
-    fun toJSONString(): String = "{ \"name\":\"${name}\", \"email\":\"${email}\", \"date\":\"${formattedDate()}\" }"
-}
-
-data class RiScApprovalPRStatus(
-    val pullRequest: GithubPullRequestObject?,
-    val hasClosedPr: Boolean,
-)
+import java.time.OffsetDateTime
 
 @Component
 class GithubConnector(
@@ -120,23 +74,31 @@ class GithubConnector(
         owner: String,
         repository: String,
         accessToken: String,
-    ): GithubRiScIdentifiersResponse =
+    ): List<RiScIdentifier> =
         coroutineScope {
             val draftRiScs =
                 async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
             val publishedRiScs =
-                async { fetchPublishedRiScIdentifiers(owner = owner, repository = repository, accessToken = accessToken) }
+                async {
+                    fetchPublishedRiScIdentifiers(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessToken,
+                    )
+                }
             val riScsSentForApproval =
-                async { fetchRiScIdentifiersSentForApproval(owner = owner, repository = repository, accessToken = accessToken) }
+                async {
+                    fetchRiScIdentifiersSentForApproval(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessToken,
+                    )
+                }
 
-            GithubRiScIdentifiersResponse(
-                status = GithubStatus.Success,
-                ids =
-                    combinePublishedDraftAndSentForApproval(
-                        draftRiScList = draftRiScs.await(),
-                        sentForApprovalList = riScsSentForApproval.await(),
-                        publishedRiScList = publishedRiScs.await(),
-                    ),
+            combinePublishedDraftAndSentForApproval(
+                draftRiScList = draftRiScs.await(),
+                sentForApprovalList = riScsSentForApproval.await(),
+                publishedRiScList = publishedRiScs.await(),
             )
         }
 
@@ -178,7 +140,7 @@ class GithubConnector(
     ): GithubContentResponse =
         try {
             getGithubResponse(uri = uri, accessToken = accessToken)
-                .toEntity<FileContentDTO>()
+                .toEntity<GithubFileDTO>()
                 .awaitSingle()
                 .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
                 .body
@@ -236,44 +198,42 @@ class GithubConnector(
     /**
      * Finds the identifiers of every RiSc in a repository that is published, i.e., on the default branch.
      *
-     * @param owner: The user/organisation the repository belongs to.
-     * @param repository: The repository to check.
-     * @param accessToken: The GitHub access token to use for authorization.
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to check.
+     * @param accessToken The GitHub access token to use for authorization.
      */
     private suspend fun fetchPublishedRiScIdentifiers(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        try {
+        tryOrDefault(default = emptyList()) {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
-                .awaitBody<List<FileNameDTO>>()
+                .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
-                .filter { it.value.endsWith(".$filenamePostfix.yaml") }
+                .filter { it.name.endsWith(".$filenamePostfix.yaml") }
                 .map {
                     RiScIdentifier(
                         // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
-                        id = it.value.substringBefore(".$filenamePostfix"),
+                        id = it.name.substringBefore(".$filenamePostfix"),
                         status = RiScStatus.Published,
                     )
                 }
-        } catch (e: Exception) {
-            emptyList()
         }
 
     /**
      * Finds the identifiers of every RiSc in a repository that has a pull request open.
      *
-     * @param owner: The user/organisation the repository belongs to.
-     * @param repository: The repository to check.
-     * @param accessToken: The GitHub access token to use for authorization.
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to check.
+     * @param accessToken The GitHub access token to use for authorization.
      */
     private suspend fun fetchRiScIdentifiersSentForApproval(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        try {
+        tryOrDefault(default = emptyList()) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
@@ -287,24 +247,22 @@ class GithubConnector(
                     )
                     // Every RiSc identifier starts with "<filenamePrefix>-".
                 }.filter { it.id.startsWith("$filenamePrefix-") }
-        } catch (e: Exception) {
-            emptyList()
         }
 
     /**
      * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
      * default branch. These are all RiScs that have a separate branch connect to them.
      *
-     * @param owner: The user/organisation the repository belongs to.
-     * @param repository: The repository to check.
-     * @param accessToken: The GitHub access token to use for authorization.
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to check.
+     * @param accessToken The GitHub access token to use for authorization.
      */
     private suspend fun fetchRiScIdentifiersDrafted(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        try {
+        tryOrDefault(default = emptyList()) {
             getGithubResponse(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
@@ -312,10 +270,17 @@ class GithubConnector(
             ).awaitBody<List<GithubReferenceObjectDTO>>()
                 // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
                 .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
-        } catch (e: Exception) {
-            emptyList()
         }
 
+    /**
+     * Determines when the newest version of the RiSc was published and how many commits have since been made to the
+     * default branch of the given repository.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to use.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param riScId The ID of the RiSc to gather information for.
+     */
     internal suspend fun fetchLastPublishedRiScDateAndCommitNumber(
         owner: String,
         repository: String,
@@ -331,27 +296,39 @@ class GithubConnector(
                         riScId = riScId,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>().first().commit.committer.dateTime
+                ).awaitBody<List<GithubCommitObject>>().first().commit.committer.date
 
             val commits =
                 getGithubResponse(
-                    githubHelper.uriToFetchCommitsSince(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
                         since = lastPublishedDate,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubRefCommitDTO>>()
+                ).awaitBody<List<GithubCommitObject>>()
 
-            val commitsAfterPublish =
-                commits.filter {
-                    it.commit.committer.dateTime
-                        .isAfter(lastPublishedDate)
-                }
-
-            LastPublished(lastPublishedDate, commitsAfterPublish.size)
+            LastPublished(
+                dateTime = lastPublishedDate,
+                numberOfCommits = commits.count { lastPublishedDate.isBefore(it.commit.committer.date) },
+            )
         }
 
+    /**
+     * Updates the content of a RiSc or creates a new RiSc if no RiSc with the provided ID already exists in the given
+     * repository (`owner/repository`). If there already exists a draft branch for the provided RiSc ID, then changes
+     * are applied to this branch. Otherwise, a branch named after the provided RiSc ID is created and the changes are
+     * applied to this new branch.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to make the changes to.
+     * @param riScId The ID of the RiSc to update/create.
+     * @param defaultBranch The default branch of the repository.
+     * @param fileContent The new contents of the RiSc.
+     * @param requiresNewApproval Indicates if the update/creation of the RiSc requires an approval from the risk owner.
+     * @param gitHubAccessToken The GitHub access token to make the changes with.
+     * @param userInfo Information on the user responsible for the update/creation.
+     */
     internal suspend fun updateOrCreateDraft(
         owner: String,
         repository: String,
@@ -359,17 +336,16 @@ class GithubConnector(
         defaultBranch: String,
         fileContent: String,
         requiresNewApproval: Boolean,
-        accessTokens: AccessTokens,
+        gitHubAccessToken: GithubAccessToken,
         userInfo: UserInfo,
     ): RiScApprovalPRStatus {
-        val accessToken = accessTokens.githubAccessToken.value
         // Attempt to get SHA for the existing draft
         val latestShaForDraft =
             getSHAForExistingRiScDraftOrNull(
                 owner = owner,
                 repository = repository,
                 riScId = riScId,
-                accessToken = accessToken,
+                accessToken = gitHubAccessToken.value,
             )
         var latestShaForPublished: String? = null
 
@@ -382,7 +358,7 @@ class GithubConnector(
                             owner = owner,
                             repository = repository,
                             newBranchName = riScId,
-                            accessToken = accessToken,
+                            accessToken = gitHubAccessToken.value,
                             defaultBranch = defaultBranch,
                         )
                     }
@@ -394,7 +370,7 @@ class GithubConnector(
                             owner = owner,
                             repository = repository,
                             riScId = riScId,
-                            accessToken = accessToken,
+                            accessToken = gitHubAccessToken.value,
                         )
                     }.await()
 
@@ -413,7 +389,7 @@ class GithubConnector(
         putFileRequestToGithub(
             repositoryOwner = owner,
             repositoryName = repository,
-            gitHubAccessToken = accessTokens.githubAccessToken,
+            gitHubAccessToken = gitHubAccessToken,
             filePath = "$riScFolderPath/$riScId.$filenamePostfix.yaml",
             branch = riScId,
             message = commitMessage,
@@ -424,11 +400,11 @@ class GithubConnector(
             coroutineScope {
                 val prExistsDeferred =
                     async {
-                        pullRequestForRiScExists(
+                        doesPullRequestForRiScExists(
                             owner = owner,
                             repository = repository,
                             riScId = riScId,
-                            accessToken = accessToken,
+                            accessToken = gitHubAccessToken.value,
                         )
                     }
 
@@ -436,10 +412,10 @@ class GithubConnector(
                     async {
                         // Latest commit timestamp on default branch that includes changes on this riSc
                         val latestCommitTimestamp =
-                            fetchLatestCommitTimestampOnDefault(
+                            fetchLatestCommitTimestampOnBranch(
                                 owner = owner,
                                 repository = repository,
-                                accessToken = accessToken,
+                                accessToken = gitHubAccessToken.value,
                                 riScId = riScId,
                                 branch = defaultBranch,
                             )
@@ -447,13 +423,16 @@ class GithubConnector(
                         // Check if previous commits on draft branch ahead of default branch requires approval.
                         latestCommitTimestamp
                             ?.let { it ->
-                                fetchCommitsSinceLastCommit(
+                                fetchCommitsOnDraftBranchSince(
                                     owner = owner,
                                     repository = repository,
-                                    accessToken = accessToken,
+                                    accessToken = gitHubAccessToken.value,
                                     riScId = riScId,
                                     since = it,
-                                ).filterNot { it.commit.committer.date == latestCommitTimestamp }
+                                ).filter {
+                                    it.commit.committer.date
+                                        .isAfter(latestCommitTimestamp)
+                                }
                             }?.any { it.commit.message.contains("requires new approval") } ?: true
                     }
 
@@ -473,7 +452,7 @@ class GithubConnector(
                             repository = repository,
                             riScId = riScId,
                             requiresNewApproval = requiresNewApproval,
-                            gitHubAccessToken = accessToken,
+                            gitHubAccessToken = gitHubAccessToken.value,
                             userInfo = userInfo,
                             baseBranch = defaultBranch,
                         )
@@ -483,7 +462,7 @@ class GithubConnector(
                         owner = owner,
                         repository = repository,
                         riScId = riScId,
-                        accessToken = accessToken,
+                        accessToken = gitHubAccessToken.value,
                     )
                     RiScApprovalPRStatus(pullRequest = null, hasClosedPr = true)
                 } else {
@@ -493,6 +472,15 @@ class GithubConnector(
         return riScApprovalPRStatus
     }
 
+    /**
+     * Determines if there exists an open pull request for the given RiSc ID (one from a branch with a name equal to the
+     * ID). If so, the pull request is closed.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to close the pull request in.
+     * @param riScId The ID of the RiSc to close the pull request for.
+     * @param accessToken The GitHub access token to use for closing the pull request.
+     */
     private suspend fun closePullRequestForRiSc(
         owner: String,
         repository: String,
@@ -513,6 +501,15 @@ class GithubConnector(
             }
         }
 
+    /**
+     * Finds the SHA for the last version of the file associated with the given RiSc on the draft branch of that
+     * RiSc (`riScId`).
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
     private suspend fun getSHAForExistingRiScDraftOrNull(
         owner: String,
         repository: String,
@@ -522,9 +519,17 @@ class GithubConnector(
         getGithubResponse(
             uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
+    /**
+     * Finds the SHA for the last published version of the file associated with the given RiSc.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
     private suspend fun getSHAForPublishedRiScOrNull(
         owner: String,
         repository: String,
@@ -534,10 +539,19 @@ class GithubConnector(
         getGithubResponse(
             uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubFileDTO>()?.sha
     }
 
-    private suspend fun pullRequestForRiScExists(
+    /**
+     * Determines if there exists a pull request for merging the draft branch of the given RiSc (`riScId`) into another
+     * branch.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param riScId The ID of the RiSc.
+     * @param accessToken The GitHub access token to make the request with.
+     */
+    private suspend fun doesPullRequestForRiScExists(
         owner: String,
         repository: String,
         riScId: String,
@@ -549,30 +563,41 @@ class GithubConnector(
             accessToken = accessToken,
         ).any { it.id == riScId }
 
-    private suspend fun fetchLatestShaForDefaultBranch(
+    /**
+     * Finds the SHA for the last commit on the provided branch.
+     *
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in,
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param branchName The name of the branch to determine the last commit for.
+     *
+     * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit">The get a
+     *      commit API reference</a>
+     */
+    private suspend fun getLatestCommitShaForBranch(
         owner: String,
         repository: String,
         accessToken: String,
-        defaultBranch: String,
+        branchName: String,
     ): String? =
         getGithubResponse(
             uri =
-                githubHelper.uriToGetCommitStatus(
+                githubHelper.uriToGetLastCommitOnBranch(
                     owner = owner,
                     repository = repository,
-                    branchName = defaultBranch,
+                    branchName = branchName,
                 ),
             accessToken = accessToken,
-        ).shaResponseDTO()
+        ).awaitBodyOrNull<GithubCommitObject>()?.sha
 
     /**
      * Creates a new branch through the GitHub API by branching out of the default branch.
      *
-     * @param owner: The owner (user/organisation) of the repository.
-     * @param repository: The name of the repository to make the branch in.
-     * @param newBranchName: The name of the new branch.
-     * @param accessToken: The GitHub access token to use for authorization.
-     * @param defaultBranch: The name of the default branch.
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in.
+     * @param newBranchName The name of the new branch.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param defaultBranch The name of the default branch.
      */
     suspend fun createNewBranch(
         owner: String,
@@ -582,11 +607,11 @@ class GithubConnector(
         defaultBranch: String,
     ): String? {
         val latestShaForDefaultBranch =
-            fetchLatestShaForDefaultBranch(
+            getLatestCommitShaForBranch(
                 owner = owner,
                 repository = repository,
                 accessToken = accessToken,
-                defaultBranch = defaultBranch,
+                branchName = defaultBranch,
             ) ?: return null
 
         return requestToGithubWithJSONBody(
@@ -594,68 +619,93 @@ class GithubConnector(
             accessToken = accessToken,
             content =
                 githubHelper
-                    .bodyToCreateNewBranchFromDefault(
+                    .bodyToCreateNewBranch(
                         branchName = newBranchName,
-                        latestShaAtDefault = latestShaForDefaultBranch,
+                        shaToBranchFrom = latestShaForDefaultBranch,
                     ).toContentBody(),
             method = HttpMethod.POST,
         ).awaitBodyOrNull<String>()
     }
 
+    /**
+     * Fetches all open pull requests in the repository.
+     *
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the branch in,
+     * @param accessToken The GitHub access token to use for authorization.
+     */
     suspend fun fetchAllPullRequests(
         owner: String,
         repository: String,
         accessToken: String,
     ): List<GithubPullRequestObject> =
-        try {
+        tryOrDefault(default = emptyList()) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
             ).awaitBody<List<GithubPullRequestObject>>()
-        } catch (e: Exception) {
-            emptyList()
         }
 
-    private suspend fun fetchCommitsSinceLastCommit(
+    /**
+     * Fetches all commits made on the draft branch for the given RiSc (`riScId`) since the given time.
+     *
+     * @param owner The user/organisation that owns the repository.
+     * @param repository The repository to find commits in.
+     * @param accessToken The GitHub access token to make the request with
+     * @param riScId The ID of the RiSc to consider
+     * @param since The earliest timestamp to consider for commits.
+     */
+    private suspend fun fetchCommitsOnDraftBranchSince(
         owner: String,
         repository: String,
         accessToken: String,
         riScId: String,
-        since: String,
+        since: OffsetDateTime,
     ): List<GithubCommitObject> =
-        try {
+        tryOrDefault(default = emptyList()) {
             getGithubResponse(
                 uri =
-                    githubHelper.uriToFetchAllCommitsOnBranchSince(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
-                        branchName = riScId,
+                        branch = riScId,
                         since = since,
                     ),
                 accessToken = accessToken,
             ).awaitBodyOrNull<List<GithubCommitObject>>() ?: emptyList()
-        } catch (e: Exception) {
-            emptyList()
         }
 
-    private suspend fun fetchLatestCommitTimestampOnDefault(
+    /**
+     * Finds the timestamp of the last commit made to the file associated with the given RiSc on the given branch.
+     *
+     * @param owner The user/organisation that own the repository to make the pull request in.
+     * @param repository The repository to make the pull request in.
+     * @param accessToken The GitHub access token to make the request with.
+     * @param riScId The id of the RiSc.
+     * @param branch The branch to consider.
+     */
+    private suspend fun fetchLatestCommitTimestampOnBranch(
         owner: String,
         repository: String,
         accessToken: String,
         riScId: String,
         branch: String,
-    ): String? =
+    ): OffsetDateTime? =
         tryOrNull {
             getGithubResponse(
                 uri =
-                    githubHelper.uriToFetchCommit(
+                    githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
                         riScId = riScId,
                         branch = branch,
                     ),
                 accessToken = accessToken,
-            ).timeStampLatestCommitResponse()
+            ).awaitBodyOrNull<List<GithubCommitObject>>()
+                ?.firstOrNull()
+                ?.commit
+                ?.committer
+                ?.date
         }
 
     /**
@@ -663,13 +713,13 @@ class GithubConnector(
      * the branch `riScId` to `baseBranch` with a title and text dependent on if the changes have been approved or do
      * not require approval
      *
-     * @param owner: The user/organisation that own the repository to make the pull request in.
-     * @param repository: The repository to make the pull request in.
-     * @param riScId: The id of the RiSc.
+     * @param owner The user/organisation that own the repository to make the pull request in.
+     * @param repository The repository to make the pull request in.
+     * @param riScId The id of the RiSc.
      * @param requiresNewApproval Indicates if the changes to the new.
-     * @param gitHubAccessToken: The GitHub access token for authorization.
-     * @param userInfo: Information about the user that is creating the pull request, i.e., the user who has approved the changes.
-     * @param baseBranch: The branch to make the pull request to.
+     * @param gitHubAccessToken The GitHub access token for authorization.
+     * @param userInfo Information about the user that is creating the pull request, i.e., the user who has approved the changes.
+     * @param baseBranch The branch to make the pull request to.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
     suspend fun createPullRequestForRiSc(
@@ -704,10 +754,10 @@ class GithubConnector(
     /**
      * Creates a request to create a new pull request through the GitHub API.
      *
-     * @param owner: The owner (user/organisation) of the repository.
-     * @param repository: The name of the repository to make the pull request in.
-     * @param accessToken: The GitHub access token to use for authorization.
-     * @param pullRequestPayload: The content of the pull request.
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the pull request in.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param pullRequestPayload The content of the pull request.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
     private suspend fun createNewPullRequest(
@@ -731,6 +781,19 @@ class GithubConnector(
             )
         }
 
+    /**
+     * Updates or creates a file at the given file path on the given branch in the given GitHub repository
+     * (`repositoryOwner/repositoryName`). The file update is performed through a commit, with the supplied commit
+     * message. This operation requires that the provided access token has write access to the specified branch.
+     *
+     * @param repositoryOwner The user/organisation owning the repository.
+     * @param repositoryName The name of the repository to update the file in.
+     * @param gitHubAccessToken The access token to use for write permissions in the repository.
+     * @param filePath The path to the file.
+     * @param branch The branch to perform the update on.
+     * @param message The commit message for the update.
+     * @param content The new contents of the file.
+     */
     suspend fun putFileRequestToGithub(
         repositoryOwner: String,
         repositoryName: String,
@@ -765,34 +828,45 @@ class GithubConnector(
             throw e
         }
 
+    /**
+     * Attempts to find the file at the given file path on the given branch in the given repository
+     * (`repositoryOwner/repositoryName`).
+     *
+     * @param repositoryOwner The user/organisation owning the specified repository.
+     * @param repositoryName The name of the repository to retrieve information from.
+     * @param gitHubAccessToken The access token to use for access to the repository.
+     * @param filePath The path of the file.
+     * @param branch The branch to retrieve the information from.
+     */
     private suspend fun fetchFileInfo(
         repositoryOwner: String,
         repositoryName: String,
         gitHubAccessToken: GithubAccessToken,
         filePath: String,
         branch: String,
-    ) = try {
-        getGithubResponse(
-            uri =
-                githubHelper.repositoryContentsUri(
-                    owner = repositoryOwner,
-                    repository = repositoryName,
-                    path = filePath,
-                    branch = branch,
-                ),
-            accessToken = gitHubAccessToken.value,
-        ).awaitBodyOrNull<FileContentDTO>() ?: throw GitHubFetchException(
-            message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
-            response =
-                ProcessRiScResultDTO(
-                    riScId = "",
-                    status = ProcessingStatus.FailedToCreateSops,
-                    statusMessage = ProcessingStatus.FailedToCreateSops.message,
-                ),
-        )
-    } catch (e: WebClientResponseException.NotFound) {
-        null
-    }
+    ): GithubFileDTO? =
+        try {
+            getGithubResponse(
+                uri =
+                    githubHelper.repositoryContentsUri(
+                        owner = repositoryOwner,
+                        repository = repositoryName,
+                        path = filePath,
+                        branch = branch,
+                    ),
+                accessToken = gitHubAccessToken.value,
+            ).awaitBodyOrNull<GithubFileDTO>() ?: throw GitHubFetchException(
+                message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
+                response =
+                    ProcessRiScResultDTO(
+                        riScId = "",
+                        status = ProcessingStatus.FailedToCreateSops,
+                        statusMessage = ProcessingStatus.FailedToCreateSops.message,
+                    ),
+            )
+        } catch (_: WebClientResponseException.NotFound) {
+            null
+        }
 
     /**
      * Constructs a request to the given URI at the GitHub API with standard headers:
@@ -800,12 +874,12 @@ class GithubConnector(
      * - Authorization: token <accessToken>
      * - X-GitHub-Api-Version: <current-GitHub-api-version>
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
-     * @param method: The HTTP method to make the request with.
-     * @param attachBody: A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
+     * @param method The HTTP method to make the request with.
+     * @param attachBody A method that attaches a body to the request if supplied (must attach body and "Content-Type" header).
      */
-    private suspend inline fun githubRequest(
+    private inline fun githubRequest(
         uri: String,
         accessToken: String,
         method: HttpMethod,
@@ -824,8 +898,8 @@ class GithubConnector(
     /**
      * Constructs a GET-request to the specified URI at GitHub with standard headers.
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
      */
     private suspend fun getGithubResponse(
         uri: String,
@@ -836,10 +910,10 @@ class GithubConnector(
      * Constructs a request to the specified URI at GitHub with standard headers and the provided JSON body. Uses
      * the supplied HTTP method to make the call.
      *
-     * @param uri: The URI at GitHub to use ("https://api.github.com/repos$uri").
-     * @param accessToken: The GitHub Access Token to use for authorization.
-     * @param content: The JSON formatted content to send as the body of the request.
-     * @param method: The HTTP method to make the call with.
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
+     * @param content The JSON formatted content to send as the body of the request.
+     * @param method The HTTP method to make the call with.
      */
     private suspend fun requestToGithubWithJSONBody(
         uri: String,
@@ -851,33 +925,19 @@ class GithubConnector(
             it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
         })
 
-    private suspend fun ResponseSpec.timeStampLatestCommitResponse(): String? =
-        this
-            .awaitBodyOrNull<List<GithubCommitObject>>()
-            ?.firstOrNull()
-            ?.commit
-            ?.committer
-            ?.date
-
-    private suspend fun ResponseSpec.shaResponseDTO(): String? = awaitBodyOrNull<ShaResponseDTO>()?.value
-
+    /**
+     * Maps exceptions returned by a web client to more descriptive GitHub statuses.
+     *
+     * @param e: The exception to map
+     */
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
-        if (e !is WebClientResponseException) {
-            GithubStatus.InternalError
-        } else {
-            when (e) {
-                is WebClientResponseException.NotFound -> GithubStatus.NotFound
-                is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
-                is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-                else -> {
-                    if (e.message.contains("DataBufferLimitException")) {
-                        LOGGER.error(e.message)
-                        GithubStatus.ResponseBodyTooLargeForWebClientError
-                    } else {
-                        GithubStatus.InternalError
-                    }
-                }
-            }
+        when (e) {
+            is WebClientResponseException.NotFound -> GithubStatus.NotFound
+            is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
+            is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
+            { e is WebClientResponseException && e.message.contains("DataBufferLimitException") } ->
+                GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            else -> GithubStatus.InternalError
         }
 
     /**
@@ -898,7 +958,7 @@ class GithubConnector(
             getGithubResponse(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
                 accessToken = gitHubAccessToken,
-            ).awaitBody<RepositoryDTO>()
+            ).awaitBody<GithubRepositoryDTO>()
 
         if (!repositoryDTO.permissions.pull) {
             throw PermissionDeniedOnGitHubException(

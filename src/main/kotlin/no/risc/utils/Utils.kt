@@ -46,9 +46,18 @@ fun generateRandomAlphanumericString(
  * Returns the result of the provided function, unless the provided function throws an exception. If an exception is
  * thrown, then null is returned.
  */
-inline fun <T> tryOrNull(func: () -> T?) =
+inline fun <T> tryOrNull(func: () -> T?): T? = tryOrDefault(default = null, func = func)
+
+/**
+ * Returns the result of the provided function, unless the provided function throws an exception. If an exception is
+ * thrown, then the provided default value is returned.
+ */
+inline fun <T> tryOrDefault(
+    default: T,
+    func: () -> T,
+): T =
     try {
         func()
     } catch (_: Exception) {
-        null
+        default
     }
