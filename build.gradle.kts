@@ -69,7 +69,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
     implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion") {
-        because("Provides endpoints for health and event monitoring that are used in SKIP.")
+        because("Provides endpoints for health and event monitoring that are used in SKIP and Docker.")
     }
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
