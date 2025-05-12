@@ -70,7 +70,7 @@ data class GithubCreateNewPullRequestPayload(
 @Serializable
 data class GithubCreateNewBranchPayload(
     val nameOfNewBranch: String,
-    val shaOfLatestDefault: String,
+    val shaToBranchFrom: String,
 ) {
-    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaOfLatestDefault\" }"
+    fun toContentBody(): String = "{ \"ref\":\"$nameOfNewBranch\", \"sha\": \"$shaToBranchFrom\" }"
 }
