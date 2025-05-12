@@ -169,7 +169,12 @@ class MigrationFunctionTests {
 
         // Check that all consequence and probability values have been correctly migrated
         val scenarios = migratedJsonObject["scenarios"]?.jsonArray
-        val firstScenario = scenarios?.get(0)?.jsonObject?.get("scenario")?.jsonObject
+        val firstScenario =
+            scenarios
+                ?.get(0)
+                ?.jsonObject
+                ?.get("scenario")
+                ?.jsonObject
 
         firstScenario?.let {
             val risk = it["risk"]?.jsonObject
@@ -189,7 +194,12 @@ class MigrationFunctionTests {
             assertEquals(0.05.toString(), remainingProbability)
         }
 
-        val secondScenario = scenarios?.get(1)?.jsonObject?.get("scenario")?.jsonObject
+        val secondScenario =
+            scenarios
+                ?.get(1)
+                ?.jsonObject
+                ?.get("scenario")
+                ?.jsonObject
 
         secondScenario?.let {
             val risk = it["risk"]?.jsonObject
@@ -209,7 +219,12 @@ class MigrationFunctionTests {
             assertEquals(20.toString(), remainingProbability)
         }
 
-        val thirdScenario = scenarios?.get(2)?.jsonObject?.get("scenario")?.jsonObject
+        val thirdScenario =
+            scenarios
+                ?.get(2)
+                ?.jsonObject
+                ?.get("scenario")
+                ?.jsonObject
 
         thirdScenario?.let {
             val risk = it["risk"]?.jsonObject
@@ -224,7 +239,6 @@ class MigrationFunctionTests {
 
             val remainingConsequence = remainingRisk?.get("consequence")?.jsonPrimitive?.content
             val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
-
 
             assertEquals(0.0025.toString(), remainingProbability)
 

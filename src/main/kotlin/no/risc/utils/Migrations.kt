@@ -192,13 +192,14 @@ fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
     // Change schema version 4.0 -> 4.1
     var migratedRiscContent = obj.riScContent!!.replace("\"schemaVersion\": \"4.0\"", "\"schemaVersion\": \"4.1\"")
 
-    val consequenceMigrations = mapOf(
-        1000 to 8000,
-        30000 to 160000,
-        1000000 to 3200000,
-        30000000 to 64000000,
-        1000000000 to 1280000000
-    )
+    val consequenceMigrations =
+        mapOf(
+            1000 to 8000,
+            30000 to 160000,
+            1000000 to 3200000,
+            30000000 to 64000000,
+            1000000000 to 1280000000,
+        )
 
     // Change the old consequence preset values to new values using base 20
     for ((key, value) in consequenceMigrations) {
@@ -206,13 +207,14 @@ fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
         migratedRiscContent = migratedRiscContent.replace("\"consequence\": $key,", "\"consequence\": $value,")
     }
 
-    val probabilityMigrations = mapOf(
-        0.01 to 0.0025,
-        0.1 to 0.05,
-        1 to 1,
-        50 to 20,
-        300 to 400,
-    )
+    val probabilityMigrations =
+        mapOf(
+            0.01 to 0.0025,
+            0.1 to 0.05,
+            1 to 1,
+            50 to 20,
+            300 to 400,
+        )
 
     // Change the old probability preset values to new values using base 20
     for ((key, value) in probabilityMigrations) {
@@ -228,5 +230,5 @@ fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
                 migrationRequiresNewApproval = true,
                 migrationVersions = obj.migrationStatus.migrationVersions,
             ),
-        )
+    )
 }
