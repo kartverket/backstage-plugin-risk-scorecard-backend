@@ -467,4 +467,56 @@ class GithubConnectorTests {
             }
         }
     }
+
+    @Nested
+    inner class TestPullRequests {
+        val pathToPullRequestEndpoint = "/$owner/$repository/pulls"
+
+        @Test
+        fun `test fetch all pull requests`() {
+            val pullRequests =
+                listOf(
+                    GithubPullRequestObject(
+                        url = "https://api.github.com/repos/$owner/$repository/pulls/97",
+                        title = "Unicode Support",
+                        createdAt = OffsetDateTime.now().minusHours(2),
+                        head = GithubPullRequestBranch(ref = "feature/unicode"),
+                        base = GithubPullRequestBranch(ref = "main"),
+                        number = 97,
+                    ),
+                    GithubPullRequestObject(
+                        url = "https://api.github.com/repos/$owner/$repository/pulls/84",
+                        title = " Updated risk scorecard",
+                        createdAt = OffsetDateTime.now().minusHours(3).minusMinutes(18),
+                        head = GithubPullRequestBranch(ref = "risc-aaaab"),
+                        base = GithubPullRequestBranch(ref = "main"),
+                        number = 84,
+                    ),
+                )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(pullRequests),
+                path = pathToPullRequestEndpoint,
+            )
+
+            val result = runBlocking { githubConnector.fetchAllPullRequests(owner, repository, "access token") }
+
+            assertEquals(2, result.size, "All PRs returned from GitHub should be included and no more.")
+            assertTrue(
+                pullRequests.all { pullRequest -> result.any { it == pullRequest } },
+                "All returned PRs should be included with the correct values.",
+            )
+        }
+
+        @Test
+        fun `test fetch all pull requests empty list on errors`() {
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.INTERNAL_SERVER_ERROR),
+            )
+
+            val result = runBlocking { githubConnector.fetchAllPullRequests(owner, repository, "access token") }
+
+            assertEquals(0, result.size, "On an error, an empty list should be returned.")
+        }
+    }
 }
