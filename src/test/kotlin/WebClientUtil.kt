@@ -1,11 +1,24 @@
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.reactivestreams.Publisher
+import org.springframework.core.io.buffer.DataBuffer
+import org.springframework.core.io.buffer.DataBufferFactory
+import org.springframework.core.io.buffer.DefaultDataBufferFactory
+import org.springframework.http.HttpCookie
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.client.reactive.ClientHttpRequest
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.reactive.function.client.ClientRequest
 import org.springframework.web.reactive.function.client.ClientResponse
+import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import java.net.URI
+import java.util.function.Supplier
 
 /**
  * A data class for keeping track of a response that should be returned by the mocked web client.
@@ -31,6 +44,55 @@ data class MockableRequest(
     val headers: Map<String, List<String>>,
     val url: URI,
 )
+
+/**
+ * Attempts to deserialize the content (body) of the request to the specified type. This assumes that the content is
+ * serialized JSON.
+ */
+inline fun <reified T> MockableRequest.deserializeContent(): T = Json.decodeFromString<T>(content)
+
+/**
+ * A custom ClientHttpRequest implementation, that consumes and tracks the full body of the request. All methods that
+ * are non-essential for this functionality are left unimplemented.
+ */
+private class BodyCapturingClientHttpRequest : ClientHttpRequest {
+    var body = ""
+
+    override fun bufferFactory(): DataBufferFactory = DefaultDataBufferFactory.sharedInstance
+
+    override fun beforeCommit(action: Supplier<out Mono<Void?>?>) = throw NotImplementedError()
+
+    override fun isCommitted(): Boolean = throw NotImplementedError()
+
+    override fun writeWith(body: Publisher<out DataBuffer?>): Mono<Void?> {
+        this.body +=
+            Mono
+                .from(body)
+                .block()
+                ?.asInputStream()
+                ?.readAllBytes()
+                ?.toString(Charsets.UTF_8)
+                ?: ""
+
+        return Mono.empty()
+    }
+
+    override fun writeAndFlushWith(body: Publisher<out Publisher<out DataBuffer?>?>): Mono<Void?> = throw NotImplementedError()
+
+    override fun setComplete(): Mono<Void?> = Mono.empty()
+
+    override fun getMethod(): HttpMethod = throw NotImplementedError()
+
+    override fun getURI(): URI = throw NotImplementedError()
+
+    override fun getCookies(): MultiValueMap<String?, HttpCookie?> = LinkedMultiValueMap()
+
+    override fun getAttributes(): Map<String?, Any?> = mutableMapOf()
+
+    override fun <T : Any?> getNativeRequest(): T & Any = throw NotImplementedError()
+
+    override fun getHeaders(): HttpHeaders = HttpHeaders()
+}
 
 /**
  * A handler for mocking a web client with tracking of received requests and queuing of custom responses. Can be used
@@ -60,13 +122,18 @@ class MockableWebClient {
      * @see MockableWebClient
      */
     private fun handleRequest(request: ClientRequest): Mono<ClientResponse> {
-        requests.add(
-            MockableRequest(
-                content = request.body().toString(),
-                headers = request.headers().toMap(),
-                url = request.url(),
-            ),
-        )
+        // Capture request body, if any
+        val bodyCapturingClient = BodyCapturingClientHttpRequest()
+        runBlocking { request.writeTo(bodyCapturingClient, ExchangeStrategies.withDefaults()).block() }
+
+        requests
+            .add(
+                MockableRequest(
+                    content = bodyCapturingClient.body,
+                    headers = request.headers().toMap(),
+                    url = request.url(),
+                ),
+            )
 
         val queryParameters = request.url().query
         val requestPath =
