@@ -3,6 +3,8 @@ package no.risc.utils
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -167,6 +169,89 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
 }
 
 /**
+ * Update a scenario with changes from 4.0 to 4.1
+ *
+ *  Changes in consequence (in NOK per incident):
+ *  1000            ->      8000 = 20^3
+ *  30 000          ->      160 000 = 20^4
+ *  1 000 000       ->      32 000 000 = 20^5
+ *  30 000 000      ->      64 000 000 = 20^6
+ *  1 000 000 000   ->      1 280 000 000 = 20^7
+ *
+ *  Changes in probabiliy (in incidents per year):
+ *  0.01    ->      0.0025 = 20^-2 (every 400 years)
+ *  0.1     ->      0.05 = 20^-1 (every 20 years)
+ *  1       ->      1 = 20^0 (every year)
+ *  50      ->      20 = 20^1 (~ monthly)
+ *  300     ->      400 = 20^2 (~ daily)
+ *
+ */
+private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
+    val scenarioObject = scenario.toMutableMap()
+
+    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+
+    val consequenceMigrations =
+        mapOf(
+            1000 to 8000,
+            30000 to 160000,
+            1000000 to 3200000,
+            30000000 to 64000000,
+            1000000000 to 1280000000,
+        )
+
+    val probabilityMigrations =
+        mapOf(
+            0.01 to 0.0025,
+            0.1 to 0.05,
+            1 to 1,
+            50.0 to 20,
+            300.0 to 400,
+        )
+
+    // Migrate risk
+    scenarioDetails.computeIfPresent("risk") { _, riskElement ->
+        val risk = riskElement.jsonObject.toMutableMap()
+
+        risk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
+            probabilityMigrations[oldValue]?.let { newValue ->
+                risk["probability"] = JsonPrimitive(newValue)
+            }
+        }
+
+        risk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
+            consequenceMigrations[oldValue]?.let { newValue ->
+                risk["consequence"] = JsonPrimitive(newValue)
+            }
+        }
+
+        JsonObject(risk)
+    }
+
+    // Migrate remaining risk
+    scenarioDetails.computeIfPresent("remainingRisk") { _, remainingRiskElement ->
+        val remainingRisk = remainingRiskElement.jsonObject.toMutableMap()
+
+        remainingRisk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
+            probabilityMigrations[oldValue]?.let { newValue ->
+                remainingRisk["probability"] = JsonPrimitive(newValue)
+            }
+        }
+
+        remainingRisk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
+            consequenceMigrations[oldValue]?.let { newValue ->
+                remainingRisk["consequence"] = JsonPrimitive(newValue)
+            }
+        }
+
+        JsonObject(remainingRisk)
+    }
+
+    scenarioObject["scenario"] = JsonObject(scenarioDetails)
+    return JsonObject(scenarioObject)
+}
+
+/**
  *  Migrate RiSc with changes from 4.0 to 4.1
  *
  *  The preset values for consequence and probability have been changed to use base 20.
@@ -189,41 +274,22 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *
  * */
 fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
+    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
+
     // Change schema version 4.0 -> 4.1
-    var migratedRiscContent = obj.riScContent!!.replace("\"schemaVersion\": \"4.0\"", "\"schemaVersion\": \"4.1\"")
+    jsonObject["schemaVersion"] = JsonPrimitive("4.1")
 
-    val consequenceMigrations =
-        mapOf(
-            1000 to 8000,
-            30000 to 160000,
-            1000000 to 3200000,
-            30000000 to 64000000,
-            1000000000 to 1280000000,
-        )
-
-    // Change the old consequence preset values to new values using base 20
-    for ((key, value) in consequenceMigrations) {
-        migratedRiscContent = migratedRiscContent.replace("\"consequence\": $key\n", "\"consequence\": $value\n")
-        migratedRiscContent = migratedRiscContent.replace("\"consequence\": $key,", "\"consequence\": $value,")
-    }
-
-    val probabilityMigrations =
-        mapOf(
-            0.01 to 0.0025,
-            0.1 to 0.05,
-            1 to 1,
-            50 to 20,
-            300 to 400,
-        )
-
-    // Change the old probability preset values to new values using base 20
-    for ((key, value) in probabilityMigrations) {
-        migratedRiscContent = migratedRiscContent.replace("\"probability\": $key\n", "\"probability\": $value\n")
-        migratedRiscContent = migratedRiscContent.replace("\"probability\": $key,", "\"probability\": $value,")
+    // Migrate consequence and probability in all scenarios
+    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
+        scenarios
+            .jsonArray
+            .map {
+                updateScenarioFrom40to41(it.jsonObject)
+            }.let(::JsonArray)
     }
 
     return obj.copy(
-        riScContent = migratedRiscContent,
+        riScContent = serializeJSON(JsonObject(jsonObject)),
         migrationStatus =
             MigrationStatus(
                 migrationChanges = true,

@@ -20,7 +20,7 @@
         ],
         "risk": {
           "summary": "",
-          "probability": 1,
+          "probability": 0.1,
           "consequence": 30000
         },
         "actions": [
@@ -35,7 +35,7 @@
         ],
         "remainingRisk": {
           "summary": "",
-          "probability": 0.1,
+          "probability": 0.01,
           "consequence": 1000
         }
       }
@@ -56,7 +56,7 @@
         ],
         "risk": {
           "summary": "",
-          "probability": 300,
+          "probability": 50,
           "consequence": 30000000
         },
         "actions": [
@@ -71,7 +71,7 @@
         ],
         "remainingRisk": {
           "summary": "",
-          "probability": 50,
+          "probability": 1,
           "consequence": 1000000
         }
       }
@@ -92,7 +92,7 @@
         ],
         "risk": {
           "summary": "",
-          "probability": 1,
+          "probability": 300,
           "consequence": 1000000000
         },
         "actions": [
@@ -107,7 +107,7 @@
         ],
         "remainingRisk": {
           "summary": "",
-          "probability": 0.01,
+          "probability": 0.123,
           "consequence": 198000
         }
       }

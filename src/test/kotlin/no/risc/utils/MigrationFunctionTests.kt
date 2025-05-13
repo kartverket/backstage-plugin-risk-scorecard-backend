@@ -183,7 +183,7 @@ class MigrationFunctionTests {
             val probability = risk?.get("probability")?.jsonPrimitive?.content
 
             assertEquals(160_000.toString(), consequence)
-            assertEquals(1.toString(), probability)
+            assertEquals(0.05.toString(), probability)
 
             val remainingRisk = it["remainingRisk"]?.jsonObject
 
@@ -191,7 +191,7 @@ class MigrationFunctionTests {
             val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
 
             assertEquals(8_000.toString(), remainingConsequence)
-            assertEquals(0.05.toString(), remainingProbability)
+            assertEquals(0.0025.toString(), remainingProbability)
         }
 
         val secondScenario =
@@ -208,7 +208,7 @@ class MigrationFunctionTests {
             val probability = risk?.get("probability")?.jsonPrimitive?.content
 
             assertEquals(64_000_000.toString(), consequence)
-            assertEquals(400.toString(), probability)
+            assertEquals(20.toString(), probability)
 
             val remainingRisk = it["remainingRisk"]?.jsonObject
 
@@ -216,7 +216,7 @@ class MigrationFunctionTests {
             val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
 
             assertEquals(3_200_000.toString(), remainingConsequence)
-            assertEquals(20.toString(), remainingProbability)
+            assertEquals(1.toString(), remainingProbability)
         }
 
         val thirdScenario =
@@ -233,16 +233,15 @@ class MigrationFunctionTests {
             val probability = risk?.get("probability")?.jsonPrimitive?.content
 
             assertEquals(1_280_000_000.toString(), consequence)
-            assertEquals(1.toString(), probability)
+            assertEquals(400.toString(), probability)
 
             val remainingRisk = it["remainingRisk"]?.jsonObject
 
             val remainingConsequence = remainingRisk?.get("consequence")?.jsonPrimitive?.content
             val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
 
-            assertEquals(0.0025.toString(), remainingProbability)
-
             // Specific values not equal to the preset values should not be changed
+            assertEquals(0.123.toString(), remainingProbability)
             assertEquals(198_000.toString(), remainingConsequence)
         }
 
