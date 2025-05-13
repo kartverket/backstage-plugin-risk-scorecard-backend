@@ -185,7 +185,7 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *  0.1     ->      0.05 = 20^-1 (every 20 years)
  *  1       ->      1 = 20^0 (every year)
  *  50      ->      20 = 20^1 (~ monthly)
- *  300     ->      400 = 20^2 (~ yearly)
+ *  300     ->      400 = 20^2 (~ daily)
  *
  * */
 fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {

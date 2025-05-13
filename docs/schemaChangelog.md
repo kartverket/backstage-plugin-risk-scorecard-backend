@@ -1,7 +1,7 @@
 # Schema changelog
 
 ## 4.1
-- Preset values for probability has been changed to a logarithmic scale with base 20
+- Preset values for probability have been changed to a logarithmic scale with base 20:
 
 | Probability level | Old value | New value      |
 |-------------------|-----------|----------------|
@@ -11,7 +11,7 @@
 | 4                 | 50        | 20^1 = 20      |
 | 5                 | 300       | 20^2 = 400     |
 
-- Preset values for consequence has been changed to a logarithmic scale with base 20
+- Preset values for consequence have been changed to a logarithmic scale with base 20:
 
 | Consequence level | Old value     | New value            |
 |-------------------|---------------|----------------------|
@@ -21,7 +21,7 @@
 | 4                 | 30 000 000    | 20^6 = 64 000 000    |
 | 5                 | 1 000 000 000 | 20^7 = 1 280 000 000 |
 
-- Probability and consequence values equal to the presets have been migrated. Manually inserted values differing from the presets are left unchanged.
+- Probability and consequence values equal to the old presets are changed to the equivalent new preset values when the schema is migrated to version 4.1. Values differing from the presets are left unchanged.
 
 ## 4.0
 - Removes deadline and owner from actions
