@@ -15,6 +15,7 @@ import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.GitHubPermission
+import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString
@@ -116,6 +117,15 @@ class GithubConnectorTests {
             )
         }
 
+        private fun fetchRiScIdentifiers(): List<RiScIdentifier> =
+            runBlocking {
+                githubConnector.fetchAllRiScIdentifiersInRepository(
+                    owner = owner,
+                    repository = repository,
+                    accessToken = "accessToken",
+                )
+            }
+
         @Test
         fun `test fetch all risc identifiers in repository`() {
             val draftedRiScIDs = listOf("aaaaa", "aaaab")
@@ -124,14 +134,7 @@ class GithubConnectorTests {
 
             queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
 
-            val identifiers =
-                runBlocking {
-                    githubConnector.fetchAllRiScIdentifiersInRepository(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = "",
-                    )
-                }
+            val identifiers = fetchRiScIdentifiers()
 
             assertEquals(6, identifiers.size, "All unique risc identifiers should be found")
             assertTrue({
@@ -159,14 +162,7 @@ class GithubConnectorTests {
 
             queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
 
-            val identifiers =
-                runBlocking {
-                    githubConnector.fetchAllRiScIdentifiersInRepository(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = "",
-                    )
-                }
+            val identifiers = fetchRiScIdentifiers()
 
             assertEquals(4, identifiers.size, "All unique risc identifiers should be found")
             assertTrue({
@@ -198,14 +194,7 @@ class GithubConnectorTests {
                 path = pathToOpenPullRequests,
             )
 
-            val identifiers =
-                runBlocking {
-                    githubConnector.fetchAllRiScIdentifiersInRepository(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = "",
-                    )
-                }
+            val identifiers = fetchRiScIdentifiers()
 
             assertTrue(identifiers.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
         }
@@ -217,6 +206,16 @@ class GithubConnectorTests {
 
         private fun pathToRiScContentOnDraftBranch(riScId: String) =
             "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$filenamePrefix-$riScId"
+
+        private fun fetchPublishedRiSc(riScId: String) =
+            runBlocking {
+                githubConnector.fetchPublishedRiSc(
+                    owner = owner,
+                    repository = repository,
+                    id = "$filenamePrefix-$riScId",
+                    accessToken = "accessToken",
+                )
+            }
 
         @Test
         fun `test fetch RiSc content`() {
@@ -235,15 +234,7 @@ class GithubConnectorTests {
                 path = pathToRiScContent(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchPublishedRiSc(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchPublishedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.Success,
@@ -262,15 +253,7 @@ class GithubConnectorTests {
                 path = pathToRiScContent(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchPublishedRiSc(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchPublishedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.NotFound,
@@ -289,15 +272,7 @@ class GithubConnectorTests {
                 path = pathToRiScContent(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchPublishedRiSc(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchPublishedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.Unauthorized,
@@ -306,6 +281,16 @@ class GithubConnectorTests {
             )
             assertEquals(null, response.data, "When the user does not have access, there should be no data.")
         }
+
+        private fun fetchDraftedRiSc(riScId: String) =
+            runBlocking {
+                githubConnector.fetchDraftedRiScContent(
+                    owner = owner,
+                    repository = repository,
+                    id = "$filenamePrefix-$riScId",
+                    accessToken = "accessToken",
+                )
+            }
 
         @Test
         fun `test fetch draft RiSc content`() {
@@ -324,15 +309,7 @@ class GithubConnectorTests {
                 path = pathToRiScContentOnDraftBranch(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchDraftedRiScContent(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchDraftedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.Success,
@@ -351,15 +328,7 @@ class GithubConnectorTests {
                 path = pathToRiScContentOnDraftBranch(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchDraftedRiScContent(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchDraftedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.NotFound,
@@ -378,15 +347,7 @@ class GithubConnectorTests {
                 path = pathToRiScContentOnDraftBranch(riScId),
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchDraftedRiScContent(
-                        owner = owner,
-                        repository = repository,
-                        id = "$filenamePrefix-$riScId",
-                        accessToken = "",
-                    )
-                }
+            val response = fetchDraftedRiSc(riScId)
 
             assertEquals(
                 GithubStatus.Unauthorized,
@@ -400,6 +361,15 @@ class GithubConnectorTests {
     @Nested
     inner class TestFetchRepositoryInfo {
         private val pathToRepository = "/$owner/$repository"
+
+        private fun fetchRepositoryInfo() =
+            runBlocking {
+                githubConnector.fetchRepositoryInfo(
+                    gitHubAccessToken = "accessToken",
+                    repositoryOwner = owner,
+                    repositoryName = repository,
+                )
+            }
 
         @Test
         fun `test fetch repository info with push access`() {
@@ -422,14 +392,7 @@ class GithubConnectorTests {
                 path = pathToRepository,
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchRepositoryInfo(
-                        gitHubAccessToken = "",
-                        repositoryOwner = owner,
-                        repositoryName = repository,
-                    )
-                }
+            val response = fetchRepositoryInfo()
 
             assertEquals(
                 defaultBranch,
@@ -464,14 +427,7 @@ class GithubConnectorTests {
                 path = pathToRepository,
             )
 
-            val response =
-                runBlocking {
-                    githubConnector.fetchRepositoryInfo(
-                        gitHubAccessToken = "",
-                        repositoryOwner = owner,
-                        repositoryName = repository,
-                    )
-                }
+            val response = fetchRepositoryInfo()
 
             assertEquals(
                 defaultBranch,
@@ -507,13 +463,7 @@ class GithubConnectorTests {
             )
 
             assertThrows<PermissionDeniedOnGitHubException>("If the user does not have pull access, an error should be thrown") {
-                runBlocking {
-                    githubConnector.fetchRepositoryInfo(
-                        gitHubAccessToken = "",
-                        repositoryOwner = owner,
-                        repositoryName = repository,
-                    )
-                }
+                fetchRepositoryInfo()
             }
         }
     }
