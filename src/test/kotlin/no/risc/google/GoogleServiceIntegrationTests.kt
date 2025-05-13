@@ -63,6 +63,8 @@ class GoogleServiceIntegrationTests {
 
     @Test
     fun `test validate access token with valid GCP access token`() {
+        val accessToken = "validAccessToken"
+
         webClient.queueResponse(
             response =
                 MockableResponse(
@@ -82,10 +84,10 @@ class GoogleServiceIntegrationTests {
                         }
                         """.trimIndent(),
                 ),
-            path = "",
+            path = "?access_token=$accessToken",
         )
 
-        val isAccessTokenValid = runBlocking { googleService.validateAccessToken("validAccessToken") }
+        val isAccessTokenValid = runBlocking { googleService.validateAccessToken(accessToken) }
 
         assertTrue(
             isAccessTokenValid,
@@ -95,13 +97,15 @@ class GoogleServiceIntegrationTests {
 
     @Test
     fun `test validate access token with invalid GCP access token`() {
+        val accessToken = "invalidAccessToken"
+
         // The endpoint returns a response with a 400 BAD REQUEST status when the access token is invalid.
         webClient.queueResponse(
             response = MockableResponse(content = "", httpStatus = HttpStatus.BAD_REQUEST),
-            path = "",
+            path = "?access_token=$accessToken",
         )
 
-        val isAccessTokenValid = runBlocking { googleService.validateAccessToken("invalidAccessToken") }
+        val isAccessTokenValid = runBlocking { googleService.validateAccessToken(accessToken) }
 
         assertFalse(
             isAccessTokenValid,
