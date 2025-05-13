@@ -53,12 +53,15 @@ data class Author(
 data class GithubCreateNewPullRequestPayload(
     val title: String,
     val body: String,
-    val repositoryOwner: String,
-    val branch: String,
-    val baseBranch: String,
+    val head: String,
+    val base: String,
 ) {
-    fun toContentBody(): String =
-        "{ \"title\":\"$title\", \"body\": \"$body\", \"head\": \"$repositoryOwner:$branch\", \"base\": \"$baseBranch\" }"
+    constructor(title: String, body: String, repositoryOwner: String, branch: String, baseBranch: String) : this(
+        title = title,
+        body = body,
+        head = "$repositoryOwner:$branch",
+        base = baseBranch,
+    )
 }
 
 /**

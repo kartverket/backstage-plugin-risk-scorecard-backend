@@ -770,14 +770,14 @@ class GithubConnector(
             requestToGithubWithJSONBody(
                 uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
                 accessToken = accessToken,
-                content = pullRequestPayload.toContentBody(),
+                content = pullRequestPayload,
                 method = HttpMethod.POST,
             ).awaitBody<GithubPullRequestObject>()
         } catch (e: Exception) {
             throw CreatePullRequestException(
                 message =
-                    "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.branch}" +
-                        "to ${pullRequestPayload.baseBranch} with title \"${pullRequestPayload.title}\"",
+                    "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.head}" +
+                        "to ${pullRequestPayload.base} with title \"${pullRequestPayload.title}\"",
             )
         }
 
@@ -912,17 +912,17 @@ class GithubConnector(
      *
      * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
      * @param accessToken The GitHub Access Token to use for authorization.
-     * @param content The JSON formatted content to send as the body of the request.
+     * @param content The content to send as the body of the request. This content will be JSON serialized.
      * @param method The HTTP method to make the call with.
      */
-    private suspend fun requestToGithubWithJSONBody(
+    private inline fun <reified T : Any> requestToGithubWithJSONBody(
         uri: String,
         accessToken: String,
-        content: String,
+        content: T,
         method: HttpMethod,
     ): ResponseSpec =
         githubRequest(uri = uri, accessToken = accessToken, method = method, attachBody = {
-            it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
+            it.header("Content-Type", "application/json").body(Mono.just(content), T::class.java)
         })
 
     /**
@@ -937,6 +937,7 @@ class GithubConnector(
             is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
             { e is WebClientResponseException && e.message.contains("DataBufferLimitException") } ->
                 GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+
             else -> GithubStatus.InternalError
         }
 
