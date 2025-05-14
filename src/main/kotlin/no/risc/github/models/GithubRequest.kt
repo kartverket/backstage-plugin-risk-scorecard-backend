@@ -1,8 +1,8 @@
 package no.risc.github.models
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import no.risc.utils.KDateSerializer
-import java.text.SimpleDateFormat
 import java.util.Date
 
 /**
@@ -16,15 +16,10 @@ data class GithubWriteToFilePayload(
     val message: String,
     val content: String,
     val sha: String? = null,
-    val branchName: String,
+    val branch: String,
+    @SerialName("committer")
     val author: Author? = null,
-) {
-    fun toContentBody(): String =
-        "{\"message\": \"$message\", \"content\": \"$content\", \"branch\": \"$branchName\"" +
-            (author?.let { ", \"committer\": ${author.toJSONString()}" } ?: "") +
-            (sha?.let { ", \"sha\": \"$sha\"" } ?: "") +
-            "}"
-}
+)
 
 /**
  * The author to create/update a file as.
@@ -37,11 +32,7 @@ data class Author(
     val email: String?,
     @Serializable(KDateSerializer::class)
     val date: Date,
-) {
-    private fun formattedDate(): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(date)
-
-    fun toJSONString(): String = "{ \"name\":\"${name}\", \"email\":\"${email}\", \"date\":\"${formattedDate()}\" }"
-}
+)
 
 /**
  * For use with GitHub's create pull request API endpoint.
