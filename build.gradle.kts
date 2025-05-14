@@ -28,7 +28,7 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.1.20"
+val kotlinVersion = "2.1.21"
 val springBootVersion = "3.4.5"
 val springSecurityVersion = "6.4.5"
 val kotlinxSerializationVersion = "1.8.1"
