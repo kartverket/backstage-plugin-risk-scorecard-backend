@@ -2,11 +2,14 @@ package no.risc.github
 
 import MockableResponse
 import MockableWebClient
+import deserializeContent
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
+import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
+import no.risc.github.models.GithubCreateNewPullRequestPayload
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
 import no.risc.github.models.GithubPullRequestObject
@@ -17,6 +20,7 @@ import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
+import no.risc.risc.models.UserInfo
 import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -464,6 +468,122 @@ class GithubConnectorTests {
 
             assertThrows<PermissionDeniedOnGitHubException>("If the user does not have pull access, an error should be thrown") {
                 fetchRepositoryInfo()
+            }
+        }
+    }
+
+    @Nested
+    inner class TestPullRequests {
+        val pathToPullRequestEndpoint = "/$owner/$repository/pulls"
+
+        @Test
+        fun `test fetch all pull requests`() {
+            val pullRequests =
+                listOf(
+                    GithubPullRequestObject(
+                        url = "https://api.github.com/repos/$owner/$repository/pulls/97",
+                        title = "Unicode Support",
+                        createdAt = OffsetDateTime.now().minusHours(2),
+                        head = GithubPullRequestBranch(ref = "feature/unicode"),
+                        base = GithubPullRequestBranch(ref = "main"),
+                        number = 97,
+                    ),
+                    GithubPullRequestObject(
+                        url = "https://api.github.com/repos/$owner/$repository/pulls/84",
+                        title = " Updated risk scorecard",
+                        createdAt = OffsetDateTime.now().minusHours(3).minusMinutes(18),
+                        head = GithubPullRequestBranch(ref = "risc-aaaab"),
+                        base = GithubPullRequestBranch(ref = "main"),
+                        number = 84,
+                    ),
+                )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(pullRequests),
+                path = pathToPullRequestEndpoint,
+            )
+
+            val result = runBlocking { githubConnector.fetchAllPullRequests(owner, repository, "access token") }
+
+            assertEquals(2, result.size, "All PRs returned from GitHub should be included and no more.")
+            assertTrue(
+                pullRequests.all { pullRequest -> result.any { it == pullRequest } },
+                "All returned PRs should be included with the correct values.",
+            )
+        }
+
+        @Test
+        fun `test fetch all pull requests empty list on errors`() {
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.INTERNAL_SERVER_ERROR),
+            )
+
+            val result = runBlocking { githubConnector.fetchAllPullRequests(owner, repository, "access token") }
+
+            assertEquals(0, result.size, "On an error, an empty list should be returned.")
+        }
+
+        @Test
+        fun `test create pull request for RiSc`() {
+            val riScId = "aaaab"
+            val baseBranch = "main"
+
+            val pullRequest =
+                GithubPullRequestObject(
+                    url = "https://api.github.com/repos/$owner/$repository/pulls/29",
+                    title = "Updated risk scorecard",
+                    createdAt = OffsetDateTime.now(),
+                    head = GithubPullRequestBranch("risc-$riScId"),
+                    base = GithubPullRequestBranch("main"),
+                    number = 37,
+                )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(pullRequest),
+            )
+
+            val result =
+                runBlocking {
+                    githubConnector.createPullRequestForRiSc(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId,
+                        requiresNewApproval = true,
+                        gitHubAccessToken = "access token",
+                        userInfo = UserInfo(name = "Kari Nordmann", email = "kari.nordmann@test.com"),
+                        baseBranch = baseBranch,
+                    )
+                }
+
+            assertEquals(pullRequest, result, "The create pull request should be returned.")
+
+            val request = webClient.getNextRequest()
+
+            val requestContent = request.deserializeContent<GithubCreateNewPullRequestPayload>()
+
+            assertEquals(baseBranch, requestContent.base, "PR should be to the provided base branch.")
+            assertEquals("$owner:$riScId", requestContent.head, "PR should be from the RiSc branch.")
+        }
+
+        @Test
+        fun `test create pull request for RiSc throws exception on error`() {
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.BAD_REQUEST),
+                path = pathToPullRequestEndpoint,
+            )
+
+            assertThrows<CreatePullRequestException> {
+                runBlocking {
+                    githubConnector.createPullRequestForRiSc(
+                        owner = owner,
+                        repository = repository,
+                        riScId = "aaaaa",
+                        requiresNewApproval = false,
+                        gitHubAccessToken = "access token",
+                        userInfo = UserInfo(name = "Ola Nordmann", email = "ola.nordmann@test.com"),
+                        baseBranch = "main",
+                    )
+                }
             }
         }
     }
