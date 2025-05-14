@@ -1,6 +1,7 @@
 package no.risc.utils
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
@@ -209,8 +210,7 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
             300.0 to 400,
         )
 
-    // Migrate risk
-    scenarioDetails.computeIfPresent("risk") { _, riskElement ->
+    fun migrateRiskFrom40to41(riskElement: JsonElement): JsonObject {
         val risk = riskElement.jsonObject.toMutableMap()
 
         risk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
@@ -225,26 +225,17 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
             }
         }
 
-        JsonObject(risk)
+        return JsonObject(risk)
+    }
+
+    // Migrate risk
+    scenarioDetails.computeIfPresent("risk") { _, riskElement ->
+        migrateRiskFrom40to41(riskElement)
     }
 
     // Migrate remaining risk
     scenarioDetails.computeIfPresent("remainingRisk") { _, remainingRiskElement ->
-        val remainingRisk = remainingRiskElement.jsonObject.toMutableMap()
-
-        remainingRisk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
-            probabilityMigrations[oldValue]?.let { newValue ->
-                remainingRisk["probability"] = JsonPrimitive(newValue)
-            }
-        }
-
-        remainingRisk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
-            consequenceMigrations[oldValue]?.let { newValue ->
-                remainingRisk["consequence"] = JsonPrimitive(newValue)
-            }
-        }
-
-        JsonObject(remainingRisk)
+        migrateRiskFrom40to41(remainingRiskElement)
     }
 
     scenarioObject["scenario"] = JsonObject(scenarioDetails)
