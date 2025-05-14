@@ -86,11 +86,12 @@ class RiScController(
                 ),
             content = riSc,
             defaultBranch =
-                githubConnector.fetchDefaultBranch(
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubAccessToken = gitHubAccessToken,
-                ),
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
             generateDefault = generateDefault,
         )
 
@@ -113,11 +114,12 @@ class RiScController(
                 githubAccessToken = GithubAccessToken(gitHubAccessToken),
             ),
         defaultBranch =
-            githubConnector.fetchDefaultBranch(
-                repositoryOwner = repositoryOwner,
-                repositoryName = repositoryName,
-                gitHubAccessToken = gitHubAccessToken,
-            ),
+            githubConnector
+                .fetchRepositoryInfo(
+                    repositoryOwner = repositoryOwner,
+                    repositoryName = repositoryName,
+                    gitHubAccessToken = gitHubAccessToken,
+                ).defaultBranch,
     )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
@@ -136,11 +138,12 @@ class RiScController(
             gitHubAccessToken = gitHubAccessToken,
             userInfo = userInfo,
             baseBranch =
-                githubConnector.fetchDefaultBranch(
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubAccessToken = gitHubAccessToken,
-                ),
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
