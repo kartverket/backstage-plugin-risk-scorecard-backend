@@ -1,6 +1,7 @@
 package no.risc.utils
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -169,80 +170,41 @@ class MigrationFunctionTests {
 
         // Check that all consequence and probability values have been correctly migrated
         val scenarios = migratedJsonObject["scenarios"]?.jsonArray
-        val firstScenario =
-            scenarios
-                ?.get(0)
-                ?.jsonObject
-                ?.get("scenario")
-                ?.jsonObject
 
-        firstScenario?.let {
-            val risk = it["risk"]?.jsonObject
-
+        fun testConsequenceAndProbability(
+            risk: JsonObject?,
+            expectedConsequence: Int,
+            expectedProbability: Number,
+        ) {
             val consequence = risk?.get("consequence")?.jsonPrimitive?.content
             val probability = risk?.get("probability")?.jsonPrimitive?.content
 
-            assertEquals(160_000.toString(), consequence)
-            assertEquals(0.05.toString(), probability)
-
-            val remainingRisk = it["remainingRisk"]?.jsonObject
-
-            val remainingConsequence = remainingRisk?.get("consequence")?.jsonPrimitive?.content
-            val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
-
-            assertEquals(8_000.toString(), remainingConsequence)
-            assertEquals(0.0025.toString(), remainingProbability)
+            assertEquals(expectedConsequence.toString(), consequence)
+            assertEquals(expectedProbability.toString(), probability)
         }
 
-        val secondScenario =
-            scenarios
-                ?.get(1)
-                ?.jsonObject
-                ?.get("scenario")
-                ?.jsonObject
+        val scenariosJsonObjects =
+            scenarios?.map {
+                it.jsonObject["scenario"]?.jsonObject
+            }
 
-        secondScenario?.let {
-            val risk = it["risk"]?.jsonObject
+        // Verify that all 3 scenarios are present after migration.
+        // This ensures that the following tests are run as expected.
+        assertEquals(scenariosJsonObjects?.size, 3)
 
-            val consequence = risk?.get("consequence")?.jsonPrimitive?.content
-            val probability = risk?.get("probability")?.jsonPrimitive?.content
-
-            assertEquals(64_000_000.toString(), consequence)
-            assertEquals(20.toString(), probability)
-
-            val remainingRisk = it["remainingRisk"]?.jsonObject
-
-            val remainingConsequence = remainingRisk?.get("consequence")?.jsonPrimitive?.content
-            val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
-
-            assertEquals(3_200_000.toString(), remainingConsequence)
-            assertEquals(1.toString(), remainingProbability)
+        scenariosJsonObjects?.get(0)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 160_000, 0.05)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 8_000, 0.0025)
         }
-
-        val thirdScenario =
-            scenarios
-                ?.get(2)
-                ?.jsonObject
-                ?.get("scenario")
-                ?.jsonObject
-
-        thirdScenario?.let {
-            val risk = it["risk"]?.jsonObject
-
-            val consequence = risk?.get("consequence")?.jsonPrimitive?.content
-            val probability = risk?.get("probability")?.jsonPrimitive?.content
-
-            assertEquals(1_280_000_000.toString(), consequence)
-            assertEquals(400.toString(), probability)
-
-            val remainingRisk = it["remainingRisk"]?.jsonObject
-
-            val remainingConsequence = remainingRisk?.get("consequence")?.jsonPrimitive?.content
-            val remainingProbability = remainingRisk?.get("probability")?.jsonPrimitive?.content
+        scenariosJsonObjects?.get(1)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 64_000_000, 20)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 3_200_000, 1)
+        }
+        scenariosJsonObjects?.get(2)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 1_280_000_000, 400)
 
             // Specific values not equal to the preset values should not be changed
-            assertEquals(0.123.toString(), remainingProbability)
-            assertEquals(198_000.toString(), remainingConsequence)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 198_000, 0.123)
         }
 
         assertEquals(true, migratedObject.migrationStatus?.migrationChanges)
