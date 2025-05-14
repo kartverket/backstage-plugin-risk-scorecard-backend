@@ -9,6 +9,9 @@ import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
+import no.risc.github.models.GithubCommitInformation
+import no.risc.github.models.GithubCommitObject
+import no.risc.github.models.GithubCommitter
 import no.risc.github.models.GithubCreateNewPullRequestPayload
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
@@ -18,6 +21,7 @@ import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.GitHubPermission
+import no.risc.risc.LastPublished
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
 import no.risc.risc.models.UserInfo
@@ -28,6 +32,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpStatus
 import java.time.OffsetDateTime
@@ -64,6 +70,8 @@ class GithubConnectorTests {
     private fun randomSHA(): String = generateRandomAlphanumericString(41)
 
     private fun riScFilename(riScId: String) = "$filenamePrefix-$riScId.$filenamePostfix.yaml"
+
+    private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
 
     @Nested
     inner class TestFetchAllRiScIdentifiers {
@@ -585,6 +593,142 @@ class GithubConnectorTests {
                     )
                 }
             }
+        }
+    }
+
+    @Nested
+    inner class TestFetchLastPublishedRiScDateAndCommitNumber {
+        private fun pathToRiScCommits(riScId: String) = "/$owner/$repository/commits?path=${pathToRiSC(riScId)}"
+
+        private fun pathToDefaultBranchCommitsSince(since: OffsetDateTime) = "/$owner/$repository/commits?since=$since"
+
+        private fun githubCommitObjectWithRandomSha(date: OffsetDateTime): GithubCommitObject {
+            val sha = randomSHA()
+            return GithubCommitObject(
+                sha = sha,
+                url = "https://api.github.com/repos/$owner/$repository/commits/",
+                commit =
+                    GithubCommitInformation(
+                        message = "Commit message",
+                        committer =
+                            GithubCommitter(
+                                date = date,
+                                name = "Committer",
+                            ),
+                    ),
+            )
+        }
+
+        private fun fetchLastPublished(riScId: String): LastPublished? =
+            runBlocking {
+                githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                    owner = owner,
+                    repository = repository,
+                    accessToken = "accessToken",
+                    riScId = "$filenamePrefix-$riScId",
+                )
+            }
+
+        @Test
+        fun `test fetch last published RiSc date and commit number`() {
+            val riScId = "aaaaa"
+            val lastCommitTime = OffsetDateTime.now().minusYears(1)
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        listOf(
+                            githubCommitObjectWithRandomSha(lastCommitTime),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(18).minusHours(12)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(2).minusDays(13)),
+                        ),
+                    ),
+                path = pathToRiScCommits(riScId),
+            )
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        listOf(
+                            githubCommitObjectWithRandomSha(lastCommitTime.plusMonths(3).plusDays(1)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.plusMonths(2).plusDays(7)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.plusDays(1).plusHours(3)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.plusDays(1).plusHours(2)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.plusMinutes(8)),
+                            githubCommitObjectWithRandomSha(lastCommitTime),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(5).minusHours(12)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(18).minusHours(12)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(1).minusDays(24)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(2).minusDays(13)),
+                        ),
+                    ),
+                path = pathToDefaultBranchCommitsSince(lastCommitTime),
+            )
+
+            val lastPublished = fetchLastPublished(riScId)
+
+            assertNotNull(
+                lastPublished,
+                "If both GitHub API calls answer correctly, last published should not be null.",
+            )
+            assertEquals(
+                lastCommitTime,
+                lastPublished.dateTime,
+                "The returned time should be equal to the time of the last published commit to the RiSc.",
+            )
+            assertEquals(
+                5,
+                lastPublished.numberOfCommits,
+                "The number of commits since last publication of the RiSc should count exactly the number of commits happening since the last commit to the RiSc.",
+            )
+        }
+
+        @Test
+        fun `test fetch last published RiSc date and commit number returns null if no commit exists for RiSc`() {
+            val riScId = "aaaab"
+            val lastCommitTime = OffsetDateTime.now()
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(emptyList<GithubCommitObject>()),
+                path = pathToRiScCommits(riScId),
+            )
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        listOf(
+                            githubCommitObjectWithRandomSha(lastCommitTime),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(5).minusHours(12)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(13).minusMinutes(8)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(1).minusDays(13)),
+                        ),
+                    ),
+                path = pathToDefaultBranchCommitsSince(lastCommitTime),
+            )
+
+            val lastPublished = fetchLastPublished(riScId)
+
+            assertNull(lastPublished, "If the RiSc file does not have any commits, null should be returned.")
+        }
+
+        @Test
+        fun `test fetch last published RiSc date and commit number returns null on error`() {
+            val riScId = "aaaac"
+            val lastCommitTime = OffsetDateTime.now()
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(listOf(githubCommitObjectWithRandomSha(lastCommitTime))),
+                path = pathToRiScCommits(riScId),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.BAD_REQUEST),
+                path = pathToDefaultBranchCommitsSince(lastCommitTime),
+            )
+
+            val lastPublished = fetchLastPublished(riScId)
+
+            assertNull(lastPublished, "If calls to the GitHub API fail, null should be returned.")
         }
     }
 }
