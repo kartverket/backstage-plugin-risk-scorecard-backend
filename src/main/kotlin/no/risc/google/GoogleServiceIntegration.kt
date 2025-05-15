@@ -17,7 +17,7 @@ import no.risc.infra.connector.GcpCloudResourceApiConnector
 import no.risc.infra.connector.GcpKmsApiConnector
 import no.risc.infra.connector.GoogleOAuthApiConnector
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.risc.ProcessingStatus
+import no.risc.risc.models.ProcessingStatus
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value

@@ -23,9 +23,9 @@ import no.risc.github.models.GithubStatus
 import no.risc.github.models.GithubWriteToFilePayload
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
-import no.risc.risc.LastPublished
-import no.risc.risc.RiScIdentifier
-import no.risc.risc.RiScStatus
+import no.risc.risc.models.LastPublished
+import no.risc.risc.models.RiScIdentifier
+import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.encodeBase64
 import no.risc.utils.generateRandomAlphanumericString

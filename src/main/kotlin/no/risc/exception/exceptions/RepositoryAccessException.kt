@@ -1,10 +1,10 @@
 package no.risc.exception.exceptions
 
 import no.risc.infra.connector.models.GitHubPermission
-import no.risc.risc.ContentStatus
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
-import no.risc.risc.RiScContentResultDTO
+import no.risc.risc.models.ContentStatus
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
+import no.risc.risc.models.RiScContentResultDTO
 
 data class RepositoryAccessException(
     val permissionNeeded: GitHubPermission,

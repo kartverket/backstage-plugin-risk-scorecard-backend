@@ -14,11 +14,11 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
-import no.risc.risc.ContentStatus
-import no.risc.risc.DecryptionFailure
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
-import no.risc.risc.RiScContentResultDTO
+import no.risc.risc.models.ContentStatus
+import no.risc.risc.models.DecryptionFailureDTO
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
+import no.risc.risc.models.RiScContentResultDTO
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -92,9 +92,9 @@ internal class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
     @ExceptionHandler(SOPSDecryptionException::class)
-    fun handleSopsDecryptionException(ex: SOPSDecryptionException): DecryptionFailure {
+    fun handleSopsDecryptionException(ex: SOPSDecryptionException): DecryptionFailureDTO {
         logger.error(ex.message, ex)
-        return DecryptionFailure(
+        return DecryptionFailureDTO(
             status = ContentStatus.DecryptionFailed,
             message = ex.message,
         )

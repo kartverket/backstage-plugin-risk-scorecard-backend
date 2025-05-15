@@ -5,8 +5,11 @@ import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
+import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
+import no.risc.risc.models.PublishRiScResultDTO
+import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity

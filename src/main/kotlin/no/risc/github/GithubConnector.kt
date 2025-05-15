@@ -20,11 +20,11 @@ import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
-import no.risc.risc.LastPublished
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
-import no.risc.risc.RiScIdentifier
-import no.risc.risc.RiScStatus
+import no.risc.risc.models.LastPublished
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
+import no.risc.risc.models.RiScIdentifier
+import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
