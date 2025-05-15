@@ -819,8 +819,8 @@ class GithubConnector(
                                 filePath = filePath,
                                 branch = branch,
                             )?.sha,
-                        branchName = branch,
-                    ).toContentBody(),
+                        branch = branch,
+                    ),
                 method = HttpMethod.PUT,
             )
         } catch (e: WebClientResponseException.BadRequest) {

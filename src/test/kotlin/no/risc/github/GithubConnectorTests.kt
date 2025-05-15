@@ -20,7 +20,9 @@ import no.risc.github.models.GithubReferenceObjectDTO
 import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
+import no.risc.github.models.GithubWriteToFilePayload
 import no.risc.infra.connector.models.GitHubPermission
+import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.LastPublished
 import no.risc.risc.RiScIdentifier
 import no.risc.risc.RiScStatus
@@ -35,7 +37,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.client.awaitBody
 import java.time.OffsetDateTime
 
 class GithubConnectorTests {
@@ -729,6 +733,176 @@ class GithubConnectorTests {
             val lastPublished = fetchLastPublished(riScId)
 
             assertNull(lastPublished, "If calls to the GitHub API fail, null should be returned.")
+        }
+    }
+
+    @Nested
+    inner class TestPutFileRequest {
+        private fun fileURL(
+            path: String,
+            branch: String,
+        ) = "/$owner/$repository/contents/$path?ref=$branch"
+
+        /* A response string mimicking parts of the response from the GitHub API. The response is not processed in the
+           application beyond a string. There is thus no datatype to use for the answer. */
+        private fun constructResponseString(path: String) =
+            """
+            {
+                "content": {
+                    "name": "${path.split("/").last()}",
+                    "path": "$path",
+                    "sha": "${randomSHA()}",
+                },
+                "commit": {
+                    "sha": "${randomSHA()}",
+                }
+            }
+            """.trimIndent()
+
+        private fun putFileRequest(
+            filePath: String,
+            commitMessage: String,
+            content: String,
+            branch: String,
+        ): String =
+            runBlocking {
+                githubConnector
+                    .putFileRequestToGithub(
+                        repositoryOwner = owner,
+                        repositoryName = repository,
+                        gitHubAccessToken = GithubAccessToken("accessToken"),
+                        filePath = filePath,
+                        message = commitMessage,
+                        content = content,
+                        branch = branch,
+                    ).awaitBody<String>()
+            }
+
+        @Test
+        fun `test file creation with put file request`() {
+            val filePath = pathToRiSC("aaaaa")
+            val branch = "main"
+
+            // The file does not exist, so there is no file contents available.
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.GET,
+            )
+
+            val responseString = constructResponseString(filePath)
+            webClient.queueResponse(
+                response = MockableResponse(content = responseString),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.PUT,
+            )
+
+            val response =
+                putFileRequest(
+                    filePath = filePath,
+                    commitMessage = "Creating new RiSc",
+                    content = """{ "schemaVersion": "4.0" }""",
+                    branch = branch,
+                )
+
+            assertEquals(
+                responseString,
+                response,
+                "The file content provided should be equal to the one returned by the GitHub API.",
+            )
+
+            // Ignore file info request
+            webClient.getNextRequest()
+
+            val requestBody = webClient.getNextRequest().deserializeContent<GithubWriteToFilePayload>()
+            assertNull(requestBody.sha, "The SHA should be null if the file does not already exist.")
+        }
+
+        @Test
+        fun `test file update with put file request`() {
+            val filePath = pathToRiSC("aaaab")
+            val branch = "default"
+
+            val fileSHA = randomSHA()
+
+            // The file already exists, so any GET request for the file should return information about it.
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubFileDTO(
+                            content = """{ "schemaVersion": "4.0" }""",
+                            sha = fileSHA,
+                            name = filePath.split("/").last(),
+                        ),
+                    ),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.GET,
+            )
+
+            val responseString = constructResponseString(filePath)
+            webClient.queueResponse(
+                response = MockableResponse(content = responseString),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.PUT,
+            )
+
+            val response =
+                putFileRequest(
+                    filePath = filePath,
+                    commitMessage = "Updating RiSc",
+                    content = """{ "schemaVersion": "4.1" }""",
+                    branch = branch,
+                )
+
+            assertEquals(
+                responseString,
+                response,
+                "The file content provided should be equal to the one returned by the GitHub API.",
+            )
+
+            // Ignore file info request
+            webClient.getNextRequest()
+
+            val requestBody = webClient.getNextRequest().deserializeContent<GithubWriteToFilePayload>()
+            assertEquals(fileSHA, requestBody.sha, "The SHA should be equal to the file SHA if the file already exist.")
+        }
+
+        @Test
+        fun `test put file request throws exception on error`() {
+            val filePath = pathToRiSC("aaaac")
+            val branch = "dev"
+
+            val fileSHA = randomSHA()
+
+            // The file already exists, so any GET request for the file should return information about it.
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubFileDTO(
+                            content = """{ "schemaVersion": "4.0" }""",
+                            sha = fileSHA,
+                            name = filePath.split("/").last(),
+                        ),
+                    ),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.GET,
+            )
+
+            // Want to check error handling on API errors.
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.INTERNAL_SERVER_ERROR),
+                path = fileURL(filePath, branch),
+                method = HttpMethod.PUT,
+            )
+
+            assertThrows<Exception> {
+                putFileRequest(
+                    filePath = filePath,
+                    commitMessage = "Updating RiSc",
+                    content = """{ "schemaVersion": "4.1" }""",
+                    branch = branch,
+                )
+            }
         }
     }
 }
