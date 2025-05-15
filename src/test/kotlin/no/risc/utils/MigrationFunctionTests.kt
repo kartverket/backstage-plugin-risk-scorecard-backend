@@ -1,6 +1,7 @@
 package no.risc.utils
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 class MigrationFunctionTests {
-    private val latestSupportedVersion = "4.0"
+    private val latestSupportedVersion = "4.1"
 
     @Test
     fun `test migrateFrom32To33`() {
@@ -135,7 +136,79 @@ class MigrationFunctionTests {
         val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
 
         val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-        assertEquals(latestSupportedVersion, schemaVersion)
+        assertEquals("4.0", schemaVersion)
+    }
+
+    @Test
+    fun `test migrateFrom40To41`() {
+        val resourcePath = "4.0.json"
+        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+
+        val file = File(resourceUrl!!.toURI())
+        val fileContent = file.readText()
+        val obj =
+            RiScContentResultDTO(
+                riScId = "2",
+                status = ContentStatus.Success,
+                riScContent = fileContent,
+                riScStatus = RiScStatus.Published,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = true,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+        val migratedObject = migrateFrom40To41(obj)
+
+        val json = Json { ignoreUnknownKeys = true }
+        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
+
+        // Check that schema version is set to 4.1
+        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
+        assertEquals("4.1", schemaVersion)
+
+        // Check that all consequence and probability values have been correctly migrated
+        val scenarios = migratedJsonObject["scenarios"]?.jsonArray
+
+        fun testConsequenceAndProbability(
+            risk: JsonObject?,
+            expectedConsequence: Int,
+            expectedProbability: Number,
+        ) {
+            val consequence = risk?.get("consequence")?.jsonPrimitive?.content
+            val probability = risk?.get("probability")?.jsonPrimitive?.content
+
+            assertEquals(expectedConsequence.toString(), consequence)
+            assertEquals(expectedProbability.toString(), probability)
+        }
+
+        val scenariosJsonObjects =
+            scenarios?.map {
+                it.jsonObject["scenario"]?.jsonObject
+            }
+
+        // Verify that all 3 scenarios are present after migration.
+        // This ensures that the following tests are run as expected.
+        assertEquals(scenariosJsonObjects?.size, 3)
+
+        scenariosJsonObjects?.get(0)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 160_000, 0.05)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 8_000, 0.0025)
+        }
+        scenariosJsonObjects?.get(1)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 64_000_000, 20)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 3_200_000, 1)
+        }
+        scenariosJsonObjects?.get(2)?.let {
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 1_280_000_000, 400)
+
+            // Specific values not equal to the preset values should not be changed
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 198_000, 0.123)
+        }
+
+        assertEquals(true, migratedObject.migrationStatus?.migrationChanges)
+        assertEquals(true, migratedObject.migrationStatus?.migrationRequiresNewApproval)
     }
 
     @Test
