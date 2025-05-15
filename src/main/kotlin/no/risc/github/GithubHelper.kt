@@ -37,7 +37,6 @@ class GithubHelper(
         repository: String,
         path: String,
         branch: String? = null,
-        // ): String = branch?.let { "/$owner/$repository/contents/$path?ref=$branch" } ?: "/$owner/$repository/contents/$path"
     ): String = "/$owner/$repository/contents/$path${branch?.let { "?ref=$branch" } ?: ""}"
 
     /**

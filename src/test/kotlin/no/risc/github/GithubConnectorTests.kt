@@ -805,7 +805,11 @@ class GithubConnectorTests {
                     branch = branch,
                 )
 
-            assertEquals(responseString, response)
+            assertEquals(
+                responseString,
+                response,
+                "The file content provided should be equal to the one returned by the GitHub API.",
+            )
 
             // Ignore file info request
             webClient.getNextRequest()
@@ -850,7 +854,11 @@ class GithubConnectorTests {
                     branch = branch,
                 )
 
-            assertEquals(responseString, response)
+            assertEquals(
+                responseString,
+                response,
+                "The file content provided should be equal to the one returned by the GitHub API.",
+            )
 
             // Ignore file info request
             webClient.getNextRequest()
