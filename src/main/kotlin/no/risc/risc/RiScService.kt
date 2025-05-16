@@ -186,42 +186,9 @@ class RiScService(
             val riScs =
                 riScContents
                     .map { (id, contentResponse) ->
-
                         async(Dispatchers.IO) {
                             try {
-                                val processedContent =
-                                    when (id.status) {
-                                        RiScStatus.Draft -> {
-                                            val publishedContent =
-                                                riScContents.entries
-                                                    .find {
-                                                        it.key.status == RiScStatus.Published && it.key.id == id.id
-                                                    }?.value
-
-                                            contentResponse.takeUnless {
-                                                publishedContent?.status == GithubStatus.Success &&
-                                                    publishedContent.data == contentResponse.data
-                                            }
-                                        }
-
-                                        RiScStatus.Published -> {
-                                            val draftedContent =
-                                                riScContents.entries
-                                                    .find {
-                                                        it.key.status == RiScStatus.Draft && it.key.id == id.id
-                                                    }?.value
-
-                                            contentResponse.takeUnless {
-                                                draftedContent?.status == GithubStatus.Success &&
-                                                    draftedContent.data != contentResponse.data
-                                            }
-                                        }
-
-                                        else -> {
-                                            contentResponse
-                                        }
-                                    }
-                                processedContent?.let { nonNullContent ->
+                                contentResponse.let { riScContent ->
                                     val lastPublished =
                                         githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
                                             owner = owner,
@@ -229,7 +196,7 @@ class RiScService(
                                             accessToken = accessTokens.githubAccessToken.value,
                                             riScId = id.id,
                                         )
-                                    nonNullContent
+                                    riScContent
                                         .responseToRiScResult(
                                             riScId = id.id,
                                             riScStatus = id.status,
@@ -238,7 +205,7 @@ class RiScService(
                                             lastPublished = lastPublished,
                                         ).let { migrate(it, latestSupportedVersion) }
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 RiScContentResultDTO(
                                     riScId = id.id,
                                     status = ContentStatus.Failure,
@@ -249,7 +216,6 @@ class RiScService(
                             }
                         }
                     }.awaitAll()
-                    .filterNotNull()
                     .map { riScContentResultDTO ->
                         if (riScContentResultDTO.status == ContentStatus.Success) {
                             LOGGER.info(
