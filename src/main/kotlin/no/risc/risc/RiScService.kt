@@ -41,7 +41,6 @@ import no.risc.validation.JSONValidator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -50,7 +49,6 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
-    private val healthHttpCodeStatusMapper: HttpCodeStatusMapper,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -84,8 +82,6 @@ class RiScService(
                     riScId = riScId,
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
-                    pullRequestUrl = null,
-                    lastPublished = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -253,69 +249,51 @@ class RiScService(
             riScs
         }
 
+    /**
+     * Converts the content response object to a RiScContentResult by decrypting it through the crypto service.
+     *
+     * @param riScId The ID of the RiSc the content belongs to.
+     * @param riScStatus The status of the RiSc the content belongs to.
+     * @param gcpAccessToken The GCP access token to decrypt the content with.
+     * @param pullRequestUrl The URL to the open pull request for this RiSc, if any.
+     * @param lastPublished Information about when the RiSc was last published, if already published.
+     */
     private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
-        pullRequestUrl: String?,
-        lastPublished: LastPublished?,
+        pullRequestUrl: String? = null,
+        lastPublished: LastPublished? = null,
     ): RiScContentResultDTO =
-        when (status) {
-            GithubStatus.Success ->
-                try {
-                    val decryptedContent = decryptContent(gcpAccessToken)
-                    RiScContentResultDTO(
-                        riScId = riScId,
-                        status = ContentStatus.Success,
-                        riScStatus = riScStatus,
-                        riScContent = decryptedContent.riSc,
-                        sopsConfig = decryptedContent.sopsConfig,
-                        pullRequestUrl = pullRequestUrl,
-                        lastPublished = lastPublished,
-                    )
-                } catch (e: Exception) {
-                    LOGGER.error("An error occurred when decrypting: ${e.message}")
-                    when (e) {
-                        is SOPSDecryptionException ->
-                            RiScContentResultDTO(
-                                riScId = riScId,
-                                status = ContentStatus.DecryptionFailed,
-                                riScStatus = riScStatus,
-                                riScContent = null,
-                            )
-
-                        else ->
-                            RiScContentResultDTO(
-                                riScId = riScId,
-                                status = ContentStatus.Failure,
-                                riScStatus = riScStatus,
-                                riScContent = null,
-                            )
-                    }
-                }
-
-            GithubStatus.NotFound ->
+        if (status == GithubStatus.Success) {
+            try {
+                val decryptedContent = cryptoService.decrypt(ciphertext = data(), gcpAccessToken = gcpAccessToken)
                 RiScContentResultDTO(
                     riScId = riScId,
-                    status = ContentStatus.FileNotFound,
+                    status = ContentStatus.Success,
+                    riScStatus = riScStatus,
+                    riScContent = decryptedContent.riSc,
+                    sopsConfig = decryptedContent.sopsConfig,
+                    pullRequestUrl = pullRequestUrl,
+                    lastPublished = lastPublished,
+                )
+            } catch (e: Exception) {
+                LOGGER.error("An error occurred when decrypting: ${e.message}")
+                RiScContentResultDTO(
+                    riScId = riScId,
+                    status = if (e is SOPSDecryptionException) ContentStatus.DecryptionFailed else ContentStatus.Failure,
                     riScStatus = riScStatus,
                     riScContent = null,
                 )
-
-            else ->
-                RiScContentResultDTO(
-                    riScId = riScId,
-                    status = ContentStatus.Failure,
-                    riScStatus = riScStatus,
-                    riScContent = null,
-                )
+            }
+        } else {
+            RiScContentResultDTO(
+                riScId = riScId,
+                status = if (status == GithubStatus.NotFound) ContentStatus.FileNotFound else ContentStatus.Failure,
+                riScStatus = riScStatus,
+                riScContent = null,
+            )
         }
-
-    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
-        cryptoService.decrypt(
-            ciphertext = data(),
-            gcpAccessToken = gcpAccessToken,
-        )
 
     suspend fun updateRiSc(
         owner: String,
