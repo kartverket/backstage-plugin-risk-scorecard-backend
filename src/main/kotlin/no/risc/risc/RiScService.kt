@@ -55,102 +55,98 @@ class RiScService(
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
     }
 
-    suspend fun fetchAndDiffRiScs(
+    /**
+     * Compares the provided draft content of a RiSc with the current published content of the same RiSc.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc is in.
+     * @param accessTokens The access tokens to use for authorization.
+     * @param riScId The ID of the RiSc.
+     * @param draftRiScContent The draft content of the RiSc to compare with.
+     */
+    suspend fun fetchAndDiffRiSc(
         owner: String,
         repository: String,
         accessTokens: AccessTokens,
         riScId: String,
-        headRiSc: String,
-    ): DifferenceDTO {
-        var lastModifiedDate = ""
-        val response: RiScContentResultDTO =
-            githubConnector
-                .fetchPublishedRiSc(
-                    owner = owner,
-                    repository = repository,
-                    id = riScId,
-                    accessToken = accessTokens.githubAccessToken.value,
-                ).also {
-                    if (it.status == GithubStatus.Success) {
-                        lastModifiedDate =
-                            it.data
-                                .toString()
-                                .substringAfterLast("lastmodified: ")
-                                .substringBefore("mac")
-                                .trimEnd()
+        draftRiScContent: String,
+    ): DifferenceDTO =
+        githubConnector
+            .fetchPublishedRiSc(
+                owner = owner,
+                repository = repository,
+                id = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
+            ).responseToRiScResult(
+                riScId = riScId,
+                riScStatus = RiScStatus.Published,
+                gcpAccessToken = accessTokens.gcpAccessToken,
+            ).let { response ->
+                when (response.status) {
+                    ContentStatus.Success -> {
+                        try {
+                            InternDifference(
+                                status = DifferenceStatus.Success,
+                                differenceState = diff("${response.riScContent}", draftRiScContent),
+                                errorMessage = "",
+                            )
+                        } catch (e: DifferenceException) {
+                            InternDifference(
+                                status = DifferenceStatus.JsonFailure,
+                                differenceState = Difference(),
+                                errorMessage = "${e.message}",
+                            )
+                        }
                     }
-                }.responseToRiScResult(
-                    riScId = riScId,
-                    riScStatus = RiScStatus.Published,
-                    gcpAccessToken = accessTokens.gcpAccessToken,
-                )
-        val result: InternDifference =
-            when (response.status) {
-                ContentStatus.Success -> {
-                    try {
+
+                    /**
+                     * This case is considered valid, because if the file is not found, we can assume that the riSc
+                     * does not have a published version yet, and therefore there are no differences to compare.
+                     * The frontend handles this.
+                     */
+                    ContentStatus.FileNotFound ->
                         InternDifference(
-                            status = DifferenceStatus.Success,
-                            differenceState = diff("${response.riScContent}", headRiSc),
-                            errorMessage = "",
-                        )
-                    } catch (e: DifferenceException) {
-                        InternDifference(
-                            status = DifferenceStatus.JsonFailure,
+                            status = DifferenceStatus.GithubFileNotFound,
                             differenceState = Difference(),
-                            errorMessage = "${e.message}",
+                            errorMessage = "Encountered Github problem: File not found",
                         )
-                    }
-                }
 
-                /*
-                This case is considered valid, because if the file is not found, we can assume that the riSc
-                does not have a published version yet, and therefore there are no differences to compare.
-                The frontend handles this.
-                 */
-                ContentStatus.FileNotFound ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFileNotFound,
-                        differenceState = Difference(),
-                        errorMessage = "Encountered Github problem: File not found",
-                    )
+                    ContentStatus.DecryptionFailed ->
+                        InternDifference(
+                            status = DifferenceStatus.DecryptionFailure,
+                            differenceState = Difference(),
+                            errorMessage = "Encountered ROS problem: Could not decrypt content",
+                        )
 
-                ContentStatus.DecryptionFailed ->
-                    InternDifference(
-                        status = DifferenceStatus.DecryptionFailure,
-                        differenceState = Difference(),
-                        errorMessage = "Encountered ROS problem: Could not decrypt content",
-                    )
+                    ContentStatus.Failure ->
+                        InternDifference(
+                            status = DifferenceStatus.GithubFailure,
+                            differenceState = Difference(),
+                            errorMessage = "Encountered Github problem: Github failure",
+                        )
 
-                ContentStatus.Failure ->
-                    InternDifference(
-                        status = DifferenceStatus.GithubFailure,
-                        differenceState = Difference(),
-                        errorMessage = "Encountered Github problem: Github failure",
-                    )
+                    ContentStatus.NoReadAccess ->
+                        InternDifference(
+                            status = DifferenceStatus.NoReadAccess,
+                            differenceState = Difference(),
+                            errorMessage = "No read access to repository",
+                        )
 
-                ContentStatus.NoReadAccess ->
-                    InternDifference(
-                        status = DifferenceStatus.NoReadAccess,
-                        differenceState = Difference(),
-                        errorMessage = "No read access to repository",
-                    )
+                    ContentStatus.SchemaNotFound ->
+                        InternDifference(
+                            status = DifferenceStatus.SchemaNotFound,
+                            differenceState = Difference(),
+                            errorMessage = "Could not fetch JSON schema",
+                        )
 
-                ContentStatus.SchemaNotFound ->
-                    InternDifference(
-                        status = DifferenceStatus.SchemaNotFound,
-                        differenceState = Difference(),
-                        errorMessage = "Could not fetch JSON schema",
-                    )
-
-                ContentStatus.SchemaValidationFailed ->
-                    InternDifference(
-                        status = DifferenceStatus.SchemaValidationFailed,
-                        differenceState = Difference(),
-                        errorMessage = "SchemaValidation failed",
-                    )
+                    ContentStatus.SchemaValidationFailed ->
+                        InternDifference(
+                            status = DifferenceStatus.SchemaValidationFailed,
+                            differenceState = Difference(),
+                            errorMessage = "SchemaValidation failed",
+                        )
+                }.toDTO(response.sopsConfig?.lastModified ?: "")
             }
-        return result.toDTO(lastModifiedDate)
-    }
 
     /**
      * Fetches all RiScs in the given repository. There are three types, drafts (RiScs that have pending updates), sent

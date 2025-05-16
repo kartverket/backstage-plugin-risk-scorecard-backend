@@ -159,7 +159,7 @@ class RiScController(
         @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
         val difference =
-            riScService.fetchAndDiffRiScs(
+            riScService.fetchAndDiffRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens =
@@ -168,7 +168,7 @@ class RiScController(
                         githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 riScId = riscId,
-                headRiSc = data.riSc,
+                draftRiScContent = data.riSc,
             )
 
         return ResponseEntity.ok().body(difference)
