@@ -43,11 +43,6 @@ val junitVersion = "5.12.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.apache.tomcat.embed:tomcat-embed-core") {
-        version {
-            strictly("11.0.5")
-        }
-    }
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
