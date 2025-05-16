@@ -314,6 +314,16 @@ class RiScService(
             )
         }
 
+    /**
+     * Updates the RiSc with the new content.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to push the RiSc to.
+     * @param riScId The ID of the RiSc.
+     * @param content The new content of the RiSc, including the SOPS config.
+     * @param accessTokens The access tokens to use for authentication.
+     * @param defaultBranch The name of the default branch of the repository.
+     */
     suspend fun updateRiSc(
         owner: String,
         repository: String,
@@ -332,6 +342,17 @@ class RiScService(
             defaultBranch = defaultBranch,
         )
 
+    /**
+     * Creates a new RiSc.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to push the RiSc to.
+     * @param content The new content of the RiSc, including the SOPS config.
+     * @param accessTokens The access tokens to use for authentication.
+     * @param defaultBranch The name of the default branch of the repository.
+     * @param generateDefault Indicates if the content of the RiSc should be based on the default RiSc.
+     * @throws CreatingRiScException If the creation fails.
+     */
     suspend fun createRiSc(
         owner: String,
         repository: String,
@@ -364,20 +385,20 @@ class RiScService(
                     defaultBranch = defaultBranch,
                 )
 
-            if (result.status == ProcessingStatus.UpdatedRiSc) {
-                return CreateRiScResultDTO(
-                    riScId = uniqueRiScId,
-                    status = ProcessingStatus.CreatedRiSc,
-                    statusMessage = "New RiSc was created",
-                    riScContent = riScContentWrapperObject.riSc,
-                    sopsConfig = riScContentWrapperObject.sopsConfig,
-                )
-            } else {
+            if (result.status != ProcessingStatus.UpdatedRiSc) {
                 throw CreatingRiScException(
                     message = "Failed to create RiSc with id $uniqueRiScId",
                     riScId = uniqueRiScId,
                 )
             }
+
+            return CreateRiScResultDTO(
+                riScId = uniqueRiScId,
+                status = ProcessingStatus.CreatedRiSc,
+                statusMessage = "New RiSc was created",
+                riScContent = riScContentWrapperObject.riSc,
+                sopsConfig = riScContentWrapperObject.sopsConfig,
+            )
         } catch (e: Exception) {
             throw CreatingRiScException(
                 message = "${e.message} for risk scorecard with id $uniqueRiScId",
@@ -386,6 +407,18 @@ class RiScService(
         }
     }
 
+    /**
+     * Updates or creates a RiSc with the provided content by encrypting the content and pushing it to a draft branch
+     * for the RiSc on the provided repository.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to push the RiSc to.
+     * @param riScId The ID of the RiSc.
+     * @param content The new content of the RiSc.
+     * @param sopsConfig The config to use for encryption/decryption of the RiSc.
+     * @param accessTokens The access tokens to use for authentication.
+     * @param defaultBranch The name of the default branch of the repository.
+     */
     private suspend fun updateOrCreateRiSc(
         owner: String,
         repository: String,
@@ -434,40 +467,23 @@ class RiScService(
                     defaultBranch = defaultBranch,
                 )
 
-            return when (riScApprovalPRStatus.pullRequest) {
-                is GithubPullRequestObject ->
-                    PublishRiScResultDTO(
-                        riScId = riScId,
-                        status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
-                        statusMessage = "RiSc was updated and does not require approval - pull request was created",
-                        pendingApproval = riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
-                    )
-
-                null ->
-                    ProcessRiScResultDTO(
-                        riScId = riScId,
-                        status =
-                            if (riScApprovalPRStatus.hasClosedPr) {
-                                ProcessingStatus.UpdatedRiScRequiresNewApproval
-                            } else {
-                                ProcessingStatus.UpdatedRiSc
-                            },
-                        statusMessage =
-                            "Risk scorecard was updated" +
-                                if (riScApprovalPRStatus.hasClosedPr) {
-                                    " and has to be approved by av risk owner again"
-                                } else {
-                                    ""
-                                },
-                    )
-
-                else -> {
-                    throw UpdatingRiScException(
-                        message = "Failed to update risk scorecard with id $riScId",
-                        riScId = riScId,
-                    )
-                }
+            if (riScApprovalPRStatus.pullRequest != null) {
+                return PublishRiScResultDTO(
+                    riScId = riScId,
+                    status = ProcessingStatus.UpdatedRiScAndCreatedPullRequest,
+                    statusMessage = "RiSc was updated and does not require approval - pull request was created",
+                    pendingApproval = riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
+                )
             }
+
+            return ProcessRiScResultDTO(
+                riScId = riScId,
+                status =
+                    if (riScApprovalPRStatus.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
+                statusMessage =
+                    "Risk scorecard was updated" +
+                        if (riScApprovalPRStatus.hasClosedPr) " and has to be approved by a risk owner again" else "",
+            )
         } catch (e: Exception) {
             throw UpdatingRiScException(
                 message = "Failed with error ${e.message} for risk scorecard with id $riScId",
