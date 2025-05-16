@@ -492,6 +492,18 @@ class RiScService(
         }
     }
 
+    /**
+     * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
+     * is made against the provided base branch.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to push the RiSc to.
+     * @param riScId The ID of the RiSc.
+     * @param gitHubAccessToken The access token to use for authorization against GitHub.
+     * @param userInfo Information about the user that is creating the pull request, i.e., the user that approved the
+     *                  changes.
+     * @param baseBranch The name of the default branch of the repository.
+     */
     suspend fun publishRiSc(
         owner: String,
         repository: String,
@@ -519,6 +531,9 @@ class RiScService(
         )
     }
 
+    /**
+     * Converts the GitHub pull request object to a DTO for sending to the frontend.
+     */
     private fun GithubPullRequestObject.toPendingApprovalDTO(): PendingApprovalDTO =
         PendingApprovalDTO(
             pullRequestUrl = this.url,
