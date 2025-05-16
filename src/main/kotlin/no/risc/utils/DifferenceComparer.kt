@@ -131,7 +131,7 @@ fun diff(
             entriesOnRight = entriesOnRight,
             difference = entriesDiffering,
         )
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         throw DifferenceException("Could not convert either source or target RiSc to JsonObject")
     }
 }

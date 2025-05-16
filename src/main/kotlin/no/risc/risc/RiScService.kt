@@ -27,6 +27,7 @@ import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiScContentResultDTO
+import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
@@ -41,7 +42,6 @@ import no.risc.validation.JSONValidator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -50,7 +50,6 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
-    private val healthHttpCodeStatusMapper: HttpCodeStatusMapper,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -84,8 +83,6 @@ class RiScService(
                     riScId = riScId,
                     riScStatus = RiScStatus.Published,
                     gcpAccessToken = accessTokens.gcpAccessToken,
-                    pullRequestUrl = null,
-                    lastPublished = null,
                 )
         val result: InternDifference =
             when (response.status) {
@@ -155,6 +152,19 @@ class RiScService(
         return result.toDTO(lastModifiedDate)
     }
 
+    /**
+     * Fetches all RiScs in the given repository. There are three types, drafts (RiScs that have pending updates), sent
+     * for approval (RiScs that have pending pull requests) and published (RiScs that have been approved, i.e., appear
+     * in the default branch of the repository). If there exists multiple version of a RiSc with the same ID, they are
+     * prioritised in the way given by `GithubConnector.fetchAllRiScIdentifiersInRepository`. Each fetched RiSc is
+     * migrated to the latest supported version and validated against the JSON schema of their version.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiScs from.
+     * @param accessTokens The access tokens to use for authorization.
+     * @param latestSupportedVersion The RiSc schema version to migrate the RiScs to if not already or past this version.
+     * @see no.risc.github.GithubConnector.fetchAllRiScIdentifiersInRepository
+     */
     suspend fun fetchAllRiScs(
         owner: String,
         repository: String,
@@ -162,160 +172,147 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
-            val riScIds =
-                githubConnector
-                    .fetchAllRiScIdentifiersInRepository(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessTokens.githubAccessToken.value,
-                    )
-            LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
-            val riScContents =
-                riScIds
-                    .associateWith { id ->
-                        async(Dispatchers.IO) {
-                            val fetchRiSc =
-                                when (id.status) {
-                                    RiScStatus.Published -> githubConnector::fetchPublishedRiSc
-                                    RiScStatus.SentForApproval, RiScStatus.Draft -> githubConnector::fetchDraftedRiScContent
-                                }
-                            fetchRiSc(owner, repository, id.id, accessTokens.githubAccessToken.value)
-                        }
-                    }.mapValues { it.value.await() }
-
-            val riScs =
-                riScContents
-                    .map { (id, contentResponse) ->
-                        async(Dispatchers.IO) {
-                            try {
-                                contentResponse.let { riScContent ->
-                                    val lastPublished =
-                                        githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                            owner = owner,
-                                            repository = repository,
-                                            accessToken = accessTokens.githubAccessToken.value,
-                                            riScId = id.id,
-                                        )
-                                    riScContent
-                                        .responseToRiScResult(
-                                            riScId = id.id,
-                                            riScStatus = id.status,
-                                            gcpAccessToken = accessTokens.gcpAccessToken,
-                                            pullRequestUrl = id.pullRequestUrl,
-                                            lastPublished = lastPublished,
-                                        ).let { migrate(it, latestSupportedVersion) }
-                                }
-                            } catch (_: Exception) {
-                                RiScContentResultDTO(
-                                    riScId = id.id,
-                                    status = ContentStatus.Failure,
-                                    riScStatus = id.status,
-                                    riScContent = null,
-                                    pullRequestUrl = null,
-                                )
-                            }
-                        }
-                    }.awaitAll()
-                    .map { riScContentResultDTO ->
-                        if (riScContentResultDTO.status == ContentStatus.Success) {
-                            LOGGER.info(
-                                "Validating RiSc with id: '${riScContentResultDTO.riScId}' ${
-                                    riScContentResultDTO.riScContent?.let {
-                                        "content starting with ${it.substring(3, 10)}***"
-                                    } ?: "without content"
-                                }",
+            githubConnector
+                .fetchAllRiScIdentifiersInRepository(
+                    owner = owner,
+                    repository = repository,
+                    accessToken = accessTokens.githubAccessToken.value,
+                ).also { riScIds ->
+                    LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
+                }.map { riScId ->
+                    // Fetch content and decrypt
+                    async(Dispatchers.IO) {
+                        try {
+                            migrate(
+                                content = fetchContent(riScId, owner, repository, accessTokens),
+                                latestSupportedVersion = latestSupportedVersion,
                             )
-                            val validationStatus =
-                                JSONValidator.validateAgainstSchema(
-                                    riScId = riScContentResultDTO.riScId,
-                                    riScContent = riScContentResultDTO.riScContent,
-                                )
-                            when (validationStatus.isValid) {
-                                true -> {
-                                    LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
-                                    riScContentResultDTO
-                                }
-
-                                false -> {
-                                    LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
-                                    RiScContentResultDTO(
-                                        riScId = riScContentResultDTO.riScId,
-                                        status = ContentStatus.SchemaValidationFailed,
-                                        riScStatus = null,
-                                        riScContent = null,
-                                    )
-                                }
-                            }
-                        } else {
-                            riScContentResultDTO
+                        } catch (_: Exception) {
+                            RiScContentResultDTO(
+                                riScId = riScId.id,
+                                status = ContentStatus.Failure,
+                                riScStatus = riScId.status,
+                                riScContent = null,
+                                pullRequestUrl = null,
+                            )
                         }
                     }
-            riScs
+                }.awaitAll()
+                // Validate RiSc against JSON schema
+                .map { riScContentResultDTO ->
+                    if (riScContentResultDTO.status == ContentStatus.Success) {
+                        LOGGER.info("Validating RiSc with id '${riScContentResultDTO.riScId}.")
+                        val validationStatus =
+                            JSONValidator.validateAgainstSchema(
+                                riScId = riScContentResultDTO.riScId,
+                                riScContent = riScContentResultDTO.riScContent,
+                            )
+
+                        if (!validationStatus.isValid) {
+                            LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
+                            return@map RiScContentResultDTO(
+                                riScId = riScContentResultDTO.riScId,
+                                status = ContentStatus.SchemaValidationFailed,
+                                riScStatus = null,
+                                riScContent = null,
+                            )
+                        }
+
+                        LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
+                    }
+                    riScContentResultDTO
+                }
         }
 
+    /**
+     * Fetches the content for the given RiSc identifier from the supplied repository, decrypts it and fetches
+     * additional information about the age of the last published version.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch content from.
+     * @param accessTokens The access tokens to use for authentication.
+     */
+    private suspend fun fetchContent(
+        riScIdentifier: RiScIdentifier,
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+    ): RiScContentResultDTO =
+        when (riScIdentifier.status) {
+            RiScStatus.Published ->
+                githubConnector.fetchPublishedRiSc(
+                    owner = owner,
+                    repository = repository,
+                    id = riScIdentifier.id,
+                    accessToken = accessTokens.githubAccessToken.value,
+                )
+
+            RiScStatus.SentForApproval, RiScStatus.Draft ->
+                githubConnector.fetchDraftedRiScContent(
+                    owner = owner,
+                    repository = repository,
+                    id = riScIdentifier.id,
+                    accessToken = accessTokens.githubAccessToken.value,
+                )
+        }.responseToRiScResult(
+            riScId = riScIdentifier.id,
+            riScStatus = riScIdentifier.status,
+            gcpAccessToken = accessTokens.gcpAccessToken,
+            pullRequestUrl = riScIdentifier.pullRequestUrl,
+            lastPublished =
+                githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                    owner = owner,
+                    repository = repository,
+                    accessToken = accessTokens.githubAccessToken.value,
+                    riScId = riScIdentifier.id,
+                ),
+        )
+
+    /**
+     * Converts the content response object to a RiScContentResult by decrypting it through the crypto service.
+     *
+     * @param riScId The ID of the RiSc the content belongs to.
+     * @param riScStatus The status of the RiSc the content belongs to.
+     * @param gcpAccessToken The GCP access token to decrypt the content with.
+     * @param pullRequestUrl The URL to the open pull request for this RiSc, if any.
+     * @param lastPublished Information about when the RiSc was last published, if already published.
+     */
     private suspend fun GithubContentResponse.responseToRiScResult(
         riScId: String,
         riScStatus: RiScStatus,
         gcpAccessToken: GCPAccessToken,
-        pullRequestUrl: String?,
-        lastPublished: LastPublished?,
+        pullRequestUrl: String? = null,
+        lastPublished: LastPublished? = null,
     ): RiScContentResultDTO =
-        when (status) {
-            GithubStatus.Success ->
-                try {
-                    val decryptedContent = decryptContent(gcpAccessToken)
-                    RiScContentResultDTO(
-                        riScId = riScId,
-                        status = ContentStatus.Success,
-                        riScStatus = riScStatus,
-                        riScContent = decryptedContent.riSc,
-                        sopsConfig = decryptedContent.sopsConfig,
-                        pullRequestUrl = pullRequestUrl,
-                        lastPublished = lastPublished,
-                    )
-                } catch (e: Exception) {
-                    LOGGER.error("An error occurred when decrypting: ${e.message}")
-                    when (e) {
-                        is SOPSDecryptionException ->
-                            RiScContentResultDTO(
-                                riScId = riScId,
-                                status = ContentStatus.DecryptionFailed,
-                                riScStatus = riScStatus,
-                                riScContent = null,
-                            )
-
-                        else ->
-                            RiScContentResultDTO(
-                                riScId = riScId,
-                                status = ContentStatus.Failure,
-                                riScStatus = riScStatus,
-                                riScContent = null,
-                            )
-                    }
-                }
-
-            GithubStatus.NotFound ->
+        if (status == GithubStatus.Success) {
+            try {
+                val decryptedContent = cryptoService.decrypt(ciphertext = data(), gcpAccessToken = gcpAccessToken)
                 RiScContentResultDTO(
                     riScId = riScId,
-                    status = ContentStatus.FileNotFound,
+                    status = ContentStatus.Success,
+                    riScStatus = riScStatus,
+                    riScContent = decryptedContent.riSc,
+                    sopsConfig = decryptedContent.sopsConfig,
+                    pullRequestUrl = pullRequestUrl,
+                    lastPublished = lastPublished,
+                )
+            } catch (e: Exception) {
+                LOGGER.error("An error occurred when decrypting: ${e.message}")
+                RiScContentResultDTO(
+                    riScId = riScId,
+                    status = if (e is SOPSDecryptionException) ContentStatus.DecryptionFailed else ContentStatus.Failure,
                     riScStatus = riScStatus,
                     riScContent = null,
                 )
-
-            else ->
-                RiScContentResultDTO(
-                    riScId = riScId,
-                    status = ContentStatus.Failure,
-                    riScStatus = riScStatus,
-                    riScContent = null,
-                )
+            }
+        } else {
+            RiScContentResultDTO(
+                riScId = riScId,
+                status = if (status == GithubStatus.NotFound) ContentStatus.FileNotFound else ContentStatus.Failure,
+                riScStatus = riScStatus,
+                riScContent = null,
+            )
         }
-
-    private suspend fun GithubContentResponse.decryptContent(gcpAccessToken: GCPAccessToken) =
-        cryptoService.decrypt(
-            ciphertext = data(),
-            gcpAccessToken = gcpAccessToken,
-        )
 
     suspend fun updateRiSc(
         owner: String,
