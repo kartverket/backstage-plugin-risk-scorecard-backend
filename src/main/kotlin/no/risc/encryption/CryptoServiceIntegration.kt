@@ -1,5 +1,6 @@
 package no.risc.encryption
 
+import no.risc.encryption.models.EncryptionRequest
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.CryptoServiceConnector
@@ -12,13 +13,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBody
 import kotlin.math.min
-
-data class EncryptionRequest(
-    val text: String,
-    val config: SopsConfig,
-    val gcpAccessToken: String,
-    val riScId: String,
-)
 
 @Component
 class CryptoServiceIntegration(

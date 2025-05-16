@@ -5,11 +5,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.ContentStatus
-import no.risc.risc.MigrationStatus
-import no.risc.risc.MigrationVersions
-import no.risc.risc.RiScContentResultDTO
-import no.risc.risc.RiScStatus
+import no.risc.risc.models.ContentStatus
+import no.risc.risc.models.MigrationStatus
+import no.risc.risc.models.MigrationVersions
+import no.risc.risc.models.RiScContentResultDTO
+import no.risc.risc.models.RiScStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test

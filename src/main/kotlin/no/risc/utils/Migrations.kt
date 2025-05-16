@@ -9,8 +9,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.MigrationStatus
-import no.risc.risc.RiScContentResultDTO
+import no.risc.risc.models.MigrationStatus
+import no.risc.risc.models.RiScContentResultDTO
 
 /**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is

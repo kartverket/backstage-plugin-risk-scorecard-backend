@@ -35,7 +35,6 @@ val springSecurityVersion = "6.4.5"
 val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.15.0"
-val fasterXmlJacksonVersion = "2.19.0"
 val jsonSchemaValidatorVersion = "1.5.6"
 val nimbusdsVersion = "10.3"
 val bouncyCastleVersion = "1.80"
@@ -72,7 +71,6 @@ dependencies {
         because("Provides endpoints for health and event monitoring that are used in SKIP and Docker.")
     }
 
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {

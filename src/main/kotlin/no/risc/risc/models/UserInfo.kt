@@ -1,8 +1,12 @@
 package no.risc.risc.models
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
 data class UserInfo(
     val name: String,
     val email: String,

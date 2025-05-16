@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.serialization.Serializable
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
@@ -17,13 +16,24 @@ import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
+import no.risc.risc.models.ContentStatus
+import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
+import no.risc.risc.models.DifferenceStatus
+import no.risc.risc.models.InternDifference
+import no.risc.risc.models.LastPublished
+import no.risc.risc.models.PendingApprovalDTO
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
+import no.risc.risc.models.PublishRiScResultDTO
+import no.risc.risc.models.RiScContentResultDTO
+import no.risc.risc.models.RiScResult
+import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
-import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -33,165 +43,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.health.HttpCodeStatusMapper
 import org.springframework.stereotype.Service
-import java.time.OffsetDateTime
-
-class ProcessRiScResultDTO(
-    riScId: String,
-    status: ProcessingStatus,
-    statusMessage: String,
-) : RiScResult(riScId, status, statusMessage) {
-    companion object {
-        val INVALID_ACCESS_TOKENS =
-            ProcessRiScResultDTO(
-                "",
-                ProcessingStatus.InvalidAccessTokens,
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
-            )
-    }
-}
-
-data class CreateRiScResultDTO(
-    val riScId: String,
-    val status: ProcessingStatus,
-    val statusMessage: String,
-    val riScContent: String?,
-    val sopsConfig: SopsConfig,
-)
-
-@Serializable
-data class LastPublished(
-    @Serializable(KOffsetDateTimeSerializer::class)
-    val dateTime: OffsetDateTime,
-    val numberOfCommits: Int,
-)
-
-@Serializable
-data class RiScContentResultDTO(
-    val riScId: String,
-    val status: ContentStatus,
-    val riScStatus: RiScStatus?,
-    val riScContent: String?,
-    val lastPublished: LastPublished? = null,
-    val sopsConfig: SopsConfig? = null,
-    val pullRequestUrl: String? = null,
-    val migrationStatus: MigrationStatus =
-        MigrationStatus(
-            migrationChanges = false,
-            migrationRequiresNewApproval = false,
-            migrationVersions =
-                MigrationVersions(
-                    fromVersion = null,
-                    toVersion = null,
-                ),
-        ),
-)
-
-@Serializable
-data class MigrationStatus(
-    val migrationChanges: Boolean,
-    val migrationRequiresNewApproval: Boolean,
-    val migrationVersions: MigrationVersions,
-)
-
-@Serializable
-data class MigrationVersions(
-    var fromVersion: String?,
-    var toVersion: String?,
-)
-
-open class RiScResult(
-    val riScId: String,
-    val status: ProcessingStatus,
-    val statusMessage: String,
-)
-
-class PublishRiScResultDTO(
-    riScId: String,
-    status: ProcessingStatus,
-    statusMessage: String,
-    val pendingApproval: PendingApprovalDTO?,
-) : RiScResult(riScId, status, statusMessage)
-
-data class PendingApprovalDTO(
-    val pullRequestUrl: String,
-    val pullRequestName: String,
-)
-
-enum class ContentStatus {
-    Success,
-    FileNotFound,
-    DecryptionFailed,
-    Failure,
-    NoReadAccess,
-    SchemaNotFound,
-    SchemaValidationFailed,
-}
-
-enum class DifferenceStatus {
-    Success,
-    GithubFailure,
-    GithubFileNotFound,
-    JsonFailure,
-    DecryptionFailure,
-    NoReadAccess,
-    SchemaNotFound,
-    SchemaValidationFailed,
-}
-
-enum class ProcessingStatus(
-    val message: String,
-) {
-    ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
-    CreatedRiSc("Created new risk scorecard successfully"),
-    InitializedGeneratedRiSc("Created new auto-generated risk scorecard successfully"),
-    UpdatedRiSc("Updated risk scorecard successfully"),
-    UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
-    CreatedPullRequest("Created pull request for risk scorecard"),
-    OpenedPullRequest("Opened pull request successfully"),
-    ErrorWhenCreatingPullRequest("Error when creating pull request"),
-    InvalidAccessTokens("Invalid access tokens"),
-    NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
-    UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),
-    ErrorWhenCreatingRiSc("Error when creating risk scorecard"),
-    AccessTokensValidationFailure("Failure when validating access tokens"),
-    ErrorWhenGeneratingInitialRiSc("Error when generating initial risk scorecard"),
-    FailedToFetchGcpProjectIds("Failed to fetch GCP project IDs"),
-    FailedToFetchGCPOAuth2TokenInformation("Failed to fetch GCP OAuth2 token information"),
-    FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
-    FailedToCreateSops("Failed to create SOPS configuration"),
-}
-
-@Serializable
-data class RiScIdentifier(
-    val id: String,
-    var status: RiScStatus,
-    val pullRequestUrl: String? = null,
-)
-
-enum class RiScStatus {
-    Draft,
-    SentForApproval,
-    Published,
-}
-
-data class DecryptionFailure(
-    val status: ContentStatus,
-    val message: String,
-)
-
-class InternDifference(
-    val status: DifferenceStatus,
-    val differenceState: Difference,
-    val errorMessage: String = "",
-) {
-    fun toDTO(date: String = ""): DifferenceDTO =
-        DifferenceDTO(
-            status = status,
-            differenceState = differenceState,
-            errorMessage = errorMessage,
-            defaultLastModifiedDateString = date,
-        )
-}
 
 @Service
 class RiScService(
