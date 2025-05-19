@@ -12,6 +12,7 @@ import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.github.models.GithubCommitInformation
 import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubCommitter
+import no.risc.github.models.GithubCreateNewBranchPayload
 import no.risc.github.models.GithubCreateNewPullRequestPayload
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
@@ -902,6 +903,147 @@ class GithubConnectorTests {
                     content = """{ "schemaVersion": "4.1" }""",
                     branch = branch,
                 )
+            }
+        }
+    }
+
+    @Nested
+    inner class TestCreateNewBranch {
+        private fun urlToCommitsOnBranch(branch: String) = "/$owner/$repository/commits/heads/$branch"
+
+        private fun githubCommitObject(sha: String) =
+            GithubCommitObject(
+                sha = sha,
+                url = "https://api.github.com/repos/$owner/$repository/commits/",
+                commit =
+                    GithubCommitInformation(
+                        message = "Commit message",
+                        committer =
+                            GithubCommitter(
+                                date = OffsetDateTime.now().minusHours(4),
+                                name = "Committer",
+                            ),
+                    ),
+            )
+
+        private val urlToCreateBranch = "/$owner/$repository/git/refs"
+
+        /* A response string mimicking parts of the response from the GitHub API. The response is not processed in the
+            application beyond a string. There is thus no datatype to use for the answer. */
+        private fun constructResponseString(
+            sha: String,
+            newBranch: String,
+        ) = """
+            {
+              "ref": "refs/heads/$newBranch",
+              "url": "https://api.github.com/repos/$owner/$repository/git/refs/heads/$newBranch",
+              "object": {
+                "type": "commit",
+                "sha": "$sha",
+                "url": "https://api.github.com/repos/$owner/$repository/git/commits/$sha"
+              }
+            }
+            """.trimIndent()
+
+        private fun createNewBranch(
+            baseBranch: String,
+            newBranch: String,
+        ) = runBlocking {
+            githubConnector.createNewBranch(
+                owner = owner,
+                repository = repository,
+                newBranchName = newBranch,
+                accessToken = "accessToken",
+                baseBranch = baseBranch,
+            )
+        }
+
+        @Test
+        fun `test create new branch`() {
+            val branch = "main"
+            val newBranch = "$filenamePrefix-aaaaa"
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(githubCommitObject(sha)),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            val expectedResponse = constructResponseString(sha = sha, newBranch = newBranch)
+            webClient.queueResponse(
+                response = MockableResponse(content = expectedResponse),
+                path = urlToCreateBranch,
+            )
+
+            val response = createNewBranch(baseBranch = branch, newBranch = newBranch)
+
+            assertEquals(
+                expectedResponse,
+                response,
+                "If a new branch is created, the method should return the same JSON as returned by the GitHub API.",
+            )
+
+            // Ignore request to get SHA
+            webClient.getNextRequest()
+
+            val requestToCreate = webClient.getNextRequest().deserializeContent<GithubCreateNewBranchPayload>()
+
+            assertEquals(
+                sha,
+                requestToCreate.shaToBranchFrom,
+                "The SHA to branch from should be equivalent to the SHA of the last commit on the base branch.",
+            )
+        }
+
+        @Test
+        fun `test create new branch errors when branch does not exist`() {
+            val branch = "default"
+            val newBranch = "$filenamePrefix-aaaab"
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = constructResponseString(sha = sha, newBranch = newBranch)),
+                path = urlToCreateBranch,
+            )
+
+            assertThrows<Exception>("Creation of a new branch should error when the base branch does not exist.") {
+                createNewBranch(baseBranch = branch, newBranch = newBranch)
+            }
+
+            assertTrue(
+                webClient.hasQueuedUpResponses(urlToCreateBranch),
+                "If the base branch does not exist, the method should not attempt to construct a new branch.",
+            )
+        }
+
+        @Test
+        fun `test create new branch throws exception on error`() {
+            val branch = "standard"
+            val newBranch = "$filenamePrefix-aaaac"
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(githubCommitObject(sha)),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.BAD_REQUEST),
+                path = urlToCreateBranch,
+            )
+
+            assertThrows<Exception>("Creation of a new branch should error when the branch creation request fails.") {
+                createNewBranch(baseBranch = branch, newBranch = newBranch)
             }
         }
     }
