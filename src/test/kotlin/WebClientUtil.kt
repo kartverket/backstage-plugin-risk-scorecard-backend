@@ -198,4 +198,13 @@ class MockableWebClient {
      * Retrieves and removes the oldest request made to the web client
      */
     fun getNextRequest(): MockableRequest = requests.removeFirst()
+
+    /**
+     * Indicates whether there are responses queued up for a given path that have not yet been consumed. If there are
+     * wildcard responses queued up, then the method will always return true.
+     *
+     * @path The path to match on.
+     */
+    fun hasQueuedUpResponses(path: String?): Boolean =
+        responses.any { (match, responseList) -> (match.second == path || match.second == null) && responseList.isNotEmpty() }
 }
