@@ -29,6 +29,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrDefault
+import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.utils.tryOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -207,7 +208,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
                 .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
@@ -233,7 +234,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
@@ -262,7 +263,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
