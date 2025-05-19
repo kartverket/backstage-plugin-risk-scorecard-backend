@@ -359,7 +359,7 @@ class GithubConnector(
                             repository = repository,
                             newBranchName = riScId,
                             accessToken = gitHubAccessToken.value,
-                            defaultBranch = defaultBranch,
+                            baseBranch = defaultBranch,
                         )
                     }
 
@@ -591,38 +591,37 @@ class GithubConnector(
         ).awaitBodyOrNull<GithubCommitObject>()?.sha
 
     /**
-     * Creates a new branch through the GitHub API by branching out of the default branch.
+     * Creates a new branch through the GitHub API by branching out from the last commit on the provided base branch.
      *
      * @param owner The owner (user/organisation) of the repository.
      * @param repository The name of the repository to make the branch in.
      * @param newBranchName The name of the new branch.
      * @param accessToken The GitHub access token to use for authorization.
-     * @param defaultBranch The name of the default branch.
+     * @param baseBranch The name of the base branch to branch out from.
      */
     suspend fun createNewBranch(
         owner: String,
         repository: String,
         newBranchName: String,
         accessToken: String,
-        defaultBranch: String,
+        baseBranch: String,
     ): String? {
         val latestShaForDefaultBranch =
             getLatestCommitShaForBranch(
                 owner = owner,
                 repository = repository,
                 accessToken = accessToken,
-                branchName = defaultBranch,
+                branchName = baseBranch,
             ) ?: return null
 
         return requestToGithubWithJSONBody(
             uri = githubHelper.uriToCreateNewBranch(owner = owner, repository = repository),
             accessToken = accessToken,
             content =
-                githubHelper
-                    .bodyToCreateNewBranch(
-                        branchName = newBranchName,
-                        shaToBranchFrom = latestShaForDefaultBranch,
-                    ).toContentBody(),
+                githubHelper.bodyToCreateNewBranch(
+                    branchName = newBranchName,
+                    shaToBranchFrom = latestShaForDefaultBranch,
+                ),
             method = HttpMethod.POST,
         ).awaitBodyOrNull<String>()
     }
