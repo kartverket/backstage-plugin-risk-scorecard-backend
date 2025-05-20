@@ -1,16 +1,19 @@
 package no.risc.utils
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class Difference(
-    val entriesOnLeft: List<String> = listOf(),
-    val entriesOnRight: List<String> = listOf(),
-    val difference: List<String> = listOf(),
+    @EncodeDefault val entriesOnLeft: List<String> = listOf(),
+    @EncodeDefault val entriesOnRight: List<String> = listOf(),
+    @EncodeDefault val difference: List<String> = listOf(),
 )
 
 /**
