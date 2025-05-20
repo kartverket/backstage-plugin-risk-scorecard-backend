@@ -8,7 +8,7 @@ plugins {
 }
 
 ktlint {
-    version.set("1.5.0")
+    version.set("1.6.0")
 }
 
 group = "no"
