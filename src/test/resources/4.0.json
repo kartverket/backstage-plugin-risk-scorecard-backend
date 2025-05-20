@@ -20,8 +20,8 @@
         ],
         "risk": {
           "summary": "",
-          "probability": 1,
-          "consequence": 1000
+          "probability": 0.1,
+          "consequence": 30000
         },
         "actions": [
           {
@@ -35,8 +35,80 @@
         ],
         "remainingRisk": {
           "summary": "",
-          "probability": 0.1,
+          "probability": 0.01,
           "consequence": 1000
+        }
+      }
+    },
+    {
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
+      "scenario": {
+        "ID": "25FcD",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "threatActors": [
+          "Organised crime"
+        ],
+        "vulnerabilities": [
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
+        ],
+        "risk": {
+          "summary": "",
+          "probability": 50,
+          "consequence": 30000000
+        },
+        "actions": [
+          {
+            "title": "",
+            "action": {
+              "ID": "w100Q",
+              "description": "Innlogging. ",
+              "status": "Not started"
+            }
+          }
+        ],
+        "remainingRisk": {
+          "summary": "",
+          "probability": 1,
+          "consequence": 1000000
+        }
+      }
+    },
+    {
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
+      "scenario": {
+        "ID": "2dsFd",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "threatActors": [
+          "Organised crime"
+        ],
+        "vulnerabilities": [
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
+        ],
+        "risk": {
+          "summary": "",
+          "probability": 300,
+          "consequence": 1000000000
+        },
+        "actions": [
+          {
+            "title": "",
+            "action": {
+              "ID": "w100Q",
+              "description": "Innlogging. ",
+              "status": "Not started"
+            }
+          }
+        ],
+        "remainingRisk": {
+          "summary": "",
+          "probability": 0.123,
+          "consequence": 198000
         }
       }
     }

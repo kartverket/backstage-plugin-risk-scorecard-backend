@@ -43,9 +43,9 @@ class CryptoServiceIntegrationTests {
                     text = "test",
                     sopsConfig =
                         SopsConfig(
-                            shamir_threshold = 2,
-                            key_groups = null,
-                            gcp_kms = listOf(GcpKmsEntry(resource_id = "test")),
+                            shamirThreshold = 2,
+                            keyGroups = null,
+                            gcpKms = listOf(GcpKmsEntry(resourceId = "test")),
                         ),
                     gcpAccessToken = GCPAccessToken("testToken"),
                     riScId = "riScId",
@@ -67,9 +67,9 @@ class CryptoServiceIntegrationTests {
                     text = "test",
                     sopsConfig =
                         SopsConfig(
-                            shamir_threshold = 2,
-                            key_groups = null,
-                            gcp_kms = listOf(GcpKmsEntry(resource_id = "test")),
+                            shamirThreshold = 2,
+                            keyGroups = null,
+                            gcpKms = listOf(GcpKmsEntry(resourceId = "test")),
                         ),
                     gcpAccessToken = GCPAccessToken("testToken"),
                     riScId = "riScId",
@@ -85,9 +85,9 @@ class CryptoServiceIntegrationTests {
                 riSc = "test",
                 sopsConfig =
                     SopsConfig(
-                        shamir_threshold = 2,
-                        key_groups = null,
-                        gcp_kms = listOf(GcpKmsEntry(resource_id = "test")),
+                        shamirThreshold = 2,
+                        keyGroups = null,
+                        gcpKms = listOf(GcpKmsEntry(resourceId = "test")),
                     ),
             )
 

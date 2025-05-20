@@ -20,15 +20,16 @@ import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
-import no.risc.risc.LastPublished
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
-import no.risc.risc.RiScIdentifier
-import no.risc.risc.RiScStatus
+import no.risc.risc.models.LastPublished
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
+import no.risc.risc.models.RiScIdentifier
+import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrDefault
+import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.utils.tryOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -207,7 +208,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
                 .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
@@ -233,7 +234,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
@@ -262,7 +263,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
@@ -359,7 +360,7 @@ class GithubConnector(
                             repository = repository,
                             newBranchName = riScId,
                             accessToken = gitHubAccessToken.value,
-                            defaultBranch = defaultBranch,
+                            baseBranch = defaultBranch,
                         )
                     }
 
@@ -591,38 +592,37 @@ class GithubConnector(
         ).awaitBodyOrNull<GithubCommitObject>()?.sha
 
     /**
-     * Creates a new branch through the GitHub API by branching out of the default branch.
+     * Creates a new branch through the GitHub API by branching out from the last commit on the provided base branch.
      *
      * @param owner The owner (user/organisation) of the repository.
      * @param repository The name of the repository to make the branch in.
      * @param newBranchName The name of the new branch.
      * @param accessToken The GitHub access token to use for authorization.
-     * @param defaultBranch The name of the default branch.
+     * @param baseBranch The name of the base branch to branch out from.
      */
     suspend fun createNewBranch(
         owner: String,
         repository: String,
         newBranchName: String,
         accessToken: String,
-        defaultBranch: String,
+        baseBranch: String,
     ): String? {
         val latestShaForDefaultBranch =
             getLatestCommitShaForBranch(
                 owner = owner,
                 repository = repository,
                 accessToken = accessToken,
-                branchName = defaultBranch,
+                branchName = baseBranch,
             ) ?: return null
 
         return requestToGithubWithJSONBody(
             uri = githubHelper.uriToCreateNewBranch(owner = owner, repository = repository),
             accessToken = accessToken,
             content =
-                githubHelper
-                    .bodyToCreateNewBranch(
-                        branchName = newBranchName,
-                        shaToBranchFrom = latestShaForDefaultBranch,
-                    ).toContentBody(),
+                githubHelper.bodyToCreateNewBranch(
+                    branchName = newBranchName,
+                    shaToBranchFrom = latestShaForDefaultBranch,
+                ),
             method = HttpMethod.POST,
         ).awaitBodyOrNull<String>()
     }
@@ -770,14 +770,14 @@ class GithubConnector(
             requestToGithubWithJSONBody(
                 uri = githubHelper.uriToCreatePullRequest(owner = owner, repository = repository),
                 accessToken = accessToken,
-                content = pullRequestPayload.toContentBody(),
+                content = pullRequestPayload,
                 method = HttpMethod.POST,
             ).awaitBody<GithubPullRequestObject>()
         } catch (e: Exception) {
             throw CreatePullRequestException(
                 message =
-                    "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.branch}" +
-                        "to ${pullRequestPayload.baseBranch} with title \"${pullRequestPayload.title}\"",
+                    "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.head}" +
+                        "to ${pullRequestPayload.base} with title \"${pullRequestPayload.title}\"",
             )
         }
 
@@ -819,8 +819,8 @@ class GithubConnector(
                                 filePath = filePath,
                                 branch = branch,
                             )?.sha,
-                        branchName = branch,
-                    ).toContentBody(),
+                        branch = branch,
+                    ),
                 method = HttpMethod.PUT,
             )
         } catch (e: WebClientResponseException.BadRequest) {
@@ -912,17 +912,17 @@ class GithubConnector(
      *
      * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
      * @param accessToken The GitHub Access Token to use for authorization.
-     * @param content The JSON formatted content to send as the body of the request.
+     * @param content The content to send as the body of the request. This content will be JSON serialized.
      * @param method The HTTP method to make the call with.
      */
-    private suspend fun requestToGithubWithJSONBody(
+    private inline fun <reified T : Any> requestToGithubWithJSONBody(
         uri: String,
         accessToken: String,
-        content: String,
+        content: T,
         method: HttpMethod,
     ): ResponseSpec =
         githubRequest(uri = uri, accessToken = accessToken, method = method, attachBody = {
-            it.header("Content-Type", "application/json").body(Mono.just(content), String::class.java)
+            it.header("Content-Type", "application/json").body(Mono.just(content), T::class.java)
         })
 
     /**
@@ -937,6 +937,7 @@ class GithubConnector(
             is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
             { e is WebClientResponseException && e.message.contains("DataBufferLimitException") } ->
                 GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+
             else -> GithubStatus.InternalError
         }
 
@@ -976,22 +977,4 @@ class GithubConnector(
                 },
         )
     }
-
-    /**
-     * Finds the default branch for the given repository "/<repositoryOwner>/<repositoryName>".
-     *
-     * @param repositoryOwner The name of the user/organisation owning the repository
-     * @param repositoryName The name of the repository to fetch information for
-     * @param gitHubAccessToken The GitHub access token to use for fetching the information
-     * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
-     */
-    suspend fun fetchDefaultBranch(
-        repositoryOwner: String,
-        repositoryName: String,
-        gitHubAccessToken: String,
-    ) = fetchRepositoryInfo(
-        repositoryOwner = repositoryOwner,
-        repositoryName = repositoryName,
-        gitHubAccessToken = gitHubAccessToken,
-    ).defaultBranch
 }

@@ -5,8 +5,11 @@ import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
+import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
+import no.risc.risc.models.PublishRiScResultDTO
+import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity
@@ -42,7 +45,7 @@ class RiScController(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
-            latestSupportedVersion = "4",
+            latestSupportedVersion = "4.1",
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -86,11 +89,12 @@ class RiScController(
                 ),
             content = riSc,
             defaultBranch =
-                githubConnector.fetchDefaultBranch(
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubAccessToken = gitHubAccessToken,
-                ),
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
             generateDefault = generateDefault,
         )
 
@@ -113,11 +117,12 @@ class RiScController(
                 githubAccessToken = GithubAccessToken(gitHubAccessToken),
             ),
         defaultBranch =
-            githubConnector.fetchDefaultBranch(
-                repositoryOwner = repositoryOwner,
-                repositoryName = repositoryName,
-                gitHubAccessToken = gitHubAccessToken,
-            ),
+            githubConnector
+                .fetchRepositoryInfo(
+                    repositoryOwner = repositoryOwner,
+                    repositoryName = repositoryName,
+                    gitHubAccessToken = gitHubAccessToken,
+                ).defaultBranch,
     )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
@@ -136,11 +141,12 @@ class RiScController(
             gitHubAccessToken = gitHubAccessToken,
             userInfo = userInfo,
             baseBranch =
-                githubConnector.fetchDefaultBranch(
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubAccessToken = gitHubAccessToken,
-                ),
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])
@@ -153,7 +159,7 @@ class RiScController(
         @RequestBody data: DifferenceRequestBody,
     ): ResponseEntity<DifferenceDTO> {
         val difference =
-            riScService.fetchAndDiffRiScs(
+            riScService.fetchAndDiffRiSc(
                 owner = repositoryOwner,
                 repository = repositoryName,
                 accessTokens =
@@ -162,7 +168,7 @@ class RiScController(
                         githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 riScId = riscId,
-                headRiSc = data.riSc,
+                draftRiScContent = data.riSc,
             )
 
         return ResponseEntity.ok().body(difference)

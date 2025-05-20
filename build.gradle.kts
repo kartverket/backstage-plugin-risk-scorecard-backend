@@ -1,13 +1,14 @@
 plugins {
+    val kotlinPluginsVersion = "2.1.21"
+    kotlin("jvm") version kotlinPluginsVersion
+    kotlin("plugin.spring") version kotlinPluginsVersion
+    kotlin("plugin.serialization") version kotlinPluginsVersion
     id("org.springframework.boot") version "3.4.5"
-    kotlin("jvm") version "2.1.20"
-    kotlin("plugin.spring") version "2.1.20"
     id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
-    kotlin("plugin.serialization") version "2.1.20"
 }
 
 ktlint {
-    version.set("1.5.0")
+    version.set("1.6.0")
 }
 
 group = "no"
@@ -28,27 +29,20 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.1.20"
+val kotlinVersion = "2.1.21"
 val springBootVersion = "3.4.5"
-val springSecurityVersion = "6.4.5"
+val springSecurityVersion = "6.5.0"
 val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.2"
-val nettyVersion = "4.2.0.Final"
-val micrometerVersion = "1.14.6"
-val fasterXmlJacksonVersion = "2.19.0"
+val micrometerVersion = "1.15.0"
 val jsonSchemaValidatorVersion = "1.5.6"
-val nimbusdsVersion = "10.2"
+val nimbusdsVersion = "10.3"
 val bouncyCastleVersion = "1.80"
 val mockkVersion = "1.14.2"
 val junitVersion = "5.12.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.apache.tomcat.embed:tomcat-embed-core") {
-        version {
-            strictly("11.0.5")
-        }
-    }
     implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
@@ -72,7 +66,6 @@ dependencies {
         because("Provides endpoints for health and event monitoring that are used in SKIP and Docker.")
     }
 
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$fasterXmlJacksonVersion")
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {

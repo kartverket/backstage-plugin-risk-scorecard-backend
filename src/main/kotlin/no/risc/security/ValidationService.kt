@@ -6,7 +6,7 @@ import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.github.GithubConnector
 import no.risc.google.GoogleServiceIntegration
 import no.risc.infra.connector.models.GitHubPermission
-import no.risc.risc.ProcessingStatus
+import no.risc.risc.models.ProcessingStatus
 import org.springframework.stereotype.Service
 
 @Service

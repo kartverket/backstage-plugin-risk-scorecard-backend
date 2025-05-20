@@ -13,13 +13,15 @@ import org.slf4j.LoggerFactory
 enum class SchemaVersion {
     VERSION_3_2,
     VERSION_3_3,
-    VERSION_4_0, ;
+    VERSION_4_0,
+    VERSION_4_1, ;
 
     fun toExpectedString() =
         when (this) {
             VERSION_3_2 -> "3_2"
             VERSION_3_3 -> "3_3"
             VERSION_4_0 -> "4_0"
+            VERSION_4_1 -> "4_1"
         }
 }
 

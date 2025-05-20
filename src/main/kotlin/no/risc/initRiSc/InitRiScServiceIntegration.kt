@@ -3,8 +3,8 @@ package no.risc.initRiSc
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
 import no.risc.initRiSc.model.GenerateRiScRequestBody
-import no.risc.risc.ProcessRiScResultDTO
-import no.risc.risc.ProcessingStatus
+import no.risc.risc.models.ProcessRiScResultDTO
+import no.risc.risc.models.ProcessingStatus
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBodyOrNull

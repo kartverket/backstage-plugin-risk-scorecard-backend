@@ -18,7 +18,7 @@ import java.time.OffsetDateTime
 @Serializable
 @JsonIgnoreUnknownKeys
 data class GithubFileDTO(
-    val content: String,
+    val content: String? = null,
     val sha: String,
     val name: String,
 )
