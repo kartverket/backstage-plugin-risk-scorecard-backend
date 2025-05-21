@@ -13,6 +13,7 @@ import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -125,29 +126,21 @@ class RiScController(
                 ).defaultBranch,
     )
 
-    @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
+    @DeleteMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun deleteRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
-        @PathVariable id: String,
         @PathVariable repositoryName: String,
-        @RequestBody riSc: RiScWrapperObject,
+        @PathVariable id: String,
     ) = riScService.deleteRiSc(
         owner = repositoryOwner,
         repository = repositoryName,
         riScId = id,
-        content = riSc,
         accessTokens =
             AccessTokens(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
                 githubAccessToken = GithubAccessToken(gitHubAccessToken),
-            ),
-        defaultBranch =
-            githubConnector.fetchDefaultBranch(
-                repositoryOwner = repositoryOwner,
-                repositoryName = repositoryName,
-                gitHubAccessToken = gitHubAccessToken,
             ),
     )
 
@@ -166,13 +159,6 @@ class RiScController(
             riScId = id,
             gitHubAccessToken = gitHubAccessToken,
             userInfo = userInfo,
-            baseBranch =
-                githubConnector
-                    .fetchRepositoryInfo(
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubAccessToken = gitHubAccessToken,
-                    ).defaultBranch,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])

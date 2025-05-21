@@ -60,7 +60,6 @@ class GithubConnectorTests {
                 GithubConnector(
                     filenamePrefix = filenamePrefix,
                     filenamePostfix = filenamePostfix,
-                    riScFolderPath = riscFolderPath,
                     githubHelper =
                         GithubHelper(
                             filenamePrefix = filenamePrefix,

@@ -18,6 +18,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
+import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceStatus
 import no.risc.risc.models.InternDifference
@@ -243,11 +244,11 @@ class RiScService(
                     accessToken = accessTokens.githubAccessToken.value,
                 )
 
-            RiScStatus.SentForApproval, RiScStatus.Draft ->
+            RiScStatus.SentForApproval, RiScStatus.Draft, RiScStatus.DeletionDraft, RiScStatus.DeletionSentForApproval ->
                 githubConnector.fetchDraftedRiScContent(
                     owner = owner,
                     repository = repository,
-                    id = riScIdentifier.id,
+                    id = riScIdentifier,
                     accessToken = accessTokens.githubAccessToken.value,
                 )
         }.responseToRiScResult(
@@ -329,24 +330,6 @@ class RiScService(
         defaultBranch: String,
     ): RiScResult =
         updateOrCreateRiSc(
-            owner = owner,
-            repository = repository,
-            riScId = riScId,
-            content = content,
-            sopsConfig = content.sopsConfig,
-            accessTokens = accessTokens,
-            defaultBranch = defaultBranch,
-        )
-
-    suspend fun deleteRiSc(
-        owner: String,
-        repository: String,
-        riScId: String,
-        content: RiScWrapperObject,
-        accessTokens: AccessTokens,
-        defaultBranch: String,
-    ): RiScResult =
-        deleteRiSc(
             owner = owner,
             repository = repository,
             riScId = riScId,
@@ -506,69 +489,19 @@ class RiScService(
         }
     }
 
-    private suspend fun deleteRiSc(
+    suspend fun deleteRiSc(
         owner: String,
         repository: String,
         riScId: String,
-        content: RiScWrapperObject,
-        sopsConfig: SopsConfig,
         accessTokens: AccessTokens,
-        defaultBranch: String,
-    ): RiScResult {
-        try {
-            val riScApprovalPRStatus =
-                githubConnector.deleteRiSc(
-                    owner = owner,
-                    repository = repository,
-                    riScId = riScId,
-                    fileContent = encryptedData,
-                    requiresNewApproval = content.isRequiresNewApproval,
-                    accessTokens = accessTokens,
-                    userInfo = content.userInfo,
-                    defaultBranch = defaultBranch,
-                )
-
-            return when (riScApprovalPRStatus.pullRequest) {
-                is GithubPullRequestObject ->
-                    PublishRiScResultDTO(
-                        riScId = riScId,
-                        status = ProcessingStatus.DeletePullRequest,
-                        statusMessage = "Pull request was created for deleting RiSc",
-                        pendingApproval = riScApprovalPRStatus.pullRequest.toPendingApprovalDTO(),
-                    )
-
-                null ->
-                    ProcessRiScResultDTO(
-                        riScId = riScId,
-                        status =
-                            if (riScApprovalPRStatus.hasClosedPr) {
-                                ProcessingStatus.UpdatedRiScRequiresNewApproval // change
-                            } else {
-                                ProcessingStatus.UpdatedRiSc // change
-                            },
-                        statusMessage =
-                            "Risk scorecard was deleted" +
-                                if (riScApprovalPRStatus.hasClosedPr) {
-                                    " and has to be approved by av risk owner again"
-                                } else {
-                                    ""
-                                },
-                    )
-
-                else -> {
-                    throw DeletingRiScException(
-                        message = "Failed to delete risk scorecard with id $riScId",
-                        riScId = riScId,
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            throw DeletingRiScException(
-                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
+    ): DeleteRiScResultDTO =
+        githubConnector
+            .deleteRiSc(
+                owner = owner,
+                repository = repository,
                 riScId = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
             )
-        }
-    }
 
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
@@ -588,7 +521,6 @@ class RiScService(
         riScId: String,
         gitHubAccessToken: String,
         userInfo: UserInfo,
-        baseBranch: String,
     ): PublishRiScResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForRiSc(
@@ -598,7 +530,6 @@ class RiScService(
                 requiresNewApproval = true,
                 gitHubAccessToken = gitHubAccessToken,
                 userInfo = userInfo,
-                baseBranch = baseBranch,
             )
 
         return PublishRiScResultDTO(
