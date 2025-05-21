@@ -208,6 +208,18 @@ class MockableWebClient {
     fun getNextRequest(path: String): MockableRequest = requests.first { it.path == path }.also { requests.remove(it) }
 
     /**
+     * Retrieves and removes the oldest request made to the web client at the specified path with the specified HTTP method.
+     *
+     * @param path The path to match on.
+     * @param method The HTTP method to match on.
+     * @throws NoSuchElementException If no requests have been made to the given path
+     */
+    fun getNextRequest(
+        path: String,
+        method: HttpMethod,
+    ): MockableRequest = requests.first { it.path == path && it.method == method }.also { requests.remove(it) }
+
+    /**
      * Indicates whether there are responses queued up for a given path that have not yet been consumed. If there are
      * wildcard responses queued up, then the method will always return true.
      *
