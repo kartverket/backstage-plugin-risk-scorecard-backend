@@ -13,6 +13,7 @@ import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -125,6 +126,24 @@ class RiScController(
                 ).defaultBranch,
     )
 
+    @DeleteMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
+    suspend fun deleteRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable id: String,
+    ) = riScService.deleteRiSc(
+        owner = repositoryOwner,
+        repository = repositoryName,
+        riScId = id,
+        accessTokens =
+            AccessTokens(
+                gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                githubAccessToken = GithubAccessToken(gitHubAccessToken),
+            ),
+    )
+
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     suspend fun sendRiScForPublishing(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
@@ -140,13 +159,6 @@ class RiScController(
             riScId = id,
             gitHubAccessToken = gitHubAccessToken,
             userInfo = userInfo,
-            baseBranch =
-                githubConnector
-                    .fetchRepositoryInfo(
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubAccessToken = gitHubAccessToken,
-                    ).defaultBranch,
         )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/{riscId}/difference", produces = ["application/json"])

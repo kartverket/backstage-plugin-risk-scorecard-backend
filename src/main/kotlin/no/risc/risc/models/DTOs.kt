@@ -106,6 +106,7 @@ abstract class RiScResult {
     abstract val statusMessage: String
 }
 
+@Serializable
 class ProcessRiScResultDTO(
     override val riScId: String,
     override val status: ProcessingStatus,
@@ -120,6 +121,13 @@ class ProcessRiScResultDTO(
             )
     }
 }
+
+@Serializable
+class DeleteRiScResultDTO(
+    override val riScId: String,
+    override val status: ProcessingStatus,
+    override val statusMessage: String,
+) : RiScResult()
 
 @Serializable
 class PublishRiScResultDTO(
@@ -141,6 +149,9 @@ enum class ProcessingStatus(
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
+    DeletedRiSc("Deleted risk scorecard successfully"),
+    DeletedRiScRequiresApproval("Deleted risk scorecard and requires approval"),
+    ErrorWhenDeletingRiSc("Error when deleting risk scorecard"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
@@ -166,4 +177,16 @@ enum class RiScStatus {
     Draft,
     SentForApproval,
     Published,
+    DeletionDraft,
+    DeletionSentForApproval,
+}
+
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
+data class UserInfo(
+    val name: String,
+    val email: String,
+) {
+    override fun toString(): String = "$name ($email)"
 }

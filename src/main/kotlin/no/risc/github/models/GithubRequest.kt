@@ -22,6 +22,21 @@ data class GithubWriteToFilePayload(
 )
 
 /**
+ * For use with GitHub's delete a file contents API endpoint.
+ *
+ * @see <a href="https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#delete-a-file">Delete a file API
+ *      documentation</a>
+ */
+@Serializable
+data class GithubDeleteFilePayload(
+    val message: String,
+    val sha: String,
+    val branch: String? = null,
+    @SerialName("committer")
+    val author: Author? = null,
+)
+
+/**
  * The author to create/update a file as.
  *
  * @see GithubWriteToFilePayload

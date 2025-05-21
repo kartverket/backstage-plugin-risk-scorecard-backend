@@ -3,6 +3,7 @@ package no.risc.exception
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.InvalidAccessTokensException
@@ -16,6 +17,7 @@ import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.DecryptionFailureDTO
+import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.RiScContentResultDTO
@@ -140,6 +142,18 @@ internal class GlobalExceptionHandler {
         return ProcessRiScResultDTO(
             riScId = ex.riScId,
             status = ProcessingStatus.ErrorWhenCreatingRiSc,
+            statusMessage = ex.message,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    @ExceptionHandler(DeletingRiScException::class)
+    fun handleDeletingRiScException(ex: DeletingRiScException): DeleteRiScResultDTO {
+        logger.error(ex.message, ex)
+        return DeleteRiScResultDTO(
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenDeletingRiSc,
             statusMessage = ex.message,
         )
     }
