@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
     id("org.springframework.boot") version "3.5.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.2.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.3.0"
 }
 
 ktlint {
