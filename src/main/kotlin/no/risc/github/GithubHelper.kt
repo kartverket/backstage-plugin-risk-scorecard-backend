@@ -19,16 +19,16 @@ class GithubHelper(
      *
      * @param riScId The ID of the RiSc.
      */
-    private fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
+    internal fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
 
     /**
-     * Constructs a URI for performing file/directory operations (retrieval and update). If no branch is provided, then
-     * the default branch is considered.
+     * Constructs a URI for performing file/directory operations (retrieval, update and deletion). If no branch is
+     * provided, then the default branch is considered.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to consider.
      * @param path The path of the file/directory to consider
-     * @param branch The branch to perform the operations on.
+     * @param branch The branch to perform the operations on. Only valid for retrieval.
      * @see <a href="https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#get-repository-content">The
      *      get repository content API documentation</a>
      */
@@ -146,6 +146,21 @@ class GithubHelper(
         owner: String,
         repository: String,
     ): String = "/$owner/$repository/git/refs"
+
+    /**
+     * Constructs a URI to delete a branch in the provided repository.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to consider.
+     * @param branch The name of the branch to delete
+     * @see <a href="https://docs.github.com/en/rest/git/refs?apiVersion=2022-11-28#delete-a-reference">The delete a
+     *      reference API documentation</a>
+     */
+    fun uriToDeleteBranch(
+        owner: String,
+        repository: String,
+        branch: String,
+    ): String = "/$owner/$repository/git/refs/heads/$branch"
 
     /**
      * Constructs a URI to fetch all pull requests in the repository.

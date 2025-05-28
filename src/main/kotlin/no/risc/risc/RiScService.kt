@@ -18,6 +18,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
+import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceStatus
 import no.risc.risc.models.InternDifference
@@ -243,11 +244,11 @@ class RiScService(
                     accessToken = accessTokens.githubAccessToken.value,
                 )
 
-            RiScStatus.SentForApproval, RiScStatus.Draft ->
+            RiScStatus.SentForApproval, RiScStatus.Draft, RiScStatus.DeletionDraft, RiScStatus.DeletionSentForApproval ->
                 githubConnector.fetchDraftedRiScContent(
                     owner = owner,
                     repository = repository,
-                    id = riScIdentifier.id,
+                    id = riScIdentifier,
                     accessToken = accessTokens.githubAccessToken.value,
                 )
         }.responseToRiScResult(
@@ -488,6 +489,20 @@ class RiScService(
         }
     }
 
+    suspend fun deleteRiSc(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessTokens: AccessTokens,
+    ): DeleteRiScResultDTO =
+        githubConnector
+            .deleteRiSc(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
+            )
+
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
      * is made against the provided base branch.
@@ -506,7 +521,6 @@ class RiScService(
         riScId: String,
         gitHubAccessToken: String,
         userInfo: UserInfo,
-        baseBranch: String,
     ): PublishRiScResultDTO {
         val pullRequestObject =
             githubConnector.createPullRequestForRiSc(
@@ -516,7 +530,6 @@ class RiScService(
                 requiresNewApproval = true,
                 gitHubAccessToken = gitHubAccessToken,
                 userInfo = userInfo,
-                baseBranch = baseBranch,
             )
 
         return PublishRiScResultDTO(
