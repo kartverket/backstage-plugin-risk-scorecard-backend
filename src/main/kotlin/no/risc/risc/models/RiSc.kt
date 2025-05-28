@@ -152,7 +152,7 @@ data class RiScScenarioRisk(
 object RiScScenarioActionSerializer : FlattenSerializer<RiScScenarioAction>(
     serializer = RiScScenarioAction.generatedSerializer(),
     flattenKey = "action",
-    subKeys = listOf("ID", "url", "status"),
+    subKeys = listOf("ID", "url", "status", "description"),
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -162,6 +162,7 @@ data class RiScScenarioAction(
     val title: String,
     @SerialName("ID")
     val id: String,
+    val description: String,
     val url: String? = null,
     val status: RiScScenarioActionStatus,
 )

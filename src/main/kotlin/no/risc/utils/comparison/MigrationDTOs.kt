@@ -43,9 +43,9 @@ data class MigrationChange41Scenario(
     val title: String,
     val id: String,
     var changedRiskProbability: MigrationChangedValue<Double>? = null,
-    var changedRiskConsequence: MigrationChangedValue<Int>? = null,
+    var changedRiskConsequence: MigrationChangedValue<Double>? = null,
     var changedRemainingRiskProbability: MigrationChangedValue<Double>? = null,
-    var changedRemainingRiskConsequence: MigrationChangedValue<Int>? = null,
+    var changedRemainingRiskConsequence: MigrationChangedValue<Double>? = null,
 ) {
     fun hasChanges() =
         changedRiskConsequence !== null ||

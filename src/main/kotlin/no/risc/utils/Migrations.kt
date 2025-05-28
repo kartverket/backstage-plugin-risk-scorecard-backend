@@ -1,15 +1,15 @@
 package no.risc.utils
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
+import no.risc.risc.models.RiScScenario
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
@@ -241,25 +241,18 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): Pair<JsonObject, Mig
  *  300     ->      400 = 20^2 (~ daily)
  *
  */
-private fun updateScenarioFrom40to41(scenario: JsonObject): Pair<JsonObject, MigrationChange41Scenario?> {
-    val scenarioObject = scenario.toMutableMap()
-
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return Pair(scenario, null)
-
-    val changes =
-        MigrationChange41Scenario(
-            title = scenarioObject["title"]!!.jsonPrimitive.content,
-            id = scenarioDetails["ID"]!!.jsonPrimitive.content,
-        )
-
-    val consequenceMigrations: Map<Int, Int> =
+private fun updateScenarioFrom40to41(
+    scenario: RiScScenario,
+    addChanges: (MigrationChange41Scenario) -> Unit,
+): RiScScenario {
+    val consequenceMigrations: Map<Double, Double> =
         mapOf(
-            1000 to 8000,
-            30000 to 160000,
-            1000000 to 3200000,
-            30000000 to 64000000,
-            1000000000 to 1280000000,
-        )
+            1000.0 to 8000.0,
+            30000.0 to 160000.0,
+            1000000.0 to 3200000.0,
+            30000000.0 to 64000000.0,
+            1000000000.0 to 1280000000.0,
+        ).withDefault { it }
 
     val probabilityMigrations: Map<Double, Double> =
         mapOf(
@@ -268,53 +261,42 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): Pair<JsonObject, Mig
             1.0 to 1.0,
             50.0 to 20.0,
             300.0 to 400.0,
+        ).withDefault { it }
+
+    val migratedScenario =
+        scenario.copy(
+            risk =
+                scenario.risk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.risk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.risk.probability),
+                ),
+            remainingRisk =
+                scenario.remainingRisk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.remainingRisk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.remainingRisk.probability),
+                ),
         )
 
-    fun migrateRiskFrom40to41(
-        riskElement: JsonElement,
-        probabilityChangeSetter: (values: MigrationChangedValue<Double>) -> Unit,
-        consequenceChangeSetter: (values: MigrationChangedValue<Int>) -> Unit,
-    ): JsonObject {
-        val risk = riskElement.jsonObject.toMutableMap()
+    fun changeValue(
+        oldValue: Double,
+        newValue: Double,
+    ): MigrationChangedValue<Double>? = if (oldValue != newValue) MigrationChangedValue(oldValue, newValue) else null
 
-        risk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
-            val newValue = probabilityMigrations.getOrDefault(oldValue, oldValue)
-            if (oldValue != newValue) probabilityChangeSetter(MigrationChangedValue(oldValue, newValue))
-            risk["probability"] = JsonPrimitive(newValue)
-        }
-
-        risk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
-            val newValue = consequenceMigrations.getOrDefault(oldValue, oldValue)
-            if (oldValue != newValue) consequenceChangeSetter(MigrationChangedValue(oldValue, newValue))
-            risk["consequence"] = JsonPrimitive(newValue)
-        }
-
-        return JsonObject(risk)
-    }
-
-    // Migrate risk
-    scenarioDetails.computeIfPresent("risk") { _, riskElement ->
-        migrateRiskFrom40to41(
-            riskElement = riskElement,
-            probabilityChangeSetter = { changes.changedRiskProbability = it },
-            consequenceChangeSetter = { changes.changedRiskConsequence = it },
+    val changes =
+        MigrationChange41Scenario(
+            title = scenario.title,
+            id = scenario.id,
+            changedRiskProbability = changeValue(scenario.risk.probability, migratedScenario.risk.probability),
+            changedRiskConsequence = changeValue(scenario.risk.consequence, migratedScenario.risk.consequence),
+            changedRemainingRiskProbability =
+                changeValue(scenario.remainingRisk.probability, migratedScenario.remainingRisk.probability),
+            changedRemainingRiskConsequence =
+                changeValue(scenario.remainingRisk.consequence, migratedScenario.remainingRisk.consequence),
         )
-    }
 
-    // Migrate remaining risk
-    scenarioDetails.computeIfPresent("remainingRisk") { _, remainingRiskElement ->
-        migrateRiskFrom40to41(
-            riskElement = remainingRiskElement,
-            probabilityChangeSetter = { changes.changedRemainingRiskProbability = it },
-            consequenceChangeSetter = { changes.changedRemainingRiskConsequence = it },
-        )
-    }
+    if (changes.hasChanges()) addChanges(changes)
 
-    scenarioObject["scenario"] = JsonObject(scenarioDetails)
-    return Pair(
-        JsonObject(scenarioObject),
-        if (changes.hasChanges()) changes else null,
-    )
+    return migratedScenario
 }
 
 /**
@@ -340,26 +322,17 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): Pair<JsonObject, Mig
  *
  * */
 fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
-
-    // Change schema version 4.0 -> 4.1
-    jsonObject["schemaVersion"] = JsonPrimitive("4.1")
+    val riSc = Json.decodeFromString<RiSc>(obj.riScContent!!)
 
     val changedScenarios = mutableListOf<MigrationChange41Scenario>()
-
-    // Migrate consequence and probability in all scenarios
-    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
-        scenarios
-            .jsonArray
-            .map {
-                val (updatedScenario, scenarioChanges) = updateScenarioFrom40to41(it.jsonObject)
-                if (scenarioChanges != null) changedScenarios.add(scenarioChanges)
-                updatedScenario
-            }.let(::JsonArray)
-    }
+    val migratedRiSc =
+        riSc.copy(
+            schemaVersion = "4.1",
+            scenarios = riSc.scenarios.map { scenario -> updateScenarioFrom40to41(scenario, changedScenarios::add) },
+        )
 
     return obj.copy(
-        riScContent = serializeJSON(JsonObject(jsonObject)),
+        riScContent = serializeJSON(migratedRiSc),
         migrationStatus =
             obj.migrationStatus.copy(
                 migrationChanges = true,
