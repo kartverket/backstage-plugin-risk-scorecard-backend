@@ -257,7 +257,7 @@ class MigrationFunctionTests {
 
         fun testConsequenceAndProbability(
             risk: JsonObject?,
-            expectedConsequence: Int,
+            expectedConsequence: Number,
             expectedProbability: Number,
         ) {
             val consequence = risk?.get("consequence")?.jsonPrimitive?.content
@@ -277,18 +277,18 @@ class MigrationFunctionTests {
         assertEquals(scenariosJsonObjects?.size, 3)
 
         scenariosJsonObjects?.get(0)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 160_000, 0.05)
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 8_000, 0.0025)
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 160_000.0, 0.05)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 8_000.0, 0.0025)
         }
         scenariosJsonObjects?.get(1)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 64_000_000, 20.0)
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 3_200_000, 1.0)
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 64_000_000.0, 20.0)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 3_200_000.0, 1.0)
         }
         scenariosJsonObjects?.get(2)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 1_280_000_000, 400.0)
+            testConsequenceAndProbability(it["risk"]?.jsonObject, 1_280_000_000.0, 400.0)
 
             // Specific values not equal to the preset values should not be changed
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 198_000, 0.123)
+            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 198_000.0, 0.123)
         }
 
         assertEquals(true, migratedObject.migrationStatus.migrationChanges)
@@ -308,9 +308,9 @@ class MigrationFunctionTests {
                 title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
                 id = "14Kap",
                 changedRiskProbability = MigrationChangedValue(0.1, 0.05),
-                changedRiskConsequence = MigrationChangedValue(30_000, 160_000),
+                changedRiskConsequence = MigrationChangedValue(30_000.0, 160_000.0),
                 changedRemainingRiskProbability = MigrationChangedValue(0.01, 0.0025),
-                changedRemainingRiskConsequence = MigrationChangedValue(1_000, 8_000),
+                changedRemainingRiskConsequence = MigrationChangedValue(1_000.0, 8_000.0),
             )
 
         assertEquals(
@@ -324,8 +324,8 @@ class MigrationFunctionTests {
                 title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
                 id = "25FcD",
                 changedRiskProbability = MigrationChangedValue(50.0, 20.0),
-                changedRiskConsequence = MigrationChangedValue(30_000_000, 64_000_000),
-                changedRemainingRiskConsequence = MigrationChangedValue(1_000_000, 3_200_000),
+                changedRiskConsequence = MigrationChangedValue(30_000_000.0, 64_000_000.0),
+                changedRemainingRiskConsequence = MigrationChangedValue(1_000_000.0, 3_200_000.0),
             )
 
         assertEquals(
@@ -339,7 +339,7 @@ class MigrationFunctionTests {
                 title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
                 id = "2dsFd",
                 changedRiskProbability = MigrationChangedValue(300.0, 400.0),
-                changedRiskConsequence = MigrationChangedValue(1_000_000_000, 1_280_000_000),
+                changedRiskConsequence = MigrationChangedValue(1_000_000_000.0, 1_280_000_000.0),
             )
 
         assertEquals(
@@ -414,8 +414,8 @@ class MigrationFunctionTests {
                         MigrationChange41Scenario(
                             title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
                             id = "14Kap",
-                            changedRiskConsequence = MigrationChangedValue(1_000, 8_000),
-                            changedRemainingRiskConsequence = MigrationChangedValue(1_000, 8_000),
+                            changedRiskConsequence = MigrationChangedValue(1_000.0, 8_000.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(1_000.0, 8_000.0),
                             changedRemainingRiskProbability = MigrationChangedValue(0.1, 0.05),
                         ),
                     ),
