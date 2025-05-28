@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 import no.risc.utils.Difference
 import no.risc.utils.KOffsetDateTimeSerializer
+import no.risc.utils.comparison.MigrationChange40
+import no.risc.utils.comparison.MigrationChange41
 import java.time.OffsetDateTime
 
 @Serializable
@@ -70,6 +72,8 @@ data class MigrationStatus(
     val migrationChanges: Boolean,
     val migrationRequiresNewApproval: Boolean,
     val migrationVersions: MigrationVersions,
+    val migrationChanges40: MigrationChange40? = null,
+    val migrationChanges41: MigrationChange41? = null,
 )
 
 @Serializable

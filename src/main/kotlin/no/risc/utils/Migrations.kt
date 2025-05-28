@@ -9,8 +9,13 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.RiScContentResultDTO
+import no.risc.utils.comparison.MigrationChange40
+import no.risc.utils.comparison.MigrationChange40Action
+import no.risc.utils.comparison.MigrationChange40Scenario
+import no.risc.utils.comparison.MigrationChange41
+import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChangedValue
 
 /**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
@@ -85,6 +90,8 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
 
+    val changedScenarios = mutableListOf<MigrationChange40Scenario>()
+
     // Replace schemaVersion
     jsonObject["schemaVersion"] = JsonPrimitive("4.0")
 
@@ -92,17 +99,20 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
     jsonObject.computeIfPresent("scenarios") { _, scenarios ->
         scenarios
             .jsonArray
-            .map { updateScenarioFrom33To40(it.jsonObject) }
-            .let(::JsonArray)
+            .map {
+                val (updatedScenario, scenarioChanges) = updateScenarioFrom33To40(it.jsonObject)
+                if (scenarioChanges != null) changedScenarios.add(scenarioChanges)
+                updatedScenario
+            }.let(::JsonArray)
     }
 
     return obj.copy(
         riScContent = serializeJSON(JsonObject(jsonObject)),
         migrationStatus =
-            MigrationStatus(
+            obj.migrationStatus.copy(
                 migrationChanges = true,
                 migrationRequiresNewApproval = true,
-                migrationVersions = obj.migrationStatus.migrationVersions,
+                migrationChanges40 = if (changedScenarios.isNotEmpty()) MigrationChange40(scenarios = changedScenarios) else null,
             ),
     )
 }
@@ -121,13 +131,20 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  *
  */
-private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
+private fun updateScenarioFrom33To40(scenario: JsonObject): Pair<JsonObject, MigrationChange40Scenario?> {
     val scenarioObject = scenario.toMutableMap()
 
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return Pair(scenario, null)
 
-    // Remove "existingActions"
-    scenarioDetails.remove("existingActions")
+    var removedExistingActions: String? = null
+
+    // Remove "existingActions" and keep track of the removed ones
+    scenarioDetails.computeIfPresent("existingActions") { _, existingActions ->
+        existingActions.jsonPrimitive.content.also { content ->
+            if (content.isNotBlank()) removedExistingActions = content
+        }
+        null
+    }
 
     // Changed vulnerability names from 3.3 to 4.0
     val replacementMap =
@@ -139,17 +156,25 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
             "Denial of service" to "Excessive use",
         )
 
+    val changedVulnerabilities = mutableListOf<MigrationChangedValue<String>>()
     // Replace values in vulnerabilities array, if any vulnerabilities are present
     scenarioDetails.computeIfPresent("vulnerabilities") { _, vulnerabilitiesArray ->
         vulnerabilitiesArray
             .jsonArray
             .map { it.jsonPrimitive.content }
-            .map { replacementMap.getOrDefault(it, it) }
-            .distinct()
+            .map { oldValue ->
+                replacementMap
+                    .getOrDefault(oldValue, oldValue)
+                    .also { newValue ->
+                        // Keep track of changed vulnerabilities
+                        if (oldValue != newValue) changedVulnerabilities.add(MigrationChangedValue(oldValue, newValue))
+                    }
+            }.distinct()
             .map(::JsonPrimitive)
             .let(::JsonArray)
     }
 
+    val changedActions = mutableListOf<MigrationChange40Action>()
     // Remove "owner" and "deadline" from actions, if there are any actions
     scenarioDetails.computeIfPresent("actions") { _, actionsArray ->
         actionsArray
@@ -157,8 +182,23 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
             .map { it.jsonObject.toMutableMap() }
             .onEach {
                 it.computeIfPresent("action") { _, actionObject ->
+                    // Record the changed action if owner or deadline is present and contains text
+                    val owner = actionObject.jsonObject["owner"]?.jsonPrimitive?.content
+                    val deadline = actionObject.jsonObject["deadline"]?.jsonPrimitive?.content
+
+                    if (!owner.isNullOrEmpty() || !deadline.isNullOrEmpty()) {
+                        changedActions.add(
+                            MigrationChange40Action(
+                                title = it["title"]!!.jsonPrimitive.content,
+                                id = actionObject.jsonObject["ID"]!!.jsonPrimitive.content,
+                                removedOwner = owner,
+                                removedDeadline = deadline,
+                            ),
+                        )
+                    }
+
                     actionObject.jsonObject
-                        .filter { (key, _) -> key != "owner" && key != "deadline" }
+                        .filterKeys { key -> key != "owner" && key != "deadline" }
                         .let(::JsonObject)
                 }
             }.map(::JsonObject)
@@ -166,7 +206,21 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
     }
 
     scenarioObject["scenario"] = JsonObject(scenarioDetails)
-    return JsonObject(scenarioObject)
+
+    if (removedExistingActions == null && changedActions.isEmpty() && changedVulnerabilities.isEmpty()) {
+        return Pair(JsonObject(scenarioObject), null)
+    }
+
+    return Pair(
+        JsonObject(scenarioObject),
+        MigrationChange40Scenario(
+            title = scenarioObject["title"]!!.jsonPrimitive.content,
+            id = scenarioDetails["ID"]!!.jsonPrimitive.content,
+            removedExistingActions = removedExistingActions,
+            changedVulnerabilities = changedVulnerabilities,
+            changedActions = changedActions,
+        ),
+    )
 }
 
 /**
@@ -179,7 +233,7 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *  30 000 000      ->      64 000 000 = 20^6
  *  1 000 000 000   ->      1 280 000 000 = 20^7
  *
- *  Changes in probabiliy (in incidents per year):
+ *  Changes in probability (in incidents per year):
  *  0.01    ->      0.0025 = 20^-2 (every 400 years)
  *  0.1     ->      0.05 = 20^-1 (every 20 years)
  *  1       ->      1 = 20^0 (every year)
@@ -187,12 +241,18 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *  300     ->      400 = 20^2 (~ daily)
  *
  */
-private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
+private fun updateScenarioFrom40to41(scenario: JsonObject): Pair<JsonObject, MigrationChange41Scenario?> {
     val scenarioObject = scenario.toMutableMap()
 
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return Pair(scenario, null)
 
-    val consequenceMigrations =
+    val changes =
+        MigrationChange41Scenario(
+            title = scenarioObject["title"]!!.jsonPrimitive.content,
+            id = scenarioDetails["ID"]!!.jsonPrimitive.content,
+        )
+
+    val consequenceMigrations: Map<Int, Int> =
         mapOf(
             1000 to 8000,
             30000 to 160000,
@@ -201,28 +261,32 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
             1000000000 to 1280000000,
         )
 
-    val probabilityMigrations =
+    val probabilityMigrations: Map<Double, Double> =
         mapOf(
             0.01 to 0.0025,
             0.1 to 0.05,
-            1 to 1,
-            50.0 to 20,
-            300.0 to 400,
+            1.0 to 1.0,
+            50.0 to 20.0,
+            300.0 to 400.0,
         )
 
-    fun migrateRiskFrom40to41(riskElement: JsonElement): JsonObject {
+    fun migrateRiskFrom40to41(
+        riskElement: JsonElement,
+        probabilityChangeSetter: (values: MigrationChangedValue<Double>) -> Unit,
+        consequenceChangeSetter: (values: MigrationChangedValue<Int>) -> Unit,
+    ): JsonObject {
         val risk = riskElement.jsonObject.toMutableMap()
 
         risk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
-            probabilityMigrations[oldValue]?.let { newValue ->
-                risk["probability"] = JsonPrimitive(newValue)
-            }
+            val newValue = probabilityMigrations.getOrDefault(oldValue, oldValue)
+            if (oldValue != newValue) probabilityChangeSetter(MigrationChangedValue(oldValue, newValue))
+            risk["probability"] = JsonPrimitive(newValue)
         }
 
         risk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
-            consequenceMigrations[oldValue]?.let { newValue ->
-                risk["consequence"] = JsonPrimitive(newValue)
-            }
+            val newValue = consequenceMigrations.getOrDefault(oldValue, oldValue)
+            if (oldValue != newValue) consequenceChangeSetter(MigrationChangedValue(oldValue, newValue))
+            risk["consequence"] = JsonPrimitive(newValue)
         }
 
         return JsonObject(risk)
@@ -230,16 +294,27 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
 
     // Migrate risk
     scenarioDetails.computeIfPresent("risk") { _, riskElement ->
-        migrateRiskFrom40to41(riskElement)
+        migrateRiskFrom40to41(
+            riskElement = riskElement,
+            probabilityChangeSetter = { changes.changedRiskProbability = it },
+            consequenceChangeSetter = { changes.changedRiskConsequence = it },
+        )
     }
 
     // Migrate remaining risk
     scenarioDetails.computeIfPresent("remainingRisk") { _, remainingRiskElement ->
-        migrateRiskFrom40to41(remainingRiskElement)
+        migrateRiskFrom40to41(
+            riskElement = remainingRiskElement,
+            probabilityChangeSetter = { changes.changedRemainingRiskProbability = it },
+            consequenceChangeSetter = { changes.changedRemainingRiskConsequence = it },
+        )
     }
 
     scenarioObject["scenario"] = JsonObject(scenarioDetails)
-    return JsonObject(scenarioObject)
+    return Pair(
+        JsonObject(scenarioObject),
+        if (changes.hasChanges()) changes else null,
+    )
 }
 
 /**
@@ -256,7 +331,7 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
  *  30 000 000      ->      64 000 000 = 20^6
  *  1 000 000 000   ->      1 280 000 000 = 20^7
  *
- *  Changes in probabiliy (in incidents per year):
+ *  Changes in probability (in incidents per year):
  *  0.01    ->      0.0025 = 20^-2 (every 400 years)
  *  0.1     ->      0.05 = 20^-1 (every 20 years)
  *  1       ->      1 = 20^0 (every year)
@@ -270,22 +345,26 @@ fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
     // Change schema version 4.0 -> 4.1
     jsonObject["schemaVersion"] = JsonPrimitive("4.1")
 
+    val changedScenarios = mutableListOf<MigrationChange41Scenario>()
+
     // Migrate consequence and probability in all scenarios
     jsonObject.computeIfPresent("scenarios") { _, scenarios ->
         scenarios
             .jsonArray
             .map {
-                updateScenarioFrom40to41(it.jsonObject)
+                val (updatedScenario, scenarioChanges) = updateScenarioFrom40to41(it.jsonObject)
+                if (scenarioChanges != null) changedScenarios.add(scenarioChanges)
+                updatedScenario
             }.let(::JsonArray)
     }
 
     return obj.copy(
         riScContent = serializeJSON(JsonObject(jsonObject)),
         migrationStatus =
-            MigrationStatus(
+            obj.migrationStatus.copy(
                 migrationChanges = true,
                 migrationRequiresNewApproval = true,
-                migrationVersions = obj.migrationStatus.migrationVersions,
+                migrationChanges41 = if (changedScenarios.isNotEmpty()) MigrationChange41(scenarios = changedScenarios) else null,
             ),
     )
 }
