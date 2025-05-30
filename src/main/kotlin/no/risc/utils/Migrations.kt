@@ -1,20 +1,22 @@
 package no.risc.utils
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.models.RiSc
+import no.risc.risc.models.RiSc33
+import no.risc.risc.models.RiSc33Scenario
+import no.risc.risc.models.RiSc33ScenarioVulnerability
+import no.risc.risc.models.RiSc4X
+import no.risc.risc.models.RiSc4XScenario
+import no.risc.risc.models.RiSc4XScenarioAction
+import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScContentResultDTO
-import no.risc.risc.models.RiScScenario
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
 /**
@@ -88,26 +90,21 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  */
 fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
+    val riSc = Json.decodeFromString<RiSc33>(obj.riScContent!!)
 
     val changedScenarios = mutableListOf<MigrationChange40Scenario>()
 
-    // Replace schemaVersion
-    jsonObject["schemaVersion"] = JsonPrimitive("4.0")
-
-    // Update scenarios, if any are present
-    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
-        scenarios
-            .jsonArray
-            .map {
-                val (updatedScenario, scenarioChanges) = updateScenarioFrom33To40(it.jsonObject)
-                if (scenarioChanges != null) changedScenarios.add(scenarioChanges)
-                updatedScenario
-            }.let(::JsonArray)
-    }
+    val migratedRiSc =
+        RiSc4X(
+            schemaVersion = "4.0",
+            title = riSc.title,
+            scope = riSc.scope,
+            valuations = riSc.valuations,
+            scenarios = riSc.scenarios.map { scenario -> updateScenarioFrom33To40(scenario, changedScenarios::add) },
+        )
 
     return obj.copy(
-        riScContent = serializeJSON(JsonObject(jsonObject)),
+        riScContent = serializeJSON(migratedRiSc),
         migrationStatus =
             obj.migrationStatus.copy(
                 migrationChanges = true,
@@ -131,96 +128,88 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  *
  */
-private fun updateScenarioFrom33To40(scenario: JsonObject): Pair<JsonObject, MigrationChange40Scenario?> {
-    val scenarioObject = scenario.toMutableMap()
-
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return Pair(scenario, null)
-
-    var removedExistingActions: String? = null
-
-    // Remove "existingActions" and keep track of the removed ones
-    scenarioDetails.computeIfPresent("existingActions") { _, existingActions ->
-        existingActions.jsonPrimitive.content.also { content ->
-            if (content.isNotBlank()) removedExistingActions = content
+private fun updateScenarioFrom33To40(
+    scenario: RiSc33Scenario,
+    addChanges: (MigrationChange40Scenario) -> Unit,
+): RiSc4XScenario {
+    // Vulnerability enum mapping from 3.3 to 4.0
+    fun replaceVulnerability(vulnerability: RiSc33ScenarioVulnerability): RiSc4XScenarioVulnerability =
+        when (vulnerability) {
+            // Changed
+            RiSc33ScenarioVulnerability.COMPROMISED_ADMIN_USER -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc33ScenarioVulnerability.DISCLOSED_SECRET -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
+            RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE -> RiSc4XScenarioVulnerability.EXCESSIVE_USE
+            RiSc33ScenarioVulnerability.ESCALATION_OF_RIGHTS -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc33ScenarioVulnerability.USER_REPUDIATION -> RiSc4XScenarioVulnerability.UNMONITORED_USE
+            // Remain the same
+            RiSc33ScenarioVulnerability.DEPENDENCY_VULNERABILITY -> RiSc4XScenarioVulnerability.DEPENDENCY_VULNERABILITY
+            RiSc33ScenarioVulnerability.INFORMATION_LEAK -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
+            RiSc33ScenarioVulnerability.INPUT_TAMPERING -> RiSc4XScenarioVulnerability.INPUT_TAMPERING
+            RiSc33ScenarioVulnerability.MISCONFIGURATION -> RiSc4XScenarioVulnerability.MISCONFIGURATION
         }
-        null
-    }
-
-    // Changed vulnerability names from 3.3 to 4.0
-    val replacementMap =
-        mapOf(
-            "User repudiation" to "Unmonitored use",
-            "Compromised admin user" to "Unauthorized access",
-            "Escalation of rights" to "Unauthorized access",
-            "Disclosed secret" to "Information leak",
-            "Denial of service" to "Excessive use",
-        )
-
-    val changedVulnerabilities = mutableListOf<MigrationChangedValue<String>>()
-    // Replace values in vulnerabilities array, if any vulnerabilities are present
-    scenarioDetails.computeIfPresent("vulnerabilities") { _, vulnerabilitiesArray ->
-        vulnerabilitiesArray
-            .jsonArray
-            .map { it.jsonPrimitive.content }
-            .map { oldValue ->
-                replacementMap
-                    .getOrDefault(oldValue, oldValue)
-                    .also { newValue ->
-                        // Keep track of changed vulnerabilities
-                        if (oldValue != newValue) changedVulnerabilities.add(MigrationChangedValue(oldValue, newValue))
-                    }
-            }.distinct()
-            .map(::JsonPrimitive)
-            .let(::JsonArray)
-    }
 
     val changedActions = mutableListOf<MigrationChange40Action>()
-    // Remove "owner" and "deadline" from actions, if there are any actions
-    scenarioDetails.computeIfPresent("actions") { _, actionsArray ->
-        actionsArray
-            .jsonArray
-            .map { it.jsonObject.toMutableMap() }
-            .onEach {
-                it.computeIfPresent("action") { _, actionObject ->
-                    // Record the changed action if owner or deadline is present and contains text
-                    val owner = actionObject.jsonObject["owner"]?.jsonPrimitive?.content
-                    val deadline = actionObject.jsonObject["deadline"]?.jsonPrimitive?.content
+    val changedVulnerabilities =
+        mutableListOf<MigrationChangedTypedValue<RiSc33ScenarioVulnerability, RiSc4XScenarioVulnerability>>()
+    val removedExistingActions: String? =
+        if (scenario.existingActions.isNullOrEmpty()) null else scenario.existingActions
 
-                    if (!owner.isNullOrEmpty() || !deadline.isNullOrEmpty()) {
+    val migratedScenario =
+        RiSc4XScenario(
+            title = scenario.title,
+            id = scenario.id,
+            description = scenario.description,
+            url = scenario.url,
+            threatActors = scenario.threatActors,
+            // Map changed vulnerabilities
+            vulnerabilities =
+                scenario.vulnerabilities
+                    .map { oldVulnerability ->
+                        val newVulnerability = replaceVulnerability(oldVulnerability)
+                        println("$newVulnerability – $oldVulnerability")
+                        if (newVulnerability.toString() != oldVulnerability.toString()) {
+                            changedVulnerabilities.add(MigrationChangedTypedValue(oldVulnerability, newVulnerability))
+                        }
+                        newVulnerability
+                    }.distinct(),
+            risk = scenario.risk,
+            remainingRisk = scenario.remainingRisk,
+            // Remove owner and deadline field from action
+            actions =
+                scenario.actions.map { action ->
+                    if (!action.owner.isNullOrEmpty() || !action.deadline.isNullOrEmpty()) {
                         changedActions.add(
                             MigrationChange40Action(
-                                title = it["title"]!!.jsonPrimitive.content,
-                                id = actionObject.jsonObject["ID"]!!.jsonPrimitive.content,
-                                removedOwner = owner,
-                                removedDeadline = deadline,
+                                title = action.title,
+                                id = action.id,
+                                removedOwner = action.owner,
+                                removedDeadline = action.deadline,
                             ),
                         )
                     }
+                    RiSc4XScenarioAction(
+                        title = action.title,
+                        id = action.id,
+                        description = action.description,
+                        url = action.url,
+                        status = action.status,
+                    )
+                },
+        )
 
-                    actionObject.jsonObject
-                        .filterKeys { key -> key != "owner" && key != "deadline" }
-                        .let(::JsonObject)
-                }
-            }.map(::JsonObject)
-            .let(::JsonArray)
+    if (removedExistingActions != null || changedActions.isNotEmpty() && changedVulnerabilities.isNotEmpty()) {
+        addChanges(
+            MigrationChange40Scenario(
+                title = scenario.title,
+                id = scenario.id,
+                removedExistingActions = removedExistingActions,
+                changedVulnerabilities = changedVulnerabilities,
+                changedActions = changedActions,
+            ),
+        )
     }
 
-    scenarioObject["scenario"] = JsonObject(scenarioDetails)
-
-    if (removedExistingActions == null && changedActions.isEmpty() && changedVulnerabilities.isEmpty()) {
-        return Pair(JsonObject(scenarioObject), null)
-    }
-
-    return Pair(
-        JsonObject(scenarioObject),
-        MigrationChange40Scenario(
-            title = scenarioObject["title"]!!.jsonPrimitive.content,
-            id = scenarioDetails["ID"]!!.jsonPrimitive.content,
-            removedExistingActions = removedExistingActions,
-            changedVulnerabilities = changedVulnerabilities,
-            changedActions = changedActions,
-        ),
-    )
+    return migratedScenario
 }
 
 /**
@@ -242,9 +231,9 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): Pair<JsonObject, Mig
  *
  */
 private fun updateScenarioFrom40to41(
-    scenario: RiScScenario,
+    scenario: RiSc4XScenario,
     addChanges: (MigrationChange41Scenario) -> Unit,
-): RiScScenario {
+): RiSc4XScenario {
     val consequenceMigrations: Map<Double, Double> =
         mapOf(
             1000.0 to 8000.0,
@@ -322,7 +311,7 @@ private fun updateScenarioFrom40to41(
  *
  * */
 fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val riSc = Json.decodeFromString<RiSc>(obj.riScContent!!)
+    val riSc = Json.decodeFromString<RiSc4X>(obj.riScContent!!)
 
     val changedScenarios = mutableListOf<MigrationChange41Scenario>()
     val migratedRiSc =

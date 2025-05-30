@@ -1,6 +1,8 @@
 package no.risc.utils.comparison
 
 import kotlinx.serialization.Serializable
+import no.risc.risc.models.RiSc33ScenarioVulnerability
+import no.risc.risc.models.RiSc4XScenarioVulnerability
 
 data class MigrationChanges(
     val migrationChange40: MigrationChange40? = null,
@@ -19,7 +21,7 @@ data class MigrationChange40Scenario(
     val title: String,
     val id: String,
     val removedExistingActions: String? = null,
-    val changedVulnerabilities: List<MigrationChangedValue<String>>,
+    val changedVulnerabilities: List<MigrationChangedTypedValue<RiSc33ScenarioVulnerability, RiSc4XScenarioVulnerability>>,
     val changedActions: List<MigrationChange40Action>,
 )
 
@@ -58,5 +60,11 @@ data class MigrationChange41Scenario(
 @Serializable
 data class MigrationChangedValue<T>(
     val oldValue: T,
+    val newValue: T,
+)
+
+@Serializable
+data class MigrationChangedTypedValue<S, T>(
+    val oldValue: S,
     val newValue: T,
 )
