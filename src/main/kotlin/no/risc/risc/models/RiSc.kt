@@ -15,7 +15,7 @@ data class RiSc4X(
     val schemaVersion: String,
     val title: String,
     val scope: String,
-    val valuations: List<RiScValuation>?,
+    val valuations: List<RiScValuation>? = null,
     val scenarios: List<RiSc4XScenario>,
 )
 
@@ -70,7 +70,7 @@ enum class RiSc4XScenarioVulnerability {
     override fun toString(): String = serializer().descriptor.getElementName(ordinal)
 }
 
-object RiSc4XScenarioActionSerializer : FlattenSerializer<RiSc4XScenarioAction>(
+private object RiSc4XScenarioActionSerializer : FlattenSerializer<RiSc4XScenarioAction>(
     serializer = RiSc4XScenarioAction.generatedSerializer(),
     flattenKey = "action",
     subKeys = listOf("ID", "url", "status", "description"),
@@ -96,7 +96,7 @@ data class RiSc33(
     val schemaVersion: String,
     val title: String,
     val scope: String,
-    val valuations: List<RiScValuation>?,
+    val valuations: List<RiScValuation>? = null,
     val scenarios: List<RiSc33Scenario>,
 )
 
@@ -167,7 +167,7 @@ enum class RiSc33ScenarioVulnerability {
     override fun toString(): String = serializer().descriptor.getElementName(ordinal)
 }
 
-object RiSc33ScenarioActionSerializer : FlattenSerializer<RiSc33ScenarioAction>(
+private object RiSc33ScenarioActionSerializer : FlattenSerializer<RiSc33ScenarioAction>(
     serializer = RiSc33ScenarioAction.generatedSerializer(),
     flattenKey = "action",
     subKeys = listOf("ID", "url", "status", "description", "owner", "deadline"),
