@@ -32,6 +32,7 @@
   - Escalation of rights -> Unauthorized access
   - Disclosed secret -> Information leak
   - Denial of service -> Excessive use
+  - Introduced "Flawed design"
 
 ## 3.3
 - Adds url field in actions
