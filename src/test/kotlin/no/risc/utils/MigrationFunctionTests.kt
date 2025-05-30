@@ -8,6 +8,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
+import no.risc.risc.models.RiSc33ScenarioVulnerability
+import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScStatus
 import no.risc.utils.comparison.MigrationChange40
@@ -15,6 +17,7 @@ import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -177,11 +180,26 @@ class MigrationFunctionTests {
 
         val expectedChanges =
             listOf(
-                MigrationChangedValue("User repudiation", "Unmonitored use"),
-                MigrationChangedValue("Compromised admin user", "Unauthorized access"),
-                MigrationChangedValue("Escalation of rights", "Unauthorized access"),
-                MigrationChangedValue("Disclosed secret", "Information leak"),
-                MigrationChangedValue("Denial of service", "Excessive use"),
+                MigrationChangedTypedValue(
+                    RiSc33ScenarioVulnerability.USER_REPUDIATION,
+                    RiSc4XScenarioVulnerability.UNMONITORED_USE,
+                ),
+                MigrationChangedTypedValue(
+                    RiSc33ScenarioVulnerability.COMPROMISED_ADMIN_USER,
+                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                ),
+                MigrationChangedTypedValue(
+                    RiSc33ScenarioVulnerability.ESCALATION_OF_RIGHTS,
+                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                ),
+                MigrationChangedTypedValue(
+                    RiSc33ScenarioVulnerability.DISCLOSED_SECRET,
+                    RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                ),
+                MigrationChangedTypedValue(
+                    RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE,
+                    RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                ),
             )
 
         assertTrue(
@@ -387,7 +405,10 @@ class MigrationFunctionTests {
                             removedExistingActions = "Ddos protection. ",
                             changedVulnerabilities =
                                 listOf(
-                                    MigrationChangedValue("Denial of service", "Excessive use"),
+                                    MigrationChangedTypedValue(
+                                        RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE,
+                                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                                    ),
                                 ),
                             changedActions =
                                 listOf(
