@@ -20,6 +20,6 @@ val JSONPrettyPrintFormat =
 fun parseJSONToElement(jsonString: String): JsonElement = JSONIgnoreParser.parseToJsonElement(jsonString)
 
 /**
- * Serializes the provided JsonElement to a string, using a pretty print format.
+ * Serializes the provided serializable element to a string, using a pretty print format.
  */
-fun serializeJSON(jsonElement: JsonElement): String = JSONPrettyPrintFormat.encodeToString(jsonElement)
+inline fun <reified T> serializeJSON(element: T): String = JSONPrettyPrintFormat.encodeToString(element)
