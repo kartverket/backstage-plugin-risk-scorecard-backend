@@ -12,6 +12,7 @@ import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
+import no.risc.slack.SlackService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -30,6 +31,7 @@ class RiScController(
     private val riScService: RiScService,
     private val githubConnector: GithubConnector,
     private val gitHubAppService: GitHubAppService,
+    private val slackService: SlackService,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
@@ -184,5 +186,13 @@ class RiScController(
             )
 
         return ResponseEntity.ok().body(difference)
+    }
+
+    @PostMapping("/{repositoryOwner}/{repositoryName}/feedback")
+    fun sendFeedback(
+        @RequestBody request: String,
+    ): ResponseEntity<*> {
+        slackService.sendFeedBack(request)
+        return ResponseEntity.ok("{}")
     }
 }
