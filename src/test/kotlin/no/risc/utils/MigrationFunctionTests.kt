@@ -1,17 +1,14 @@
 package no.risc.utils
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
-import no.risc.risc.models.RiSc33ScenarioVulnerability
+import no.risc.risc.models.RiSc
+import no.risc.risc.models.RiSc3X
+import no.risc.risc.models.RiSc3XScenarioVulnerability
+import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScContentResultDTO
-import no.risc.risc.models.RiScStatus
+import no.risc.risc.models.RiScScenarioRisk
+import no.risc.risc.models.RiScVersion
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
@@ -20,7 +17,6 @@ import no.risc.utils.comparison.MigrationChange41Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
@@ -32,16 +28,12 @@ class MigrationFunctionTests {
 
     @Test
     fun `test migrateFrom32To33`() {
-        val resourcePath = "3.2.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
-        val file = File(resourceUrl!!.toURI())
-        val fileContent = file.readText()
-        val obj =
-            RiScContentResultDTO(
-                riScId = "1",
-                status = ContentStatus.Success,
-                riScContent = fileContent,
-                riScStatus = RiScStatus.Published,
+        val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
+
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
+        val (migratedRiSc, _) =
+            migrateTo32To33(
+                riSc = riSc,
                 migrationStatus =
                     MigrationStatus(
                         migrationChanges = false,
@@ -49,90 +41,75 @@ class MigrationFunctionTests {
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
-        val migratedObject = migrateTo32To33(obj)
 
-        val json = Json { ignoreUnknownKeys = true }
-        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject
-
-        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-
-        assertEquals("3.3", schemaVersion)
+        assertEquals(
+            RiScVersion.RiSc3XVersion.VERSION_3_3,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 3.3.",
+        )
+        assertEquals(
+            riSc,
+            migratedRiSc.copy(schemaVersion = RiScVersion.RiSc3XVersion.VERSION_3_2),
+            "The only change to the RiSc when migrating to version 3.3 should be the schema version.",
+        )
     }
 
     @Test
     fun `test migrateFrom33To40`() {
-        val resourcePath = "3.3.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val resourceUrl = object {}.javaClass.classLoader.getResource("3.3.json")
 
-        val file = File(resourceUrl!!.toURI())
-        val fileContent = file.readText()
-        val obj =
-            RiScContentResultDTO(
-                riScId = "2",
-                status = ContentStatus.Success,
-                riScContent = fileContent,
-                riScStatus = RiScStatus.Published,
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
+
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom33To40(
+                riSc = riSc,
                 migrationStatus =
                     MigrationStatus(
                         migrationChanges = false,
-                        migrationRequiresNewApproval = true,
+                        migrationRequiresNewApproval = false,
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
-        val migratedObject = migrateFrom33To40(obj)
 
-        val json = Json { ignoreUnknownKeys = true }
-        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.0",
+        )
+        assertEquals(true, migrationStatus.migrationChanges, "A migration from 3.3 to 4.0 should make changes.")
+        assertEquals(
+            true,
+            migrationStatus.migrationRequiresNewApproval,
+            "A migration from 3.3 to 4.0 should require new approval.",
+        )
 
-        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-        assertEquals("4.0", schemaVersion)
-
-        val scenarios = migratedJsonObject["scenarios"]?.jsonArray
-        scenarios?.forEachIndexed { index, scenario ->
-            val scenarioObject = scenario.jsonObject
-            val scenarioDetails = scenarioObject["scenario"]?.jsonObject
-
-            scenarioDetails?.let {
-                // Check that existingActions has been removed
-                assertFalse(it.containsKey("existingActions"))
-
-                val vulnerabilitiesArray =
-                    it["vulnerabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
-
-                val expectedVulnerabilities =
-                    if (index == 0) {
-                        listOf(
-                            "Unmonitored use",
-                            "Unauthorized access",
-                            "Information leak",
-                            "Excessive use",
-                            "Misconfiguration",
-                        )
-                    } else {
-                        listOf("Misconfiguration")
-                    }
-                assertEquals(expectedVulnerabilities, vulnerabilitiesArray)
-
-                val actionsArray = it["actions"]?.jsonArray
-                actionsArray?.forEach { action ->
-                    val actionObject = action.jsonObject["action"]?.jsonObject
-                    actionObject?.let { ao ->
-                        assertFalse(ao.containsKey("owner"))
-                        assertFalse(ao.containsKey("deadline"))
-                    }
+        migratedRiSc.scenarios.forEachIndexed { index, scenario ->
+            val expectedVulnerabilities =
+                if (index == 0) {
+                    listOf(
+                        RiSc4XScenarioVulnerability.UNMONITORED_USE,
+                        RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                        RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                        RiSc4XScenarioVulnerability.MISCONFIGURATION,
+                    )
+                } else {
+                    listOf(RiSc4XScenarioVulnerability.MISCONFIGURATION)
                 }
-            }
 
-            assertEquals(true, migratedObject.migrationStatus.migrationChanges)
-            assertEquals(true, migratedObject.migrationStatus.migrationRequiresNewApproval)
+            assertEquals(
+                expectedVulnerabilities,
+                scenario.vulnerabilities,
+                "Vulnerabilities should be properly mapped when migrating from 3.3 to 4.0.",
+            )
         }
 
         assertNotNull(
-            migratedObject.migrationStatus.migrationChanges40,
+            migrationStatus.migrationChanges40,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migratedObject.migrationStatus.migrationChanges40.scenarios
+        val changedScenarios = migrationStatus.migrationChanges40.scenarios
 
         assertEquals(1, changedScenarios.size, "Only changed scenarios should be included in the migration changes.")
 
@@ -181,23 +158,23 @@ class MigrationFunctionTests {
         val expectedChanges =
             listOf(
                 MigrationChangedTypedValue(
-                    RiSc33ScenarioVulnerability.USER_REPUDIATION,
+                    RiSc3XScenarioVulnerability.USER_REPUDIATION,
                     RiSc4XScenarioVulnerability.UNMONITORED_USE,
                 ),
                 MigrationChangedTypedValue(
-                    RiSc33ScenarioVulnerability.COMPROMISED_ADMIN_USER,
+                    RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER,
                     RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
-                    RiSc33ScenarioVulnerability.ESCALATION_OF_RIGHTS,
+                    RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS,
                     RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
-                    RiSc33ScenarioVulnerability.DISCLOSED_SECRET,
+                    RiSc3XScenarioVulnerability.DISCLOSED_SECRET,
                     RiSc4XScenarioVulnerability.INFORMATION_LEAK,
                 ),
                 MigrationChangedTypedValue(
-                    RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE,
+                    RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
                     RiSc4XScenarioVulnerability.EXCESSIVE_USE,
                 ),
             )
@@ -210,16 +187,11 @@ class MigrationFunctionTests {
 
     @Test
     fun `test migrate33To40NoScenarios`() {
-        val resourcePath = "3.3-no-scenarios.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
-        val file = File(resourceUrl!!.toURI())
-        val fileContent = file.readText()
-        val obj =
-            RiScContentResultDTO(
-                riScId = "3",
-                status = ContentStatus.Success,
-                riScContent = fileContent,
-                riScStatus = RiScStatus.Draft,
+        val resourceUrl = object {}.javaClass.classLoader.getResource("3.3-no-scenarios.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom33To40(
+                riSc = riSc,
                 migrationStatus =
                     MigrationStatus(
                         migrationChanges = false,
@@ -227,97 +199,97 @@ class MigrationFunctionTests {
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
-        val migratedObject = migrateFrom33To40(obj)
 
-        val json = Json { ignoreUnknownKeys = true }
-        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
-
-        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-        assertEquals("4.0", schemaVersion)
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.0.",
+        )
 
         assertNull(
-            migratedObject.migrationStatus.migrationChanges40,
+            migrationStatus.migrationChanges40,
             "When no changes have been made, there should be no migration changes object.",
         )
     }
 
     @Test
     fun `test migrateFrom40To41`() {
-        val resourcePath = "4.0.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.0.json")
 
-        val file = File(resourceUrl!!.toURI())
-        val fileContent = file.readText()
-        val obj =
-            RiScContentResultDTO(
-                riScId = "2",
-                status = ContentStatus.Success,
-                riScContent = fileContent,
-                riScStatus = RiScStatus.Published,
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom40To41(
+                riSc = riSc,
                 migrationStatus =
                     MigrationStatus(
                         migrationChanges = false,
-                        migrationRequiresNewApproval = true,
+                        migrationRequiresNewApproval = false,
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
                     ),
             )
-        val migratedObject = migrateFrom40To41(obj)
-
-        val json = Json { ignoreUnknownKeys = true }
-        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
 
         // Check that schema version is set to 4.1
-        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-        assertEquals("4.1", schemaVersion)
-
-        // Check that all consequence and probability values have been correctly migrated
-        val scenarios = migratedJsonObject["scenarios"]?.jsonArray
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_1,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.1.",
+        )
 
         fun testConsequenceAndProbability(
-            risk: JsonObject?,
+            risk: RiScScenarioRisk,
             expectedConsequence: Number,
             expectedProbability: Number,
         ) {
-            val consequence = risk?.get("consequence")?.jsonPrimitive?.content
-            val probability = risk?.get("probability")?.jsonPrimitive?.content
-
-            assertEquals(expectedConsequence.toString(), consequence)
-            assertEquals(expectedProbability.toString(), probability)
+            assertEquals(expectedConsequence, risk.consequence)
+            assertEquals(expectedProbability, risk.probability)
         }
-
-        val scenariosJsonObjects =
-            scenarios?.map {
-                it.jsonObject["scenario"]?.jsonObject
-            }
 
         // Verify that all 3 scenarios are present after migration.
         // This ensures that the following tests are run as expected.
-        assertEquals(scenariosJsonObjects?.size, 3)
+        assertEquals(3, migratedRiSc.scenarios.size, "All scenarios should be present after migration.")
 
-        scenariosJsonObjects?.get(0)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 160_000.0, 0.05)
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 8_000.0, 0.0025)
-        }
-        scenariosJsonObjects?.get(1)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 64_000_000.0, 20.0)
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 3_200_000.0, 1.0)
-        }
-        scenariosJsonObjects?.get(2)?.let {
-            testConsequenceAndProbability(it["risk"]?.jsonObject, 1_280_000_000.0, 400.0)
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[0].risk,
+            expectedConsequence = 160_000.0,
+            expectedProbability = 0.05,
+        )
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[0].remainingRisk,
+            expectedConsequence = 8_000.0,
+            expectedProbability = 0.0025,
+        )
 
-            // Specific values not equal to the preset values should not be changed
-            testConsequenceAndProbability(it["remainingRisk"]?.jsonObject, 198_000.0, 0.123)
-        }
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[1].risk,
+            expectedConsequence = 64_000_000.0,
+            expectedProbability = 20.0,
+        )
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[1].remainingRisk,
+            expectedConsequence = 3_200_000.0,
+            expectedProbability = 1.0,
+        )
 
-        assertEquals(true, migratedObject.migrationStatus.migrationChanges)
-        assertEquals(true, migratedObject.migrationStatus.migrationRequiresNewApproval)
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[2].risk,
+            expectedConsequence = 1_280_000_000.0,
+            expectedProbability = 400.0,
+        )
+        testConsequenceAndProbability(
+            risk = migratedRiSc.scenarios[2].remainingRisk,
+            expectedConsequence = 198_000.0,
+            expectedProbability = 0.123,
+        )
+
+        assertEquals(true, migrationStatus.migrationChanges)
+        assertEquals(true, migrationStatus.migrationRequiresNewApproval)
 
         assertNotNull(
-            migratedObject.migrationStatus.migrationChanges41,
+            migrationStatus.migrationChanges41,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migratedObject.migrationStatus.migrationChanges41.scenarios
+        val changedScenarios = migrationStatus.migrationChanges41.scenarios
 
         assertEquals(3, changedScenarios.size, "All changed scenarios should be included in the migration changes.")
 
@@ -369,31 +341,12 @@ class MigrationFunctionTests {
 
     @Test
     fun `test migrate`() {
-        val resourcePath = "3.2.json"
-        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
-        val file = File(resourceUrl!!.toURI())
-        val fileContent = file.readText()
-        val obj =
-            RiScContentResultDTO(
-                riScId = "4",
-                status = ContentStatus.Success,
-                riScContent = fileContent,
-                riScStatus = RiScStatus.Published,
-                migrationStatus =
-                    MigrationStatus(
-                        migrationChanges = false,
-                        migrationRequiresNewApproval = false,
-                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
-                    ),
-            )
-        val migratedObject = migrate(obj, latestSupportedVersion)
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
+        val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = latestSupportedVersion)
 
-        val json = Json { ignoreUnknownKeys = true }
-        val migratedJsonObject = json.parseToJsonElement(migratedObject.riScContent!!).jsonObject.toMap()
-
-        val schemaVersion = migratedJsonObject["schemaVersion"]?.jsonPrimitive?.content
-        assertEquals(latestSupportedVersion, schemaVersion)
+        assertEquals(RiScVersion.fromString(latestSupportedVersion), migratedRiSc.schemaVersion)
 
         val expected40MigrationChanges =
             MigrationChange40(
@@ -406,7 +359,7 @@ class MigrationFunctionTests {
                             changedVulnerabilities =
                                 listOf(
                                     MigrationChangedTypedValue(
-                                        RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE,
+                                        RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
                                         RiSc4XScenarioVulnerability.EXCESSIVE_USE,
                                     ),
                                 ),
@@ -424,7 +377,7 @@ class MigrationFunctionTests {
             )
         assertEquals(
             expected40MigrationChanges,
-            migratedObject.migrationStatus.migrationChanges40,
+            migrationStatus.migrationChanges40,
             "Changes made from version 3.3 to 4.0 should be included.",
         )
 
@@ -443,7 +396,7 @@ class MigrationFunctionTests {
             )
         assertEquals(
             expected41MigrationChanges,
-            migratedObject.migrationStatus.migrationChanges41,
+            migrationStatus.migrationChanges41,
             "Changes made from version 4.0 to 4.1 should be included.",
         )
     }

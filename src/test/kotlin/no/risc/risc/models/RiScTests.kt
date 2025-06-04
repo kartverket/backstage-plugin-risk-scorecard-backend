@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class RiScTests {
-    fun riSc4XWithoutValuations(schemaVersion: String): RiSc4X =
+    fun riSc4XWithoutValuations(schemaVersion: RiScVersion.RiSc4XVersion): RiSc4X =
         RiSc4X(
             schemaVersion = schemaVersion,
             title = "Title",
@@ -92,7 +92,7 @@ class RiScTests {
                 ),
         )
 
-    fun riSc4XWithValuations(schemaVersion: String): RiSc4X =
+    fun riSc4XWithValuations(schemaVersion: RiScVersion.RiSc4XVersion): RiSc4X =
         riSc4XWithoutValuations(schemaVersion).copy(
             valuations =
                 listOf(
@@ -130,7 +130,7 @@ class RiScTests {
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "4.0",
-                    riScContent = Json.encodeToString(riSc4XWithoutValuations("4.0")),
+                    riScContent = Json.encodeToString(riSc4XWithoutValuations(RiScVersion.RiSc4XVersion.VERSION_4_0)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.0 when valuations are not present.",
         )
@@ -140,7 +140,7 @@ class RiScTests {
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "4.1",
-                    riScContent = Json.encodeToString(riSc4XWithoutValuations("4.1")),
+                    riScContent = Json.encodeToString(riSc4XWithoutValuations(RiScVersion.RiSc4XVersion.VERSION_4_1)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.1 when valuations are not present.",
         )
@@ -153,7 +153,7 @@ class RiScTests {
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "4.0",
-                    riScContent = Json.encodeToString(riSc4XWithValuations("4.0")),
+                    riScContent = Json.encodeToString(riSc4XWithValuations(RiScVersion.RiSc4XVersion.VERSION_4_0)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.0 when valuations are present.",
         )
@@ -163,20 +163,20 @@ class RiScTests {
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "4.1",
-                    riScContent = Json.encodeToString(riSc4XWithValuations("4.1")),
+                    riScContent = Json.encodeToString(riSc4XWithValuations(RiScVersion.RiSc4XVersion.VERSION_4_1)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.1 when valuations are present.",
         )
     }
 
     val riSc33WithoutValuations =
-        RiSc33(
-            schemaVersion = "3.3",
+        RiSc3X(
+            schemaVersion = RiScVersion.RiSc3XVersion.VERSION_3_3,
             title = "Title",
             scope = "Scope",
             scenarios =
                 listOf(
-                    RiSc33Scenario(
+                    RiSc3XScenario(
                         title = "Scenario with all attributes",
                         id = "ABCDE",
                         description = "Description",
@@ -193,21 +193,21 @@ class RiScTests {
                             ),
                         vulnerabilities =
                             listOf(
-                                RiSc33ScenarioVulnerability.USER_REPUDIATION,
-                                RiSc33ScenarioVulnerability.INFORMATION_LEAK,
-                                RiSc33ScenarioVulnerability.DISCLOSED_SECRET,
-                                RiSc33ScenarioVulnerability.COMPROMISED_ADMIN_USER,
-                                RiSc33ScenarioVulnerability.INPUT_TAMPERING,
-                                RiSc33ScenarioVulnerability.MISCONFIGURATION,
-                                RiSc33ScenarioVulnerability.DEPENDENCY_VULNERABILITY,
-                                RiSc33ScenarioVulnerability.DENIAL_OF_SERVICE,
-                                RiSc33ScenarioVulnerability.ESCALATION_OF_RIGHTS,
+                                RiSc3XScenarioVulnerability.USER_REPUDIATION,
+                                RiSc3XScenarioVulnerability.INFORMATION_LEAK,
+                                RiSc3XScenarioVulnerability.DISCLOSED_SECRET,
+                                RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER,
+                                RiSc3XScenarioVulnerability.INPUT_TAMPERING,
+                                RiSc3XScenarioVulnerability.MISCONFIGURATION,
+                                RiSc3XScenarioVulnerability.DEPENDENCY_VULNERABILITY,
+                                RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
+                                RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS,
                             ),
                         risk = RiScScenarioRisk(summary = "Text", probability = 1.0, consequence = 200_000.0),
                         remainingRisk = RiScScenarioRisk(summary = "Text", probability = 0.025, consequence = 10_000.0),
                         actions =
                             listOf(
-                                RiSc33ScenarioAction(
+                                RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "12345",
                                     description = "Description",
@@ -216,14 +216,14 @@ class RiScTests {
                                     owner = "Ola Nordmann",
                                     deadline = "2024-12-12",
                                 ),
-                                RiSc33ScenarioAction(
+                                RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "23456",
                                     description = "Description",
                                     status = RiScScenarioActionStatus.ABORTED,
                                     owner = "Ola Nordmann",
                                 ),
-                                RiSc33ScenarioAction(
+                                RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "34567",
                                     description = "Description",
@@ -231,14 +231,14 @@ class RiScTests {
                                     status = RiScScenarioActionStatus.NOT_STARTED,
                                     deadline = "2020-10-10",
                                 ),
-                                RiSc33ScenarioAction(
+                                RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "45678",
                                     description = "Description",
                                     url = "https://example.org",
                                     status = RiScScenarioActionStatus.ON_HOLD,
                                 ),
-                                RiSc33ScenarioAction(
+                                RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "56789",
                                     description = "Description",
@@ -248,7 +248,7 @@ class RiScTests {
                             ),
                         existingActions = "Existing actions",
                     ),
-                    RiSc33Scenario(
+                    RiSc3XScenario(
                         title = "Scenario with minimum attributes",
                         id = "ABCDE",
                         description = "Description",
