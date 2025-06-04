@@ -7,23 +7,9 @@ import com.networknt.schema.SpecVersion
 import com.networknt.schema.output.OutputUnit
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
+import no.risc.risc.models.RiScVersion
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
-enum class SchemaVersion {
-    VERSION_3_2,
-    VERSION_3_3,
-    VERSION_4_0,
-    VERSION_4_1, ;
-
-    fun toExpectedString() =
-        when (this) {
-            VERSION_3_2 -> "3_2"
-            VERSION_3_3 -> "3_3"
-            VERSION_4_0 -> "4_0"
-            VERSION_4_1 -> "4_1"
-        }
-}
 
 object JSONValidator {
     private val LOGGER: Logger = LoggerFactory.getLogger(JSONValidator::class.java)
@@ -73,16 +59,16 @@ object JSONValidator {
         riScId: String,
         riScContent: String?,
     ): OutputUnit =
-        SchemaVersion.entries
-            .asSequence()
+        RiScVersion
+            .allVersions()
+            .map { it.asString().replace(".", "_") }
             .map {
                 validateAgainstSchema(
                     riScId = riScId,
-                    schema = readSchema(schemaVersion = it.toExpectedString(), riScId = riScId, isUpdate = false),
+                    schema = readSchema(schemaVersion = it, riScId = riScId, isUpdate = false),
                     riScContent = riScContent,
                 )
-            }.filter { it.isValid }
-            .firstOrNull()
+            }.firstOrNull { it.isValid }
             ?: OutputUnit().also {
                 it.isValid = false
                 LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
