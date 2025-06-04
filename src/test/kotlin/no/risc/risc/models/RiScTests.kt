@@ -2,8 +2,14 @@ package no.risc.risc.models
 
 import kotlinx.serialization.json.Json
 import no.risc.validation.JSONValidator
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.Arguments.arguments
+import org.junit.jupiter.params.provider.FieldSource
+import java.io.File
 
 class RiScTests {
     fun riSc4XWithoutValuations(schemaVersion: RiScVersion.RiSc4XVersion): RiSc4X =
@@ -334,5 +340,33 @@ class RiScTests {
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are present.",
         )
+    }
+
+    @ParameterizedTest
+    @FieldSource("fromContentArguments")
+    fun `test RiSc from content`(
+        resourcePath: String,
+        expectedVersion: RiScVersion,
+    ) {
+        val resourceUrl = object {}.javaClass.classLoader.getResource(resourcePath)
+        val riScJSONString = File(resourceUrl!!.toURI()).readText()
+
+        val riSc = RiSc.fromContent(riScJSONString)
+
+        assertEquals(
+            expectedVersion,
+            riSc.schemaVersion,
+            "The schema version of the parsed RiSc should be equal to the one in the JSON string.",
+        )
+    }
+
+    companion object {
+        val fromContentArguments: List<Arguments> =
+            listOf(
+                arguments("3.2.json", RiScVersion.RiSc3XVersion.VERSION_3_2),
+                arguments("3.3.json", RiScVersion.RiSc3XVersion.VERSION_3_3),
+                arguments("4.0.json", RiScVersion.RiSc4XVersion.VERSION_4_0),
+                arguments("4.1.json", RiScVersion.RiSc4XVersion.VERSION_4_1),
+            )
     }
 }
