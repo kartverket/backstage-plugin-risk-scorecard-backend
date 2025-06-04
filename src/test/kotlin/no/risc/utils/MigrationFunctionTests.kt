@@ -9,6 +9,7 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScVersion
+import no.risc.risc.models.UnknownRiSc
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
+import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 class MigrationFunctionTests {
@@ -399,5 +401,48 @@ class MigrationFunctionTests {
             migrationStatus.migrationChanges41,
             "Changes made from version 4.0 to 4.1 should be included.",
         )
+    }
+
+    @Test
+    fun `test migrate throws error on unsupported version`() {
+        assertThrows<IllegalStateException>("If an unsupported version is provided, the migrate function should throw an exception") {
+            migrate(
+                riSc =
+                    RiSc4X(
+                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_1,
+                        title = "Title",
+                        scope = "Scope",
+                        valuations = emptyList(),
+                        scenarios = emptyList(),
+                    ),
+                endVersion = "0.0",
+            )
+        }
+    }
+
+    @Test
+    fun `test migrate throws error on unsupported RiSc`() {
+        assertThrows<IllegalStateException>("If an unsupported RiSc is provided, the migrate function should throw an exception") {
+            migrate(riSc = UnknownRiSc(content = ""), endVersion = "4.1")
+        }
+    }
+
+    @Test
+    fun `test migrate throws error on migration to lower version`() {
+        assertThrows<IllegalStateException>(
+            "If the supplied RiSc has a newer version than the end version, the migrate function should throw an exception",
+        ) {
+            migrate(
+                riSc =
+                    RiSc4X(
+                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_1,
+                        title = "Title",
+                        scope = "Scope",
+                        valuations = emptyList(),
+                        scenarios = emptyList(),
+                    ),
+                endVersion = "3.3",
+            )
+        }
     }
 }
