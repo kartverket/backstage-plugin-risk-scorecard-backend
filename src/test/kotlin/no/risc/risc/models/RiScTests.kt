@@ -169,9 +169,9 @@ class RiScTests {
         )
     }
 
-    val riSc33WithoutValuations =
+    fun riSc3XWithoutValuations(schemaVersion: RiScVersion.RiSc3XVersion): RiSc3X =
         RiSc3X(
-            schemaVersion = RiScVersion.RiSc3XVersion.VERSION_3_3,
+            schemaVersion = schemaVersion,
             title = "Title",
             scope = "Scope",
             scenarios =
@@ -261,8 +261,8 @@ class RiScTests {
                 ),
         )
 
-    val riSc33WithValuations =
-        riSc33WithoutValuations.copy(
+    fun riSc3XWithValuations(schemaVersion: RiScVersion.RiSc3XVersion): RiSc3X =
+        riSc3XWithoutValuations(schemaVersion).copy(
             valuations =
                 listOf(
                     RiScValuation(
@@ -293,26 +293,44 @@ class RiScTests {
         )
 
     @Test
-    fun `test that RiSc33 without valuations validates correctly`() {
+    fun `test that RiSc3X without valuations validates correctly`() {
+        assertTrue(
+            JSONValidator
+                .validateAgainstSchema(
+                    riScId = "abcde",
+                    schema = "3.2",
+                    riScContent = Json.encodeToString(riSc3XWithoutValuations(RiScVersion.RiSc3XVersion.VERSION_3_2)),
+                ).isValid,
+            "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.2 when valuations are not present.",
+        )
         assertTrue(
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "3.3",
-                    riScContent = Json.encodeToString(riSc33WithoutValuations),
+                    riScContent = Json.encodeToString(riSc3XWithoutValuations(RiScVersion.RiSc3XVersion.VERSION_3_3)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are not present.",
         )
     }
 
     @Test
-    fun `test that RiSc33 with valuations validates correctly`() {
+    fun `test that RiSc3X with valuations validates correctly`() {
+        assertTrue(
+            JSONValidator
+                .validateAgainstSchema(
+                    riScId = "abcde",
+                    schema = "3.2",
+                    riScContent = Json.encodeToString(riSc3XWithValuations(RiScVersion.RiSc3XVersion.VERSION_3_2)),
+                ).isValid,
+            "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.2 when valuations are present.",
+        )
         assertTrue(
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
                     schema = "3.3",
-                    riScContent = Json.encodeToString(riSc33WithValuations),
+                    riScContent = Json.encodeToString(riSc3XWithValuations(RiScVersion.RiSc3XVersion.VERSION_3_3)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are present.",
         )
