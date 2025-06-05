@@ -37,7 +37,7 @@ val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.15.0"
 val jsonSchemaValidatorVersion = "1.5.7"
 val nimbusdsVersion = "10.3"
-val bouncyCastleVersion = "1.80"
+val bouncyCastleVersion = "1.81"
 val mockkVersion = "1.14.2"
 val junitVersion = "5.13.0"
 
