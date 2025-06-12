@@ -1,94 +1,130 @@
 package no.risc.utils.comparison
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import no.risc.risc.models.MigrationStatus
+import no.risc.risc.models.RiSc3XScenario
+import no.risc.risc.models.RiSc3XScenarioAction
 import no.risc.risc.models.RiSc3XScenarioVulnerability
+import no.risc.risc.models.RiSc4XScenario
+import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioThreatActor
-import no.risc.risc.models.RiScValuationAvailability
-import no.risc.risc.models.RiScValuationConfidentiality
-import no.risc.risc.models.RiScValuationIntegrity
+import no.risc.risc.models.RiScValuation
 
+/**
+ * A tracked property type for handling tracking changes of five types (ADDED, CHANGED, CONTENT_CHANGED, DELETED and UNCHANGED).
+ * Uses two types `T` and `K` to allow for two types of change tracking objects:
+ * - Type `S` is used for CHANGED and CONTENT_CHANGED
+ * - Type `T` is used for ADDED, DELETED and UNCHANGED
+ */
 @Serializable
-enum class ChangeType {
-    ADDED,
-    CHANGED,
-    CONTENT_CHANGED,
-    DELETED,
-    UNCHANGED,
-}
+sealed interface TrackedProperty<S, T>
 
+/**
+ * Indicates that the object of type T previously assigned to the given property has been deleted from the RiSc.
+ */
 @Serializable
-sealed class TrackedProperty<T>(
-    val changeType: ChangeType,
-) {
-    @Serializable
-    data class DeletedProperty<T>(
-        val oldValue: T,
-    ) : TrackedProperty<T>(ChangeType.DELETED)
+@SerialName("DELETED")
+data class DeletedProperty<S, T>(
+    val oldValue: T,
+) : TrackedProperty<S, T>
 
-    @Serializable
-    data class ChangedProperty<T>(
-        val oldValue: T,
-        val newValue: T,
-    ) : TrackedProperty<T>(ChangeType.CHANGED)
+/**
+ * Indicates that the object of type T previously assigned to the given property has had its value changed. Only used
+ * from primitive properties, where the whole object is always exchanged. Such properties are typically strings or
+ * numbers.
+ */
+@Serializable
+@SerialName("CHANGED")
+data class ChangedProperty<S, T>(
+    val oldValue: S,
+    val newValue: S,
+) : TrackedProperty<S, T>
 
-    @Serializable
-    data class AddedProperty<T>(
-        val newValue: T,
-    ) : TrackedProperty<T>(ChangeType.ADDED)
+/**
+ * Indicates that a new object of type T has been assigned to the given property. A new object refers here either to a
+ * value set to an optional property that was previously unset or adding a new object to a list/map.
+ */
+@Serializable
+@SerialName("ADDED")
+data class AddedProperty<S, T>(
+    val newValue: T,
+) : TrackedProperty<S, T>
 
-    @Serializable
-    data class ContentChangedProperty<T>(
-        val value: T,
-    ) : TrackedProperty<T>(ChangeType.CONTENT_CHANGED)
+/**
+ * Indicates that the object of type T previously assigned to the given property has had its value changed. Only used
+ * for non-primitive properties, where the object consists of multiple separately tracked sub-fields that can be changed
+ * independently. Examples include actions and scenarios.
+ */
+@Serializable
+@SerialName("CONTENT_CHANGED")
+data class ContentChangedProperty<S, T>(
+    val value: S,
+) : TrackedProperty<S, T>
 
-    @Serializable
-    data class UnchangedProperty<T>(
-        val value: T,
-    ) : TrackedProperty<T>(ChangeType.UNCHANGED)
+/**
+ *  Indicates that the object of type T assigned to the given property has not changed. Used for fields that should
+ *  always be included in the change set, typically to visualise other changes. Examples include titles and descriptions
+ *  of scenarios, which can be used to give the user an indication of which scenario other changes belong to.
+ */
+@Serializable
+@SerialName("UNCHANGED")
+data class UnchangedProperty<S, T>(
+    val value: T,
+) : TrackedProperty<S, T>
+
+/**
+ * A simple tracked property where the type of the change tracking object is the same for all types of changes.
+ */
+typealias SimpleTrackedProperty<S> = TrackedProperty<S, S>
+
+/**
+ * Represents the changes made to a RiSc. These changes always include a migration status object for the changes made
+ * by migrating the old RiSc version to the version of the new one.
+ */
+@Serializable
+sealed interface RiScChange {
+    val migrationChanges: MigrationStatus
 }
-
-typealias DeletedProperty<T> = TrackedProperty.DeletedProperty<T>
-typealias ChangedProperty<T> = TrackedProperty.ChangedProperty<T>
-typealias AddedProperty<T> = TrackedProperty.AddedProperty<T>
-typealias ContentChangedProperty<T> = TrackedProperty.ContentChangedProperty<T>
-typealias UnchangedProperty<T> = TrackedProperty.UnchangedProperty<T>
 
 /***************
  * VERSION 4.X *
  ***************/
 
 @Serializable
+@SerialName("4.*")
 data class RiSc4XChange(
-    val title: TrackedProperty<String>?,
-    val scope: TrackedProperty<String>?,
-    val valuations: List<TrackedProperty<RiScValuationChange>>? = null,
-    val scenarios: List<TrackedProperty<RiSc4XScenarioChange>>? = null,
-)
+    val title: SimpleTrackedProperty<String>? = null,
+    val scope: SimpleTrackedProperty<String>? = null,
+    val valuations: List<SimpleTrackedProperty<RiScValuation>>,
+    val scenarios: List<TrackedProperty<RiSc4XScenarioChange, RiSc4XScenario>>,
+    override val migrationChanges: MigrationStatus,
+) : RiScChange
 
 @Serializable
 data class RiSc4XScenarioChange(
-    val title: TrackedProperty<String>,
+    val title: SimpleTrackedProperty<String>,
     // The id will never change
     val id: String,
-    val description: TrackedProperty<String>,
-    val url: TrackedProperty<String?>? = null,
-    val threatActors: List<TrackedProperty<RiScScenarioThreatActor>>? = null,
-    val vulnerabilities: List<TrackedProperty<RiSc4XScenarioVulnerability>>? = null,
-    val risk: TrackedProperty<RiScScenarioRiskChange>? = null,
-    val remainingRisk: TrackedProperty<RiScScenarioRiskChange>? = null,
-    val actions: List<TrackedProperty<RiSc4XScenarioActionChange>>? = null,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val threatActors: List<SimpleTrackedProperty<RiScScenarioThreatActor>>,
+    val vulnerabilities: List<SimpleTrackedProperty<RiSc4XScenarioVulnerability>>,
+    val risk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val remainingRisk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val actions: List<TrackedProperty<RiSc4XScenarioActionChange, RiSc4XScenarioAction>>,
 )
 
 @Serializable
 data class RiSc4XScenarioActionChange(
-    val title: TrackedProperty<String>,
+    val title: SimpleTrackedProperty<String>,
     // The id will never change
     val id: String,
-    val description: TrackedProperty<String>,
-    val url: TrackedProperty<String?>? = null,
-    val status: TrackedProperty<RiScScenarioActionStatus>? = null,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
 )
 
 /************************
@@ -96,38 +132,40 @@ data class RiSc4XScenarioActionChange(
  ************************/
 
 @Serializable
+@SerialName("3.*")
 data class RiSc3XChange(
-    val title: TrackedProperty<String>?,
-    val scope: TrackedProperty<String>?,
-    val valuations: List<TrackedProperty<RiScValuationChange>>? = null,
-    val scenarios: List<TrackedProperty<RiSc3XScenarioChange>>? = null,
-)
+    val title: SimpleTrackedProperty<String>?,
+    val scope: SimpleTrackedProperty<String>?,
+    val valuations: List<SimpleTrackedProperty<RiScValuation>>? = null,
+    val scenarios: List<TrackedProperty<RiSc3XScenarioChange, RiSc3XScenario>>? = null,
+    override val migrationChanges: MigrationStatus,
+) : RiScChange
 
 @Serializable
 data class RiSc3XScenarioChange(
-    val title: TrackedProperty<String>,
+    val title: SimpleTrackedProperty<String>,
     // The id will never change
     val id: String,
-    val description: TrackedProperty<String>,
-    val url: TrackedProperty<String?>? = null,
-    val threatActors: List<TrackedProperty<RiScScenarioThreatActor>>? = null,
-    val vulnerabilities: List<TrackedProperty<RiSc3XScenarioVulnerability>>? = null,
-    val risk: TrackedProperty<RiScScenarioRiskChange>? = null,
-    val remainingRisk: TrackedProperty<RiScScenarioRiskChange>? = null,
-    val actions: List<TrackedProperty<RiSc3XScenarioActionChange>>? = null,
-    val existingActions: TrackedProperty<String?>? = null,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val threatActors: List<SimpleTrackedProperty<RiScScenarioThreatActor>>? = null,
+    val vulnerabilities: List<SimpleTrackedProperty<RiSc3XScenarioVulnerability>>? = null,
+    val risk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val remainingRisk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val actions: List<TrackedProperty<RiSc3XScenarioActionChange, RiSc3XScenarioAction>>? = null,
+    val existingActions: SimpleTrackedProperty<String?>? = null,
 )
 
 @Serializable
 data class RiSc3XScenarioActionChange(
-    val title: TrackedProperty<String>,
+    val title: SimpleTrackedProperty<String>,
     // The id will never change
     val id: String,
-    val description: TrackedProperty<String>,
-    val url: TrackedProperty<String?>? = null,
-    val status: TrackedProperty<RiScScenarioActionStatus>? = null,
-    val deadline: TrackedProperty<String?>? = null,
-    val owner: TrackedProperty<String?>? = null,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val deadline: SimpleTrackedProperty<String?>? = null,
+    val owner: SimpleTrackedProperty<String?>? = null,
 )
 
 /******************************
@@ -135,16 +173,8 @@ data class RiSc3XScenarioActionChange(
  ******************************/
 
 @Serializable
-data class RiScValuationChange(
-    val description: TrackedProperty<String>,
-    val confidentiality: TrackedProperty<RiScValuationConfidentiality>,
-    val integrity: TrackedProperty<RiScValuationIntegrity>,
-    val availability: TrackedProperty<RiScValuationAvailability>,
-)
-
-@Serializable
 data class RiScScenarioRiskChange(
-    val summary: TrackedProperty<String?>? = null,
-    val probability: TrackedProperty<Double>,
-    val consequence: TrackedProperty<Double>,
+    val summary: SimpleTrackedProperty<String?>? = null,
+    val probability: SimpleTrackedProperty<Double>,
+    val consequence: SimpleTrackedProperty<Double>,
 )

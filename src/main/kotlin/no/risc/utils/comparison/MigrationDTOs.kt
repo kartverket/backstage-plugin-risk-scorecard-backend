@@ -4,11 +4,6 @@ import kotlinx.serialization.Serializable
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4XScenarioVulnerability
 
-data class MigrationChanges(
-    val migrationChange40: MigrationChange40? = null,
-    val migrationChange41: MigrationChange41? = null,
-)
-
 // Changes for the migration from version 3.3 to 4.0
 
 @Serializable

@@ -7,7 +7,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.models.RiScVersion.RiSc3XVersion
 import no.risc.utils.FlattenSerializer
 import no.risc.utils.parseJSONToClass
 import no.risc.utils.parseJSONToElement
