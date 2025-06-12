@@ -12,7 +12,7 @@ import no.risc.utils.parseJSONToClass
 import no.risc.utils.parseJSONToElement
 import no.risc.utils.serializeJSON
 
-interface RiSc {
+sealed interface RiSc {
     // Every RiSc should have a schema version (or null if the version is unknown)
     val schemaVersion: RiScVersion?
 
