@@ -1,10 +1,10 @@
 package no.risc.risc.models
 
-import no.risc.utils.Difference
+import no.risc.utils.comparison.RiScChange
 
 class InternDifference(
     val status: DifferenceStatus,
-    val differenceState: Difference,
+    val differenceState: RiScChange? = null,
     val errorMessage: String = "",
 ) {
     fun toDTO(date: String = ""): DifferenceDTO =

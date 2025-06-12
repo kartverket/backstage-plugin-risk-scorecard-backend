@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.1.21"
+    val kotlinPluginsVersion = "2.2.0-RC2"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -29,7 +29,7 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.1.21"
+val kotlinVersion = "2.2.0-RC2"
 val springBootVersion = "3.5.0"
 val springSecurityVersion = "6.5.0"
 val kotlinxSerializationVersion = "1.8.1"

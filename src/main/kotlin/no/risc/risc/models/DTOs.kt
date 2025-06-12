@@ -3,16 +3,16 @@ package no.risc.risc.models
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
-import no.risc.utils.Difference
 import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange41
+import no.risc.utils.comparison.RiScChange
 import java.time.OffsetDateTime
 
 @Serializable
 data class DifferenceDTO(
     val status: DifferenceStatus,
-    val differenceState: Difference,
+    val differenceState: RiScChange? = null,
     val errorMessage: String = "",
     val defaultLastModifiedDateString: String = "",
 )

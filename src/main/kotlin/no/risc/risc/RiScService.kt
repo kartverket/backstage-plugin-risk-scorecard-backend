@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
@@ -27,6 +28,7 @@ import no.risc.risc.models.PendingApprovalDTO
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
+import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScResult
@@ -34,11 +36,10 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.utils.Difference
-import no.risc.utils.DifferenceException
-import no.risc.utils.diff
+import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
+import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -88,15 +89,14 @@ class RiScService(
                         try {
                             InternDifference(
                                 status = DifferenceStatus.Success,
-                                differenceState = diff("${response.riScContent}", draftRiScContent),
-                                errorMessage = "",
+                                differenceState =
+                                    compare(
+                                        updatedRiSc = RiSc.fromContent(draftRiScContent),
+                                        oldRiSc = RiSc.fromContent(response.riScContent),
+                                    ),
                             )
                         } catch (e: DifferenceException) {
-                            InternDifference(
-                                status = DifferenceStatus.JsonFailure,
-                                differenceState = Difference(),
-                                errorMessage = "${e.message}",
-                            )
+                            InternDifference(status = DifferenceStatus.JsonFailure, errorMessage = "${e.message}")
                         }
                     }
 
@@ -108,42 +108,36 @@ class RiScService(
                     ContentStatus.FileNotFound ->
                         InternDifference(
                             status = DifferenceStatus.GithubFileNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: File not found",
                         )
 
                     ContentStatus.DecryptionFailed ->
                         InternDifference(
                             status = DifferenceStatus.DecryptionFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered ROS problem: Could not decrypt content",
                         )
 
                     ContentStatus.Failure ->
                         InternDifference(
                             status = DifferenceStatus.GithubFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: Github failure",
                         )
 
                     ContentStatus.NoReadAccess ->
                         InternDifference(
                             status = DifferenceStatus.NoReadAccess,
-                            differenceState = Difference(),
                             errorMessage = "No read access to repository",
                         )
 
                     ContentStatus.SchemaNotFound ->
                         InternDifference(
                             status = DifferenceStatus.SchemaNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Could not fetch JSON schema",
                         )
 
                     ContentStatus.SchemaValidationFailed ->
                         InternDifference(
                             status = DifferenceStatus.SchemaValidationFailed,
-                            differenceState = Difference(),
                             errorMessage = "SchemaValidation failed",
                         )
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
@@ -180,10 +174,7 @@ class RiScService(
                     // Fetch content and decrypt
                     async(Dispatchers.IO) {
                         try {
-                            migrate(
-                                content = fetchContent(riScId, owner, repository, accessTokens),
-                                latestSupportedVersion = latestSupportedVersion,
-                            )
+                            fetchContent(riScId, owner, repository, accessTokens)
                         } catch (_: Exception) {
                             RiScContentResultDTO(
                                 riScId = riScId.id,
@@ -218,6 +209,28 @@ class RiScService(
                         LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                     }
                     riScContentResultDTO
+                }.map { riScContentResultDTO ->
+                    if (riScContentResultDTO.riScContent == null) return@map riScContentResultDTO
+                    tryOrDefaultWithErrorLogging(
+                        default =
+                            RiScContentResultDTO(
+                                riScId = riScContentResultDTO.riScId,
+                                status = ContentStatus.Failure,
+                                riScStatus = null,
+                                riScContent = null,
+                            ),
+                        logger = LOGGER,
+                    ) {
+                        migrate(
+                            riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            endVersion = latestSupportedVersion,
+                        ).let { (migratedRiSc, migrationStatus) ->
+                            riScContentResultDTO.copy(
+                                riScContent = migratedRiSc.toJSON(),
+                                migrationStatus = migrationStatus,
+                            )
+                        }
+                    }
                 }
         }
 
