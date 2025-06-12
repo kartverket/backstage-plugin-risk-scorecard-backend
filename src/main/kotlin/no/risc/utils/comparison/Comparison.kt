@@ -1,5 +1,6 @@
 package no.risc.utils.comparison
 
+import no.risc.exception.exceptions.DifferenceException
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenario
@@ -10,7 +11,6 @@ import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScValuation
 import no.risc.risc.models.UnknownRiSc
-import no.risc.utils.DifferenceException
 import no.risc.utils.migrate
 import kotlin.collections.component1
 import kotlin.collections.component2
