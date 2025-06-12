@@ -55,6 +55,34 @@ fun migrate(
 }
 
 /**
+ * Migrates the supplied RiSc to the supplied 4.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    endVersion: RiScVersion.RiSc3XVersion,
+): Pair<RiSc3X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc3X) throw IllegalStateException("Migration to 3.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
+ * Migrates the supplied RiSc to the supplied 4.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    endVersion: RiScVersion.RiSc4XVersion,
+): Pair<RiSc4X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc4X) throw IllegalStateException("Migration to 4.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
  * performed as a number of steps. The method currently supports the following steps:
  * - 3.2 -> 3.3

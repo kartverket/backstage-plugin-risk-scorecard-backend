@@ -35,9 +35,8 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
-import no.risc.utils.diff
+import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
@@ -90,15 +89,14 @@ class RiScService(
                         try {
                             InternDifference(
                                 status = DifferenceStatus.Success,
-                                differenceState = diff("${response.riScContent}", draftRiScContent),
-                                errorMessage = "",
+                                differenceState =
+                                    compare(
+                                        updatedRiSc = RiSc.fromContent(draftRiScContent),
+                                        oldRiSc = RiSc.fromContent(response.riScContent),
+                                    ),
                             )
                         } catch (e: DifferenceException) {
-                            InternDifference(
-                                status = DifferenceStatus.JsonFailure,
-                                differenceState = Difference(),
-                                errorMessage = "${e.message}",
-                            )
+                            InternDifference(status = DifferenceStatus.JsonFailure, errorMessage = "${e.message}")
                         }
                     }
 
@@ -110,42 +108,36 @@ class RiScService(
                     ContentStatus.FileNotFound ->
                         InternDifference(
                             status = DifferenceStatus.GithubFileNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: File not found",
                         )
 
                     ContentStatus.DecryptionFailed ->
                         InternDifference(
                             status = DifferenceStatus.DecryptionFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered ROS problem: Could not decrypt content",
                         )
 
                     ContentStatus.Failure ->
                         InternDifference(
                             status = DifferenceStatus.GithubFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: Github failure",
                         )
 
                     ContentStatus.NoReadAccess ->
                         InternDifference(
                             status = DifferenceStatus.NoReadAccess,
-                            differenceState = Difference(),
                             errorMessage = "No read access to repository",
                         )
 
                     ContentStatus.SchemaNotFound ->
                         InternDifference(
                             status = DifferenceStatus.SchemaNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Could not fetch JSON schema",
                         )
 
                     ContentStatus.SchemaValidationFailed ->
                         InternDifference(
                             status = DifferenceStatus.SchemaValidationFailed,
-                            differenceState = Difference(),
                             errorMessage = "SchemaValidation failed",
                         )
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
