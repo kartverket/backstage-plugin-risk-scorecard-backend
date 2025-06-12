@@ -83,11 +83,16 @@ fun comparison3X(
     updatedRiSc: RiSc3X,
     oldRiSc: RiSc,
 ): RiSc3XChange {
-    val (migratedOldRiSc, migrationStatus) = migrate(riSc = oldRiSc, endVersion = updatedRiSc.schemaVersion)
+    val (migratedOldRiSc, migrationStatus) =
+        try {
+            migrate(riSc = oldRiSc, endVersion = updatedRiSc.schemaVersion)
+        } catch (_: IllegalStateException) {
+            throw DifferenceException("The comparison failed due to migration failure of the old RiSc.")
+        }
 
     return RiSc3XChange(
-        title = changeForMandatorySimpleProperty(migratedOldRiSc.title, updatedRiSc.title),
-        scope = changeForMandatorySimpleProperty(migratedOldRiSc.scope, updatedRiSc.scope),
+        title = changeForNonMandatorySimpleProperty(migratedOldRiSc.title, updatedRiSc.title),
+        scope = changeForNonMandatorySimpleProperty(migratedOldRiSc.scope, updatedRiSc.scope),
         valuations =
             compareValuations(
                 oldValuations = migratedOldRiSc.valuations ?: emptyList(),
