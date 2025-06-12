@@ -33,7 +33,6 @@ fun compare(
         is RiSc4X -> comparison4X(updatedRiSc, oldRiSc)
         is RiSc3X -> comparison3X(updatedRiSc, oldRiSc)
         is UnknownRiSc -> throw DifferenceException("The version of the RiSc is unknown and not supported for comparison.")
-        else -> throw DifferenceException("The version of the RiSc is not supported for comparison.")
     }
 
 /**
