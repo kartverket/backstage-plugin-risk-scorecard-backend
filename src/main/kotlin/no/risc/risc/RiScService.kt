@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
@@ -35,7 +36,6 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.utils.DifferenceException
 import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
