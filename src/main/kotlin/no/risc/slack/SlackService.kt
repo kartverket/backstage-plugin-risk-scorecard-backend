@@ -6,10 +6,5 @@ import org.springframework.stereotype.Service
 class SlackService(
     private val slackConnector: SlackConnector,
 ) {
-    fun sendFeedBack(message: String) {
-        slackConnector
-            .sendFeedBack(
-                message = message,
-            )
-    }
+    fun sendFeedBack(message: String) = slackConnector.sendFeedBack(message = message)
 }
