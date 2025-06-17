@@ -8,11 +8,10 @@ import org.springframework.stereotype.Component
 class SlackConnector(
     @Value("\${slack.feedback.webhook.url}")
     private val webhookUrl: String,
-) : WebClientConnector("") {
+) : WebClientConnector(webhookUrl) {
     fun sendFeedBack(message: String) {
         webClient
             .post()
-            .uri(webhookUrl)
             .bodyValue(SlackMessageDTO(message))
             .retrieve()
             .bodyToMono(String::class.java)
