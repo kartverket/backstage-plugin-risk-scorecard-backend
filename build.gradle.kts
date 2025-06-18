@@ -34,12 +34,12 @@ val springBootVersion = "3.5.0"
 val springSecurityVersion = "6.5.0"
 val kotlinxSerializationVersion = "1.8.1"
 val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.15.0"
+val micrometerVersion = "1.15.1"
 val jsonSchemaValidatorVersion = "1.5.7"
 val nimbusdsVersion = "10.3"
 val bouncyCastleVersion = "1.81"
 val mockkVersion = "1.14.2"
-val junitVersion = "5.13.0"
+val junitVersion = "5.13.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
