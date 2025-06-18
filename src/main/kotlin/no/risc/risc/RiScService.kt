@@ -27,6 +27,7 @@ import no.risc.risc.models.PendingApprovalDTO
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
+import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScResult
@@ -39,6 +40,7 @@ import no.risc.utils.DifferenceException
 import no.risc.utils.diff
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
+import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -180,10 +182,7 @@ class RiScService(
                     // Fetch content and decrypt
                     async(Dispatchers.IO) {
                         try {
-                            migrate(
-                                content = fetchContent(riScId, owner, repository, accessTokens),
-                                latestSupportedVersion = latestSupportedVersion,
-                            )
+                            fetchContent(riScId, owner, repository, accessTokens)
                         } catch (_: Exception) {
                             RiScContentResultDTO(
                                 riScId = riScId.id,
@@ -218,6 +217,28 @@ class RiScService(
                         LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                     }
                     riScContentResultDTO
+                }.map { riScContentResultDTO ->
+                    if (riScContentResultDTO.riScContent == null) return@map riScContentResultDTO
+                    tryOrDefaultWithErrorLogging(
+                        default =
+                            RiScContentResultDTO(
+                                riScId = riScContentResultDTO.riScId,
+                                status = ContentStatus.Failure,
+                                riScStatus = null,
+                                riScContent = null,
+                            ),
+                        logger = LOGGER,
+                    ) {
+                        migrate(
+                            riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            endVersion = latestSupportedVersion,
+                        ).let { (migratedRiSc, migrationStatus) ->
+                            riScContentResultDTO.copy(
+                                riScContent = migratedRiSc.toJSON(),
+                                migrationStatus = migrationStatus,
+                            )
+                        }
+                    }
                 }
         }
 
