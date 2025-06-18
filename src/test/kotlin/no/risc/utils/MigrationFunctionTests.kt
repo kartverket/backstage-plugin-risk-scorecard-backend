@@ -34,7 +34,7 @@ class MigrationFunctionTests {
 
         val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
         val (migratedRiSc, _) =
-            migrateTo32To33(
+            migrateFrom32To33(
                 riSc = riSc,
                 migrationStatus =
                     MigrationStatus(

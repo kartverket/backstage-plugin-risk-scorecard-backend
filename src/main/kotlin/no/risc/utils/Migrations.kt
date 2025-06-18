@@ -79,7 +79,7 @@ private fun handleMigrate(
     val (migratedRiSc, migrationStatus) =
         when {
             riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_2 ->
-                migrateTo32To33(riSc, migrationStatus)
+                migrateFrom32To33(riSc, migrationStatus)
 
             riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_3 ->
                 migrateFrom33To40(riSc, migrationStatus)
@@ -94,7 +94,7 @@ private fun handleMigrate(
 
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
 // and modifications can only be made when the schemaVersion is 3.3.
-fun migrateTo32To33(
+fun migrateFrom32To33(
     riSc: RiSc3X,
     migrationStatus: MigrationStatus,
 ): Pair<RiSc3X, MigrationStatus> = Pair(riSc.copy(schemaVersion = RiScVersion.RiSc3XVersion.VERSION_3_3), migrationStatus)
