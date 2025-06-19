@@ -189,10 +189,15 @@ class RiScController(
     }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/feedback")
-    fun sendFeedback(
-        @RequestBody request: String,
-    ): ResponseEntity<*> {
-        slackService.sendFeedBack(request)
-        return ResponseEntity.ok("{}")
-    }
+    suspend fun sendFeedback(
+        @RequestBody feedbackMessage: String,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+    ): ResponseEntity<*> =
+        try {
+            slackService.sendFeedback(feedbackMessage)
+            ResponseEntity.ok("{}")
+        } catch (e: Exception) {
+            ResponseEntity.status(500).body("Failed to send feedback to Slack")
+        }
 }
