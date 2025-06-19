@@ -1,10 +1,10 @@
 package no.risc.slack
 
 import no.risc.infra.connector.WebClientConnector
+import no.risc.slack.models.SlackMessageDTO
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.awaitBody
-import no.risc.slack.models.SlackMessageDTO
 
 @Component
 class SlackConnector(
