@@ -18,7 +18,3 @@ class SlackConnector(
             .awaitBody<String>()
     }
 }
-
-data class SlackMessageDTO(
-    val text: String,
-)
