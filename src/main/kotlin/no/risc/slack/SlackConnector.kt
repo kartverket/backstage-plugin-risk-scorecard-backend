@@ -20,10 +20,10 @@ class SlackConnector(
     @Value("\${slack.feedback.webhook.url}")
     private val webhookUrl: String,
 ) : WebClientConnector(webhookUrl) {
-    suspend fun sendFeedback(message: String) {
+    suspend fun sendFeedback(feedbackMessage: String) {
         webClient
             .post()
-            .bodyValue(SlackMessageDTO(message))
+            .bodyValue(SlackMessageDTO(feedbackMessage))
             .retrieve()
             .awaitBody<String>()
     }
