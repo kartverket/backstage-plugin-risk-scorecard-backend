@@ -193,10 +193,10 @@ class RiScController(
         @RequestBody feedbackMessage: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<*> =
+    ): ResponseEntity<String> =
         try {
             slackService.sendFeedback(feedbackMessage)
-            ResponseEntity.ok("{}")
+            ResponseEntity.ok().build()
         } catch (e: Exception) {
             ResponseEntity.status(500).body("Failed to send feedback to Slack")
         }
