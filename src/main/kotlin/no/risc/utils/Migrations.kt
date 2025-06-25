@@ -55,7 +55,7 @@ fun migrate(
 }
 
 /**
- * Migrates the supplied RiSc to the supplied 4.X version.
+ * Migrates the supplied RiSc to the supplied 3.X version.
  *
  * @see no.risc.utils.migrate(RiSc, String)
  */
