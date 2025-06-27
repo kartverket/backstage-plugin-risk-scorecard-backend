@@ -7,13 +7,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import no.risc.risc.models.RiScVersion.RiSc3XVersion
 import no.risc.utils.FlattenSerializer
 import no.risc.utils.parseJSONToClass
 import no.risc.utils.parseJSONToElement
 import no.risc.utils.serializeJSON
 
-interface RiSc {
+sealed interface RiSc {
     // Every RiSc should have a schema version (or null if the version is unknown)
     val schemaVersion: RiScVersion?
 
