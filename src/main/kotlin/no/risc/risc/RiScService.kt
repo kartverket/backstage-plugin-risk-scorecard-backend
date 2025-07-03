@@ -13,6 +13,7 @@ import no.risc.github.GithubConnector
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
+import no.risc.infra.connector.RosaConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
@@ -446,6 +447,16 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
+        LOGGER.info("Sending ROS")
+        val connector = RosaConnector()
+        val encryptRequest = connector.createEncryptRequest(content.riSc)
+        LOGGER.info(encryptRequest.toString())
+        val response = connector.encrypt(encryptRequest)
+        LOGGER.info("Received response from rosa")
+        val componentRequest = connector.createComponent("A1", "A2", response.sum, response.remaining_sum)
+        LOGGER.info(componentRequest.toString())
+        val uploadResponse = connector.sendCipher(componentRequest)
+        LOGGER.info("ROSA response: $uploadResponse")
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId = riScId,
@@ -463,7 +474,6 @@ class RiScService(
                 validationError = validationError,
             )
         }
-
         val encryptedData: String =
             cryptoService.encrypt(
                 text = content.riSc,
