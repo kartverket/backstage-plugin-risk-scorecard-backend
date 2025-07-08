@@ -12,6 +12,8 @@ import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScValuation
+import no.risc.utils.KNullableOffsetDateTimeSerializer
+import java.time.OffsetDateTime
 
 /**
  * A tracked property type for handling tracking changes of five types (ADDED, CHANGED, CONTENT_CHANGED, DELETED and UNCHANGED).
@@ -125,6 +127,10 @@ data class RiSc4XScenarioActionChange(
     val description: SimpleTrackedProperty<String>,
     val url: SimpleTrackedProperty<String?>? = null,
     val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val lastUpdated: SimpleTrackedProperty<
+        @Serializable(KNullableOffsetDateTimeSerializer::class)
+        OffsetDateTime?,
+    >? = null,
 )
 
 /************************

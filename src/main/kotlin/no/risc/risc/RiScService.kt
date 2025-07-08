@@ -223,6 +223,7 @@ class RiScService(
                     ) {
                         migrate(
                             riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            lastPublished = riScContentResultDTO.lastPublished,
                             endVersion = latestSupportedVersion,
                         ).let { (migratedRiSc, migrationStatus) ->
                             riScContentResultDTO.copy(

@@ -1,5 +1,8 @@
 # Schema changelog
 
+## 4.2
+- Adds lastUpdated field in actions
+
 ## 4.1
 - Preset values for probability have been changed to a logarithmic scale with base 20:
 
