@@ -26,7 +26,6 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import java.io.File
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 
 class MigrationFunctionTests {
     private val latestSupportedVersion = "4.2"
@@ -360,7 +359,7 @@ class MigrationFunctionTests {
                         migrationChanges = false,
                         migrationRequiresNewApproval = false,
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
-                    )
+                    ),
             )
 
         // Check that schema version is set to 4.2
@@ -379,7 +378,6 @@ class MigrationFunctionTests {
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[0].actions[0].lastUpdated)
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[1].actions[0].lastUpdated)
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[2].actions[0].lastUpdated)
-
     }
 
     @Test
@@ -395,7 +393,7 @@ class MigrationFunctionTests {
                         migrationChanges = false,
                         migrationRequiresNewApproval = false,
                         migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
-                    )
+                    ),
             )
 
         // Check that schema version is set to 4.2
