@@ -1,6 +1,7 @@
 package no.risc.utils.comparison
 
 import no.risc.exception.exceptions.DifferenceException
+import no.risc.risc.models.LastPublished
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenario
@@ -22,6 +23,7 @@ import kotlin.collections.component2
  *
  * @param updatedRiSc The newest version of the RiSc.
  * @param oldRiSc The old version to compare against.
+ * @param lastPublished Last publised version of the RiSc.
  * @throws DifferenceException If the RiSc is of an unsupported version, the old RiSc has a newer
  * version than the
  * ```
@@ -31,10 +33,11 @@ import kotlin.collections.component2
 fun compare(
     updatedRiSc: RiSc,
     oldRiSc: RiSc,
+    lastPublished: LastPublished? = null,
 ): RiScChange =
     when (updatedRiSc) {
-        is RiSc4X -> comparison4X(updatedRiSc, oldRiSc)
-        is RiSc3X -> comparison3X(updatedRiSc, oldRiSc)
+        is RiSc4X -> comparison4X(updatedRiSc, oldRiSc, lastPublished)
+        is RiSc3X -> comparison3X(updatedRiSc, oldRiSc, lastPublished)
         is UnknownRiSc ->
             throw DifferenceException(
                 "The version of the RiSc is unknown and not supported for comparison.",
@@ -54,10 +57,11 @@ fun compare(
 fun comparison4X(
     updatedRiSc: RiSc4X,
     oldRiSc: RiSc,
+    lastPublished: LastPublished?,
 ): RiSc4XChange {
     val (migratedOldRiSc, migrationStatus) =
         try {
-            migrate(riSc = oldRiSc, endVersion = updatedRiSc.schemaVersion)
+            migrate(riSc = oldRiSc, lastPublished = lastPublished, endVersion = updatedRiSc.schemaVersion)
         } catch (_: IllegalStateException) {
             throw DifferenceException(
                 "The comparison failed due to migration failure of the old RiSc.",
@@ -94,10 +98,11 @@ fun comparison4X(
 fun comparison3X(
     updatedRiSc: RiSc3X,
     oldRiSc: RiSc,
+    lastPublished: LastPublished?,
 ): RiSc3XChange {
     val (migratedOldRiSc, migrationStatus) =
         try {
-            migrate(riSc = oldRiSc, endVersion = updatedRiSc.schemaVersion)
+            migrate(riSc = oldRiSc, lastPublished = lastPublished, endVersion = updatedRiSc.schemaVersion)
         } catch (_: IllegalStateException) {
             throw DifferenceException(
                 "The comparison failed due to migration failure of the old RiSc.",

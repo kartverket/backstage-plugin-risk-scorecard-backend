@@ -17,6 +17,9 @@ import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChange42
+import no.risc.utils.comparison.MigrationChange42Action
+import no.risc.utils.comparison.MigrationChange42Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -390,6 +393,31 @@ fun migrateFrom40To41(
     )
 }
 
+fun updateScenarioFrom41To42(
+    scenario: RiSc4XScenario,
+    lastPublished: LastPublished?,
+    addChanges: (MigrationChange42Scenario) -> Unit,
+): RiSc4XScenario {
+    val migratedScenario =
+        scenario.copy(
+            actions =
+                scenario.actions.map { action ->
+                    action.copy(lastUpdated = lastPublished?.dateTime ?: null)
+                },
+        )
+
+    val changes =
+        MigrationChange42Scenario(
+            title = migratedScenario.title,
+            id = migratedScenario.id,
+            changedActions = migratedScenario.actions.map { MigrationChange42Action(it.title, it.id, it.lastUpdated) },
+        )
+
+    if (changes.hasChanges()) addChanges(changes)
+
+    return migratedScenario
+}
+
 /**
  *  Migrate RiSc with changes from 4.1 to 4.2
  *
@@ -401,21 +429,18 @@ fun migrateFrom41To42(
     lastPublished: LastPublished?,
     migrationStatus: MigrationStatus,
 ): Pair<RiSc4X, MigrationStatus> {
-    val updatedScenarios =
-        riSc.scenarios.map { scenario ->
-            scenario.copy(
-                actions =
-                    scenario.actions.map { action ->
-                        action.copy(lastUpdated = lastPublished?.dateTime ?: null)
-                    },
-            )
-        }
+    val changedScenarios = mutableListOf<MigrationChange42Scenario>()
 
     return Pair(
         riSc.copy(
             schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_2,
-            scenarios = updatedScenarios,
+            scenarios =
+                riSc.scenarios.map { scenario ->
+                    updateScenarioFrom41To42(scenario, lastPublished, changedScenarios::add)
+                },
         ),
-        migrationStatus.copy(),
+        migrationStatus.copy(
+            migrationChanges42 = if (changedScenarios.isNotEmpty()) MigrationChange42(scenarios = changedScenarios) else null,
+        ),
     )
 }
