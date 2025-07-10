@@ -5,11 +5,16 @@ import kotlinx.serialization.json.JsonElement
 import org.springframework.web.reactive.function.client.awaitBody
 
 @Serializable
-data class ComponentRequest(
-    val Backstage_UID: String,
-    val GitHubNode_UID: String,
+data class AggregatedRos(
+    val RosID: String,
     val AggregatedNumber: String,
     val RemainingAggregatedNumber: String,
+)
+
+@Serializable
+data class UploadRequest(
+    val repository: String,
+    val aggregatedros: AggregatedRos,
 )
 
 @Serializable
@@ -23,19 +28,23 @@ data class EncryptRequest(
     val text: JsonElement,
 )
 
+@Serializable
+data class DeleteRequest(
+    val rosID: String,
+)
+
 class RosaConnector : WebClientConnector("http://localhost:8888") {
-    fun createComponent(
-        backstage_uid: String,
-        github_node_uid: String,
-        aggregated_number: String,
-        remaining_aggregated_number: String,
-    ): ComponentRequest {
+    fun createUploadRequest(
+        RiscID: String,
+        aggregatedNumber: String,
+        remainingAggregatedNumber: String,
+        repository: String,
+    ): UploadRequest {
+        val aggregatedRos = AggregatedRos(RiscID, aggregatedNumber, remainingAggregatedNumber)
         val request =
-            ComponentRequest(
-                backstage_uid,
-                github_node_uid,
-                aggregated_number,
-                remaining_aggregated_number,
+            UploadRequest(
+                repository,
+                aggregatedRos,
             )
         return request
     }
@@ -55,11 +64,18 @@ class RosaConnector : WebClientConnector("http://localhost:8888") {
             .retrieve()
             .awaitBody<EncryptResponse>()
 
-    suspend fun sendCipher(request: ComponentRequest): String =
+    suspend fun sendCipher(request: UploadRequest): String =
         webClient
             .post()
             .uri("/rosa")
             .bodyValue(request)
+            .retrieve()
+            .awaitBody()
+
+    suspend fun deleteRiSc(riscID: String): String =
+        webClient
+            .delete()
+            .uri("/rosa/{id}", riscID)
             .retrieve()
             .awaitBody()
 }

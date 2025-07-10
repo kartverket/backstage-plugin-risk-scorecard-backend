@@ -453,10 +453,9 @@ class RiScService(
         LOGGER.info(encryptRequest.toString())
         val response = connector.encrypt(encryptRequest)
         LOGGER.info("Received response from rosa")
-        val componentRequest = connector.createComponent("A1", "A2", response.sum, response.remaining_sum)
+        val componentRequest = connector.createUploadRequest(riScId, response.sum, response.remaining_sum, repository)
         LOGGER.info(componentRequest.toString())
         val uploadResponse = connector.sendCipher(componentRequest)
-        LOGGER.info("ROSA response: $uploadResponse")
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId = riScId,
@@ -525,14 +524,23 @@ class RiScService(
         repository: String,
         riScId: String,
         accessTokens: AccessTokens,
-    ): DeleteRiScResultDTO =
-        githubConnector
-            .deleteRiSc(
+    ): DeleteRiScResultDTO {
+        // First, delete from GitHub
+        val deleteRiScResultDTO =
+            githubConnector.deleteRiSc(
                 owner = owner,
                 repository = repository,
                 riScId = riScId,
                 accessToken = accessTokens.githubAccessToken.value,
             )
+
+        // Then, delete from Rosa
+        val connector = RosaConnector()
+        connector.deleteRiSc(riScId)
+
+        // Return result (example object)
+        return DeleteRiScResultDTO(deleteRiScResultDTO.riScId, deleteRiScResultDTO.status, deleteRiScResultDTO.statusMessage)
+    }
 
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
