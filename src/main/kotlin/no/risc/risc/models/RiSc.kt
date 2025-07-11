@@ -8,9 +8,11 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import no.risc.utils.FlattenSerializer
+import no.risc.utils.KNullableOffsetDateTimeSerializer
 import no.risc.utils.parseJSONToClass
 import no.risc.utils.parseJSONToElement
 import no.risc.utils.serializeJSON
+import java.time.OffsetDateTime
 
 sealed interface RiSc {
     // Every RiSc should have a schema version (or null if the version is unknown)
@@ -42,7 +44,7 @@ sealed interface RiSc {
                     RiScVersion.RiSc3XVersion.VERSION_3_2, RiScVersion.RiSc3XVersion.VERSION_3_3 ->
                         parseJSONToClass<RiSc3X>(content)
 
-                    RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1 ->
+                    RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
                         parseJSONToClass<RiSc4X>(content)
 
                     null -> UnknownRiSc(content = content)
@@ -68,7 +70,10 @@ sealed interface RiScVersion {
         VERSION_4_0,
 
         @SerialName("4.1")
-        VERSION_4_1, ;
+        VERSION_4_1,
+
+        @SerialName("4.2")
+        VERSION_4_2, ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
     }
@@ -170,7 +175,7 @@ enum class RiSc4XScenarioVulnerability {
 private object RiSc4XScenarioActionSerializer : FlattenSerializer<RiSc4XScenarioAction>(
     serializer = RiSc4XScenarioAction.generatedSerializer(),
     flattenKey = "action",
-    subKeys = listOf("ID", "url", "status", "description"),
+    subKeys = listOf("ID", "url", "status", "description", "lastUpdated"),
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -183,6 +188,8 @@ data class RiSc4XScenarioAction(
     val description: String,
     val url: String? = null,
     val status: RiScScenarioActionStatus,
+    @Serializable(KNullableOffsetDateTimeSerializer::class)
+    val lastUpdated: OffsetDateTime? = null,
 )
 
 /**********************

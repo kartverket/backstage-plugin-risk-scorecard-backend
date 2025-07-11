@@ -1,5 +1,6 @@
 package no.risc.utils
 
+import no.risc.risc.models.LastPublished
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
 import no.risc.risc.models.RiSc
@@ -16,6 +17,9 @@ import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChange42
+import no.risc.utils.comparison.MigrationChange42Action
+import no.risc.utils.comparison.MigrationChange42Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -25,21 +29,26 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 3.2 -> 3.3
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
+ * - 4.1 -> 4.2 (add lastUpdated field to action)
  *
  * @param riSc The RiSc to migrate.
+ * @param lastPublished The last published version of the RisC to use for migration to 4.2
  * @param endVersion The version to migrate to.
  * @throws IllegalStateException If the RiSc is of an unsupported version, the endVersion is a non-supported version or
  *                               the endVersion is an earlier version than the RiSc version.
  */
 fun migrate(
     riSc: RiSc,
+    lastPublished: LastPublished?,
     endVersion: String,
 ): Pair<RiSc, MigrationStatus> {
     val toVersion = RiScVersion.fromString(endVersion)
+
     if (riSc.schemaVersion == null || toVersion == null) throw IllegalStateException("Unsupported migration")
 
     return handleMigrate(
         riSc = riSc,
+        lastPublished = lastPublished,
         migrationStatus =
             MigrationStatus(
                 migrationChanges = false,
@@ -61,9 +70,10 @@ fun migrate(
  */
 fun migrate(
     riSc: RiSc,
+    lastPublished: LastPublished? = null,
     endVersion: RiScVersion.RiSc3XVersion,
 ): Pair<RiSc3X, MigrationStatus> {
-    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = endVersion.asString())
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
     if (migratedRiSc !is RiSc3X) throw IllegalStateException("Migration to 3.X version failed")
     return Pair(migratedRiSc, migrationStatus)
 }
@@ -75,9 +85,10 @@ fun migrate(
  */
 fun migrate(
     riSc: RiSc,
+    lastPublished: LastPublished? = null,
     endVersion: RiScVersion.RiSc4XVersion,
 ): Pair<RiSc4X, MigrationStatus> {
-    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = endVersion.asString())
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
     if (migratedRiSc !is RiSc4X) throw IllegalStateException("Migration to 4.X version failed")
     return Pair(migratedRiSc, migrationStatus)
 }
@@ -97,6 +108,7 @@ fun migrate(
  */
 private fun handleMigrate(
     riSc: RiSc,
+    lastPublished: LastPublished?,
     migrationStatus: MigrationStatus,
     toVersion: RiScVersion,
 ): Pair<RiSc, MigrationStatus> {
@@ -115,9 +127,12 @@ private fun handleMigrate(
             riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_0 ->
                 migrateFrom40To41(riSc, migrationStatus)
 
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 ->
+                migrateFrom41To42(riSc, lastPublished, migrationStatus)
+
             else -> throw IllegalStateException("Unsupported migration")
         }
-    return handleMigrate(migratedRiSc, migrationStatus, toVersion)
+    return handleMigrate(migratedRiSc, lastPublished, migrationStatus, toVersion)
 }
 
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
@@ -339,7 +354,7 @@ private fun updateScenarioFrom40to41(
 }
 
 /**
- *  Migrate RiSc with changes from 4.0 to 4.1
+// *  Migrate RiSc with changes from 4.0 to 4.1
  *
  *  The preset values for consequence and probability have been changed to use base 20.
  *  Note that arbitrary values are allowed for consequence and probability. We leave arbitrary values as is
@@ -374,6 +389,58 @@ fun migrateFrom40To41(
             migrationChanges = true,
             migrationRequiresNewApproval = true,
             migrationChanges41 = if (changedScenarios.isNotEmpty()) MigrationChange41(scenarios = changedScenarios) else null,
+        ),
+    )
+}
+
+fun updateScenarioFrom41To42(
+    scenario: RiSc4XScenario,
+    lastPublished: LastPublished?,
+    addChanges: (MigrationChange42Scenario) -> Unit,
+): RiSc4XScenario {
+    val migratedScenario =
+        scenario.copy(
+            actions =
+                scenario.actions.map { action ->
+                    action.copy(lastUpdated = lastPublished?.dateTime ?: null)
+                },
+        )
+
+    val changes =
+        MigrationChange42Scenario(
+            title = migratedScenario.title,
+            id = migratedScenario.id,
+            changedActions = migratedScenario.actions.map { MigrationChange42Action(it.title, it.id, it.lastUpdated) },
+        )
+
+    if (changes.hasChanges()) addChanges(changes)
+
+    return migratedScenario
+}
+
+/**
+ *  Migrate RiSc with changes from 4.1 to 4.2
+ *
+ * Add lastUpdated field to action to keep track when the action was last updated.
+ * Set to the last published date for RiSc or null if RiSc is not yet published.
+ * */
+fun migrateFrom41To42(
+    riSc: RiSc4X,
+    lastPublished: LastPublished?,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc4X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange42Scenario>()
+
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_2,
+            scenarios =
+                riSc.scenarios.map { scenario ->
+                    updateScenarioFrom41To42(scenario, lastPublished, changedScenarios::add)
+                },
+        ),
+        migrationStatus.copy(
+            migrationChanges42 = if (changedScenarios.isNotEmpty()) MigrationChange42(scenarios = changedScenarios) else null,
         ),
     )
 }

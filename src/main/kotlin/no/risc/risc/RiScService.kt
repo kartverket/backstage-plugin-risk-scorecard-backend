@@ -83,6 +83,13 @@ class RiScService(
                 riScId = riScId,
                 riScStatus = RiScStatus.Published,
                 gcpAccessToken = accessTokens.gcpAccessToken,
+                lastPublished =
+                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessTokens.githubAccessToken.value,
+                        riScId = riScId,
+                    ),
             ).let { response ->
                 when (response.status) {
                     ContentStatus.Success -> {
@@ -93,6 +100,7 @@ class RiScService(
                                     compare(
                                         updatedRiSc = RiSc.fromContent(draftRiScContent),
                                         oldRiSc = RiSc.fromContent(response.riScContent),
+                                        lastPublished = response.lastPublished,
                                     ),
                             )
                         } catch (e: DifferenceException) {
@@ -223,6 +231,7 @@ class RiScService(
                     ) {
                         migrate(
                             riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            lastPublished = riScContentResultDTO.lastPublished,
                             endVersion = latestSupportedVersion,
                         ).let { (migratedRiSc, migrationStatus) ->
                             riScContentResultDTO.copy(
