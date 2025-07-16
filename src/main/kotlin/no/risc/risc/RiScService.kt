@@ -454,7 +454,6 @@ class RiScService(
         val response = connector.encrypt(encryptRequest)
         LOGGER.info("Received response from rosa")
         val componentRequest = connector.createUploadRequest(riScId, response.sum, response.remaining_sum, repository)
-        LOGGER.info(componentRequest.toString())
         val uploadResponse = connector.sendCipher(componentRequest)
         val validationStatus =
             JSONValidator.validateAgainstSchema(
