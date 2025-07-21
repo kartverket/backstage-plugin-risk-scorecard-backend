@@ -51,6 +51,7 @@ import org.springframework.stereotype.Service
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
+    private val rosaConnector: RosaConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
@@ -447,14 +448,10 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
-        LOGGER.info("Sending ROS")
-        val connector = RosaConnector()
-        val encryptRequest = connector.createEncryptRequest(content.riSc)
-        LOGGER.info(encryptRequest.toString())
-        val response = connector.encrypt(encryptRequest)
-        LOGGER.info("Received response from rosa")
-        val componentRequest = connector.createUploadRequest(riScId, response.sum, response.remaining_sum, repository)
-        val uploadResponse = connector.sendCipher(componentRequest)
+        val encryptRequest = rosaConnector.createEncryptRequest(content.riSc)
+        val response = rosaConnector.encrypt(encryptRequest)
+        val componentRequest = rosaConnector.createUploadRequest(riScId, response.sum, response.remaining_sum, repository)
+        val uploadResponse = rosaConnector.sendCipher(componentRequest)
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId = riScId,
@@ -534,8 +531,7 @@ class RiScService(
             )
 
         // Then, delete from Rosa
-        val connector = RosaConnector()
-        connector.deleteRiSc(riScId)
+        rosaConnector.deleteRiSc(riScId)
 
         // Return result (example object)
         return DeleteRiScResultDTO(deleteRiScResultDTO.riScId, deleteRiScResultDTO.status, deleteRiScResultDTO.statusMessage)
