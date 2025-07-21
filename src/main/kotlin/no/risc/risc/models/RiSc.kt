@@ -202,7 +202,7 @@ data class RiSc4XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatus,
+    val status: RiScScenarioActionStatusOld,
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
 )
