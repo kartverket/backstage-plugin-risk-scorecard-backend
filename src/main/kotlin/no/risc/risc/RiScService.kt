@@ -13,7 +13,6 @@ import no.risc.github.GithubConnector
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
-import no.risc.infra.connector.RosaConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
@@ -36,6 +35,7 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
+import no.risc.rosa.RosaIntegration
 import no.risc.utils.Difference
 import no.risc.utils.DifferenceException
 import no.risc.utils.diff
@@ -51,10 +51,10 @@ import org.springframework.stereotype.Service
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
-    private val rosaConnector: RosaConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
+    private val rosaClient: RosaIntegration,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -448,10 +448,6 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
     ): RiScResult {
-        val encryptRequest = rosaConnector.createEncryptRequest(content.riSc)
-        val response = rosaConnector.encrypt(encryptRequest)
-        val componentRequest = rosaConnector.createUploadRequest(riScId, response.sum, response.remaining_sum, repository)
-        val uploadResponse = rosaConnector.sendCipher(componentRequest)
         val validationStatus =
             JSONValidator.validateAgainstSchema(
                 riScId = riScId,
@@ -531,7 +527,7 @@ class RiScService(
             )
 
         // Then, delete from Rosa
-        rosaConnector.deleteRiSc(riScId)
+        rosaClient.deleteRiSc(riScId)
 
         // Return result (example object)
         return DeleteRiScResultDTO(deleteRiScResultDTO.riScId, deleteRiScResultDTO.status, deleteRiScResultDTO.statusMessage)
@@ -572,6 +568,22 @@ class RiScService(
             statusMessage = "Pull request was created",
             pendingApproval = pullRequestObject.toPendingApprovalDTO(),
         )
+    }
+
+    suspend fun uploadRiScToRosa(
+        riScId: String,
+        repository: String,
+        riSc: String,
+    ): String {
+        try {
+            val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
+            return result
+        } catch (e: Exception) {
+            throw UpdatingRiScException( // Todo: Change to rosa specific exception
+                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
+                riScId = riScId,
+            )
+        }
     }
 
     /**

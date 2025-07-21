@@ -79,25 +79,31 @@ class RiScController(
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
         @RequestParam generateDefault: Boolean = false,
-    ): CreateRiScResultDTO =
-        riScService.createRiSc(
-            owner = repositoryOwner,
-            repository = repositoryName,
-            accessTokens =
-                AccessTokens(
-                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
-                ),
-            content = riSc,
-            defaultBranch =
-                githubConnector
-                    .fetchRepositoryInfo(
-                        repositoryOwner = repositoryOwner,
-                        repositoryName = repositoryName,
-                        gitHubAccessToken = gitHubAccessToken,
-                    ).defaultBranch,
-            generateDefault = generateDefault,
-        )
+    ): CreateRiScResultDTO {
+        val createRiscResultDTO =
+            riScService.createRiSc(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                accessTokens =
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                    ),
+                content = riSc,
+                defaultBranch =
+                    githubConnector
+                        .fetchRepositoryInfo(
+                            repositoryOwner = repositoryOwner,
+                            repositoryName = repositoryName,
+                            gitHubAccessToken = gitHubAccessToken,
+                        ).defaultBranch,
+                generateDefault = generateDefault,
+            )
+        if (createRiscResultDTO.riScContent != null) {
+            riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
+        }
+        return createRiscResultDTO
+    }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun editRiSc(
@@ -107,24 +113,31 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ) = riScService.updateRiSc(
-        owner = repositoryOwner,
-        repository = repositoryName,
-        riScId = id,
-        content = riSc,
-        accessTokens =
-            AccessTokens(
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
-            ),
-        defaultBranch =
-            githubConnector
-                .fetchRepositoryInfo(
-                    repositoryOwner = repositoryOwner,
-                    repositoryName = repositoryName,
-                    gitHubAccessToken = gitHubAccessToken,
-                ).defaultBranch,
-    )
+    ) {
+        riScService.updateRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            riScId = id,
+            content = riSc,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                ),
+            defaultBranch =
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
+        )
+        riScService.uploadRiScToRosa(
+            id,
+            repositoryName,
+            riSc.riSc,
+        )
+    }
 
     @DeleteMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun deleteRiSc(
