@@ -11,6 +11,11 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XScenarioAction
+import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.risc.models.RiScVersion
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
@@ -20,6 +25,9 @@ import no.risc.utils.comparison.MigrationChange41Scenario
 import no.risc.utils.comparison.MigrationChange42
 import no.risc.utils.comparison.MigrationChange42Action
 import no.risc.utils.comparison.MigrationChange42Scenario
+import no.risc.utils.comparison.MigrationChange50
+import no.risc.utils.comparison.MigrationChange50Action
+import no.risc.utils.comparison.MigrationChange50Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -30,6 +38,7 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  * - 4.1 -> 4.2 (add lastUpdated field to action)
+ * - 4.2 -> 5.0 (change action status names)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -94,11 +103,28 @@ fun migrate(
 }
 
 /**
+ * Migrates the supplied RiSc to the supplied 5.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    lastPublished: LastPublished? = null,
+    endVersion: RiScVersion.RiSc5XVersion,
+): Pair<RiSc5X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc5X) throw IllegalStateException("Migration to 5.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
  * performed as a number of steps. The method currently supports the following steps:
  * - 3.2 -> 3.3
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
+ * - 4.1 -> 4.2 (add lastUpdated field to action)
+ * - 4.2 -> 5.0 (change action status names)
  *
  * @param riSc The RiSc to migrate
  * @param migrationStatus The migration status so far
@@ -129,6 +155,9 @@ private fun handleMigrate(
 
             riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 ->
                 migrateFrom41To42(riSc, lastPublished, migrationStatus)
+
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_2 ->
+                migrateFrom42To50(riSc, migrationStatus)
 
             else -> throw IllegalStateException("Unsupported migration")
         }
@@ -441,6 +470,99 @@ fun migrateFrom41To42(
         ),
         migrationStatus.copy(
             migrationChanges42 = if (changedScenarios.isNotEmpty()) MigrationChange42(scenarios = changedScenarios) else null,
+        ),
+    )
+}
+
+fun updateScenarioFrom42To50(
+    scenario: RiSc4XScenario,
+    addChanges: (MigrationChange50Scenario) -> Unit,
+): RiSc5XScenario {
+    val migratedActions =
+        scenario.actions.map { action ->
+            val newStatus =
+                when (action.status) {
+                    RiScScenarioActionStatusV4.NOT_STARTED,
+                    RiScScenarioActionStatusV4.IN_PROGRESS,
+                    RiScScenarioActionStatusV4.ON_HOLD,
+                    -> RiScScenarioActionStatus.NOT_OK
+
+                    RiScScenarioActionStatusV4.COMPLETED -> RiScScenarioActionStatus.OK
+
+                    RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
+                }
+
+            RiSc5XScenarioAction(
+                title = action.title,
+                id = action.id,
+                description = action.description,
+                url = action.url,
+                status = newStatus,
+                lastUpdated = action.lastUpdated,
+            )
+        }
+
+    val migratedScenario =
+        RiSc5XScenario(
+            title = scenario.title,
+            id = scenario.id,
+            description = scenario.description,
+            url = scenario.url,
+            threatActors = scenario.threatActors,
+            vulnerabilities = scenario.vulnerabilities,
+            risk = scenario.risk,
+            remainingRisk = scenario.remainingRisk,
+            actions = migratedActions,
+        )
+
+    addChanges(
+        MigrationChange50Scenario(
+            title = scenario.title,
+            id = scenario.id,
+            changedActions =
+                migratedActions.map {
+                    MigrationChange50Action(it.title, it.id, it.status)
+                },
+        ),
+    )
+
+    return migratedScenario
+}
+
+/**
+ * Migrate RiSc with changes from 4.2 to 5.0
+ *
+ * Change status of actions from
+ *
+ * Completed -> Ok
+ * Not started, In progress, On hold -> Not ok
+ * aborted -> Not relevant
+ **/
+
+fun migrateFrom42To50(
+    riSc: RiSc4X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange50Scenario>()
+
+    val migratedScenarios =
+        riSc.scenarios.map { scenario ->
+            updateScenarioFrom42To50(scenario, changedScenarios::add)
+        }
+
+    return Pair(
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_0,
+            title = riSc.title,
+            scope = riSc.scope,
+            valuations = riSc.valuations,
+            scenarios = migratedScenarios,
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges50 =
+                if (changedScenarios.isNotEmpty()) MigrationChange50(scenarios = changedScenarios) else null,
         ),
     )
 }
