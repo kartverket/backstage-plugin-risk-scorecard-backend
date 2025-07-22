@@ -182,4 +182,6 @@ class JSONValidatorTests {
             "Content adhering to version 3.3 should fail validation against the version 4.0 schema.",
         )
     }
+
+    // må skrive en test her for å validere 4.2 opp mot de andre?
 }

@@ -4,7 +4,7 @@ plugins {
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
     id("org.springframework.boot") version "3.5.3"
-    id("org.jlleitschuh.gradle.ktlint") version "12.3.0"
+    id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
 }
 
 ktlint {
@@ -32,14 +32,14 @@ repositories {
 val kotlinVersion = "2.2.0"
 val springBootVersion = "3.5.3"
 val springSecurityVersion = "6.5.1"
-val kotlinxSerializationVersion = "1.8.1"
+val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.15.1"
-val jsonSchemaValidatorVersion = "1.5.7"
-val nimbusdsVersion = "10.3"
+val micrometerVersion = "1.15.2"
+val jsonSchemaValidatorVersion = "1.5.8"
+val nimbusdsVersion = "10.3.1"
 val bouncyCastleVersion = "1.81"
-val mockkVersion = "1.14.4"
-val junitVersion = "5.13.2"
+val mockkVersion = "1.14.5"
+val junitVersion = "5.13.3"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")

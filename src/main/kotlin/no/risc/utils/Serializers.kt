@@ -4,6 +4,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.nullable
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonElement
@@ -25,6 +26,30 @@ class KOffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
     ) = encoder.encodeString(formatter.format(value))
 
     override fun deserialize(decoder: Decoder): OffsetDateTime = OffsetDateTime.parse(decoder.decodeString())
+}
+
+class KNullableOffsetDateTimeSerializer : KSerializer<OffsetDateTime?> {
+    private val delegate = KOffsetDateTimeSerializer()
+
+    override val descriptor: SerialDescriptor = delegate.descriptor.nullable
+
+    override fun serialize(
+        encoder: Encoder,
+        value: OffsetDateTime?,
+    ) {
+        if (value == null) {
+            encoder.encodeNull()
+        } else {
+            delegate.serialize(encoder, value)
+        }
+    }
+
+    override fun deserialize(decoder: Decoder): OffsetDateTime? =
+        if (decoder.decodeNotNullMark()) {
+            delegate.deserialize(decoder)
+        } else {
+            decoder.decodeNull()
+        }
 }
 
 class KDateSerializer : KSerializer<Date> {

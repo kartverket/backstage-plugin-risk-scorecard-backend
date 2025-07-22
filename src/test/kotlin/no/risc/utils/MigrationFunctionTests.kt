@@ -1,5 +1,6 @@
 package no.risc.utils
 
+import no.risc.risc.models.LastPublished
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
 import no.risc.risc.models.RiSc
@@ -15,6 +16,8 @@ import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChange42Action
+import no.risc.utils.comparison.MigrationChange42Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,9 +27,10 @@ import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import java.io.File
+import java.time.OffsetDateTime
 
 class MigrationFunctionTests {
-    private val latestSupportedVersion = "4.1"
+    private val latestSupportedVersion = "4.2"
 
     @Test
     fun `test migrateFrom32To33`() {
@@ -341,12 +345,161 @@ class MigrationFunctionTests {
         )
     }
 
+    // dateTime should be equal to lastUpdated in 4.2.json
+    private val lastPublished = LastPublished(dateTime = OffsetDateTime.parse("2025-07-09T11:28:14.801Z"), numberOfCommits = 3)
+
+    @Test
+    fun `test migrateFrom41To42`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.1.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom41To42(
+                riSc = riSc,
+                lastPublished = lastPublished,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 4.2
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_2,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.2.",
+        )
+
+        // Verify that all actions for a scenario are present after migration.
+        assertEquals(1, migratedRiSc.scenarios[0].actions.size, "All actions for a scenarios should be present after migration.")
+        assertEquals(1, migratedRiSc.scenarios[1].actions.size, "All actions for a scenarios should be present after migration.")
+        assertEquals(1, migratedRiSc.scenarios[2].actions.size, "All actions for a scenarios should be present after migration.")
+
+        // Verify that lastUpdated is set to same date as when the RiSC was published
+        assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[0].actions[0].lastUpdated)
+        assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[1].actions[0].lastUpdated)
+        assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[2].actions[0].lastUpdated)
+
+        assertNotNull(
+            migrationStatus.migrationChanges42,
+            "When changes have been made, there should be a migration changes object.",
+        )
+
+        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+
+        val expectedFirstScenarioChanges =
+            MigrationChange42Scenario(
+                title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
+                id = "14Kap",
+                changedActions =
+                    List<MigrationChange42Action>(1, {
+                        MigrationChange42Action(title = "", id = "w100Q", lastUpdated = lastPublished.dateTime)
+                    }),
+            )
+
+        assertEquals(
+            expectedFirstScenarioChanges,
+            changedScenarios[0],
+            "The changed values of the first scenario should be properly included.",
+        )
+    }
+
+    @Test
+    fun `test migrateFrom41To42NoLastPublished`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.1.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom41To42(
+                riSc = riSc,
+                lastPublished = null,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 4.2
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_2,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.2.",
+        )
+
+        // Verify that all actions for a scenario are present after migration.
+        assertEquals(1, migratedRiSc.scenarios[0].actions.size, "All actions for a scenarios should be present after migration.")
+        assertEquals(1, migratedRiSc.scenarios[1].actions.size, "All actions for a scenarios should be present after migration.")
+        assertEquals(1, migratedRiSc.scenarios[2].actions.size, "All actions for a scenarios should be present after migration.")
+
+        // Verify that lastUpdated is set null when RiSc are not yet published
+        assertEquals(null, migratedRiSc.scenarios[0].actions[0].lastUpdated)
+        assertEquals(null, migratedRiSc.scenarios[1].actions[0].lastUpdated)
+        assertEquals(null, migratedRiSc.scenarios[2].actions[0].lastUpdated)
+
+        assertNotNull(
+            migrationStatus.migrationChanges42,
+            "When changes have been made, there should be a migration changes object.",
+        )
+
+        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+
+        val expectedFirstScenarioChanges =
+            MigrationChange42Scenario(
+                title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
+                id = "14Kap",
+                changedActions =
+                    List<MigrationChange42Action>(
+                        1,
+                        { MigrationChange42Action(title = "", id = "w100Q", lastUpdated = null) },
+                    ),
+            )
+
+        assertEquals(
+            expectedFirstScenarioChanges,
+            changedScenarios[0],
+            "The changed values of the first scenario should be properly included.",
+        )
+    }
+
+    @Test
+    fun `test migrateFrom41To42EmptyAction`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.1-no-actions.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom41To42(
+                riSc = riSc,
+                lastPublished = null,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+        // Check that schema version is set to 4.2
+        assertEquals(
+            RiScVersion.RiSc4XVersion.VERSION_4_2,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 4.2.",
+        )
+
+        // Verify that there is still no actions in the migrated RiSc
+        assertEquals(0, migratedRiSc.scenarios[0].actions.size, "All actions for a scenarios should be present after migration.")
+
+        assertNull(
+            migrationStatus.migrationChanges42,
+            "When no changes have been made, there should not be a migration changes object.",
+        )
+    }
+
     @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
         val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc3X
-        val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, endVersion = latestSupportedVersion)
+        val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = latestSupportedVersion)
 
         assertEquals(RiScVersion.fromString(latestSupportedVersion), migratedRiSc.schemaVersion)
 
@@ -409,12 +562,13 @@ class MigrationFunctionTests {
             migrate(
                 riSc =
                     RiSc4X(
-                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_1,
+                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_2,
                         title = "Title",
                         scope = "Scope",
                         valuations = emptyList(),
                         scenarios = emptyList(),
                     ),
+                lastPublished = null,
                 endVersion = "0.0",
             )
         }
@@ -423,7 +577,7 @@ class MigrationFunctionTests {
     @Test
     fun `test migrate throws error on unsupported RiSc`() {
         assertThrows<IllegalStateException>("If an unsupported RiSc is provided, the migrate function should throw an exception") {
-            migrate(riSc = UnknownRiSc(content = ""), endVersion = "4.1")
+            migrate(riSc = UnknownRiSc(content = ""), lastPublished = null, endVersion = "4.2")
         }
     }
 
@@ -435,12 +589,13 @@ class MigrationFunctionTests {
             migrate(
                 riSc =
                     RiSc4X(
-                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_1,
+                        schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_2,
                         title = "Title",
                         scope = "Scope",
                         valuations = emptyList(),
                         scenarios = emptyList(),
                     ),
+                lastPublished = null,
                 endVersion = "3.3",
             )
         }

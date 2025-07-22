@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
+import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
@@ -36,9 +37,7 @@ import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.rosa.RosaIntegration
-import no.risc.utils.Difference
-import no.risc.utils.DifferenceException
-import no.risc.utils.diff
+import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
@@ -86,21 +85,28 @@ class RiScService(
                 riScId = riScId,
                 riScStatus = RiScStatus.Published,
                 gcpAccessToken = accessTokens.gcpAccessToken,
+                lastPublished =
+                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                        owner = owner,
+                        repository = repository,
+                        accessToken = accessTokens.githubAccessToken.value,
+                        riScId = riScId,
+                    ),
             ).let { response ->
                 when (response.status) {
                     ContentStatus.Success -> {
                         try {
                             InternDifference(
                                 status = DifferenceStatus.Success,
-                                differenceState = diff("${response.riScContent}", draftRiScContent),
-                                errorMessage = "",
+                                differenceState =
+                                    compare(
+                                        updatedRiSc = RiSc.fromContent(draftRiScContent),
+                                        oldRiSc = RiSc.fromContent(response.riScContent),
+                                        lastPublished = response.lastPublished,
+                                    ),
                             )
                         } catch (e: DifferenceException) {
-                            InternDifference(
-                                status = DifferenceStatus.JsonFailure,
-                                differenceState = Difference(),
-                                errorMessage = "${e.message}",
-                            )
+                            InternDifference(status = DifferenceStatus.JsonFailure, errorMessage = "${e.message}")
                         }
                     }
 
@@ -112,42 +118,36 @@ class RiScService(
                     ContentStatus.FileNotFound ->
                         InternDifference(
                             status = DifferenceStatus.GithubFileNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: File not found",
                         )
 
                     ContentStatus.DecryptionFailed ->
                         InternDifference(
                             status = DifferenceStatus.DecryptionFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered ROS problem: Could not decrypt content",
                         )
 
                     ContentStatus.Failure ->
                         InternDifference(
                             status = DifferenceStatus.GithubFailure,
-                            differenceState = Difference(),
                             errorMessage = "Encountered Github problem: Github failure",
                         )
 
                     ContentStatus.NoReadAccess ->
                         InternDifference(
                             status = DifferenceStatus.NoReadAccess,
-                            differenceState = Difference(),
                             errorMessage = "No read access to repository",
                         )
 
                     ContentStatus.SchemaNotFound ->
                         InternDifference(
                             status = DifferenceStatus.SchemaNotFound,
-                            differenceState = Difference(),
                             errorMessage = "Could not fetch JSON schema",
                         )
 
                     ContentStatus.SchemaValidationFailed ->
                         InternDifference(
                             status = DifferenceStatus.SchemaValidationFailed,
-                            differenceState = Difference(),
                             errorMessage = "SchemaValidation failed",
                         )
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
@@ -233,6 +233,7 @@ class RiScService(
                     ) {
                         migrate(
                             riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            lastPublished = riScContentResultDTO.lastPublished,
                             endVersion = latestSupportedVersion,
                         ).let { (migratedRiSc, migrationStatus) ->
                             riScContentResultDTO.copy(
@@ -465,6 +466,7 @@ class RiScService(
                 validationError = validationError,
             )
         }
+
         val encryptedData: String =
             cryptoService.encrypt(
                 text = content.riSc,
@@ -517,12 +519,13 @@ class RiScService(
         riScId: String,
         accessTokens: AccessTokens,
     ): DeleteRiScResultDTO =
-        githubConnector.deleteRiSc(
-            owner = owner,
-            repository = repository,
-            riScId = riScId,
-            accessToken = accessTokens.githubAccessToken.value,
-        )
+        githubConnector
+            .deleteRiSc(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                accessToken = accessTokens.githubAccessToken.value,
+            )
 
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request

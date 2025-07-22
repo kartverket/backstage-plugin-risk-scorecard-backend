@@ -3,11 +3,8 @@ package no.risc.utils.comparison
 import kotlinx.serialization.Serializable
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4XScenarioVulnerability
-
-data class MigrationChanges(
-    val migrationChange40: MigrationChange40? = null,
-    val migrationChange41: MigrationChange41? = null,
-)
+import no.risc.utils.KNullableOffsetDateTimeSerializer
+import java.time.OffsetDateTime
 
 // Changes for the migration from version 3.3 to 4.0
 
@@ -55,6 +52,29 @@ data class MigrationChange41Scenario(
             changedRemainingRiskConsequence != null ||
             changedRemainingRiskProbability != null
 }
+
+// Changes for the migration from version 4.1 to 4.2
+@Serializable
+data class MigrationChange42(
+    val scenarios: List<MigrationChange42Scenario>,
+)
+
+@Serializable
+data class MigrationChange42Scenario(
+    val title: String,
+    val id: String,
+    val changedActions: List<MigrationChange42Action>,
+) {
+    fun hasChanges() = changedActions.isNotEmpty()
+}
+
+@Serializable
+data class MigrationChange42Action(
+    val title: String,
+    val id: String,
+    @Serializable(with = KNullableOffsetDateTimeSerializer::class)
+    val lastUpdated: OffsetDateTime? = null,
+)
 
 // General change object
 @Serializable
