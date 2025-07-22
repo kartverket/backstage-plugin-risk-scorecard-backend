@@ -48,12 +48,11 @@ fun compare(
             )
     }
 
-
 fun comparison5X(
     updatedRiSc: RiSc5X,
     oldRiSc: RiSc,
     lastPublished: LastPublished? = null,
-): RiSc5XChange{
+): RiSc5XChange {
     val (migratedOldRiSc, migrationStatus) =
         try {
             migrate(riSc = oldRiSc, lastPublished = lastPublished, endVersion = updatedRiSc.schemaVersion)
@@ -79,7 +78,6 @@ fun comparison5X(
         migrationChanges = migrationStatus,
     )
 }
-
 
 /**
  * Compares an updated RiSc of version 4.X to an old RiSc. The fields `title` and `scope` are only
