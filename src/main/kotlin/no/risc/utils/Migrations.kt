@@ -1,17 +1,6 @@
 package no.risc.utils
 
-import no.risc.risc.models.LastPublished
-import no.risc.risc.models.MigrationStatus
-import no.risc.risc.models.MigrationVersions
-import no.risc.risc.models.RiSc
-import no.risc.risc.models.RiSc3X
-import no.risc.risc.models.RiSc3XScenario
-import no.risc.risc.models.RiSc3XScenarioVulnerability
-import no.risc.risc.models.RiSc4X
-import no.risc.risc.models.RiSc4XScenario
-import no.risc.risc.models.RiSc4XScenarioAction
-import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScVersion
+import no.risc.risc.models.*
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
@@ -20,6 +9,9 @@ import no.risc.utils.comparison.MigrationChange41Scenario
 import no.risc.utils.comparison.MigrationChange42
 import no.risc.utils.comparison.MigrationChange42Action
 import no.risc.utils.comparison.MigrationChange42Scenario
+import no.risc.utils.comparison.MigrationChange50
+import no.risc.utils.comparison.MigrationChange50Action
+import no.risc.utils.comparison.MigrationChange50Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -129,6 +121,9 @@ private fun handleMigrate(
 
             riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 ->
                 migrateFrom41To42(riSc, lastPublished, migrationStatus)
+
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_2 ->
+                migrateFrom42To50(riSc, migrationStatus)
 
             else -> throw IllegalStateException("Unsupported migration")
         }
@@ -441,6 +436,99 @@ fun migrateFrom41To42(
         ),
         migrationStatus.copy(
             migrationChanges42 = if (changedScenarios.isNotEmpty()) MigrationChange42(scenarios = changedScenarios) else null,
+        ),
+    )
+}
+
+fun updateScenarioFrom42To50(
+    scenario: RiSc4XScenario,
+    addChanges: (MigrationChange50Scenario) -> Unit,
+): RiSc5XScenario {
+    val migratedActions =
+        scenario.actions.map { action ->
+            val newStatus =
+                when (action.status) {
+                    RiScScenarioActionStatusV4.NOT_STARTED,
+                    RiScScenarioActionStatusV4.IN_PROGRESS,
+                    RiScScenarioActionStatusV4.ON_HOLD,
+                    -> RiScScenarioActionStatus.NOT_OK
+
+                    RiScScenarioActionStatusV4.COMPLETED -> RiScScenarioActionStatus.OK
+
+                    RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
+                }
+
+            RiSc5XScenarioAction(
+                title = action.title,
+                id = action.id,
+                description = action.description,
+                url = action.url,
+                status = newStatus,
+                lastUpdated = action.lastUpdated,
+            )
+        }
+
+    val migratedScenario =
+        RiSc5XScenario(
+            title = scenario.title,
+            id = scenario.id,
+            description = scenario.description,
+            url = scenario.url,
+            threatActors = scenario.threatActors,
+            vulnerabilities = scenario.vulnerabilities,
+            risk = scenario.risk,
+            remainingRisk = scenario.remainingRisk,
+            actions = migratedActions,
+        )
+
+    addChanges(
+        MigrationChange50Scenario(
+            title = scenario.title,
+            id = scenario.id,
+            changedActions =
+                migratedActions.map {
+                    MigrationChange50Action(it.title, it.id, it.status)
+                },
+        ),
+    )
+
+    return migratedScenario
+}
+
+/**
+ * Migrate RiSc with changes from 4.2 to 5.0
+ *
+ * Change status of actions from
+ *
+ * Completed -> Ok
+ * Not started, In progress, On hold -> Not ok
+ * aborted -> Not relevant
+ **/
+
+fun migrateFrom42To50(
+    riSc: RiSc4X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange50Scenario>()
+
+    val migratedScenarios =
+        riSc.scenarios.map { scenario ->
+            updateScenarioFrom42To50(scenario, changedScenarios::add)
+        }
+
+    return Pair(
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_0,
+            title = riSc.title,
+            scope = riSc.scope,
+            valuations = riSc.valuations,
+            scenarios = migratedScenarios,
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges50 =
+                if (changedScenarios.isNotEmpty()) MigrationChange50(scenarios = changedScenarios) else null,
         ),
     )
 }
