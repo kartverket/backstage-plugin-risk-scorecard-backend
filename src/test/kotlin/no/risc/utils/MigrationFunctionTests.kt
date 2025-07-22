@@ -8,6 +8,7 @@ import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScVersion
 import no.risc.risc.models.UnknownRiSc
@@ -495,6 +496,52 @@ class MigrationFunctionTests {
         assertNull(
             migrationStatus.migrationChanges42,
             "When no changes have been made, there should not be a migration changes object.",
+        )
+    }
+
+    @Test
+    fun `test migrateFrom42To50`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.2.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom42To50(
+                riSc = riSc,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 5.0
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.0.",
+        )
+
+        migratedRiSc.scenarios.forEach { scenario ->
+            scenario.actions.forEach { action ->
+                assertEquals(
+                    RiScScenarioActionStatus.NOT_OK,
+                    action.status,
+                    "All actions should have status NOT_OK after migration to version 5.0.",
+                )
+            }
+        }
+
+        val changes50 = migrationStatus.migrationChanges50
+        assertNotNull(
+            changes50,
+            "When changes have been made, there should be a migration changes object.",
+        )
+
+        val changedScenarios = changes50.scenarios
+
+        assertTrue(
+            changedScenarios.isNotEmpty(),
+            "There should be changed scenarios after migrating from 4.2 to 5.0.",
         )
     }
 
