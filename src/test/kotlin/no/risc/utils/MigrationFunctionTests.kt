@@ -30,7 +30,7 @@ import java.io.File
 import java.time.OffsetDateTime
 
 class MigrationFunctionTests {
-    private val latestSupportedVersion = "4.2"
+    private val latestSupportedVersion = "5.0"
 
     @Test
     fun `test migrateFrom32To33`() {
