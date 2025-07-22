@@ -96,9 +96,8 @@ data class MigrationChange50Scenario(
 data class MigrationChange50Action(
     val title: String,
     val id: String,
-    val newStatus: RiScScenarioActionStatus
+    val newStatus: RiScScenarioActionStatus,
 )
-
 
 // General change object
 @Serializable
