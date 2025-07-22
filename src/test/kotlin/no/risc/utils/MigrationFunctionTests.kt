@@ -110,12 +110,13 @@ class MigrationFunctionTests {
             )
         }
 
+        val changes40 = migrationStatus.migrationChanges40
         assertNotNull(
-            migrationStatus.migrationChanges40,
+            changes40,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges40.scenarios
+        val changedScenarios = changes40.scenarios
 
         assertEquals(1, changedScenarios.size, "Only changed scenarios should be included in the migration changes.")
 
@@ -290,12 +291,13 @@ class MigrationFunctionTests {
         assertEquals(true, migrationStatus.migrationChanges)
         assertEquals(true, migrationStatus.migrationRequiresNewApproval)
 
+        val changes41 = migrationStatus.migrationChanges41
         assertNotNull(
-            migrationStatus.migrationChanges41,
+            changes41,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges41.scenarios
+        val changedScenarios = changes41.scenarios
 
         assertEquals(3, changedScenarios.size, "All changed scenarios should be included in the migration changes.")
 
@@ -381,12 +383,13 @@ class MigrationFunctionTests {
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[1].actions[0].lastUpdated)
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[2].actions[0].lastUpdated)
 
+        val changes42 = migrationStatus.migrationChanges42
         assertNotNull(
-            migrationStatus.migrationChanges42,
+            changes42,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+        val changedScenarios = changes42.scenarios
 
         val expectedFirstScenarioChanges =
             MigrationChange42Scenario(
@@ -438,12 +441,13 @@ class MigrationFunctionTests {
         assertEquals(null, migratedRiSc.scenarios[1].actions[0].lastUpdated)
         assertEquals(null, migratedRiSc.scenarios[2].actions[0].lastUpdated)
 
+        val changes42 = migrationStatus.migrationChanges42
         assertNotNull(
-            migrationStatus.migrationChanges42,
+            changes42,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+        val changedScenarios = changes42.scenarios
 
         val expectedFirstScenarioChanges =
             MigrationChange42Scenario(
