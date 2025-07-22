@@ -127,6 +127,63 @@ sealed interface RiScVersion {
 }
 
 /***************
+ * VERSION 5.X *
+ ***************/
+
+@Serializable
+data class RiSc5X(
+    override val schemaVersion: RiScVersion.RiSc5XVersion,
+    val title: String,
+    val scope: String,
+    val valuations: List<RiScValuation>? = null,
+    val scenarios: List<RiSc5XScenario>,
+) : RiSc {
+    override fun toJSON(): String = serializeJSON(this)
+}
+
+object RiSc5XScenarioSerializer : FlattenSerializer<RiSc5XScenario>(
+    serializer = RiSc5XScenario.generatedSerializer(),
+    flattenKey = "scenario",
+    subKeys = listOf("ID", "description", "url", "threatActors", "vulnerabilities", "risk", "remainingRisk", "actions"),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@KeepGeneratedSerializer
+@Serializable(with = RiSc5XScenarioSerializer::class)
+data class RiSc5XScenario(
+    val title: String,
+    @SerialName("ID")
+    val id: String,
+    val description: String,
+    val url: String? = null,
+    val threatActors: List<RiScScenarioThreatActor>,
+    val vulnerabilities: List<RiSc4XScenarioVulnerability>,
+    val risk: RiScScenarioRisk,
+    val remainingRisk: RiScScenarioRisk,
+    val actions: List<RiSc5XScenarioAction>,
+)
+
+private object RiSc5XScenarioActionSerializer : FlattenSerializer<RiSc5XScenarioAction>(
+    serializer = RiSc5XScenarioAction.generatedSerializer(),
+    flattenKey = "action",
+    subKeys = listOf("ID", "url", "status", "description", "lastUpdated"),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@KeepGeneratedSerializer
+@Serializable(with = RiSc5XScenarioActionSerializer::class)
+data class RiSc5XScenarioAction(
+    val title: String,
+    @SerialName("ID")
+    val id: String,
+    val description: String,
+    val url: String? = null,
+    val status: RiScScenarioActionStatus,
+    @Serializable(KNullableOffsetDateTimeSerializer::class)
+    val lastUpdated: OffsetDateTime? = null,
+)
+
+/***************
  * VERSION 4.X *
  ***************/
 @Serializable
@@ -207,47 +264,6 @@ data class RiSc4XScenarioAction(
     val description: String,
     val url: String? = null,
     val status: RiScScenarioActionStatusV4,
-    @Serializable(KNullableOffsetDateTimeSerializer::class)
-    val lastUpdated: OffsetDateTime? = null,
-)
-
-/***************
- * VERSION 5.X *
- ***************/
-
-@Serializable
-data class RiSc5X(
-    override val schemaVersion: RiScVersion.RiSc5XVersion,
-    val title: String,
-    val scope: String,
-    val valuations: List<RiScValuation>? = null,
-    val scenarios: List<RiSc5XScenario>,
-) : RiSc {
-    override fun toJSON(): String = serializeJSON(this)
-}
-
-@Serializable
-data class RiSc5XScenario(
-    val title: String,
-    @SerialName("ID")
-    val id: String,
-    val description: String,
-    val url: String? = null,
-    val threatActors: List<RiScScenarioThreatActor>,
-    val vulnerabilities: List<RiSc4XScenarioVulnerability>,
-    val risk: RiScScenarioRisk,
-    val remainingRisk: RiScScenarioRisk,
-    val actions: List<RiSc5XScenarioAction>,
-)
-
-@Serializable
-data class RiSc5XScenarioAction(
-    val title: String,
-    @SerialName("ID")
-    val id: String,
-    val description: String,
-    val url: String? = null,
-    val status: RiScScenarioActionStatus,
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
 )
