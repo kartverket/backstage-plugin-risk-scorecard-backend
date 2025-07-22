@@ -38,6 +38,7 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  * - 4.1 -> 4.2 (add lastUpdated field to action)
+ * - 4.2 -> 5.0 (change action status names)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -102,11 +103,28 @@ fun migrate(
 }
 
 /**
+ * Migrates the supplied RiSc to the supplied 5.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    lastPublished: LastPublished? = null,
+    endVersion: RiScVersion.RiSc5XVersion,
+): Pair<RiSc5X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc5X) throw IllegalStateException("Migration to 5.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
  * performed as a number of steps. The method currently supports the following steps:
  * - 3.2 -> 3.3
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
+ * - 4.1 -> 4.2 (add lastUpdated field to action)
+ * - 4.2 -> 5.0 (change action status names)
  *
  * @param riSc The RiSc to migrate
  * @param migrationStatus The migration status so far
