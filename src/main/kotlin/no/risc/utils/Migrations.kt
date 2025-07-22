@@ -1,6 +1,22 @@
 package no.risc.utils
 
-import no.risc.risc.models.*
+import no.risc.risc.models.LastPublished
+import no.risc.risc.models.MigrationStatus
+import no.risc.risc.models.MigrationVersions
+import no.risc.risc.models.RiSc
+import no.risc.risc.models.RiSc3X
+import no.risc.risc.models.RiSc3XScenario
+import no.risc.risc.models.RiSc3XScenarioVulnerability
+import no.risc.risc.models.RiSc4X
+import no.risc.risc.models.RiSc4XScenario
+import no.risc.risc.models.RiSc4XScenarioAction
+import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XScenarioAction
+import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
+import no.risc.risc.models.RiScVersion
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
 import no.risc.utils.comparison.MigrationChange40Scenario
