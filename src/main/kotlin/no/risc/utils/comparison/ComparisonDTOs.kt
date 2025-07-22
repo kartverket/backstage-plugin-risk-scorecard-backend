@@ -9,10 +9,10 @@ import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScValuation
 import no.risc.utils.KNullableOffsetDateTimeSerializer
@@ -129,11 +129,10 @@ data class RiSc5XScenarioActionChange(
     val url: SimpleTrackedProperty<String?>? = null,
     val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
     val lastUpdated: SimpleTrackedProperty<
-            @Serializable(KNullableOffsetDateTimeSerializer::class)
-            OffsetDateTime?,
-            >? = null,
+        @Serializable(KNullableOffsetDateTimeSerializer::class)
+        OffsetDateTime?,
+    >? = null,
 )
-
 
 /***************
  * VERSION 4.X *
