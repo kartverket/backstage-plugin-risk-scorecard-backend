@@ -1,6 +1,6 @@
 # Schema changelog
 
-## 4.3
+## 5.0
 - Changes status field in actions to 'ok', 'not ok' and 'not relevant'
 
 ## 4.2
