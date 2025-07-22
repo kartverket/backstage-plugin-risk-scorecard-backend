@@ -1,7 +1,11 @@
 # Schema changelog
 
 ## 5.0
-- Changes status field in actions to 'ok', 'not ok' and 'not relevant'
+- Changes status field in actions to 'OK', 'Not OK' and 'Not relevant'. 
+- The following mapping is applied from previous status values to new status values:
+  - Not started, In progress, On hold → Not OK
+  - Completed → OK
+  - Aborted → Not relevant
 
 ## 4.2
 - Adds lastUpdated field in actions
