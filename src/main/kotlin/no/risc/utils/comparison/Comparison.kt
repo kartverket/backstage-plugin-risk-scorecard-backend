@@ -9,6 +9,9 @@ import no.risc.risc.models.RiSc3XScenarioAction
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
+import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScValuation
 import no.risc.risc.models.UnknownRiSc
@@ -36,6 +39,7 @@ fun compare(
     lastPublished: LastPublished? = null,
 ): RiScChange =
     when (updatedRiSc) {
+        is RiSc5X -> comparison5X(updatedRiSc, oldRiSc, lastPublished)
         is RiSc4X -> comparison4X(updatedRiSc, oldRiSc, lastPublished)
         is RiSc3X -> comparison3X(updatedRiSc, oldRiSc, lastPublished)
         is UnknownRiSc ->
@@ -43,6 +47,39 @@ fun compare(
                 "The version of the RiSc is unknown and not supported for comparison.",
             )
     }
+
+
+fun comparison5X(
+    updatedRiSc: RiSc5X,
+    oldRiSc: RiSc,
+    lastPublished: LastPublished? = null,
+): RiSc5XChange{
+    val (migratedOldRiSc, migrationStatus) =
+        try {
+            migrate(riSc = oldRiSc, lastPublished = lastPublished, endVersion = updatedRiSc.schemaVersion)
+        } catch (_: IllegalStateException) {
+            throw DifferenceException(
+                "The comparison failed due to migration failure of the old RiSc.",
+            )
+        }
+
+    return RiSc5XChange(
+        title = changeForNonMandatorySimpleProperty(migratedOldRiSc.title, updatedRiSc.title),
+        scope = changeForNonMandatorySimpleProperty(migratedOldRiSc.scope, updatedRiSc.scope),
+        valuations =
+            compareValuations(
+                oldValuations = migratedOldRiSc.valuations ?: emptyList(),
+                newValuations = updatedRiSc.valuations ?: emptyList(),
+            ),
+        scenarios =
+            compareScenarios5X(
+                oldScenarios = migratedOldRiSc.scenarios,
+                newScenarios = updatedRiSc.scenarios,
+            ),
+        migrationChanges = migrationStatus,
+    )
+}
+
 
 /**
  * Compares an updated RiSc of version 4.X to an old RiSc. The fields `title` and `scope` are only
@@ -244,6 +281,112 @@ fun compareValuations(
 
 /**
  * Compares and tracks changes for scenarios for versions 4.X. Only scenarios with changes are
+ * included. The IDs are used for determining if a change is an addition, a change of an existing
+ * scenario or a deletion. A changed scenario always includes the `title`, `id`, `description`,
+ * `risk` and `remainingRisk` fields, even if these have not been changed. The remaining fields are
+ * only included when changes have been made to them.
+ *
+ * @param oldScenarios Scenarios in the old version of the RiSc.
+ * @param newScenarios Scenarios in the new version of the RiSc.
+ */
+fun compareScenarios5X(
+    oldScenarios: List<RiSc5XScenario>,
+    newScenarios: List<RiSc5XScenario>,
+): List<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>> =
+    changeForListOfComplexProperty(
+        oldValues = oldScenarios,
+        newValues = newScenarios,
+        keySelector = { scenario -> scenario.id },
+        changeMapper = { oldScenario, newScenario ->
+            RiSc5XScenarioChange(
+                title =
+                    changeForMandatorySimpleProperty(
+                        oldScenario.title,
+                        newScenario.title,
+                    ),
+                id = newScenario.id,
+                description =
+                    changeForMandatorySimpleProperty(
+                        oldScenario.description,
+                        newScenario.description,
+                    ),
+                url =
+                    changeForNonMandatorySimpleProperty(
+                        oldScenario.url,
+                        newScenario.url,
+                    ),
+                threatActors =
+                    changeForListOfSimpleProperty(
+                        oldScenario.threatActors,
+                        newScenario.threatActors,
+                    ),
+                vulnerabilities =
+                    changeForListOfSimpleProperty(
+                        oldScenario.vulnerabilities,
+                        newScenario.vulnerabilities,
+                    ),
+                risk =
+                    compareRisk(
+                        oldRisk = oldScenario.risk,
+                        newRisk = newScenario.risk,
+                    ),
+                remainingRisk =
+                    compareRisk(
+                        oldRisk = oldScenario.remainingRisk,
+                        newRisk = newScenario.remainingRisk,
+                    ),
+                actions =
+                    compareActions5X(
+                        oldActions = oldScenario.actions,
+                        newActions = newScenario.actions,
+                    ),
+            )
+        },
+    )
+
+/**
+ * Compares and tracks changes for actions for version 4.X. Only actions with changes are included.
+ * The IDs are used for determining if a change is an addition, a change of an existing action or a
+ * deletion. A changed action always includes the `title` and `id` fields. The remaining fields are
+ * only included if they have been changed.
+ *
+ * @param oldActions The list of actions in the old version of the RiSc.
+ * @param newActions The list of actions in the new version of the RiSc.
+ */
+fun compareActions5X(
+    oldActions: List<RiSc5XScenarioAction>,
+    newActions: List<RiSc5XScenarioAction>,
+): List<TrackedProperty<RiSc5XScenarioActionChange, RiSc5XScenarioAction>> =
+    changeForListOfComplexProperty(
+        oldValues = oldActions,
+        newValues = newActions,
+        keySelector = { action -> action.id },
+        changeMapper = { oldAction, newAction ->
+            RiSc5XScenarioActionChange(
+                title =
+                    changeForMandatorySimpleProperty(
+                        oldAction.title,
+                        newAction.title,
+                    ),
+                id = newAction.id,
+                description =
+                    changeForMandatorySimpleProperty(
+                        oldAction.description,
+                        newAction.description,
+                    ),
+                url = changeForNonMandatorySimpleProperty(oldAction.url, newAction.url),
+                status =
+                    changeForNonMandatorySimpleProperty(
+                        oldAction.status,
+                        newAction.status,
+                    ),
+                lastUpdated = changeForNonMandatorySimpleProperty(oldAction.lastUpdated, newAction.lastUpdated),
+            )
+        },
+    )
+
+/**
+ * Compares and tracks changes for scenarios for versions 5.X. Only scenarios with changes are
  * included. The IDs are used for determining if a change is an addition, a change of an existing
  * scenario or a deletion. A changed scenario always includes the `title`, `id`, `description`,
  * `risk` and `remainingRisk` fields, even if these have not been changed. The remaining fields are
