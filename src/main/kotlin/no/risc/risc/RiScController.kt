@@ -6,6 +6,7 @@ import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.CreateRiScResultDTO
+import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
 import no.risc.risc.models.PublishRiScResultDTO
@@ -146,16 +147,21 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-    ) = riScService.deleteRiSc(
-        owner = repositoryOwner,
-        repository = repositoryName,
-        riScId = id,
-        accessTokens =
-            AccessTokens(
-                gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                githubAccessToken = GithubAccessToken(gitHubAccessToken),
-            ),
-    )
+    ): DeleteRiScResultDTO {
+        val deleteRiscResultDTO =
+            riScService.deleteRiSc(
+                owner = repositoryOwner,
+                repository = repositoryName,
+                riScId = id,
+                accessTokens =
+                    AccessTokens(
+                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                    ),
+            )
+        riScService.deleteRiscFromRosa(riScId = id)
+        return deleteRiscResultDTO
+    }
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     suspend fun sendRiScForPublishing(

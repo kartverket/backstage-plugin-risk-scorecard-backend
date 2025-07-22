@@ -516,22 +516,13 @@ class RiScService(
         repository: String,
         riScId: String,
         accessTokens: AccessTokens,
-    ): DeleteRiScResultDTO {
-        // First, delete from GitHub
-        val deleteRiScResultDTO =
-            githubConnector.deleteRiSc(
-                owner = owner,
-                repository = repository,
-                riScId = riScId,
-                accessToken = accessTokens.githubAccessToken.value,
-            )
-
-        // Then, delete from Rosa
-        rosaClient.deleteRiSc(riScId)
-
-        // Return result (example object)
-        return DeleteRiScResultDTO(deleteRiScResultDTO.riScId, deleteRiScResultDTO.status, deleteRiScResultDTO.statusMessage)
-    }
+    ): DeleteRiScResultDTO =
+        githubConnector.deleteRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = riScId,
+            accessToken = accessTokens.githubAccessToken.value,
+        )
 
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
@@ -575,16 +566,11 @@ class RiScService(
         repository: String,
         riSc: String,
     ): String {
-        try {
-            val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
-            return result
-        } catch (e: Exception) {
-            throw UpdatingRiScException( // Todo: Change to rosa specific exception
-                message = "Failed with error ${e.message} for risk scorecard with id $riScId",
-                riScId = riScId,
-            )
-        }
+        val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
+        return result
     }
+
+    suspend fun deleteRiscFromRosa(riScId: String) = rosaClient.deleteRiSc(riScId)
 
     /**
      * Converts the GitHub pull request object to a DTO for sending to the frontend.
