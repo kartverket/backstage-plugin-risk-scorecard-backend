@@ -9,7 +9,7 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScValuation
@@ -86,7 +86,7 @@ class ComparisonTests {
                                     title = "Title",
                                     id = "bbbbb",
                                     description = "",
-                                    status = RiScScenarioActionStatus.ON_HOLD,
+                                    status = RiScScenarioActionStatusV4.ON_HOLD,
                                     deadline = "2025-10-25",
                                     owner = "Ola Nordmann",
                                 ),
@@ -141,7 +141,7 @@ class ComparisonTests {
                                     title = "Title of action",
                                     id = "bbbbb",
                                     description = "Description",
-                                    status = RiScScenarioActionStatus.IN_PROGRESS,
+                                    status = RiScScenarioActionStatusV4.IN_PROGRESS,
                                 ),
                             ),
                     ),
@@ -307,7 +307,7 @@ class ComparisonTests {
                                             title = "Title",
                                             id = "bbbbb",
                                             description = "",
-                                            status = RiScScenarioActionStatus.ON_HOLD,
+                                            status = RiScScenarioActionStatusV4.ON_HOLD,
                                             deadline = "2025-10-25",
                                             owner = "Ola Nordmann",
                                         ),
@@ -450,8 +450,8 @@ class ComparisonTests {
                                             description = ChangedProperty(oldValue = "", newValue = "Description"),
                                             status =
                                                 ChangedProperty(
-                                                    oldValue = RiScScenarioActionStatus.ON_HOLD,
-                                                    newValue = RiScScenarioActionStatus.IN_PROGRESS,
+                                                    oldValue = RiScScenarioActionStatusV4.ON_HOLD,
+                                                    newValue = RiScScenarioActionStatusV4.IN_PROGRESS,
                                                 ),
                                         ),
                                 ),
@@ -562,7 +562,7 @@ class ComparisonTests {
                                     title = "Title of action",
                                     id = "bbbbb",
                                     description = "Description",
-                                    status = RiScScenarioActionStatus.IN_PROGRESS,
+                                    status = RiScScenarioActionStatusV4.IN_PROGRESS,
                                 ),
                             ),
                     ),

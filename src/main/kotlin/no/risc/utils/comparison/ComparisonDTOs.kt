@@ -2,16 +2,7 @@ package no.risc.utils.comparison
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import no.risc.risc.models.MigrationStatus
-import no.risc.risc.models.RiSc3XScenario
-import no.risc.risc.models.RiSc3XScenarioAction
-import no.risc.risc.models.RiSc3XScenarioVulnerability
-import no.risc.risc.models.RiSc4XScenario
-import no.risc.risc.models.RiSc4XScenarioAction
-import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScScenarioActionStatus
-import no.risc.risc.models.RiScScenarioThreatActor
-import no.risc.risc.models.RiScValuation
+import no.risc.risc.models.*
 import no.risc.utils.KNullableOffsetDateTimeSerializer
 import java.time.OffsetDateTime
 
@@ -126,7 +117,7 @@ data class RiSc4XScenarioActionChange(
     val id: String,
     val description: SimpleTrackedProperty<String>,
     val url: SimpleTrackedProperty<String?>? = null,
-    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatusV4>? = null,
     val lastUpdated: SimpleTrackedProperty<
         @Serializable(KNullableOffsetDateTimeSerializer::class)
         OffsetDateTime?,
@@ -169,7 +160,7 @@ data class RiSc3XScenarioActionChange(
     val id: String,
     val description: SimpleTrackedProperty<String>,
     val url: SimpleTrackedProperty<String?>? = null,
-    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatusV4>? = null,
     val deadline: SimpleTrackedProperty<String?>? = null,
     val owner: SimpleTrackedProperty<String?>? = null,
 )
