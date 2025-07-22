@@ -70,7 +70,8 @@ sealed interface RiScVersion {
     @Serializable
     enum class RiSc5XVersion : RiScVersion {
         @SerialName("5.0")
-        VERSION_5_0;
+        VERSION_5_0,
+        ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
     }
@@ -84,7 +85,9 @@ sealed interface RiScVersion {
         VERSION_4_1,
 
         @SerialName("4.2")
-        VERSION_4_2;
+        VERSION_4_2,
+
+        ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
     }
@@ -109,11 +112,12 @@ sealed interface RiScVersion {
         /**
          * Provides a list of all supported versions.
          */
-        fun allVersions(): List<RiScVersion> = listOf(
-            *RiSc3XVersion.entries.toTypedArray(),
-            *RiSc4XVersion.entries.toTypedArray(),
-            *RiSc5XVersion.entries.toTypedArray(),
-        )
+        fun allVersions(): List<RiScVersion> =
+            listOf(
+                *RiSc3XVersion.entries.toTypedArray(),
+                *RiSc4XVersion.entries.toTypedArray(),
+                *RiSc5XVersion.entries.toTypedArray(),
+            )
 
         /**
          * Finds the RiScVersion object that corresponds to the provided string, if any. Otherwise, returns null.
@@ -202,7 +206,7 @@ data class RiSc4XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatusOld,
+    val status: RiScScenarioActionStatusV4,
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
 )
@@ -344,7 +348,7 @@ data class RiSc3XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatusOld,
+    val status: RiScScenarioActionStatusV4,
     val deadline: String? = null,
     val owner: String? = null,
 )
@@ -443,7 +447,7 @@ enum class RiScScenarioThreatActor {
 }
 
 @Serializable
-enum class RiScScenarioActionStatusOld {
+enum class RiScScenarioActionStatusV4 {
     @SerialName("Not started")
     NOT_STARTED,
 
@@ -471,8 +475,6 @@ enum class RiScScenarioActionStatus {
     @SerialName("Not relevant")
     NOT_RELEVANT,
 }
-
-
 
 @Serializable
 data class RiScScenarioRisk(
