@@ -344,7 +344,7 @@ data class RiSc3XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatus,
+    val status: RiScScenarioActionStatusOld,
     val deadline: String? = null,
     val owner: String? = null,
 )
