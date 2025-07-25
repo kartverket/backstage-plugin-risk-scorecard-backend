@@ -5,21 +5,21 @@ import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class AggregatedRos(
-    val RosID: String,
-    val AggregatedNumber: String,
-    val RemainingAggregatedNumber: String,
+    val riScId: String,
+    val aggregatedNumber: String,
+    val remainingAggregatedNumber: String,
 )
 
 @Serializable
 data class UploadRequest(
     val repository: String,
-    val aggregatedros: AggregatedRos,
+    val aggregatedRos: AggregatedRos,
 )
 
 @Serializable
 data class EncryptResponse(
     val sum: String,
-    val remaining_sum: String,
+    val remainingSum: String,
 )
 
 @Serializable
@@ -29,5 +29,5 @@ data class EncryptRequest(
 
 @Serializable
 data class DeleteRequest(
-    val rosID: String,
+    val riScId: String,
 )

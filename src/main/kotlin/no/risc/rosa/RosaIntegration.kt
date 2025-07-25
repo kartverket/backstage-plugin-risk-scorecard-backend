@@ -17,13 +17,13 @@ import org.springframework.web.reactive.function.client.awaitBody
 class RosaIntegration(
     private val rosaConnector: RosaConnector,
 ) {
-    fun createUploadRequest(
-        RiscID: String,
+    private suspend fun createUploadRequest(
+        riScId: String,
         aggregatedNumber: String,
         remainingAggregatedNumber: String,
         repository: String,
     ): UploadRequest {
-        val aggregatedRos = AggregatedRos(RiscID, aggregatedNumber, remainingAggregatedNumber)
+        val aggregatedRos = AggregatedRos(riScId, aggregatedNumber, remainingAggregatedNumber)
         val request =
             UploadRequest(
                 repository,
@@ -32,7 +32,7 @@ class RosaIntegration(
         return request
     }
 
-    fun createEncryptRequest(request: String): EncryptRequest {
+    private suspend fun createEncryptRequest(request: String): EncryptRequest {
         val json = Json { ignoreUnknownKeys = true }
         val jsonElement: JsonElement = json.parseToJsonElement(request)
         val request = EncryptRequest(text = jsonElement)
@@ -65,7 +65,7 @@ class RosaIntegration(
                     .awaitBody<String>()
             return response
         } catch (e: Exception) {
-            throw RosaUploadException(message = e.stackTraceToString(), request.aggregatedros.RosID)
+            throw RosaUploadException(message = e.stackTraceToString(), request.aggregatedRos.riScId)
         }
     }
 
@@ -90,7 +90,7 @@ class RosaIntegration(
     ): String {
         val encryptRequest = createEncryptRequest(riSc)
         val encryptResponse = encrypt(encryptRequest)
-        val aggregatedRos = AggregatedRos(riScId, encryptResponse.sum, encryptResponse.remaining_sum)
+        val aggregatedRos = AggregatedRos(riScId, encryptResponse.sum, encryptResponse.remainingSum)
         val uploadRequest = UploadRequest(repository, aggregatedRos)
         val uploadResponse = sendCipher(uploadRequest)
         return uploadResponse
