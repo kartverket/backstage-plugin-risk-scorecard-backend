@@ -19,11 +19,11 @@ class RosaIntegration(
 ) {
     private suspend fun createUploadRequest(
         riScId: String,
-        aggregatedNumber: String,
-        remainingAggregatedNumber: String,
+        aggregatedRisk: String,
+        remainingAggregatedRisk: String,
         repository: String,
     ): UploadRequest {
-        val aggregatedRos = AggregatedRos(riScId, aggregatedNumber, remainingAggregatedNumber)
+        val aggregatedRos = AggregatedRos(riScId, aggregatedRisk, remainingAggregatedRisk)
         val request =
             UploadRequest(
                 repository,
@@ -90,7 +90,7 @@ class RosaIntegration(
     ): String {
         val encryptRequest = createEncryptRequest(riSc)
         val encryptResponse = encrypt(encryptRequest)
-        val uploadRequest = createUploadRequest(riScId, encryptResponse.sum, encryptResponse.remainingSum, repository)
+        val uploadRequest = createUploadRequest(riScId, encryptResponse.risk, encryptResponse.remainingRisk, repository)
         val uploadResponse = sendCipher(uploadRequest)
         return uploadResponse
     }

@@ -6,8 +6,8 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 data class AggregatedRos(
     val riScId: String,
-    val aggregatedNumber: String,
-    val remainingAggregatedNumber: String,
+    val aggregatedRisk: String,
+    val remainingAggregatedRisk: String,
 )
 
 @Serializable
@@ -18,8 +18,8 @@ data class UploadRequest(
 
 @Serializable
 data class EncryptResponse(
-    val sum: String,
-    val remainingSum: String,
+    val risk: String,
+    val remainingRisk: String,
 )
 
 @Serializable
