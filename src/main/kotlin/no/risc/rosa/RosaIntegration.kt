@@ -90,8 +90,7 @@ class RosaIntegration(
     ): String {
         val encryptRequest = createEncryptRequest(riSc)
         val encryptResponse = encrypt(encryptRequest)
-        val aggregatedRos = AggregatedRos(riScId, encryptResponse.sum, encryptResponse.remainingSum)
-        val uploadRequest = UploadRequest(repository, aggregatedRos)
+        val uploadRequest = createUploadRequest(riScId, encryptResponse.sum, encryptResponse.remainingSum, repository)
         val uploadResponse = sendCipher(uploadRequest)
         return uploadResponse
     }
