@@ -570,9 +570,10 @@ class MigrationFunctionTests {
         // Verify that there is still no actions in the migrated RiSc
         assertEquals(0, migratedRiSc.scenarios[0].actions.size, "There should be no actions present after migration.")
 
+        val changes50 = migrationStatus.migrationChanges50
         assertNull(
-            migrationStatus.migrationChanges50,
-            "When no changes have been made, there should not be a migration changes object.",
+            changes50,
+            "When changes have been made, there should be a migration changes object.",
         )
     }
 
