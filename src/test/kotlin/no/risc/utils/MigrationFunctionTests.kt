@@ -546,6 +546,37 @@ class MigrationFunctionTests {
     }
 
     @Test
+    fun `test migrateFrom42To50NoActions`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.2-no-actions.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom42To50(
+                riSc = riSc,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 5.0
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.0.",
+        )
+
+        // Verify that there is still no actions in the migrated RiSc
+        assertEquals(0, migratedRiSc.scenarios[0].actions.size, "There should be no actions present after migration.")
+
+        assertNull(
+            migrationStatus.migrationChanges50,
+            "When no changes have been made, there should not be a migration changes object.",
+        )
+    }
+
+    @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
