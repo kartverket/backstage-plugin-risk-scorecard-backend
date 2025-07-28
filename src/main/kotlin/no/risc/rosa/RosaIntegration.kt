@@ -2,14 +2,13 @@ package no.risc.rosa
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import no.risc.exception.exceptions.RosaDeleteException
-import no.risc.exception.exceptions.RosaEncryptionException
-import no.risc.exception.exceptions.RosaUploadException
 import no.risc.infra.connector.RosaConnector
 import no.risc.rosa.models.AggregatedRos
 import no.risc.rosa.models.EncryptRequest
 import no.risc.rosa.models.EncryptResponse
 import no.risc.rosa.models.UploadRequest
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.awaitBody
 
@@ -17,6 +16,10 @@ import org.springframework.web.reactive.function.client.awaitBody
 class RosaIntegration(
     private val rosaConnector: RosaConnector,
 ) {
+    companion object {
+        val LOGGER: Logger = LoggerFactory.getLogger(RosaIntegration::class.java)
+    }
+
     private suspend fun createUploadRequest(
         riScId: String,
         aggregatedRisk: String,
@@ -39,59 +42,63 @@ class RosaIntegration(
         return request
     }
 
-    private suspend fun encrypt(request: EncryptRequest): EncryptResponse {
+    private suspend fun encrypt(request: EncryptRequest): EncryptResponse? =
         try {
-            val response =
-                rosaConnector.webClient
-                    .post()
-                    .uri("/rosa/encrypt")
-                    .bodyValue(request)
-                    .retrieve()
-                    .awaitBody<EncryptResponse>()
-            return response
+            LOGGER.info("Sending POST-request to /rosa/encrypt")
+            rosaConnector.webClient
+                .post()
+                .uri("/rosa/encrypt")
+                .bodyValue(request)
+                .retrieve()
+                .awaitBody<EncryptResponse>()
         } catch (e: Exception) {
-            throw RosaEncryptionException(message = e.stackTraceToString())
+            LOGGER.warn("Failed to encrypt ROS", e)
+            null
         }
-    }
 
-    suspend fun sendCipher(request: UploadRequest): String {
+    suspend fun sendCipher(request: UploadRequest): String? =
         try {
-            val response =
-                rosaConnector.webClient
-                    .post()
-                    .uri("/rosa")
-                    .bodyValue(request)
-                    .retrieve()
-                    .awaitBody<String>()
-            return response
+            LOGGER.info("Sending POST-request to /rosa")
+            rosaConnector.webClient
+                .post()
+                .uri("/rosa")
+                .bodyValue(request)
+                .retrieve()
+                .awaitBody<String>()
         } catch (e: Exception) {
-            throw RosaUploadException(message = e.stackTraceToString(), request.aggregatedRos.riScId)
+            LOGGER.warn("Failed to upload ROS to Rosa", e)
+            null
         }
-    }
 
-    suspend fun deleteRiSc(riScId: String): String {
+    suspend fun deleteRiSc(riScId: String): String? =
         try {
-            val response =
-                rosaConnector.webClient
-                    .delete()
-                    .uri("/rosa/{id}", riScId)
-                    .retrieve()
-                    .awaitBody<String>()
-            return response
+            LOGGER.info("Sending DELETE-request to /rosa")
+            rosaConnector.webClient
+                .delete()
+                .uri("/rosa/{id}", riScId)
+                .retrieve()
+                .awaitBody<String>()
         } catch (e: Exception) {
-            throw RosaDeleteException(message = e.stackTraceToString(), riScId)
+            LOGGER.warn("DELETE-request to Rosa failed: ", e)
+            null
         }
-    }
 
     suspend fun encryptAndUpload(
         riScId: String,
         repository: String,
         riSc: String,
-    ): String {
+    ): String? {
         val encryptRequest = createEncryptRequest(riSc)
-        val encryptResponse = encrypt(encryptRequest)
-        val uploadRequest = createUploadRequest(riScId, encryptResponse.risk, encryptResponse.remainingRisk, repository)
-        val uploadResponse = sendCipher(uploadRequest)
-        return uploadResponse
+        val encryptResponse = encrypt(encryptRequest) ?: return null // fail silently
+
+        val uploadRequest =
+            createUploadRequest(
+                riScId,
+                encryptResponse.risk,
+                encryptResponse.remainingRisk,
+                repository,
+            )
+
+        return sendCipher(uploadRequest)
     }
 }

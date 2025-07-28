@@ -568,7 +568,7 @@ class RiScService(
         riScId: String,
         repository: String,
         riSc: String,
-    ): String {
+    ): String? {
         val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
         return result
     }
