@@ -573,9 +573,10 @@ class MigrationFunctionTests {
         val changes50 = migrationStatus.migrationChanges50
         assertNull(
             changes50,
-            "When changes have been made, there should be a migration changes object.",
+            "When no changes have been made, there should not be a migration changes object.",
         )
     }
+
 
     @Test
     fun `test migrate`() {
