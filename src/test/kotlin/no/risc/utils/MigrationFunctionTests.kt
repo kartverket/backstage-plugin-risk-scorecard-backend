@@ -577,7 +577,6 @@ class MigrationFunctionTests {
         )
     }
 
-
     @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
