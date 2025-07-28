@@ -515,16 +515,18 @@ fun updateScenarioFrom42To50(
             actions = migratedActions,
         )
 
-    addChanges(
-        MigrationChange50Scenario(
-            title = scenario.title,
-            id = scenario.id,
-            changedActions =
-                migratedActions.map {
-                    MigrationChange50Action(it.title, it.id, it.status)
-                },
-        ),
-    )
+    if (migratedActions.isNotEmpty()) {
+        addChanges(
+            MigrationChange50Scenario(
+                title = scenario.title,
+                id = scenario.id,
+                changedActions =
+                    migratedActions.map {
+                        MigrationChange50Action(it.title, it.id, it.status)
+                    },
+            ),
+        )
+    }
 
     return migratedScenario
 }
