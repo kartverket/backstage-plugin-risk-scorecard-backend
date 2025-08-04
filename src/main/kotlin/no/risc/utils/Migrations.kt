@@ -478,7 +478,7 @@ fun updateScenarioFrom42To50(
     scenario: RiSc4XScenario,
     addChanges: (MigrationChange50Scenario) -> Unit,
 ): RiSc5XScenario {
-    val migratedActions =
+    val migratedActionsWithOldStatus =
         scenario.actions.map { action ->
             val newStatus =
                 when (action.status) {
@@ -492,13 +492,17 @@ fun updateScenarioFrom42To50(
                     RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
                 }
 
-            RiSc5XScenarioAction(
-                title = action.title,
-                id = action.id,
-                description = action.description,
-                url = action.url,
-                status = newStatus,
-                lastUpdated = action.lastUpdated,
+            Triple(
+                action,
+                newStatus,
+                RiSc5XScenarioAction(
+                    title = action.title,
+                    id = action.id,
+                    description = action.description,
+                    url = action.url,
+                    status = newStatus,
+                    lastUpdated = action.lastUpdated,
+                ),
             )
         }
 
@@ -512,22 +516,26 @@ fun updateScenarioFrom42To50(
             vulnerabilities = scenario.vulnerabilities,
             risk = scenario.risk,
             remainingRisk = scenario.remainingRisk,
-            actions = migratedActions,
+            actions = migratedActionsWithOldStatus.map { it.third },
         )
 
-    if (migratedActions.isNotEmpty()) {
+    if (migratedActionsWithOldStatus.isNotEmpty()) {
         addChanges(
             MigrationChange50Scenario(
                 title = scenario.title,
                 id = scenario.id,
                 changedActions =
-                    migratedActions.map {
-                        MigrationChange50Action(it.title, it.id, it.status)
+                    migratedActionsWithOldStatus.map { (oldAction, newStatus) ->
+                        MigrationChange50Action(
+                            title = oldAction.title,
+                            id = oldAction.id,
+                            oldStatus = oldAction.status,
+                            newStatus = newStatus,
+                        )
                     },
             ),
         )
     }
-
     return migratedScenario
 }
 
