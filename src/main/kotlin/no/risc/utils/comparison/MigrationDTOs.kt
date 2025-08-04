@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4XScenarioVulnerability
 import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.utils.KNullableOffsetDateTimeSerializer
 import java.time.OffsetDateTime
 
@@ -96,6 +97,7 @@ data class MigrationChange50Scenario(
 data class MigrationChange50Action(
     val title: String,
     val id: String,
+    val oldStatus: RiScScenarioActionStatusV4,
     val newStatus: RiScScenarioActionStatus,
 )
 
