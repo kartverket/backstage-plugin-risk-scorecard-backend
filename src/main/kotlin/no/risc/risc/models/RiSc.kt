@@ -5,19 +5,121 @@ import kotlinx.serialization.KeepGeneratedSerializer
 import kotlinx.serialization.SealedSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.risc.utils.FlattenSerializer
+import no.risc.utils.KNullableOffsetDateTimeSerializer
+import no.risc.utils.parseJSONToClass
+import no.risc.utils.parseJSONToElement
+import no.risc.utils.serializeJSON
+import java.time.OffsetDateTime
+
+sealed interface RiSc {
+    // Every RiSc should have a schema version (or null if the version is unknown)
+    val schemaVersion: RiScVersion?
+
+    companion object {
+        /**
+         * Creates a RiSc object from the content of a RiSc. If the content is `null` or of an unknown RiSc version,
+         * a `UnknownRiSc` object is returned.
+         *
+         * @param content The content of the RiSc.
+         */
+        fun fromContent(content: String?): RiSc {
+            if (content == null) return UnknownRiSc(content = null)
+
+            val schemaVersion =
+                RiScVersion.fromString(
+                    parseJSONToElement(content)
+                        .jsonObject
+                        .getOrElse("schemaVersion") {
+                            // If schemaVersion is not present, we cannot determine the version used
+                            return UnknownRiSc(content = null)
+                        }.jsonPrimitive
+                        .content,
+                )
+
+            return try {
+                when (schemaVersion) {
+                    RiScVersion.RiSc3XVersion.VERSION_3_2, RiScVersion.RiSc3XVersion.VERSION_3_3 ->
+                        parseJSONToClass<RiSc3X>(content)
+
+                    RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
+                        parseJSONToClass<RiSc4X>(content)
+
+                    null -> UnknownRiSc(content = content)
+                }
+            } catch (_: IllegalArgumentException) {
+                // If parsing fails with an IllegalArgumentException, the riSc is not valid according to the schema.
+                UnknownRiSc(content = content)
+            }
+        }
+    }
+
+    /**
+     * Converts the RiSc object to a JSON string.
+     */
+    fun toJSON(): String
+}
+
+@Serializable
+sealed interface RiScVersion {
+    @Serializable
+    enum class RiSc4XVersion : RiScVersion {
+        @SerialName("4.0")
+        VERSION_4_0,
+
+        @SerialName("4.1")
+        VERSION_4_1,
+
+        @SerialName("4.2")
+        VERSION_4_2, ;
+
+        override fun asString(): String = serializer().descriptor.getElementName(ordinal)
+    }
+
+    @Serializable
+    enum class RiSc3XVersion : RiScVersion {
+        @SerialName("3.2")
+        VERSION_3_2,
+
+        @SerialName("3.3")
+        VERSION_3_3, ;
+
+        override fun asString(): String = serializer().descriptor.getElementName(ordinal)
+    }
+
+    /**
+     * The version number as a string in the format MAJOR.MINOR
+     */
+    fun asString(): String
+
+    companion object {
+        /**
+         * Provides a list of all supported versions.
+         */
+        fun allVersions(): List<RiScVersion> = listOf(*RiSc3XVersion.entries.toTypedArray(), *RiSc4XVersion.entries.toTypedArray())
+
+        /**
+         * Finds the RiScVersion object that corresponds to the provided string, if any. Otherwise, returns null.
+         */
+        fun fromString(version: String): RiScVersion? = allVersions().firstOrNull { it.asString() == version }
+    }
+}
 
 /***************
  * VERSION 4.X *
  ***************/
 @Serializable
 data class RiSc4X(
-    val schemaVersion: String,
+    override val schemaVersion: RiScVersion.RiSc4XVersion,
     val title: String,
     val scope: String,
     val valuations: List<RiScValuation>? = null,
     val scenarios: List<RiSc4XScenario>,
-)
+) : RiSc {
+    override fun toJSON(): String = serializeJSON(this)
+}
 
 object RiSc4XScenarioSerializer : FlattenSerializer<RiSc4XScenario>(
     serializer = RiSc4XScenario.generatedSerializer(),
@@ -73,7 +175,7 @@ enum class RiSc4XScenarioVulnerability {
 private object RiSc4XScenarioActionSerializer : FlattenSerializer<RiSc4XScenarioAction>(
     serializer = RiSc4XScenarioAction.generatedSerializer(),
     flattenKey = "action",
-    subKeys = listOf("ID", "url", "status", "description"),
+    subKeys = listOf("ID", "url", "status", "description", "lastUpdated"),
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -86,22 +188,26 @@ data class RiSc4XScenarioAction(
     val description: String,
     val url: String? = null,
     val status: RiScScenarioActionStatus,
+    @Serializable(KNullableOffsetDateTimeSerializer::class)
+    val lastUpdated: OffsetDateTime? = null,
 )
 
-/***************
- * VERSION 3.3 *
- ***************/
+/**********************
+ * VERSIONS 3.2 & 3.3 *
+ **********************/
 @Serializable
-data class RiSc33(
-    val schemaVersion: String,
+data class RiSc3X(
+    override val schemaVersion: RiScVersion.RiSc3XVersion,
     val title: String,
     val scope: String,
     val valuations: List<RiScValuation>? = null,
-    val scenarios: List<RiSc33Scenario>,
-)
+    val scenarios: List<RiSc3XScenario>,
+) : RiSc {
+    override fun toJSON(): String = serializeJSON(this)
+}
 
-object RiSc33ScenarioSerializer : FlattenSerializer<RiSc33Scenario>(
-    serializer = RiSc33Scenario.generatedSerializer(),
+object RiSc3XScenarioSerializer : FlattenSerializer<RiSc3XScenario>(
+    serializer = RiSc3XScenario.generatedSerializer(),
     flattenKey = "scenario",
     subKeys =
         listOf(
@@ -119,24 +225,24 @@ object RiSc33ScenarioSerializer : FlattenSerializer<RiSc33Scenario>(
 
 @OptIn(ExperimentalSerializationApi::class)
 @KeepGeneratedSerializer
-@Serializable(with = RiSc33ScenarioSerializer::class)
-data class RiSc33Scenario(
+@Serializable(with = RiSc3XScenarioSerializer::class)
+data class RiSc3XScenario(
     val title: String,
     @SerialName("ID")
     val id: String,
     val description: String,
     val url: String? = null,
     val threatActors: List<RiScScenarioThreatActor>,
-    val vulnerabilities: List<RiSc33ScenarioVulnerability>,
+    val vulnerabilities: List<RiSc3XScenarioVulnerability>,
     val risk: RiScScenarioRisk,
     val remainingRisk: RiScScenarioRisk,
-    val actions: List<RiSc33ScenarioAction>,
+    val actions: List<RiSc3XScenarioAction>,
     val existingActions: String? = null,
 )
 
 @OptIn(SealedSerializationApi::class)
 @Serializable
-enum class RiSc33ScenarioVulnerability {
+enum class RiSc3XScenarioVulnerability {
     @SerialName("Compromised admin user")
     COMPROMISED_ADMIN_USER,
 
@@ -167,16 +273,16 @@ enum class RiSc33ScenarioVulnerability {
     override fun toString(): String = serializer().descriptor.getElementName(ordinal)
 }
 
-private object RiSc33ScenarioActionSerializer : FlattenSerializer<RiSc33ScenarioAction>(
-    serializer = RiSc33ScenarioAction.generatedSerializer(),
+private object RiSc3XScenarioActionSerializer : FlattenSerializer<RiSc3XScenarioAction>(
+    serializer = RiSc3XScenarioAction.generatedSerializer(),
     flattenKey = "action",
     subKeys = listOf("ID", "url", "status", "description", "owner", "deadline"),
 )
 
 @OptIn(ExperimentalSerializationApi::class)
 @KeepGeneratedSerializer
-@Serializable(with = RiSc33ScenarioActionSerializer::class)
-data class RiSc33ScenarioAction(
+@Serializable(with = RiSc3XScenarioActionSerializer::class)
+data class RiSc3XScenarioAction(
     val title: String,
     @SerialName("ID")
     val id: String,
@@ -187,8 +293,20 @@ data class RiSc33ScenarioAction(
     val owner: String? = null,
 )
 
+/*************************
+ * VERSIONS PRIOR TO 3.2 *
+ *************************/
+
+data class UnknownRiSc(
+    val content: String?,
+) : RiSc {
+    override val schemaVersion: RiScVersion? get() = null
+
+    override fun toJSON(): String = throw NotImplementedError("The unknown RiSc should never be serialised as is.")
+}
+
 /******************************
- * SHARED BETWEEN 3.3 AND 4.X *
+ * SHARED BETWEEN 3.X AND 4.X *
  ******************************/
 
 @Serializable
