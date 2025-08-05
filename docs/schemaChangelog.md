@@ -1,5 +1,8 @@
 # Schema changelog
 
+## 4.2
+- Adds lastUpdated field in actions
+
 ## 4.1
 - Preset values for probability have been changed to a logarithmic scale with base 20:
 
@@ -32,6 +35,7 @@
   - Escalation of rights -> Unauthorized access
   - Disclosed secret -> Information leak
   - Denial of service -> Excessive use
+  - Introduced "Flawed design"
 
 ## 3.3
 - Adds url field in actions

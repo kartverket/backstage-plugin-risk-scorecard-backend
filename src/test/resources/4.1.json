@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "3.3",
+  "schemaVersion": "4.1",
   "title": "Transformasjon",
   "scope": "Sikkerhet av backend.",
   "valuations": [],
@@ -8,39 +8,26 @@
       "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
       "scenario": {
         "ID": "14Kap",
-        "description": "Ondsinnet bruer ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
         "threatActors": [
           "Organised crime"
         ],
         "vulnerabilities": [
-          "User repudiation",
-          "Compromised admin user",
-          "Escalation of rights",
-          "Disclosed secret",
-          "Denial of service",
-          "Misconfiguration"
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
         ],
         "risk": {
           "summary": "",
-          "probability": 1,
-          "consequence": 1000
+          "probability": 0.1,
+          "consequence": 30000
         },
-        "existingActions": "Ddos protection. ",
         "actions": [
-          {
-            "title": "Innlogging",
-            "action": {
-              "ID": "w100Q",
-              "description": "Innlogging. ",
-              "owner": "Kåre",
-              "deadline": "2024-06-12",
-              "status": "Not started"
-            }
-          },
           {
             "title": "",
             "action": {
-              "ID": "z4B01",
+              "ID": "w100Q",
               "description": "Innlogging. ",
               "status": "Not started"
             }
@@ -48,21 +35,60 @@
         ],
         "remainingRisk": {
           "summary": "",
-          "probability": 0.1,
+          "probability": 0.01,
           "consequence": 1000
         }
       }
     },
     {
-      "title": "Tilgang til administratorbruker havner i feil hender.",
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
       "scenario": {
-        "ID": "2dsFd",
-        "description": "Tilgang til administratorbruker havner i feil hender og persondata havner på avveie.",
+        "ID": "25FcD",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
         "threatActors": [
           "Organised crime"
         ],
         "vulnerabilities": [
-          "Misconfiguration"
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
+        ],
+        "risk": {
+          "summary": "",
+          "probability": 50,
+          "consequence": 30000000
+        },
+        "actions": [
+          {
+            "title": "",
+            "action": {
+              "ID": "w100Q",
+              "description": "Innlogging. ",
+              "status": "Not started"
+            }
+          }
+        ],
+        "remainingRisk": {
+          "summary": "",
+          "probability": 1,
+          "consequence": 1000000
+        }
+      }
+    },
+    {
+      "title": "Ondsinnet bruker ønsker å ta ned løsningen. ",
+      "scenario": {
+        "ID": "2dsFd",
+        "description": "Ondsinnet bruker ønsker å ta ned løsningen for å lage kaos hos kartveket.",
+        "threatActors": [
+          "Organised crime"
+        ],
+        "vulnerabilities": [
+          "Unmonitored use",
+          "Unauthorized access",
+          "Information leak",
+          "Excessive use"
         ],
         "risk": {
           "summary": "",

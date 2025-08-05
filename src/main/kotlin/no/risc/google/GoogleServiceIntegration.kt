@@ -135,7 +135,7 @@ class GoogleServiceIntegration(
                             testIAMPermissions(
                                 cryptoKeyResourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
                                 gcpAccessToken = gcpAccessToken,
-                                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT, GcpIAMPermission.USE_TO_DECRYPT),
+                                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
                             )
 
                         GcpCryptoKeyObject(

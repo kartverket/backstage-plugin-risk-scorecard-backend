@@ -42,7 +42,7 @@ inline fun <reified T> mockableResponseFromObject(obj: T): MockableResponse = Mo
 data class MockableRequest(
     val content: String,
     val headers: Map<String, List<String>>,
-    val url: URI,
+    val path: String,
     val method: HttpMethod,
 )
 
@@ -128,20 +128,20 @@ class MockableWebClient {
         val bodyCapturingClient = BodyCapturingClientHttpRequest()
         runBlocking { request.writeTo(bodyCapturingClient, ExchangeStrategies.withDefaults()).block() }
 
+        val queryParameters = request.url().query
+        val requestPath =
+            if (queryParameters.isNullOrBlank()) request.url().path else "${request.url().path}?$queryParameters"
+        val requestMethod = request.method()
+
         requests
             .add(
                 MockableRequest(
                     content = bodyCapturingClient.body,
                     headers = request.headers().toMap(),
-                    url = request.url(),
-                    method = request.method(),
+                    path = requestPath,
+                    method = requestMethod,
                 ),
             )
-
-        val queryParameters = request.url().query
-        val requestPath =
-            if (queryParameters.isNullOrBlank()) request.url().path else "${request.url().path}?$queryParameters"
-        val requestMethod = request.method()
 
         val matchedMethod: HttpMethod?
         val matchedPath: String?
@@ -198,4 +198,33 @@ class MockableWebClient {
      * Retrieves and removes the oldest request made to the web client
      */
     fun getNextRequest(): MockableRequest = requests.removeFirst()
+
+    /**
+     * Retrieves and removes the oldest request made to the web client at the specified path.
+     *
+     * @param path The path to match on.
+     * @throws NoSuchElementException If no requests have been made to the given path
+     */
+    fun getNextRequest(path: String): MockableRequest = requests.first { it.path == path }.also { requests.remove(it) }
+
+    /**
+     * Retrieves and removes the oldest request made to the web client at the specified path with the specified HTTP method.
+     *
+     * @param path The path to match on.
+     * @param method The HTTP method to match on.
+     * @throws NoSuchElementException If no requests have been made to the given path
+     */
+    fun getNextRequest(
+        path: String,
+        method: HttpMethod,
+    ): MockableRequest = requests.first { it.path == path && it.method == method }.also { requests.remove(it) }
+
+    /**
+     * Indicates whether there are responses queued up for a given path that have not yet been consumed. If there are
+     * wildcard responses queued up, then the method will always return true.
+     *
+     * @param path The path to match on.
+     */
+    fun hasQueuedUpResponses(path: String?): Boolean =
+        responses.any { (match, responseList) -> (match.second == path || match.second == null) && responseList.isNotEmpty() }
 }

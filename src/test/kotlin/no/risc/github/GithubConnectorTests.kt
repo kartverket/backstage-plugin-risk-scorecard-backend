@@ -8,11 +8,14 @@ import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
 import no.risc.exception.exceptions.CreatePullRequestException
+import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.github.models.GithubCommitInformation
 import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubCommitter
+import no.risc.github.models.GithubCreateNewBranchPayload
 import no.risc.github.models.GithubCreateNewPullRequestPayload
+import no.risc.github.models.GithubDeleteFilePayload
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestBranch
 import no.risc.github.models.GithubPullRequestObject
@@ -24,6 +27,7 @@ import no.risc.github.models.GithubWriteToFilePayload
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.LastPublished
+import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.UserInfo
@@ -59,7 +63,6 @@ class GithubConnectorTests {
                 GithubConnector(
                     filenamePrefix = filenamePrefix,
                     filenamePostfix = filenamePostfix,
-                    riScFolderPath = riscFolderPath,
                     githubHelper =
                         GithubHelper(
                             filenamePrefix = filenamePrefix,
@@ -73,7 +76,11 @@ class GithubConnectorTests {
 
     private fun randomSHA(): String = generateRandomAlphanumericString(41)
 
-    private fun riScFilename(riScId: String) = "$filenamePrefix-$riScId.$filenamePostfix.yaml"
+    private fun randomRiSc(): String = riScName(generateRandomAlphanumericString(5))
+
+    private fun riScName(riScId: String) = "$filenamePrefix-$riScId"
+
+    private fun riScFilename(riScId: String) = "$riScId.$filenamePostfix.yaml"
 
     private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
 
@@ -93,8 +100,8 @@ class GithubConnectorTests {
                     mockableResponseFromObject(
                         draftedRiScIDs.map { riScID ->
                             GithubReferenceObjectDTO(
-                                ref = "refs/heads/$filenamePrefix-$riScID",
-                                url = "https://api.github.com/repos/$owner/$repository/git/refs/heads/$filenamePrefix-$riScID",
+                                ref = "refs/heads/$riScID",
+                                url = "https://api.github.com/repos/$owner/$repository/git/refs/heads/$riScID",
                             )
                         },
                     ),
@@ -108,7 +115,7 @@ class GithubConnectorTests {
                             GithubFileDTO(
                                 content = "{}",
                                 sha = randomSHA(),
-                                name = "$filenamePrefix-$riScID.$filenamePostfix.yaml",
+                                name = "$riScID.$filenamePostfix.yaml",
                             )
                         },
                     ),
@@ -123,7 +130,7 @@ class GithubConnectorTests {
                                 url = "https://api.github.com/repos/$owner/$repository/pulls/$index",
                                 title = "Update RiSc",
                                 createdAt = OffsetDateTime.now(),
-                                head = GithubPullRequestBranch("$filenamePrefix-$riScID"),
+                                head = GithubPullRequestBranch(riScID),
                                 base = GithubPullRequestBranch("main"),
                                 number = index,
                             )
@@ -144,9 +151,9 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch all risc identifiers in repository`() {
-            val draftedRiScIDs = listOf("aaaaa", "aaaab")
-            val publishedRiScIDs = listOf("bbbbb", "bbbbc")
-            val approvedRiScIDs = listOf("ccccc", "ccccd")
+            val draftedRiScIDs = listOf(riScName("aaaaa"), riScName("aaaab"))
+            val publishedRiScIDs = listOf(riScName("bbbbb"), riScName("bbbbc"))
+            val approvedRiScIDs = listOf(riScName("ccccc"), riScName("ccccd"))
 
             queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
 
@@ -155,26 +162,26 @@ class GithubConnectorTests {
             assertEquals(6, identifiers.size, "All unique risc identifiers should be found")
             assertTrue({
                 publishedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == "$filenamePrefix-$riScID" && it.status == RiScStatus.Published }
+                    identifiers.any { it.id == riScID && it.status == RiScStatus.Published }
                 }
             }, "Unique published RiScs should be included in the list")
             assertTrue({
                 draftedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == "$filenamePrefix-$riScID" && it.status == RiScStatus.Draft }
+                    identifiers.any { it.id == riScID && it.status == RiScStatus.Draft }
                 }
             }, "Unique drafted RiScs should be included in the list")
             assertTrue({
                 approvedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == "$filenamePrefix-$riScID" && it.status == RiScStatus.SentForApproval }
+                    identifiers.any { it.id == riScID && it.status == RiScStatus.SentForApproval }
                 }
             }, "Unique approved RiScs should be included in the list")
         }
 
         @Test
         fun `test fetch all risc identifiers in repository with overlap`() {
-            val publishedRiScIDs = listOf("aaaaa", "bbbbb", "ddddd")
-            val draftedRiScIDs = listOf("bbbbb", "ccccc")
-            val approvedRiScIDs = listOf("ccccc", "ddddd")
+            val publishedRiScIDs = listOf(riScName("aaaaa"), riScName("bbbbb"), riScName("ddddd"))
+            val draftedRiScIDs = listOf(riScName("bbbbb"), riScName("ccccc"))
+            val approvedRiScIDs = listOf(riScName("ccccc"), riScName("ddddd"))
 
             queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
 
@@ -182,14 +189,14 @@ class GithubConnectorTests {
 
             assertEquals(4, identifiers.size, "All unique risc identifiers should be found")
             assertTrue({
-                identifiers.any { it.id == "$filenamePrefix-aaaaa" && it.status == RiScStatus.Published }
+                identifiers.any { it.id == riScName("aaaaa") && it.status == RiScStatus.Published }
             }, "Unique published RiScs should be included in the list")
             assertTrue({
-                identifiers.any { it.id == "$filenamePrefix-bbbbb" && it.status == RiScStatus.Draft }
+                identifiers.any { it.id == riScName("bbbbb") && it.status == RiScStatus.Draft }
             }, "Unique drafted RiScs should be included in the list")
             assertTrue({
-                identifiers.any { it.id == "$filenamePrefix-ccccc" && it.status == RiScStatus.SentForApproval } &&
-                    identifiers.any { it.id == "$filenamePrefix-ddddd" && it.status == RiScStatus.SentForApproval }
+                identifiers.any { it.id == riScName("ccccc") && it.status == RiScStatus.SentForApproval } &&
+                    identifiers.any { it.id == riScName("ddddd") && it.status == RiScStatus.SentForApproval }
             }, "Unique approved RiScs should be included in the list")
         }
 
@@ -221,21 +228,21 @@ class GithubConnectorTests {
         private fun pathToRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
 
         private fun pathToRiScContentOnDraftBranch(riScId: String) =
-            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$filenamePrefix-$riScId"
+            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$riScId"
 
         private fun fetchPublishedRiSc(riScId: String) =
             runBlocking {
                 githubConnector.fetchPublishedRiSc(
                     owner = owner,
                     repository = repository,
-                    id = "$filenamePrefix-$riScId",
+                    id = riScId,
                     accessToken = "accessToken",
                 )
             }
 
         @Test
         fun `test fetch RiSc content`() {
-            val riScId = "abcde"
+            val riScId = randomRiSc()
             val content = """{ "schemaVersion": "4.0" }"""
 
             webClient.queueResponse(
@@ -262,7 +269,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch RiSc content does not exist`() {
-            val riScId = "aaaaa"
+            val riScId = randomRiSc()
 
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
@@ -281,7 +288,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch RiSc content no access`() {
-            val riScId = "aaaaa"
+            val riScId = randomRiSc()
 
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.UNAUTHORIZED),
@@ -303,14 +310,14 @@ class GithubConnectorTests {
                 githubConnector.fetchDraftedRiScContent(
                     owner = owner,
                     repository = repository,
-                    id = "$filenamePrefix-$riScId",
+                    id = RiScIdentifier(riScId, status = RiScStatus.Draft),
                     accessToken = "accessToken",
                 )
             }
 
         @Test
         fun `test fetch draft RiSc content`() {
-            val riScId = "abcde"
+            val riScId = randomRiSc()
             val content = """{ "schemaVersion": "4.0" }"""
 
             webClient.queueResponse(
@@ -337,7 +344,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch draft RiSc content does not exist`() {
-            val riScId = "aaaaa"
+            val riScId = randomRiSc()
 
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
@@ -356,7 +363,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch draft RiSc content no access`() {
-            val riScId = "aaaaa"
+            val riScId = randomRiSc()
 
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.UNAUTHORIZED),
@@ -486,7 +493,11 @@ class GithubConnectorTests {
 
     @Nested
     inner class TestPullRequests {
-        val pathToPullRequestEndpoint = "/$owner/$repository/pulls"
+        private val pathToPullRequestEndpoint = "/$owner/$repository/pulls"
+        private val pathToRepositoryInfoEndpoint = "/$owner/$repository"
+
+        private fun pathToDraftRiScContent(riScId: String) =
+            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$riScId"
 
         @Test
         fun `test fetch all pull requests`() {
@@ -504,7 +515,7 @@ class GithubConnectorTests {
                         url = "https://api.github.com/repos/$owner/$repository/pulls/84",
                         title = " Updated risk scorecard",
                         createdAt = OffsetDateTime.now().minusHours(3).minusMinutes(18),
-                        head = GithubPullRequestBranch(ref = "risc-aaaab"),
+                        head = GithubPullRequestBranch(ref = randomRiSc()),
                         base = GithubPullRequestBranch(ref = "main"),
                         number = 84,
                     ),
@@ -535,9 +546,29 @@ class GithubConnectorTests {
             assertEquals(0, result.size, "On an error, an empty list should be returned.")
         }
 
+        private fun queueDefaultBranchResponse(defaultBranch: String) {
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubRepositoryDTO(
+                            defaultBranch = defaultBranch,
+                            permissions =
+                                GithubRepositoryPermissions(
+                                    admin = false,
+                                    maintain = false,
+                                    push = true,
+                                    triage = false,
+                                    pull = true,
+                                ),
+                        ),
+                    ),
+                path = pathToRepositoryInfoEndpoint,
+            )
+        }
+
         @Test
-        fun `test create pull request for RiSc`() {
-            val riScId = "aaaab"
+        fun `test create pull request for RiSc update`() {
+            val riScId = randomRiSc()
             val baseBranch = "main"
 
             val pullRequest =
@@ -545,13 +576,21 @@ class GithubConnectorTests {
                     url = "https://api.github.com/repos/$owner/$repository/pulls/29",
                     title = "Updated risk scorecard",
                     createdAt = OffsetDateTime.now(),
-                    head = GithubPullRequestBranch("risc-$riScId"),
-                    base = GithubPullRequestBranch("main"),
+                    head = GithubPullRequestBranch(riScId),
+                    base = GithubPullRequestBranch(baseBranch),
                     number = 37,
                 )
 
+            queueDefaultBranchResponse(baseBranch)
+
             webClient.queueResponse(
                 response = mockableResponseFromObject(pullRequest),
+                path = pathToPullRequestEndpoint,
+            )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(GithubFileDTO(content = "{}", sha = randomSHA(), name = riScId)),
+                path = pathToDraftRiScContent(riScId),
             )
 
             val result =
@@ -563,37 +602,103 @@ class GithubConnectorTests {
                         requiresNewApproval = true,
                         gitHubAccessToken = "access token",
                         userInfo = UserInfo(name = "Kari Nordmann", email = "kari.nordmann@test.com"),
-                        baseBranch = baseBranch,
                     )
                 }
 
-            assertEquals(pullRequest, result, "The create pull request should be returned.")
+            assertEquals(pullRequest, result, "The created pull request should be returned.")
 
-            val request = webClient.getNextRequest()
+            val request = webClient.getNextRequest(pathToPullRequestEndpoint)
 
             val requestContent = request.deserializeContent<GithubCreateNewPullRequestPayload>()
 
             assertEquals(baseBranch, requestContent.base, "PR should be to the provided base branch.")
             assertEquals("$owner:$riScId", requestContent.head, "PR should be from the RiSc branch.")
+            assertEquals(
+                "Updated risk scorecard",
+                requestContent.title,
+                "PR should be for an update when the RiSc file exists.",
+            )
+        }
+
+        @Test
+        fun `test create pull request for RiSc deletion`() {
+            val riScId = randomRiSc()
+            val baseBranch = "base"
+
+            val pullRequest =
+                GithubPullRequestObject(
+                    url = "https://api.github.com/repos/$owner/$repository/pulls/29",
+                    title = "Deleted risk scorecard",
+                    createdAt = OffsetDateTime.now(),
+                    head = GithubPullRequestBranch(riScId),
+                    base = GithubPullRequestBranch(baseBranch),
+                    number = 37,
+                )
+
+            queueDefaultBranchResponse(baseBranch)
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(pullRequest),
+                path = pathToPullRequestEndpoint,
+            )
+
+            // Deletion
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToDraftRiScContent(riScId),
+            )
+
+            val result =
+                runBlocking {
+                    githubConnector.createPullRequestForRiSc(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId,
+                        requiresNewApproval = true,
+                        gitHubAccessToken = "access token",
+                        userInfo = UserInfo(name = "Kari Nordmann", email = "kari.nordmann@test.com"),
+                    )
+                }
+
+            assertEquals(pullRequest, result, "The created pull request should be returned.")
+
+            val request = webClient.getNextRequest(pathToPullRequestEndpoint)
+
+            val requestContent = request.deserializeContent<GithubCreateNewPullRequestPayload>()
+
+            assertEquals(baseBranch, requestContent.base, "PR should be to the provided base branch.")
+            assertEquals("$owner:$riScId", requestContent.head, "PR should be from the RiSc branch.")
+            assertEquals(
+                "Deleted risk scorecard",
+                requestContent.title,
+                "PR should be for a deletion when the RiSc file does not exist.",
+            )
         }
 
         @Test
         fun `test create pull request for RiSc throws exception on error`() {
+            val riScId = randomRiSc()
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.BAD_REQUEST),
                 path = pathToPullRequestEndpoint,
             )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(GithubFileDTO(content = "{}", sha = randomSHA(), name = riScId)),
+                path = pathToDraftRiScContent(riScId),
+            )
+
+            queueDefaultBranchResponse("default")
 
             assertThrows<CreatePullRequestException> {
                 runBlocking {
                     githubConnector.createPullRequestForRiSc(
                         owner = owner,
                         repository = repository,
-                        riScId = "aaaaa",
+                        riScId = riScId,
                         requiresNewApproval = false,
                         gitHubAccessToken = "access token",
                         userInfo = UserInfo(name = "Ola Nordmann", email = "ola.nordmann@test.com"),
-                        baseBranch = "main",
                     )
                 }
             }
@@ -629,13 +734,13 @@ class GithubConnectorTests {
                     owner = owner,
                     repository = repository,
                     accessToken = "accessToken",
-                    riScId = "$filenamePrefix-$riScId",
+                    riScId = riScId,
                 )
             }
 
         @Test
         fun `test fetch last published RiSc date and commit number`() {
-            val riScId = "aaaaa"
+            val riScId = randomRiSc()
             val lastCommitTime = OffsetDateTime.now().minusYears(1)
 
             webClient.queueResponse(
@@ -689,7 +794,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch last published RiSc date and commit number returns null if no commit exists for RiSc`() {
-            val riScId = "aaaab"
+            val riScId = randomRiSc()
             val lastCommitTime = OffsetDateTime.now()
 
             webClient.queueResponse(
@@ -717,7 +822,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch last published RiSc date and commit number returns null on error`() {
-            val riScId = "aaaac"
+            val riScId = randomRiSc()
             val lastCommitTime = OffsetDateTime.now()
 
             webClient.queueResponse(
@@ -780,7 +885,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test file creation with put file request`() {
-            val filePath = pathToRiSC("aaaaa")
+            val filePath = pathToRiSC(randomRiSc())
             val branch = "main"
 
             // The file does not exist, so there is no file contents available.
@@ -820,7 +925,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test file update with put file request`() {
-            val filePath = pathToRiSC("aaaab")
+            val filePath = pathToRiSC(randomRiSc())
             val branch = "default"
 
             val fileSHA = randomSHA()
@@ -869,7 +974,7 @@ class GithubConnectorTests {
 
         @Test
         fun `test put file request throws exception on error`() {
-            val filePath = pathToRiSC("aaaac")
+            val filePath = pathToRiSC(randomRiSc())
             val branch = "dev"
 
             val fileSHA = randomSHA()
@@ -903,6 +1008,437 @@ class GithubConnectorTests {
                     branch = branch,
                 )
             }
+        }
+    }
+
+    @Nested
+    inner class TestCreateNewBranch {
+        private fun urlToCommitsOnBranch(branch: String) = "/$owner/$repository/commits/heads/$branch"
+
+        private fun githubCommitObject(sha: String) =
+            GithubCommitObject(
+                sha = sha,
+                url = "https://api.github.com/repos/$owner/$repository/commits/",
+                commit =
+                    GithubCommitInformation(
+                        message = "Commit message",
+                        committer =
+                            GithubCommitter(
+                                date = OffsetDateTime.now().minusHours(4),
+                                name = "Committer",
+                            ),
+                    ),
+            )
+
+        private val urlToCreateBranch = "/$owner/$repository/git/refs"
+
+        /* A response string mimicking parts of the response from the GitHub API. The response is not processed in the
+            application beyond a string. There is thus no datatype to use for the answer. */
+        private fun constructResponseString(
+            sha: String,
+            newBranch: String,
+        ) = """
+            {
+              "ref": "refs/heads/$newBranch",
+              "url": "https://api.github.com/repos/$owner/$repository/git/refs/heads/$newBranch",
+              "object": {
+                "type": "commit",
+                "sha": "$sha",
+                "url": "https://api.github.com/repos/$owner/$repository/git/commits/$sha"
+              }
+            }
+            """.trimIndent()
+
+        private fun createNewBranch(
+            baseBranch: String,
+            newBranch: String,
+        ) = runBlocking {
+            githubConnector.createNewBranch(
+                owner = owner,
+                repository = repository,
+                newBranchName = newBranch,
+                accessToken = "accessToken",
+                baseBranch = baseBranch,
+            )
+        }
+
+        @Test
+        fun `test create new branch`() {
+            val branch = "main"
+            val newBranch = randomRiSc()
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(githubCommitObject(sha)),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            val expectedResponse = constructResponseString(sha = sha, newBranch = newBranch)
+            webClient.queueResponse(
+                response = MockableResponse(content = expectedResponse),
+                path = urlToCreateBranch,
+            )
+
+            val response = createNewBranch(baseBranch = branch, newBranch = newBranch)
+
+            assertEquals(
+                expectedResponse,
+                response,
+                "If a new branch is created, the method should return the same JSON as returned by the GitHub API.",
+            )
+
+            // Ignore request to get SHA
+            webClient.getNextRequest()
+
+            val requestToCreate = webClient.getNextRequest().deserializeContent<GithubCreateNewBranchPayload>()
+
+            assertEquals(
+                sha,
+                requestToCreate.shaToBranchFrom,
+                "The SHA to branch from should be equivalent to the SHA of the last commit on the base branch.",
+            )
+        }
+
+        @Test
+        fun `test create new branch errors when branch does not exist`() {
+            val branch = "default"
+            val newBranch = randomRiSc()
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = constructResponseString(sha = sha, newBranch = newBranch)),
+                path = urlToCreateBranch,
+            )
+
+            assertThrows<Exception>("Creation of a new branch should error when the base branch does not exist.") {
+                createNewBranch(baseBranch = branch, newBranch = newBranch)
+            }
+
+            assertTrue(
+                webClient.hasQueuedUpResponses(urlToCreateBranch),
+                "If the base branch does not exist, the method should not attempt to construct a new branch.",
+            )
+        }
+
+        @Test
+        fun `test create new branch throws exception on error`() {
+            val branch = "standard"
+            val newBranch = randomRiSc()
+            val sha = randomSHA()
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = mockableResponseFromObject(githubCommitObject(sha)),
+                path = urlToCommitsOnBranch(branch),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.BAD_REQUEST),
+                path = urlToCreateBranch,
+            )
+
+            assertThrows<Exception>("Creation of a new branch should error when the branch creation request fails.") {
+                createNewBranch(baseBranch = branch, newBranch = newBranch)
+            }
+        }
+    }
+
+    @Nested
+    inner class TestDeleteRiSc {
+        private val pathToBranchCreationEndpoint = "/$owner/$repository/git/refs"
+        private val pathToRepositoryInfoEndpoint = "/$owner/$repository"
+
+        private fun pathToGetLastCommitOnBranch(branch: String) = "/$owner/$repository/commits/heads/$branch"
+
+        private fun pathToDraftRiScContent(riScId: String) =
+            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$riScId"
+
+        private fun pathToRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+
+        private fun pathToDeleteRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+
+        private fun pathToDeleteBranch(branch: String) = "/$owner/$repository/git/refs/heads/$branch"
+
+        private fun queueContentResponse(
+            riScId: String,
+            sha: String,
+            path: String,
+        ) = webClient.queueResponse(
+            response = mockableResponseFromObject(GithubFileDTO(content = "{}", sha = sha, name = riScFilename(riScId))),
+            path = path,
+        )
+
+        private fun queuePublishedContentResponse(
+            riScId: String,
+            sha: String,
+        ) = queueContentResponse(riScId = riScId, sha = sha, path = pathToRiScContent(riScId))
+
+        private fun queueDraftContentResponse(
+            riScId: String,
+            sha: String,
+        ) = queueContentResponse(riScId = riScId, sha = sha, path = pathToDraftRiScContent(riScId))
+
+        private fun queueRepositoryInfoResponse(defaultBranch: String) =
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubRepositoryDTO(
+                            defaultBranch = defaultBranch,
+                            permissions =
+                                GithubRepositoryPermissions(admin = false, maintain = false, push = true, triage = false, pull = true),
+                        ),
+                    ),
+                path = pathToRepositoryInfoEndpoint,
+            )
+
+        private fun queueDeleteDraftFileResponse(riScId: String) {
+            val sha = randomSHA()
+            webClient.queueResponse(
+                response =
+                    MockableResponse(
+                        /* A response string mimicking parts of the response from the GitHub API. The response is not
+                           processed in the application beyond a string. There is thus no datatype to use for the answer. */
+                        content =
+                            """
+                            {
+                                "content": null,
+                                "commit": {
+                                    "sha": "$sha",
+                                    "message": "Deleted RiSc with id: $riScId requires new approval"
+                                    "url": "https://api.github.com/repos/$owner/$repository/git/commits/$sha", 
+                                }
+                            }
+                            """.trimIndent(),
+                    ),
+                path = pathToDeleteRiScContent(riScId),
+                method = HttpMethod.DELETE,
+            )
+        }
+
+        private fun deleteRiSc(riScId: String) =
+            runBlocking {
+                githubConnector.deleteRiSc(
+                    owner = owner,
+                    repository = repository,
+                    accessToken = "accessToken",
+                    riScId = riScId,
+                )
+            }
+
+        @Test
+        fun `test delete unpublished RiSc`() {
+            val riScId = randomRiSc()
+            val unpublishedSHA = randomSHA()
+            val defaultBranch = "default"
+
+            queueDraftContentResponse(riScId, unpublishedSHA)
+            queueRepositoryInfoResponse(defaultBranch)
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToRiScContent(riScId),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NO_CONTENT),
+                path = pathToDeleteBranch(riScId),
+                method = HttpMethod.DELETE,
+            )
+
+            val response = deleteRiSc(riScId)
+
+            assertEquals(
+                ProcessingStatus.DeletedRiSc,
+                response.status,
+                "When the RiSc has not been published, it should be properly deleted.",
+            )
+
+            val deleteResponse = webClient.getNextRequest(pathToDeleteBranch(riScId))
+
+            assertEquals(HttpMethod.DELETE, deleteResponse.method, "The delete endpoint should have been called with the DELETE method.")
+        }
+
+        @Test
+        fun `test delete unpublished RiSc throws exception on error`() {
+            val riScId = randomRiSc()
+            val unpublishedSHA = randomSHA()
+            val defaultBranch = "main"
+
+            queueDraftContentResponse(riScId, unpublishedSHA)
+            queueRepositoryInfoResponse(defaultBranch)
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToRiScContent(riScId),
+            )
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.CONFLICT),
+                path = pathToDeleteBranch(riScId),
+                method = HttpMethod.DELETE,
+            )
+
+            assertThrows<DeletingRiScException>(
+                "If the GitHub API returns an error on deletion, the method should throw a DeletingRiScException.",
+            ) { deleteRiSc(riScId) }
+        }
+
+        @Test
+        fun `test delete published RiSc with existing branch`() {
+            val riScId = randomRiSc()
+            val unpublishedSHA = randomSHA()
+            val publishedSHA = randomSHA()
+            val defaultBranch = "base"
+
+            queueDraftContentResponse(riScId, unpublishedSHA)
+            queueRepositoryInfoResponse(defaultBranch)
+            queuePublishedContentResponse(riScId, publishedSHA)
+            queueDeleteDraftFileResponse(riScId)
+
+            val response = deleteRiSc(riScId)
+
+            assertEquals(
+                ProcessingStatus.DeletedRiScRequiresApproval,
+                response.status,
+                "When the RiSc has been published, it should require an approval before being deleted.",
+            )
+
+            val deleteRequestContent =
+                webClient
+                    .getNextRequest(
+                        path = pathToDeleteRiScContent(riScId),
+                        method = HttpMethod.DELETE,
+                    ).deserializeContent<GithubDeleteFilePayload>()
+
+            assertEquals(riScId, deleteRequestContent.branch, "The RiSc should be deleted on its draft branch.")
+            assertEquals(
+                unpublishedSHA,
+                deleteRequestContent.sha,
+                "The SHA used should be equal to the SHA for the RiSc on the draft branch.",
+            )
+        }
+
+        @Test
+        fun `test delete published RiSc without existing branch`() {
+            val riScId = randomRiSc()
+            val publishedSHA = randomSHA()
+            // Last commit on default branch
+            val commitSHA = randomSHA()
+            val defaultBranch = "main"
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
+                path = pathToDraftRiScContent(riScId),
+            )
+            queueRepositoryInfoResponse(defaultBranch)
+            queuePublishedContentResponse(riScId, publishedSHA)
+            queueDeleteDraftFileResponse(riScId)
+
+            webClient.queueResponse(
+                response =
+                    MockableResponse(
+                        content =
+                            """
+                            {
+                              "ref": "refs/heads/$riScId",
+                              "url": "https://api.github.com/repos/$owner/$repository/git/refs/heads/$riScId",
+                              "object": {
+                                "type": "commit",
+                                "sha": "$commitSHA",
+                                "url": "https://api.github.com/repos/$owner/$repository/git/commits/$commitSHA"
+                              }
+                            }
+                            """.trimIndent(),
+                    ),
+                path = pathToBranchCreationEndpoint,
+            )
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        GithubCommitObject(
+                            sha = commitSHA,
+                            url = "https://api.github.com/repos/$owner/$repository/git/commits/$commitSHA",
+                            commit =
+                                GithubCommitInformation(
+                                    message = "Updated code",
+                                    committer =
+                                        GithubCommitter(
+                                            date = OffsetDateTime.now().minusHours(4),
+                                            name = "username",
+                                        ),
+                                ),
+                        ),
+                    ),
+                path = pathToGetLastCommitOnBranch(defaultBranch),
+            )
+
+            val response = deleteRiSc(riScId)
+
+            assertEquals(
+                ProcessingStatus.DeletedRiScRequiresApproval,
+                response.status,
+                "When the RiSc has been published, it should require an approval before being deleted.",
+            )
+
+            val branchRequestContent =
+                webClient.getNextRequest(path = pathToBranchCreationEndpoint).deserializeContent<GithubCreateNewBranchPayload>()
+
+            assertEquals(
+                commitSHA,
+                branchRequestContent.shaToBranchFrom,
+                "The new branch should be created from the last commit on the default branch.",
+            )
+            assertEquals(
+                "refs/heads/$riScId",
+                branchRequestContent.nameOfNewBranch,
+                "A new branch should be created for the riSc.",
+            )
+
+            val deleteRequestContent =
+                webClient
+                    .getNextRequest(
+                        path = pathToDeleteRiScContent(riScId),
+                        method = HttpMethod.DELETE,
+                    ).deserializeContent<GithubDeleteFilePayload>()
+
+            assertEquals(riScId, deleteRequestContent.branch, "The RiSc should be deleted on its draft branch.")
+            assertEquals(
+                publishedSHA,
+                deleteRequestContent.sha,
+                "The SHA used should be equal to the SHA for the RiSc on the default branch, as no changes were made after branching.",
+            )
+        }
+
+        @Test
+        fun `test delete published RiSc throws exception on error`() {
+            val riScId = randomRiSc()
+            val unpublishedSHA = randomSHA()
+            val publishedSHA = randomSHA()
+            val defaultBranch = "base"
+
+            queueDraftContentResponse(riScId, unpublishedSHA)
+            queueRepositoryInfoResponse(defaultBranch)
+            queuePublishedContentResponse(riScId, publishedSHA)
+
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.SERVICE_UNAVAILABLE),
+                path = pathToDeleteRiScContent(riScId),
+                method = HttpMethod.DELETE,
+            )
+
+            assertThrows<DeletingRiScException> (
+                "Deletion of the RiSc should throw a DeletingRiScException when the GitHub API endpoint call fails.",
+            ) { deleteRiSc(riScId) }
         }
     }
 }

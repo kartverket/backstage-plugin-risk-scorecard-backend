@@ -1,5 +1,6 @@
 package no.risc.utils
 
+import org.slf4j.Logger
 import java.util.Base64
 import java.util.stream.Stream
 import kotlin.random.Random
@@ -59,5 +60,21 @@ inline fun <T> tryOrDefault(
     try {
         func()
     } catch (_: Exception) {
+        default
+    }
+
+/**
+ * Returns the result of the provided function, unless the provided function throws an exception. If an exception is
+ * thrown, then the error message is logged and the provided default value is returned.
+ */
+inline fun <T> tryOrDefaultWithErrorLogging(
+    default: T,
+    logger: Logger,
+    func: () -> T,
+): T =
+    try {
+        func()
+    } catch (e: Exception) {
+        logger.error(e.toString())
         default
     }

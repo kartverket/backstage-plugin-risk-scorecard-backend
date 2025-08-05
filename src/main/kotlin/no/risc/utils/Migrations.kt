@@ -1,16 +1,27 @@
 package no.risc.utils
 
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import no.risc.risc.models.LastPublished
 import no.risc.risc.models.MigrationStatus
-import no.risc.risc.models.RiScContentResultDTO
+import no.risc.risc.models.MigrationVersions
+import no.risc.risc.models.RiSc
+import no.risc.risc.models.RiSc3X
+import no.risc.risc.models.RiSc3XScenario
+import no.risc.risc.models.RiSc3XScenarioVulnerability
+import no.risc.risc.models.RiSc4X
+import no.risc.risc.models.RiSc4XScenario
+import no.risc.risc.models.RiSc4XScenarioAction
+import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScVersion
+import no.risc.utils.comparison.MigrationChange40
+import no.risc.utils.comparison.MigrationChange40Action
+import no.risc.utils.comparison.MigrationChange40Scenario
+import no.risc.utils.comparison.MigrationChange41
+import no.risc.utils.comparison.MigrationChange41Scenario
+import no.risc.utils.comparison.MigrationChange42
+import no.risc.utils.comparison.MigrationChange42Action
+import no.risc.utils.comparison.MigrationChange42Scenario
+import no.risc.utils.comparison.MigrationChangedTypedValue
+import no.risc.utils.comparison.MigrationChangedValue
 
 /**
  * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
@@ -18,53 +29,118 @@ import no.risc.risc.models.RiScContentResultDTO
  * - 3.2 -> 3.3
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
+ * - 4.1 -> 4.2 (add lastUpdated field to action)
+ *
+ * @param riSc The RiSc to migrate.
+ * @param lastPublished The last published version of the RisC to use for migration to 4.2
+ * @param endVersion The version to migrate to.
+ * @throws IllegalStateException If the RiSc is of an unsupported version, the endVersion is a non-supported version or
+ *                               the endVersion is an earlier version than the RiSc version.
  */
 fun migrate(
-    content: RiScContentResultDTO,
-    latestSupportedVersion: String,
-): RiScContentResultDTO {
-    if (content.riScContent == null) return content
+    riSc: RiSc,
+    lastPublished: LastPublished?,
+    endVersion: String,
+): Pair<RiSc, MigrationStatus> {
+    val toVersion = RiScVersion.fromString(endVersion)
 
-    val schemaVersion =
-        parseJSONToElement(content.riScContent)
-            .jsonObject
-            .getOrElse("schemaVersion") {
-                // If schemaVersion is not present, we cannot determine which version to migrate from
-                return content
-            }.jsonPrimitive
-            .content
+    if (riSc.schemaVersion == null || toVersion == null) throw IllegalStateException("Unsupported migration")
 
-    // Only perform migration if not already at the desired version
-    if (schemaVersion == latestSupportedVersion) {
-        if (content.migrationStatus.migrationVersions.fromVersion != null) {
-            // Set the toVersion to the latestSupportedVersion
-            content.migrationStatus.migrationVersions.toVersion = latestSupportedVersion
-        }
-        return content
+    return handleMigrate(
+        riSc = riSc,
+        lastPublished = lastPublished,
+        migrationStatus =
+            MigrationStatus(
+                migrationChanges = false,
+                migrationRequiresNewApproval = false,
+                migrationVersions =
+                    MigrationVersions(
+                        fromVersion = riSc.schemaVersion?.asString(),
+                        toVersion = toVersion.asString(),
+                    ),
+            ),
+        toVersion = toVersion,
+    )
+}
+
+/**
+ * Migrates the supplied RiSc to the supplied 3.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    lastPublished: LastPublished? = null,
+    endVersion: RiScVersion.RiSc3XVersion,
+): Pair<RiSc3X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc3X) throw IllegalStateException("Migration to 3.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
+ * Migrates the supplied RiSc to the supplied 4.X version.
+ *
+ * @see no.risc.utils.migrate(RiSc, String)
+ */
+fun migrate(
+    riSc: RiSc,
+    lastPublished: LastPublished? = null,
+    endVersion: RiScVersion.RiSc4XVersion,
+): Pair<RiSc4X, MigrationStatus> {
+    val (migratedRiSc, migrationStatus) = migrate(riSc = riSc, lastPublished = lastPublished, endVersion = endVersion.asString())
+    if (migratedRiSc !is RiSc4X) throw IllegalStateException("Migration to 4.X version failed")
+    return Pair(migratedRiSc, migrationStatus)
+}
+
+/**
+ * Migrates the supplied RiSc from its current version to supplied latest supported version if possible. Migration is
+ * performed as a number of steps. The method currently supports the following steps:
+ * - 3.2 -> 3.3
+ * - 3.3 -> 4.0 (breaking changes)
+ * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
+ *
+ * @param riSc The RiSc to migrate
+ * @param migrationStatus The migration status so far
+ * @param toVersion The version to migrate to.
+ * @throws IllegalStateException If the riSc is of an unsupported version, the to version is a non-supported version or
+ *                               the to version is an earlier version than the RiSc version.
+ */
+private fun handleMigrate(
+    riSc: RiSc,
+    lastPublished: LastPublished?,
+    migrationStatus: MigrationStatus,
+    toVersion: RiScVersion,
+): Pair<RiSc, MigrationStatus> {
+    if (toVersion == riSc.schemaVersion) {
+        return riSc to migrationStatus
     }
 
-    // Set the fromVersion only if it's not already set
-    if (content.migrationStatus.migrationVersions.fromVersion == null) {
-        content.migrationStatus.migrationVersions.fromVersion = schemaVersion
-    }
+    val (migratedRiSc, migrationStatus) =
+        when {
+            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_2 ->
+                migrateFrom32To33(riSc, migrationStatus)
 
-    val nextVersionObj =
-        when (schemaVersion) {
-            "3.2" -> migrateTo32To33(content)
-            "3.3" -> migrateFrom33To40(content)
-            "4.0" -> migrateFrom40To41(content)
-            else -> return content
+            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_3 ->
+                migrateFrom33To40(riSc, migrationStatus)
+
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_0 ->
+                migrateFrom40To41(riSc, migrationStatus)
+
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 ->
+                migrateFrom41To42(riSc, lastPublished, migrationStatus)
+
+            else -> throw IllegalStateException("Unsupported migration")
         }
-
-    return migrate(nextVersionObj, latestSupportedVersion)
+    return handleMigrate(migratedRiSc, lastPublished, migrationStatus, toVersion)
 }
 
 // Update RiSc scenarios from schemaVersion 3.2 to 3.3. This is necessary because 3.3 is backwards compatible,
 // and modifications can only be made when the schemaVersion is 3.3.
-fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val migratedSchemaVersion = obj.riScContent!!.replace("\"schemaVersion\": \"3.2\"", "\"schemaVersion\": \"3.3\"")
-    return obj.copy(riScContent = migratedSchemaVersion)
-}
+fun migrateFrom32To33(
+    riSc: RiSc3X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc3X, MigrationStatus> = Pair(riSc.copy(schemaVersion = RiScVersion.RiSc3XVersion.VERSION_3_3), migrationStatus)
 
 /**
  * Update RiSc content from version 3.3 to 4.0. Includes breaking changes.
@@ -82,28 +158,25 @@ fun migrateTo32To33(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "owner" and "deadline" from actions
  * Remove "existingActions" from scenarios
  */
-fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
+fun migrateFrom33To40(
+    riSc: RiSc3X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc4X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange40Scenario>()
 
-    // Replace schemaVersion
-    jsonObject["schemaVersion"] = JsonPrimitive("4.0")
-
-    // Update scenarios, if any are present
-    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
-        scenarios
-            .jsonArray
-            .map { updateScenarioFrom33To40(it.jsonObject) }
-            .let(::JsonArray)
-    }
-
-    return obj.copy(
-        riScContent = serializeJSON(JsonObject(jsonObject)),
-        migrationStatus =
-            MigrationStatus(
-                migrationChanges = true,
-                migrationRequiresNewApproval = true,
-                migrationVersions = obj.migrationStatus.migrationVersions,
-            ),
+    return Pair(
+        RiSc4X(
+            schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_0,
+            title = riSc.title,
+            scope = riSc.scope,
+            valuations = riSc.valuations,
+            scenarios = riSc.scenarios.map { scenario -> updateScenarioFrom33To40(scenario, changedScenarios::add) },
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges40 = if (changedScenarios.isNotEmpty()) MigrationChange40(scenarios = changedScenarios) else null,
+        ),
     )
 }
 
@@ -121,52 +194,87 @@ fun migrateFrom33To40(obj: RiScContentResultDTO): RiScContentResultDTO {
  * Remove "existingActions" from scenarios
  *
  */
-private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
-    val scenarioObject = scenario.toMutableMap()
+private fun updateScenarioFrom33To40(
+    scenario: RiSc3XScenario,
+    addChanges: (MigrationChange40Scenario) -> Unit,
+): RiSc4XScenario {
+    // Vulnerability enum mapping from 3.3 to 4.0
+    fun replaceVulnerability(vulnerability: RiSc3XScenarioVulnerability): RiSc4XScenarioVulnerability =
+        when (vulnerability) {
+            // Changed
+            RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc3XScenarioVulnerability.DISCLOSED_SECRET -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
+            RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE -> RiSc4XScenarioVulnerability.EXCESSIVE_USE
+            RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc3XScenarioVulnerability.USER_REPUDIATION -> RiSc4XScenarioVulnerability.UNMONITORED_USE
+            // Remain the same
+            RiSc3XScenarioVulnerability.DEPENDENCY_VULNERABILITY -> RiSc4XScenarioVulnerability.DEPENDENCY_VULNERABILITY
+            RiSc3XScenarioVulnerability.INFORMATION_LEAK -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
+            RiSc3XScenarioVulnerability.INPUT_TAMPERING -> RiSc4XScenarioVulnerability.INPUT_TAMPERING
+            RiSc3XScenarioVulnerability.MISCONFIGURATION -> RiSc4XScenarioVulnerability.MISCONFIGURATION
+        }
 
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
+    val changedActions = mutableListOf<MigrationChange40Action>()
+    val changedVulnerabilities =
+        mutableListOf<MigrationChangedTypedValue<RiSc3XScenarioVulnerability, RiSc4XScenarioVulnerability>>()
+    val removedExistingActions: String? =
+        if (scenario.existingActions.isNullOrEmpty()) null else scenario.existingActions
 
-    // Remove "existingActions"
-    scenarioDetails.remove("existingActions")
-
-    // Changed vulnerability names from 3.3 to 4.0
-    val replacementMap =
-        mapOf(
-            "User repudiation" to "Unmonitored use",
-            "Compromised admin user" to "Unauthorized access",
-            "Escalation of rights" to "Unauthorized access",
-            "Disclosed secret" to "Information leak",
-            "Denial of service" to "Excessive use",
+    val migratedScenario =
+        RiSc4XScenario(
+            title = scenario.title,
+            id = scenario.id,
+            description = scenario.description,
+            url = scenario.url,
+            threatActors = scenario.threatActors,
+            // Map changed vulnerabilities
+            vulnerabilities =
+                scenario.vulnerabilities
+                    .map { oldVulnerability ->
+                        val newVulnerability = replaceVulnerability(oldVulnerability)
+                        if (newVulnerability.toString() != oldVulnerability.toString()) {
+                            changedVulnerabilities.add(MigrationChangedTypedValue(oldVulnerability, newVulnerability))
+                        }
+                        newVulnerability
+                    }.distinct(),
+            risk = scenario.risk,
+            remainingRisk = scenario.remainingRisk,
+            // Remove owner and deadline field from action
+            actions =
+                scenario.actions.map { action ->
+                    if (!action.owner.isNullOrEmpty() || !action.deadline.isNullOrEmpty()) {
+                        changedActions.add(
+                            MigrationChange40Action(
+                                title = action.title,
+                                id = action.id,
+                                removedOwner = action.owner,
+                                removedDeadline = action.deadline,
+                            ),
+                        )
+                    }
+                    RiSc4XScenarioAction(
+                        title = action.title,
+                        id = action.id,
+                        description = action.description,
+                        url = action.url,
+                        status = action.status,
+                    )
+                },
         )
 
-    // Replace values in vulnerabilities array, if any vulnerabilities are present
-    scenarioDetails.computeIfPresent("vulnerabilities") { _, vulnerabilitiesArray ->
-        vulnerabilitiesArray
-            .jsonArray
-            .map { it.jsonPrimitive.content }
-            .map { replacementMap.getOrDefault(it, it) }
-            .distinct()
-            .map(::JsonPrimitive)
-            .let(::JsonArray)
+    if (removedExistingActions != null || changedActions.isNotEmpty() && changedVulnerabilities.isNotEmpty()) {
+        addChanges(
+            MigrationChange40Scenario(
+                title = scenario.title,
+                id = scenario.id,
+                removedExistingActions = removedExistingActions,
+                changedVulnerabilities = changedVulnerabilities,
+                changedActions = changedActions,
+            ),
+        )
     }
 
-    // Remove "owner" and "deadline" from actions, if there are any actions
-    scenarioDetails.computeIfPresent("actions") { _, actionsArray ->
-        actionsArray
-            .jsonArray
-            .map { it.jsonObject.toMutableMap() }
-            .onEach {
-                it.computeIfPresent("action") { _, actionObject ->
-                    actionObject.jsonObject
-                        .filter { (key, _) -> key != "owner" && key != "deadline" }
-                        .let(::JsonObject)
-                }
-            }.map(::JsonObject)
-            .let(::JsonArray)
-    }
-
-    scenarioObject["scenario"] = JsonObject(scenarioDetails)
-    return JsonObject(scenarioObject)
+    return migratedScenario
 }
 
 /**
@@ -179,7 +287,7 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *  30 000 000      ->      64 000 000 = 20^6
  *  1 000 000 000   ->      1 280 000 000 = 20^7
  *
- *  Changes in probabiliy (in incidents per year):
+ *  Changes in probability (in incidents per year):
  *  0.01    ->      0.0025 = 20^-2 (every 400 years)
  *  0.1     ->      0.05 = 20^-1 (every 20 years)
  *  1       ->      1 = 20^0 (every year)
@@ -187,63 +295,66 @@ private fun updateScenarioFrom33To40(scenario: JsonObject): JsonObject {
  *  300     ->      400 = 20^2 (~ daily)
  *
  */
-private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
-    val scenarioObject = scenario.toMutableMap()
-
-    val scenarioDetails = scenarioObject["scenario"]?.jsonObject?.toMutableMap() ?: return scenario
-
-    val consequenceMigrations =
+private fun updateScenarioFrom40to41(
+    scenario: RiSc4XScenario,
+    addChanges: (MigrationChange41Scenario) -> Unit,
+): RiSc4XScenario {
+    val consequenceMigrations: Map<Double, Double> =
         mapOf(
-            1000 to 8000,
-            30000 to 160000,
-            1000000 to 3200000,
-            30000000 to 64000000,
-            1000000000 to 1280000000,
-        )
+            1000.0 to 8000.0,
+            30000.0 to 160000.0,
+            1000000.0 to 3200000.0,
+            30000000.0 to 64000000.0,
+            1000000000.0 to 1280000000.0,
+        ).withDefault { it }
 
-    val probabilityMigrations =
+    val probabilityMigrations: Map<Double, Double> =
         mapOf(
             0.01 to 0.0025,
             0.1 to 0.05,
-            1 to 1,
-            50.0 to 20,
-            300.0 to 400,
+            1.0 to 1.0,
+            50.0 to 20.0,
+            300.0 to 400.0,
+        ).withDefault { it }
+
+    val migratedScenario =
+        scenario.copy(
+            risk =
+                scenario.risk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.risk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.risk.probability),
+                ),
+            remainingRisk =
+                scenario.remainingRisk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.remainingRisk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.remainingRisk.probability),
+                ),
         )
 
-    fun migrateRiskFrom40to41(riskElement: JsonElement): JsonObject {
-        val risk = riskElement.jsonObject.toMutableMap()
+    fun changeValue(
+        oldValue: Double,
+        newValue: Double,
+    ): MigrationChangedValue<Double>? = if (oldValue != newValue) MigrationChangedValue(oldValue, newValue) else null
 
-        risk["probability"]?.jsonPrimitive?.doubleOrNull?.let { oldValue ->
-            probabilityMigrations[oldValue]?.let { newValue ->
-                risk["probability"] = JsonPrimitive(newValue)
-            }
-        }
+    val changes =
+        MigrationChange41Scenario(
+            title = scenario.title,
+            id = scenario.id,
+            changedRiskProbability = changeValue(scenario.risk.probability, migratedScenario.risk.probability),
+            changedRiskConsequence = changeValue(scenario.risk.consequence, migratedScenario.risk.consequence),
+            changedRemainingRiskProbability =
+                changeValue(scenario.remainingRisk.probability, migratedScenario.remainingRisk.probability),
+            changedRemainingRiskConsequence =
+                changeValue(scenario.remainingRisk.consequence, migratedScenario.remainingRisk.consequence),
+        )
 
-        risk["consequence"]?.jsonPrimitive?.intOrNull?.let { oldValue ->
-            consequenceMigrations[oldValue]?.let { newValue ->
-                risk["consequence"] = JsonPrimitive(newValue)
-            }
-        }
+    if (changes.hasChanges()) addChanges(changes)
 
-        return JsonObject(risk)
-    }
-
-    // Migrate risk
-    scenarioDetails.computeIfPresent("risk") { _, riskElement ->
-        migrateRiskFrom40to41(riskElement)
-    }
-
-    // Migrate remaining risk
-    scenarioDetails.computeIfPresent("remainingRisk") { _, remainingRiskElement ->
-        migrateRiskFrom40to41(remainingRiskElement)
-    }
-
-    scenarioObject["scenario"] = JsonObject(scenarioDetails)
-    return JsonObject(scenarioObject)
+    return migratedScenario
 }
 
 /**
- *  Migrate RiSc with changes from 4.0 to 4.1
+// *  Migrate RiSc with changes from 4.0 to 4.1
  *
  *  The preset values for consequence and probability have been changed to use base 20.
  *  Note that arbitrary values are allowed for consequence and probability. We leave arbitrary values as is
@@ -256,7 +367,7 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
  *  30 000 000      ->      64 000 000 = 20^6
  *  1 000 000 000   ->      1 280 000 000 = 20^7
  *
- *  Changes in probabiliy (in incidents per year):
+ *  Changes in probability (in incidents per year):
  *  0.01    ->      0.0025 = 20^-2 (every 400 years)
  *  0.1     ->      0.05 = 20^-1 (every 20 years)
  *  1       ->      1 = 20^0 (every year)
@@ -264,28 +375,72 @@ private fun updateScenarioFrom40to41(scenario: JsonObject): JsonObject {
  *  300     ->      400 = 20^2 (~ daily)
  *
  * */
-fun migrateFrom40To41(obj: RiScContentResultDTO): RiScContentResultDTO {
-    val jsonObject = parseJSONToElement(obj.riScContent!!).jsonObject.toMutableMap()
+fun migrateFrom40To41(
+    riSc: RiSc4X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc4X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange41Scenario>()
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_1,
+            scenarios = riSc.scenarios.map { scenario -> updateScenarioFrom40to41(scenario, changedScenarios::add) },
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges41 = if (changedScenarios.isNotEmpty()) MigrationChange41(scenarios = changedScenarios) else null,
+        ),
+    )
+}
 
-    // Change schema version 4.0 -> 4.1
-    jsonObject["schemaVersion"] = JsonPrimitive("4.1")
+fun updateScenarioFrom41To42(
+    scenario: RiSc4XScenario,
+    lastPublished: LastPublished?,
+    addChanges: (MigrationChange42Scenario) -> Unit,
+): RiSc4XScenario {
+    val migratedScenario =
+        scenario.copy(
+            actions =
+                scenario.actions.map { action ->
+                    action.copy(lastUpdated = lastPublished?.dateTime ?: null)
+                },
+        )
 
-    // Migrate consequence and probability in all scenarios
-    jsonObject.computeIfPresent("scenarios") { _, scenarios ->
-        scenarios
-            .jsonArray
-            .map {
-                updateScenarioFrom40to41(it.jsonObject)
-            }.let(::JsonArray)
-    }
+    val changes =
+        MigrationChange42Scenario(
+            title = migratedScenario.title,
+            id = migratedScenario.id,
+            changedActions = migratedScenario.actions.map { MigrationChange42Action(it.title, it.id, it.lastUpdated) },
+        )
 
-    return obj.copy(
-        riScContent = serializeJSON(JsonObject(jsonObject)),
-        migrationStatus =
-            MigrationStatus(
-                migrationChanges = true,
-                migrationRequiresNewApproval = true,
-                migrationVersions = obj.migrationStatus.migrationVersions,
-            ),
+    if (changes.hasChanges()) addChanges(changes)
+
+    return migratedScenario
+}
+
+/**
+ *  Migrate RiSc with changes from 4.1 to 4.2
+ *
+ * Add lastUpdated field to action to keep track when the action was last updated.
+ * Set to the last published date for RiSc or null if RiSc is not yet published.
+ * */
+fun migrateFrom41To42(
+    riSc: RiSc4X,
+    lastPublished: LastPublished?,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc4X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange42Scenario>()
+
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc4XVersion.VERSION_4_2,
+            scenarios =
+                riSc.scenarios.map { scenario ->
+                    updateScenarioFrom41To42(scenario, lastPublished, changedScenarios::add)
+                },
+        ),
+        migrationStatus.copy(
+            migrationChanges42 = if (changedScenarios.isNotEmpty()) MigrationChange42(scenarios = changedScenarios) else null,
+        ),
     )
 }

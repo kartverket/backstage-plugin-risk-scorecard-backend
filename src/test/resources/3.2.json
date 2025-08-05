@@ -24,7 +24,7 @@
         "existingActions": "Ddos protection. ",
         "actions": [
           {
-            "title": "",
+            "title": "Innlogging",
             "action": {
               "ID": "w100Q",
               "description": "Innlogging. ",

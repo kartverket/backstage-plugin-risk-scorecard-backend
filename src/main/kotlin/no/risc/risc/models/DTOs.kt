@@ -3,14 +3,17 @@ package no.risc.risc.models
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
-import no.risc.utils.Difference
 import no.risc.utils.KOffsetDateTimeSerializer
+import no.risc.utils.comparison.MigrationChange40
+import no.risc.utils.comparison.MigrationChange41
+import no.risc.utils.comparison.MigrationChange42
+import no.risc.utils.comparison.RiScChange
 import java.time.OffsetDateTime
 
 @Serializable
 data class DifferenceDTO(
     val status: DifferenceStatus,
-    val differenceState: Difference,
+    val differenceState: RiScChange? = null,
     val errorMessage: String = "",
     val defaultLastModifiedDateString: String = "",
 )
@@ -70,6 +73,9 @@ data class MigrationStatus(
     val migrationChanges: Boolean,
     val migrationRequiresNewApproval: Boolean,
     val migrationVersions: MigrationVersions,
+    val migrationChanges40: MigrationChange40? = null,
+    val migrationChanges41: MigrationChange41? = null,
+    val migrationChanges42: MigrationChange42? = null,
 )
 
 @Serializable
@@ -106,6 +112,7 @@ abstract class RiScResult {
     abstract val statusMessage: String
 }
 
+@Serializable
 class ProcessRiScResultDTO(
     override val riScId: String,
     override val status: ProcessingStatus,
@@ -120,6 +127,13 @@ class ProcessRiScResultDTO(
             )
     }
 }
+
+@Serializable
+class DeleteRiScResultDTO(
+    override val riScId: String,
+    override val status: ProcessingStatus,
+    override val statusMessage: String,
+) : RiScResult()
 
 @Serializable
 class PublishRiScResultDTO(
@@ -141,6 +155,9 @@ enum class ProcessingStatus(
     ErrorWhenUpdatingRiSc("Error when updating risk scorecard"),
     CreatedRiSc("Created new risk scorecard successfully"),
     UpdatedRiSc("Updated risk scorecard successfully"),
+    DeletedRiSc("Deleted risk scorecard successfully"),
+    DeletedRiScRequiresApproval("Deleted risk scorecard and requires approval"),
+    ErrorWhenDeletingRiSc("Error when deleting risk scorecard"),
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
@@ -166,4 +183,16 @@ enum class RiScStatus {
     Draft,
     SentForApproval,
     Published,
+    DeletionDraft,
+    DeletionSentForApproval,
+}
+
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+@JsonIgnoreUnknownKeys
+data class UserInfo(
+    val name: String,
+    val email: String,
+) {
+    override fun toString(): String = "$name ($email)"
 }

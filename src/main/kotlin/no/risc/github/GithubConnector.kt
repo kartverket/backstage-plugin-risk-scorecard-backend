@@ -4,11 +4,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
 import no.risc.exception.exceptions.CreatePullRequestException
+import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubCreateNewPullRequestPayload
+import no.risc.github.models.GithubDeleteFilePayload
 import no.risc.github.models.GithubFileDTO
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubReferenceObjectDTO
@@ -20,6 +22,7 @@ import no.risc.infra.connector.WebClientConnector
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
+import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.LastPublished
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
@@ -29,6 +32,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrDefault
+import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.utils.tryOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -39,6 +43,7 @@ import org.springframework.web.reactive.function.client.WebClient.RequestBodySpe
 import org.springframework.web.reactive.function.client.WebClient.RequestHeadersSpec
 import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
 import org.springframework.web.reactive.function.client.WebClientResponseException
+import org.springframework.web.reactive.function.client.awaitBodilessEntity
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
@@ -49,7 +54,6 @@ import java.time.OffsetDateTime
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
-    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
@@ -177,7 +181,9 @@ class GithubConnector(
         )
 
     /**
-     * Fetches the content of the pending changes to a RiSc from the given repository using the GitHub Contents-API.
+     * Fetches the content of the pending changes to a RiSc from the given repository using the GitHub Contents-API. If
+     * the fetch detects that the RiSc is marked for deletion in the draft changes, then the status of the identifier is
+     * updated accordingly.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository the RiSc belongs to.
@@ -187,13 +193,28 @@ class GithubConnector(
     suspend fun fetchDraftedRiScContent(
         owner: String,
         repository: String,
-        id: String,
+        id: RiScIdentifier,
         accessToken: String,
-    ): GithubContentResponse =
-        fetchRiScContent(
-            uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id),
-            accessToken = accessToken,
-        )
+    ): GithubContentResponse {
+        val fetchedContent =
+            fetchRiScContent(
+                uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id.id),
+                accessToken = accessToken,
+            )
+
+        if (fetchedContent.status != GithubStatus.NotFound) return fetchedContent
+
+        // Handle deleted RiSc
+        val publishedVersion = fetchPublishedRiSc(owner, repository, id.id, accessToken)
+
+        if (publishedVersion.status != GithubStatus.Success) return fetchedContent
+
+        // If the draft file cannot be found and there is a published version, then the RiSc has been staged for deletion.
+        // Use the data of the published version to show what is being deleted.
+        if (id.status == RiScStatus.Draft) id.status = RiScStatus.DeletionDraft
+        if (id.status == RiScStatus.SentForApproval) id.status = RiScStatus.DeletionSentForApproval
+        return GithubContentResponse(data = publishedVersion.data, status = GithubStatus.Success)
+    }
 
     /**
      * Finds the identifiers of every RiSc in a repository that is published, i.e., on the default branch.
@@ -207,7 +228,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
                 .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
@@ -233,7 +254,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
@@ -262,7 +283,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefault(default = emptyList()) {
+        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
             getGithubResponse(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
@@ -359,7 +380,7 @@ class GithubConnector(
                             repository = repository,
                             newBranchName = riScId,
                             accessToken = gitHubAccessToken.value,
-                            defaultBranch = defaultBranch,
+                            baseBranch = defaultBranch,
                         )
                     }
 
@@ -390,7 +411,7 @@ class GithubConnector(
             repositoryOwner = owner,
             repositoryName = repository,
             gitHubAccessToken = gitHubAccessToken,
-            filePath = "$riScFolderPath/$riScId.$filenamePostfix.yaml",
+            filePath = githubHelper.riscPath(riScId),
             branch = riScId,
             message = commitMessage,
             content = fileContent.encodeBase64(),
@@ -454,7 +475,6 @@ class GithubConnector(
                             requiresNewApproval = requiresNewApproval,
                             gitHubAccessToken = gitHubAccessToken.value,
                             userInfo = userInfo,
-                            baseBranch = defaultBranch,
                         )
                     RiScApprovalPRStatus(pullRequest = pullRequest, hasClosedPr = false)
                 } else if (requiresNewApproval && prExists) {
@@ -591,38 +611,37 @@ class GithubConnector(
         ).awaitBodyOrNull<GithubCommitObject>()?.sha
 
     /**
-     * Creates a new branch through the GitHub API by branching out of the default branch.
+     * Creates a new branch through the GitHub API by branching out from the last commit on the provided base branch.
      *
      * @param owner The owner (user/organisation) of the repository.
      * @param repository The name of the repository to make the branch in.
      * @param newBranchName The name of the new branch.
      * @param accessToken The GitHub access token to use for authorization.
-     * @param defaultBranch The name of the default branch.
+     * @param baseBranch The name of the base branch to branch out from.
      */
     suspend fun createNewBranch(
         owner: String,
         repository: String,
         newBranchName: String,
         accessToken: String,
-        defaultBranch: String,
+        baseBranch: String,
     ): String? {
         val latestShaForDefaultBranch =
             getLatestCommitShaForBranch(
                 owner = owner,
                 repository = repository,
                 accessToken = accessToken,
-                branchName = defaultBranch,
+                branchName = baseBranch,
             ) ?: return null
 
         return requestToGithubWithJSONBody(
             uri = githubHelper.uriToCreateNewBranch(owner = owner, repository = repository),
             accessToken = accessToken,
             content =
-                githubHelper
-                    .bodyToCreateNewBranch(
-                        branchName = newBranchName,
-                        shaToBranchFrom = latestShaForDefaultBranch,
-                    ).toContentBody(),
+                githubHelper.bodyToCreateNewBranch(
+                    branchName = newBranchName,
+                    shaToBranchFrom = latestShaForDefaultBranch,
+                ),
             method = HttpMethod.POST,
         ).awaitBodyOrNull<String>()
     }
@@ -710,8 +729,8 @@ class GithubConnector(
 
     /**
      * Creates a pull request for the changes to a RiSc with the given riScId. That is, a pull request is created from
-     * the branch `riScId` to `baseBranch` with a title and text dependent on if the changes have been approved or do
-     * not require approval
+     * the branch `riScId` to the default branch of the repository with a title and text dependent on if the changes
+     * delete the RiSc, have been approved or do not require approval.
      *
      * @param owner The user/organisation that own the repository to make the pull request in.
      * @param repository The repository to make the pull request in.
@@ -719,7 +738,6 @@ class GithubConnector(
      * @param requiresNewApproval Indicates if the changes to the new.
      * @param gitHubAccessToken The GitHub access token for authorization.
      * @param userInfo Information about the user that is creating the pull request, i.e., the user who has approved the changes.
-     * @param baseBranch The branch to make the pull request to.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
     suspend fun createPullRequestForRiSc(
@@ -729,27 +747,47 @@ class GithubConnector(
         requiresNewApproval: Boolean,
         gitHubAccessToken: String,
         userInfo: UserInfo,
-        baseBranch: String,
     ): GithubPullRequestObject =
-        createNewPullRequest(
-            owner = owner,
-            repository = repository,
-            accessToken = gitHubAccessToken,
-            pullRequestPayload =
-                GithubCreateNewPullRequestPayload(
-                    title = "Updated risk scorecard",
-                    repositoryOwner = owner,
-                    body =
-                        if (requiresNewApproval) {
-                            "${userInfo.name} (${userInfo.email}) has approved the risk scorecard. " +
-                                "Merge the pull request to include the changes in the default branch."
-                        } else {
-                            "The risk scorecard has been updated, but does not require new approval."
-                        },
-                    branch = riScId,
-                    baseBranch = baseBranch,
-                ),
-        )
+        coroutineScope {
+            // Fetch default branch and if the pull request is for the deletion of the RiSc in parallel to save time.
+            val baseBranchDeferred =
+                async {
+                    fetchRepositoryInfo(
+                        gitHubAccessToken = gitHubAccessToken,
+                        repositoryOwner = owner,
+                        repositoryName = repository,
+                    ).defaultBranch
+                }
+
+            val isDeletion =
+                fetchRiScContent(
+                    uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
+                    accessToken = gitHubAccessToken,
+                ).status === GithubStatus.NotFound
+
+            createNewPullRequest(
+                owner = owner,
+                repository = repository,
+                accessToken = gitHubAccessToken,
+                pullRequestPayload =
+                    GithubCreateNewPullRequestPayload(
+                        title = if (isDeletion) "Deleted risk scorecard" else "Updated risk scorecard",
+                        repositoryOwner = owner,
+                        body =
+                            (
+                                if (isDeletion) {
+                                    "$userInfo has approved the deletion of the scorecard."
+                                } else if (requiresNewApproval) {
+                                    "$userInfo has approved the risk scorecard."
+                                } else {
+                                    "The risk scorecard has been updated, but does not require new approval."
+                                }
+                            ) + " Merge the pull request to include the changes in the default branch.",
+                        branch = riScId,
+                        baseBranch = baseBranchDeferred.await(),
+                    ),
+            )
+        }
 
     /**
      * Creates a request to create a new pull request through the GitHub API.
@@ -778,6 +816,116 @@ class GithubConnector(
                 message =
                     "Failed with error ${e.message} when creating pull request from branch ${pullRequestPayload.head}" +
                         "to ${pullRequestPayload.base} with title \"${pullRequestPayload.title}\"",
+            )
+        }
+
+    /**
+     * Deletes a RiSc. If the RiSc has never been published, then the branch of the RiSc is deleted without requiring
+     * approval. If the RiSc has been published, a draft branch is created (if one does not already exist) and the
+     * RiSc is removed on this branch. For the RiSc to disappear completely, the change has to be approved and the
+     * resulting PR must be deleted.
+     *
+     * @param owner The owner (user/organisation) of the repository.
+     * @param repository The name of the repository to make the pull request in.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param riScId The ID of the RiSc to delete.
+     * @throws DeletingRiScException On all errors
+     */
+    suspend fun deleteRiSc(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        riScId: String,
+    ): DeleteRiScResultDTO =
+        try {
+            coroutineScope {
+                // Get the draft SHA in parallel, as it is most likely needed later on.
+                val draftSHADeferred =
+                    async {
+                        getSHAForExistingRiScDraftOrNull(
+                            owner = owner,
+                            repository = repository,
+                            riScId = riScId,
+                            accessToken = accessToken,
+                        )
+                    }
+
+                // Get the default branch in parallel, as it might be needed later on.
+                val defaultBranchDeferred =
+                    async {
+                        fetchRepositoryInfo(
+                            gitHubAccessToken = accessToken,
+                            repositoryOwner = owner,
+                            repositoryName = repository,
+                        ).defaultBranch
+                    }
+
+                val publishedSHA =
+                    getSHAForPublishedRiScOrNull(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId,
+                        accessToken = accessToken,
+                    )
+
+                // If the RiSc has never been published, we can simply delete the branch. No approval needed.
+                if (publishedSHA == null) {
+                    githubRequest(
+                        uri = githubHelper.uriToDeleteBranch(owner = owner, repository = repository, branch = riScId),
+                        accessToken = accessToken,
+                        method = HttpMethod.DELETE,
+                    ).awaitBodilessEntity()
+                    return@coroutineScope DeleteRiScResultDTO(
+                        riScId = riScId,
+                        status = ProcessingStatus.DeletedRiSc,
+                        statusMessage = "Risk scorecard was deleted - no approval required as it was never published",
+                    )
+                }
+
+                var draftSHA = draftSHADeferred.await()
+
+                // If there is no draft SHA, a draft branch is needed to stage the changes on.
+                if (draftSHA == null) {
+                    createNewBranch(
+                        owner = owner,
+                        repository = repository,
+                        newBranchName = riScId,
+                        accessToken = accessToken,
+                        baseBranch = defaultBranchDeferred.await(),
+                    )
+
+                    // The file SHA does not change on creation of a branch, so we can use the SHA of the published version.
+                    draftSHA = publishedSHA
+                }
+
+                // Delete the RiSc on the draft branch.
+                requestToGithubWithJSONBody(
+                    uri =
+                        githubHelper.repositoryContentsUri(
+                            owner = owner,
+                            repository = repository,
+                            path = githubHelper.riscPath(riScId),
+                        ),
+                    accessToken = accessToken,
+                    content =
+                        GithubDeleteFilePayload(
+                            message = "Deleted RiSc with id: $riScId requires new approval",
+                            sha = draftSHA,
+                            branch = riScId,
+                        ),
+                    method = HttpMethod.DELETE,
+                ).awaitBodilessEntity()
+
+                DeleteRiScResultDTO(
+                    riScId = riScId,
+                    status = ProcessingStatus.DeletedRiScRequiresApproval,
+                    statusMessage = "Risk scorecard was staged for deletion - the deletion requires approval",
+                )
+            }
+        } catch (e: Exception) {
+            throw DeletingRiScException(
+                riScId = riScId,
+                message = "Failed to delete RiSc scorecard with error $e",
             )
         }
 
