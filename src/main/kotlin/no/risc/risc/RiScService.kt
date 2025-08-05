@@ -36,6 +36,7 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
+import no.risc.rosa.RosaIntegration
 import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -52,6 +53,7 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
+    private val rosaClient: RosaIntegration,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -561,6 +563,17 @@ class RiScService(
             pendingApproval = pullRequestObject.toPendingApprovalDTO(),
         )
     }
+
+    suspend fun uploadRiScToRosa(
+        riScId: String,
+        repository: String,
+        riSc: String,
+    ): String? {
+        val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
+        return result
+    }
+
+    suspend fun deleteRiscFromRosa(riScId: String) = rosaClient.deleteRiSc(riScId)
 
     /**
      * Converts the GitHub pull request object to a DTO for sending to the frontend.

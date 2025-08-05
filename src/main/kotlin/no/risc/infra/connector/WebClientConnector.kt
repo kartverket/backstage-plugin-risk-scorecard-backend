@@ -15,7 +15,7 @@ abstract class WebClientConnector(
                 ExchangeStrategies
                     .builder()
                     .codecs { codecs: ClientCodecConfigurer ->
-                        codecs.defaultCodecs().maxInMemorySize(1024 * 1024)
+                        codecs.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)
                     }.build(),
             ).build()
 }
