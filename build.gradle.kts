@@ -75,6 +75,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
+
+    developmentOnly("org.springframework.boot:spring-boot-devtools:$springBootVersion")
 }
 
 tasks.withType<Test> {
