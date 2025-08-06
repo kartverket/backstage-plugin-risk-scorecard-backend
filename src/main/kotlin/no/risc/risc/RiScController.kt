@@ -181,7 +181,7 @@ class RiScController(
         @RequestBody feedbackMessage: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<*> =
+    ): ResponseEntity<String> =
         try {
             slackService.sendFeedback(feedbackMessage)
             ResponseEntity.ok("{}")
