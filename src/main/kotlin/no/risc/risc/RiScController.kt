@@ -210,7 +210,7 @@ class RiScController(
         return ResponseEntity.ok().body(difference)
     }
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}/feedback")
+    @PostMapping("/{repositoryOwner}/{repositoryName}/feedback", produces = ["application/json"])
     suspend fun sendFeedback(
         @RequestBody feedbackMessage: String,
         @PathVariable repositoryOwner: String,
