@@ -210,16 +210,16 @@ class RiScController(
         return ResponseEntity.ok().body(difference)
     }
 
-    @PostMapping("/{repositoryOwner}/{repositoryName}/feedback")
+    @PostMapping("/{repositoryOwner}/{repositoryName}/feedback", produces = ["application/json"])
     suspend fun sendFeedback(
         @RequestBody feedbackMessage: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-    ): ResponseEntity<String> =
+    ): ResponseEntity<Map<String, String>> =
         try {
             slackService.sendFeedback(feedbackMessage)
-            ResponseEntity.ok("{}")
+            ResponseEntity.ok(emptyMap())
         } catch (e: Exception) {
-            ResponseEntity.status(500).body("Failed to send feedback to Slack")
+            ResponseEntity.status(500).body(mapOf("error" to "Failed to send feedback to Slack"))
         }
 }
