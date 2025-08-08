@@ -25,3 +25,6 @@ http-client.private.env.json
 !.env.example
 
 .history/
+
+# Claude Code documentation
+CLAUDE.md
