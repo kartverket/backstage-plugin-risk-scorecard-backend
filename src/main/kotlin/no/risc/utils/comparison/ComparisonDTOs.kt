@@ -9,7 +9,10 @@ import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioActionStatusV4
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScValuation
 import no.risc.utils.KNullableOffsetDateTimeSerializer
@@ -92,6 +95,46 @@ sealed interface RiScChange {
 }
 
 /***************
+ * VERSION 5.X *
+ ***************/
+
+@Serializable
+@SerialName("5.0")
+data class RiSc5XChange(
+    val title: SimpleTrackedProperty<String>? = null,
+    val scope: SimpleTrackedProperty<String>? = null,
+    val valuations: List<SimpleTrackedProperty<RiScValuation>>,
+    val scenarios: List<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>>,
+    override val migrationChanges: MigrationStatus,
+) : RiScChange
+
+@Serializable
+data class RiSc5XScenarioChange(
+    val title: SimpleTrackedProperty<String>,
+    val id: String,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val threatActors: List<SimpleTrackedProperty<RiScScenarioThreatActor>>,
+    val vulnerabilities: List<SimpleTrackedProperty<RiSc4XScenarioVulnerability>>,
+    val risk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val remainingRisk: SimpleTrackedProperty<RiScScenarioRiskChange>,
+    val actions: List<TrackedProperty<RiSc5XScenarioActionChange, RiSc5XScenarioAction>>,
+)
+
+@Serializable
+data class RiSc5XScenarioActionChange(
+    val title: SimpleTrackedProperty<String>,
+    val id: String,
+    val description: SimpleTrackedProperty<String>,
+    val url: SimpleTrackedProperty<String?>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val lastUpdated: SimpleTrackedProperty<
+        @Serializable(KNullableOffsetDateTimeSerializer::class)
+        OffsetDateTime?,
+    >? = null,
+)
+
+/***************
  * VERSION 4.X *
  ***************/
 
@@ -126,7 +169,7 @@ data class RiSc4XScenarioActionChange(
     val id: String,
     val description: SimpleTrackedProperty<String>,
     val url: SimpleTrackedProperty<String?>? = null,
-    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatusV4>? = null,
     val lastUpdated: SimpleTrackedProperty<
         @Serializable(KNullableOffsetDateTimeSerializer::class)
         OffsetDateTime?,
@@ -169,7 +212,7 @@ data class RiSc3XScenarioActionChange(
     val id: String,
     val description: SimpleTrackedProperty<String>,
     val url: SimpleTrackedProperty<String?>? = null,
-    val status: SimpleTrackedProperty<RiScScenarioActionStatus>? = null,
+    val status: SimpleTrackedProperty<RiScScenarioActionStatusV4>? = null,
     val deadline: SimpleTrackedProperty<String?>? = null,
     val owner: SimpleTrackedProperty<String?>? = null,
 )
