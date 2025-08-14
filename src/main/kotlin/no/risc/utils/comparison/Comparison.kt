@@ -21,12 +21,12 @@ import kotlin.collections.component2
 
 /**
  * Compares the updated RiSc to the new old RiSc. Currently supported for RiSc versions 3.2 through
- * 4.1. Comparisons are made by first migrating the old RiSc to the version of the updated RiSc, if
+ * 5.0. Comparisons are made by first migrating the old RiSc to the version of the updated RiSc, if
  * differing. Then, the migrated version of the old RiSc is compared against the updated RiSc.
  *
  * @param updatedRiSc The newest version of the RiSc.
  * @param oldRiSc The old version to compare against.
- * @param lastPublished Last publised version of the RiSc.
+ * @param lastPublished Last published version of the RiSc.
  * @throws DifferenceException If the RiSc is of an unsupported version, the old RiSc has a newer
  * version than the
  * ```
@@ -48,6 +48,16 @@ fun compare(
             )
     }
 
+/**
+ * Compares an updated RiSc of version 5.X to an old RiSc. The fields `title` and `scope` are only
+ * included in the changes if changes have been made to these. For `valuations` and `scenarios`
+ * items are only included if they have been added, updated or deleted. Valuations do not have an ID
+ * and are therefore considered deleted and then added on any changes. Scenarios are matched on ID.
+ *
+ * @param updatedRiSc The newest version of the RiSc.
+ * @param oldRiSc The old version to compare against.
+ * @throws DifferenceException If migration fails.
+ */
 fun comparison5X(
     updatedRiSc: RiSc5X,
     oldRiSc: RiSc,
@@ -265,7 +275,7 @@ fun <S, T, U> changeForListOfComplexProperty(
 }
 
 /**
- * Compares and tracks changes for valuations for versions 3.X and 4.X. As valuations do not have
+ * Compares and tracks changes for valuations for versions 3.X, 4.X and 5.X. As valuations do not have
  * IDs in these versions, a valuation is considered deleted and readded if any of its properties are
  * changed.
  *
@@ -278,7 +288,7 @@ fun compareValuations(
 ): List<SimpleTrackedProperty<RiScValuation>> = changeForListOfSimpleProperty(oldValuations, newValuations)
 
 /**
- * Compares and tracks changes for scenarios for versions 4.X. Only scenarios with changes are
+ * Compares and tracks changes for scenarios for versions 5.X. Only scenarios with changes are
  * included. The IDs are used for determining if a change is an addition, a change of an existing
  * scenario or a deletion. A changed scenario always includes the `title`, `id`, `description`,
  * `risk` and `remainingRisk` fields, even if these have not been changed. The remaining fields are
@@ -343,7 +353,7 @@ fun compareScenarios5X(
     )
 
 /**
- * Compares and tracks changes for actions for version 4.X. Only actions with changes are included.
+ * Compares and tracks changes for actions for version 5.X. Only actions with changes are included.
  * The IDs are used for determining if a change is an addition, a change of an existing action or a
  * deletion. A changed action always includes the `title` and `id` fields. The remaining fields are
  * only included if they have been changed.
@@ -384,7 +394,7 @@ fun compareActions5X(
     )
 
 /**
- * Compares and tracks changes for scenarios for versions 5.X. Only scenarios with changes are
+ * Compares and tracks changes for scenarios for versions 4.X. Only scenarios with changes are
  * included. The IDs are used for determining if a change is an addition, a change of an existing
  * scenario or a deletion. A changed scenario always includes the `title`, `id`, `description`,
  * `risk` and `remainingRisk` fields, even if these have not been changed. The remaining fields are
