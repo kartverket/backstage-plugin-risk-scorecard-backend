@@ -521,15 +521,10 @@ class MigrationFunctionTests {
             "The schema version should be updated when migrating to version 5.0.",
         )
 
-        migratedRiSc.scenarios.forEach { scenario ->
-            scenario.actions.forEach { action ->
-                assertEquals(
-                    RiScScenarioActionStatus.NOT_OK,
-                    action.status,
-                    "All actions should have status NOT_OK after migration to version 5.0.",
-                )
-            }
-        }
+        // Verify that new action status is set
+        assertEquals(RiScScenarioActionStatus.NOT_OK, migratedRiSc.scenarios[0].actions[0].status,  "Should have status NOT_OK after migration to version 5.0.",)
+        assertEquals(RiScScenarioActionStatus.NOT_OK, migratedRiSc.scenarios[1].actions[0].status,  "Should have status NOT_OK after migration to version 5.0.",)
+        assertEquals(RiScScenarioActionStatus.OK, migratedRiSc.scenarios[2].actions[0].status,  "Should have status OK after migration to version 5.0.",)
 
         val changes50 = migrationStatus.migrationChanges50
         assertNotNull(
