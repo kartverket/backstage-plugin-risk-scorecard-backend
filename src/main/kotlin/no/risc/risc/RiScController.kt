@@ -50,7 +50,7 @@ class RiScController(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
-            latestSupportedVersion = "4.2",
+            latestSupportedVersion = "5.0",
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
