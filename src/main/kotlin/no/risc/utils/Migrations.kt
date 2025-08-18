@@ -478,33 +478,19 @@ fun updateScenarioFrom42To50(
     scenario: RiSc4XScenario,
     addChanges: (MigrationChange50Scenario) -> Unit,
 ): RiSc5XScenario {
-    val migratedActionsWithOldStatus =
-        scenario.actions.map { action ->
-            val newStatus =
-                when (action.status) {
-                    RiScScenarioActionStatusV4.NOT_STARTED,
-                    RiScScenarioActionStatusV4.IN_PROGRESS,
-                    RiScScenarioActionStatusV4.ON_HOLD,
-                    -> RiScScenarioActionStatus.NOT_OK
-
-                    RiScScenarioActionStatusV4.COMPLETED -> RiScScenarioActionStatus.OK
-
-                    RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
-                }
-
-            Triple(
-                action,
-                newStatus,
-                RiSc5XScenarioAction(
-                    title = action.title,
-                    id = action.id,
-                    description = action.description,
-                    url = action.url,
-                    status = newStatus,
-                    lastUpdated = action.lastUpdated,
-                ),
-            )
+    // Action status enum mapping from 4.2 to 5.0
+    fun replaceActionStatus(actionStatus: RiScScenarioActionStatusV4): RiScScenarioActionStatus =
+        when (actionStatus) {
+            RiScScenarioActionStatusV4.NOT_STARTED,
+            RiScScenarioActionStatusV4.IN_PROGRESS,
+            RiScScenarioActionStatusV4.ON_HOLD,
+            -> RiScScenarioActionStatus.NOT_OK
+            RiScScenarioActionStatusV4.COMPLETED -> RiScScenarioActionStatus.OK
+            RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
         }
+
+    val changedActionStatus = mutableListOf<MigrationChangedTypedValue<RiScScenarioActionStatusV4, RiScScenarioActionStatus>>()
+    val changedActions = mutableListOf<MigrationChange50Action>()
 
     val migratedScenario =
         RiSc5XScenario(
@@ -516,26 +502,42 @@ fun updateScenarioFrom42To50(
             vulnerabilities = scenario.vulnerabilities,
             risk = scenario.risk,
             remainingRisk = scenario.remainingRisk,
-            actions = migratedActionsWithOldStatus.map { it.third },
+            actions =
+                scenario.actions
+                    .map { action ->
+                        val newActionStatus = replaceActionStatus(action.status)
+                        if (newActionStatus.toString() != action.status.toString()) {
+                            changedActionStatus.add(MigrationChangedTypedValue(action.status, newActionStatus))
+                            changedActions.add(
+                                MigrationChange50Action(
+                                    title = action.title,
+                                    id = action.id,
+                                    changedActionStatus = MigrationChangedTypedValue(action.status, newActionStatus),
+                                ),
+                            )
+                        }
+                        RiSc5XScenarioAction(
+                            title = action.title,
+                            id = action.id,
+                            description = action.description,
+                            url = action.url,
+                            status = newActionStatus,
+                            lastUpdated = action.lastUpdated,
+                        )
+                    },
         )
 
-    if (migratedActionsWithOldStatus.isNotEmpty()) {
+    if (changedActions.isNotEmpty()) {
         addChanges(
             MigrationChange50Scenario(
                 title = scenario.title,
                 id = scenario.id,
-                changedActions =
-                    migratedActionsWithOldStatus.map { (oldAction, newStatus) ->
-                        MigrationChange50Action(
-                            title = oldAction.title,
-                            id = oldAction.id,
-                            oldStatus = oldAction.status,
-                            newStatus = newStatus,
-                        )
-                    },
+                changedActionStatus = changedActionStatus,
+                changedActions = changedActions,
             ),
         )
     }
+
     return migratedScenario
 }
 
@@ -555,18 +557,16 @@ fun migrateFrom42To50(
 ): Pair<RiSc5X, MigrationStatus> {
     val changedScenarios = mutableListOf<MigrationChange50Scenario>()
 
-    val migratedScenarios =
-        riSc.scenarios.map { scenario ->
-            updateScenarioFrom42To50(scenario, changedScenarios::add)
-        }
-
     return Pair(
         RiSc5X(
             schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_0,
             title = riSc.title,
             scope = riSc.scope,
             valuations = riSc.valuations,
-            scenarios = migratedScenarios,
+            scenarios =
+                riSc.scenarios.map { scenario ->
+                    updateScenarioFrom42To50(scenario, changedScenarios::add)
+                },
         ),
         migrationStatus.copy(
             migrationChanges = true,

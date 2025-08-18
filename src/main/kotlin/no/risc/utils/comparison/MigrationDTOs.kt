@@ -88,6 +88,7 @@ data class MigrationChange50(
 data class MigrationChange50Scenario(
     val title: String,
     val id: String,
+    val changedActionStatus: List<MigrationChangedTypedValue<RiScScenarioActionStatusV4, RiScScenarioActionStatus>>,
     val changedActions: List<MigrationChange50Action>,
 ) {
     fun hasChanges() = changedActions.isNotEmpty()
@@ -97,8 +98,7 @@ data class MigrationChange50Scenario(
 data class MigrationChange50Action(
     val title: String,
     val id: String,
-    val oldStatus: RiScScenarioActionStatusV4,
-    val newStatus: RiScScenarioActionStatus,
+    val changedActionStatus: MigrationChangedTypedValue<RiScScenarioActionStatusV4, RiScScenarioActionStatus>,
 )
 
 // General change object
