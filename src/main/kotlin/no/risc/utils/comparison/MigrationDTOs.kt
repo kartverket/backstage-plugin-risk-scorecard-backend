@@ -1,10 +1,10 @@
 package no.risc.utils.comparison
 
 import kotlinx.serialization.Serializable
-import no.risc.risc.models.RiSc3XScenarioVulnerability
-import no.risc.risc.models.RiScScenarioVulnerability
-import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiSc3X4XScenarioActionStatus
+import no.risc.risc.models.RiSc3XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.utils.KNullableOffsetDateTimeSerializer
 import java.time.OffsetDateTime
 

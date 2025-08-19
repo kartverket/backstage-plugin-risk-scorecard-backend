@@ -7,9 +7,9 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
-import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScVersion
 import no.risc.risc.models.UnknownRiSc
 import no.risc.utils.comparison.MigrationChange40

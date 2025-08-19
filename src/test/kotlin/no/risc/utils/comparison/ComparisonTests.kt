@@ -3,15 +3,15 @@ package no.risc.utils.comparison
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.risc.models.MigrationVersions
 import no.risc.risc.models.RiSc3X
+import no.risc.risc.models.RiSc3X4XScenarioActionStatus
 import no.risc.risc.models.RiSc3XScenario
 import no.risc.risc.models.RiSc3XScenarioAction
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
-import no.risc.risc.models.RiScScenarioVulnerability
-import no.risc.risc.models.RiSc3X4XScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioThreatActor
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScValuation
 import no.risc.risc.models.RiScValuationAvailability
 import no.risc.risc.models.RiScValuationConfidentiality
