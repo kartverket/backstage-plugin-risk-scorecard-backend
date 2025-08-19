@@ -47,6 +47,9 @@ sealed interface RiSc {
                     RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
                         parseJSONToClass<RiSc4X>(content)
 
+                    RiScVersion.RiSc5XVersion.VERSION_5_0 ->
+                        parseJSONToClass<RiSc5X>(content)
+
                     null -> UnknownRiSc(content = content)
                 }
             } catch (_: IllegalArgumentException) {
@@ -65,6 +68,15 @@ sealed interface RiSc {
 @Serializable
 sealed interface RiScVersion {
     @Serializable
+    enum class RiSc5XVersion : RiScVersion {
+        @SerialName("5.0")
+        VERSION_5_0,
+        ;
+
+        override fun asString(): String = serializer().descriptor.getElementName(ordinal)
+    }
+
+    @Serializable
     enum class RiSc4XVersion : RiScVersion {
         @SerialName("4.0")
         VERSION_4_0,
@@ -73,7 +85,9 @@ sealed interface RiScVersion {
         VERSION_4_1,
 
         @SerialName("4.2")
-        VERSION_4_2, ;
+        VERSION_4_2,
+
+        ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
     }
@@ -98,7 +112,12 @@ sealed interface RiScVersion {
         /**
          * Provides a list of all supported versions.
          */
-        fun allVersions(): List<RiScVersion> = listOf(*RiSc3XVersion.entries.toTypedArray(), *RiSc4XVersion.entries.toTypedArray())
+        fun allVersions(): List<RiScVersion> =
+            listOf(
+                *RiSc3XVersion.entries.toTypedArray(),
+                *RiSc4XVersion.entries.toTypedArray(),
+                *RiSc5XVersion.entries.toTypedArray(),
+            )
 
         /**
          * Finds the RiScVersion object that corresponds to the provided string, if any. Otherwise, returns null.
@@ -106,6 +125,63 @@ sealed interface RiScVersion {
         fun fromString(version: String): RiScVersion? = allVersions().firstOrNull { it.asString() == version }
     }
 }
+
+/***************
+ * VERSION 5.X *
+ ***************/
+
+@Serializable
+data class RiSc5X(
+    override val schemaVersion: RiScVersion.RiSc5XVersion,
+    val title: String,
+    val scope: String,
+    val valuations: List<RiScValuation>? = null,
+    val scenarios: List<RiSc5XScenario>,
+) : RiSc {
+    override fun toJSON(): String = serializeJSON(this)
+}
+
+object RiSc5XScenarioSerializer : FlattenSerializer<RiSc5XScenario>(
+    serializer = RiSc5XScenario.generatedSerializer(),
+    flattenKey = "scenario",
+    subKeys = listOf("ID", "description", "url", "threatActors", "vulnerabilities", "risk", "remainingRisk", "actions"),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@KeepGeneratedSerializer
+@Serializable(with = RiSc5XScenarioSerializer::class)
+data class RiSc5XScenario(
+    val title: String,
+    @SerialName("ID")
+    val id: String,
+    val description: String,
+    val url: String? = null,
+    val threatActors: List<RiScScenarioThreatActor>,
+    val vulnerabilities: List<RiScScenarioVulnerability>,
+    val risk: RiScScenarioRisk,
+    val remainingRisk: RiScScenarioRisk,
+    val actions: List<RiSc5XScenarioAction>,
+)
+
+private object RiSc5XScenarioActionSerializer : FlattenSerializer<RiSc5XScenarioAction>(
+    serializer = RiSc5XScenarioAction.generatedSerializer(),
+    flattenKey = "action",
+    subKeys = listOf("ID", "url", "status", "description", "lastUpdated"),
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@KeepGeneratedSerializer
+@Serializable(with = RiSc5XScenarioActionSerializer::class)
+data class RiSc5XScenarioAction(
+    val title: String,
+    @SerialName("ID")
+    val id: String,
+    val description: String,
+    val url: String? = null,
+    val status: RiScScenarioActionStatus,
+    @Serializable(KNullableOffsetDateTimeSerializer::class)
+    val lastUpdated: OffsetDateTime? = null,
+)
 
 /***************
  * VERSION 4.X *
@@ -137,14 +213,14 @@ data class RiSc4XScenario(
     val description: String,
     val url: String? = null,
     val threatActors: List<RiScScenarioThreatActor>,
-    val vulnerabilities: List<RiSc4XScenarioVulnerability>,
+    val vulnerabilities: List<RiScScenarioVulnerability>,
     val risk: RiScScenarioRisk,
     val remainingRisk: RiScScenarioRisk,
     val actions: List<RiSc4XScenarioAction>,
 )
 
 @Serializable
-enum class RiSc4XScenarioVulnerability {
+enum class RiScScenarioVulnerability {
     @SerialName("Flawed design")
     FLAWED_DESIGN,
 
@@ -187,7 +263,7 @@ data class RiSc4XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatus,
+    val status: RiSc3X4XScenarioActionStatus,
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
 )
@@ -288,7 +364,7 @@ data class RiSc3XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatus,
+    val status: RiSc3X4XScenarioActionStatus,
     val deadline: String? = null,
     val owner: String? = null,
 )
@@ -387,7 +463,7 @@ enum class RiScScenarioThreatActor {
 }
 
 @Serializable
-enum class RiScScenarioActionStatus {
+enum class RiSc3X4XScenarioActionStatus {
     @SerialName("Not started")
     NOT_STARTED,
 
@@ -402,6 +478,18 @@ enum class RiScScenarioActionStatus {
 
     @SerialName("Aborted")
     ABORTED,
+}
+
+@Serializable
+enum class RiScScenarioActionStatus {
+    @SerialName("OK")
+    OK,
+
+    @SerialName("Not OK")
+    NOT_OK,
+
+    @SerialName("Not relevant")
+    NOT_RELEVANT,
 }
 
 @Serializable

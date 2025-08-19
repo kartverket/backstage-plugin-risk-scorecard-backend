@@ -7,6 +7,7 @@ import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange42
+import no.risc.utils.comparison.MigrationChange50
 import no.risc.utils.comparison.RiScChange
 import java.time.OffsetDateTime
 
@@ -76,6 +77,7 @@ data class MigrationStatus(
     val migrationChanges40: MigrationChange40? = null,
     val migrationChanges41: MigrationChange41? = null,
     val migrationChanges42: MigrationChange42? = null,
+    val migrationChanges50: MigrationChange50? = null,
 )
 
 @Serializable

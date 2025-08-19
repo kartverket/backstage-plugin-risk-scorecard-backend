@@ -23,17 +23,7 @@
           "probability": 0.1,
           "consequence": 30000
         },
-        "actions": [
-          {
-            "title": "",
-            "action": {
-              "ID": "w100Q",
-              "description": "Innlogging. ",
-              "status": "Not started",
-              "lastUpdated": "2025-07-09T11:28:14.801Z"
-            }
-          }
-        ],
+        "actions": [],
         "remainingRisk": {
           "summary": "",
           "probability": 0.01,
@@ -60,17 +50,7 @@
           "probability": 50,
           "consequence": 30000000
         },
-        "actions": [
-          {
-            "title": "",
-            "action": {
-              "ID": "w100Q",
-              "description": "Innlogging. ",
-              "status": "Not started",
-              "lastUpdated": "2025-07-09T11:28:14.801Z"
-            }
-          }
-        ],
+        "actions": [],
         "remainingRisk": {
           "summary": "",
           "probability": 1,
@@ -97,17 +77,7 @@
           "probability": 300,
           "consequence": 1000000000
         },
-        "actions": [
-          {
-            "title": "",
-            "action": {
-              "ID": "w100Q",
-              "description": "Innlogging. ",
-              "status": "Completed",
-              "lastUpdated": "2025-07-09T11:28:14.801Z"
-            }
-          }
-        ],
+        "actions": [],
         "remainingRisk": {
           "summary": "",
           "probability": 0.123,

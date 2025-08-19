@@ -1,8 +1,10 @@
 package no.risc.utils.comparison
 
 import kotlinx.serialization.Serializable
+import no.risc.risc.models.RiSc3X4XScenarioActionStatus
 import no.risc.risc.models.RiSc3XScenarioVulnerability
-import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioActionStatus
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.utils.KNullableOffsetDateTimeSerializer
 import java.time.OffsetDateTime
 
@@ -18,7 +20,7 @@ data class MigrationChange40Scenario(
     val title: String,
     val id: String,
     val removedExistingActions: String? = null,
-    val changedVulnerabilities: List<MigrationChangedTypedValue<RiSc3XScenarioVulnerability, RiSc4XScenarioVulnerability>>,
+    val changedVulnerabilities: List<MigrationChangedTypedValue<RiSc3XScenarioVulnerability, RiScScenarioVulnerability>>,
     val changedActions: List<MigrationChange40Action>,
 )
 
@@ -74,6 +76,29 @@ data class MigrationChange42Action(
     val id: String,
     @Serializable(with = KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
+)
+
+// Changes for the migration from version 4.2 to 5.0
+@Serializable
+data class MigrationChange50(
+    val scenarios: List<MigrationChange50Scenario>,
+)
+
+@Serializable
+data class MigrationChange50Scenario(
+    val title: String,
+    val id: String,
+    val changedActionStatus: List<MigrationChangedTypedValue<RiSc3X4XScenarioActionStatus, RiScScenarioActionStatus>>,
+    val changedActions: List<MigrationChange50Action>,
+) {
+    fun hasChanges() = changedActions.isNotEmpty() || changedActionStatus.isNotEmpty()
+}
+
+@Serializable
+data class MigrationChange50Action(
+    val title: String,
+    val id: String,
+    val changedActionStatus: MigrationChangedTypedValue<RiSc3X4XScenarioActionStatus, RiScScenarioActionStatus>,
 )
 
 // General change object

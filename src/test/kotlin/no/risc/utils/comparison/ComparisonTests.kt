@@ -3,15 +3,15 @@ package no.risc.utils.comparison
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.risc.models.MigrationVersions
 import no.risc.risc.models.RiSc3X
+import no.risc.risc.models.RiSc3X4XScenarioActionStatus
 import no.risc.risc.models.RiSc3XScenario
 import no.risc.risc.models.RiSc3XScenarioAction
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
-import no.risc.risc.models.RiSc4XScenarioVulnerability
-import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioThreatActor
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScValuation
 import no.risc.risc.models.RiScValuationAvailability
 import no.risc.risc.models.RiScValuationConfidentiality
@@ -86,7 +86,7 @@ class ComparisonTests {
                                     title = "Title",
                                     id = "bbbbb",
                                     description = "",
-                                    status = RiScScenarioActionStatus.ON_HOLD,
+                                    status = RiSc3X4XScenarioActionStatus.ON_HOLD,
                                     deadline = "2025-10-25",
                                     owner = "Ola Nordmann",
                                 ),
@@ -130,8 +130,8 @@ class ComparisonTests {
                         threatActors = listOf(RiScScenarioThreatActor.SCRIPT_KIDDIE),
                         vulnerabilities =
                             listOf(
-                                RiSc4XScenarioVulnerability.EXCESSIVE_USE,
-                                RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                                RiScScenarioVulnerability.EXCESSIVE_USE,
+                                RiScScenarioVulnerability.INFORMATION_LEAK,
                             ),
                         risk = RiScScenarioRisk(probability = 3.0, consequence = 1_000.0),
                         remainingRisk = RiScScenarioRisk(probability = 0.01, consequence = 2_000_000.0),
@@ -141,7 +141,7 @@ class ComparisonTests {
                                     title = "Title of action",
                                     id = "bbbbb",
                                     description = "Description",
-                                    status = RiScScenarioActionStatus.IN_PROGRESS,
+                                    status = RiSc3X4XScenarioActionStatus.IN_PROGRESS,
                                 ),
                             ),
                     ),
@@ -307,7 +307,7 @@ class ComparisonTests {
                                             title = "Title",
                                             id = "bbbbb",
                                             description = "",
-                                            status = RiScScenarioActionStatus.ON_HOLD,
+                                            status = RiSc3X4XScenarioActionStatus.ON_HOLD,
                                             deadline = "2025-10-25",
                                             owner = "Ola Nordmann",
                                         ),
@@ -421,8 +421,8 @@ class ComparisonTests {
                         threatActors = listOf(AddedProperty(newValue = RiScScenarioThreatActor.SCRIPT_KIDDIE)),
                         vulnerabilities =
                             listOf(
-                                AddedProperty(newValue = RiSc4XScenarioVulnerability.EXCESSIVE_USE),
-                                AddedProperty(newValue = RiSc4XScenarioVulnerability.INFORMATION_LEAK),
+                                AddedProperty(newValue = RiScScenarioVulnerability.EXCESSIVE_USE),
+                                AddedProperty(newValue = RiScScenarioVulnerability.INFORMATION_LEAK),
                             ),
                         risk =
                             ContentChangedProperty(
@@ -450,8 +450,8 @@ class ComparisonTests {
                                             description = ChangedProperty(oldValue = "", newValue = "Description"),
                                             status =
                                                 ChangedProperty(
-                                                    oldValue = RiScScenarioActionStatus.ON_HOLD,
-                                                    newValue = RiScScenarioActionStatus.IN_PROGRESS,
+                                                    oldValue = RiSc3X4XScenarioActionStatus.ON_HOLD,
+                                                    newValue = RiSc3X4XScenarioActionStatus.IN_PROGRESS,
                                                 ),
                                         ),
                                 ),
@@ -551,8 +551,8 @@ class ComparisonTests {
                         threatActors = listOf(RiScScenarioThreatActor.SCRIPT_KIDDIE),
                         vulnerabilities =
                             listOf(
-                                RiSc4XScenarioVulnerability.EXCESSIVE_USE,
-                                RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                                RiScScenarioVulnerability.EXCESSIVE_USE,
+                                RiScScenarioVulnerability.INFORMATION_LEAK,
                             ),
                         risk = RiScScenarioRisk(probability = 3.0, consequence = 8_000.0),
                         remainingRisk = RiScScenarioRisk(probability = 0.0025, consequence = 2_000_000.0),
@@ -562,7 +562,7 @@ class ComparisonTests {
                                     title = "Title of action",
                                     id = "bbbbb",
                                     description = "Description",
-                                    status = RiScScenarioActionStatus.IN_PROGRESS,
+                                    status = RiSc3X4XScenarioActionStatus.IN_PROGRESS,
                                 ),
                             ),
                     ),

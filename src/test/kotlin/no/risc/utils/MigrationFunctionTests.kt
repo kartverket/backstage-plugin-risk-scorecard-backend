@@ -7,8 +7,9 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
-import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScVersion
 import no.risc.risc.models.UnknownRiSc
 import no.risc.utils.comparison.MigrationChange40
@@ -30,7 +31,7 @@ import java.io.File
 import java.time.OffsetDateTime
 
 class MigrationFunctionTests {
-    private val latestSupportedVersion = "4.2"
+    private val latestSupportedVersion = "5.0"
 
     @Test
     fun `test migrateFrom32To33`() {
@@ -93,14 +94,14 @@ class MigrationFunctionTests {
             val expectedVulnerabilities =
                 if (index == 0) {
                     listOf(
-                        RiSc4XScenarioVulnerability.UNMONITORED_USE,
-                        RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
-                        RiSc4XScenarioVulnerability.INFORMATION_LEAK,
-                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
-                        RiSc4XScenarioVulnerability.MISCONFIGURATION,
+                        RiScScenarioVulnerability.UNMONITORED_USE,
+                        RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                        RiScScenarioVulnerability.INFORMATION_LEAK,
+                        RiScScenarioVulnerability.EXCESSIVE_USE,
+                        RiScScenarioVulnerability.MISCONFIGURATION,
                     )
                 } else {
-                    listOf(RiSc4XScenarioVulnerability.MISCONFIGURATION)
+                    listOf(RiScScenarioVulnerability.MISCONFIGURATION)
                 }
 
             assertEquals(
@@ -110,12 +111,13 @@ class MigrationFunctionTests {
             )
         }
 
+        val changes40 = migrationStatus.migrationChanges40
         assertNotNull(
-            migrationStatus.migrationChanges40,
+            changes40,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges40.scenarios
+        val changedScenarios = changes40.scenarios
 
         assertEquals(1, changedScenarios.size, "Only changed scenarios should be included in the migration changes.")
 
@@ -165,23 +167,23 @@ class MigrationFunctionTests {
             listOf(
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.USER_REPUDIATION,
-                    RiSc4XScenarioVulnerability.UNMONITORED_USE,
+                    RiScScenarioVulnerability.UNMONITORED_USE,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER,
-                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                    RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS,
-                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                    RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.DISCLOSED_SECRET,
-                    RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                    RiScScenarioVulnerability.INFORMATION_LEAK,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
-                    RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                    RiScScenarioVulnerability.EXCESSIVE_USE,
                 ),
             )
 
@@ -290,12 +292,13 @@ class MigrationFunctionTests {
         assertEquals(true, migrationStatus.migrationChanges)
         assertEquals(true, migrationStatus.migrationRequiresNewApproval)
 
+        val changes41 = migrationStatus.migrationChanges41
         assertNotNull(
-            migrationStatus.migrationChanges41,
+            changes41,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges41.scenarios
+        val changedScenarios = changes41.scenarios
 
         assertEquals(3, changedScenarios.size, "All changed scenarios should be included in the migration changes.")
 
@@ -381,12 +384,13 @@ class MigrationFunctionTests {
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[1].actions[0].lastUpdated)
         assertEquals(lastPublished.dateTime, migratedRiSc.scenarios[2].actions[0].lastUpdated)
 
+        val changes42 = migrationStatus.migrationChanges42
         assertNotNull(
-            migrationStatus.migrationChanges42,
+            changes42,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+        val changedScenarios = changes42.scenarios
 
         val expectedFirstScenarioChanges =
             MigrationChange42Scenario(
@@ -438,12 +442,13 @@ class MigrationFunctionTests {
         assertEquals(null, migratedRiSc.scenarios[1].actions[0].lastUpdated)
         assertEquals(null, migratedRiSc.scenarios[2].actions[0].lastUpdated)
 
+        val changes42 = migrationStatus.migrationChanges42
         assertNotNull(
-            migrationStatus.migrationChanges42,
+            changes42,
             "When changes have been made, there should be a migration changes object.",
         )
 
-        val changedScenarios = migrationStatus.migrationChanges42.scenarios
+        val changedScenarios = changes42.scenarios
 
         val expectedFirstScenarioChanges =
             MigrationChange42Scenario(
@@ -495,6 +500,91 @@ class MigrationFunctionTests {
     }
 
     @Test
+    fun `test migrateFrom42To50`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.2.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom42To50(
+                riSc = riSc,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 5.0
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.0.",
+        )
+
+        // Verify that new action status is set
+        assertEquals(
+            RiScScenarioActionStatus.NOT_OK,
+            migratedRiSc.scenarios[0].actions[0].status,
+            "Should have status NOT_OK after migration to version 5.0.",
+        )
+        assertEquals(
+            RiScScenarioActionStatus.NOT_OK,
+            migratedRiSc.scenarios[1].actions[0].status,
+            "Should have status NOT_OK after migration to version 5.0.",
+        )
+        assertEquals(
+            RiScScenarioActionStatus.OK,
+            migratedRiSc.scenarios[2].actions[0].status,
+            "Should have status OK after migration to version 5.0.",
+        )
+
+        val changes50 = migrationStatus.migrationChanges50
+        assertNotNull(
+            changes50,
+            "When changes have been made, there should be a migration changes object.",
+        )
+
+        val changedScenarios = changes50.scenarios
+
+        assertTrue(
+            changedScenarios.isNotEmpty(),
+            "There should be changed scenarios after migrating from 4.2 to 5.0.",
+        )
+    }
+
+    @Test
+    fun `test migrateFrom42To50NoActions`() {
+        val resourceUrl = object {}.javaClass.classLoader.getResource("4.2-no-actions.json")
+        val riSc = RiSc.fromContent(File(resourceUrl!!.toURI()).readText()) as RiSc4X
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom42To50(
+                riSc = riSc,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        // Check that schema version is set to 5.0
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_0,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.0.",
+        )
+
+        // Verify that there is still no actions in the migrated RiSc
+        assertEquals(0, migratedRiSc.scenarios[0].actions.size, "There should be no actions present after migration.")
+
+        val changes50 = migrationStatus.migrationChanges50
+        assertNull(
+            changes50,
+            "When no changes have been made, there should not be a migration changes object.",
+        )
+    }
+
+    @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
@@ -515,7 +605,7 @@ class MigrationFunctionTests {
                                 listOf(
                                     MigrationChangedTypedValue(
                                         RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
-                                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                                        RiScScenarioVulnerability.EXCESSIVE_USE,
                                     ),
                                 ),
                             changedActions =
