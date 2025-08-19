@@ -157,7 +157,7 @@ data class RiSc5XScenario(
     val description: String,
     val url: String? = null,
     val threatActors: List<RiScScenarioThreatActor>,
-    val vulnerabilities: List<RiSc4XScenarioVulnerability>,
+    val vulnerabilities: List<RiScScenarioVulnerability>,
     val risk: RiScScenarioRisk,
     val remainingRisk: RiScScenarioRisk,
     val actions: List<RiSc5XScenarioAction>,
@@ -213,14 +213,14 @@ data class RiSc4XScenario(
     val description: String,
     val url: String? = null,
     val threatActors: List<RiScScenarioThreatActor>,
-    val vulnerabilities: List<RiSc4XScenarioVulnerability>,
+    val vulnerabilities: List<RiScScenarioVulnerability>,
     val risk: RiScScenarioRisk,
     val remainingRisk: RiScScenarioRisk,
     val actions: List<RiSc4XScenarioAction>,
 )
 
 @Serializable
-enum class RiSc4XScenarioVulnerability {
+enum class RiScScenarioVulnerability {
     @SerialName("Flawed design")
     FLAWED_DESIGN,
 
@@ -263,7 +263,7 @@ data class RiSc4XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatusV4,
+    val status: RiSc3X4XScenarioActionStatus,
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
 )
@@ -364,7 +364,7 @@ data class RiSc3XScenarioAction(
     val id: String,
     val description: String,
     val url: String? = null,
-    val status: RiScScenarioActionStatusV4,
+    val status: RiSc3X4XScenarioActionStatus,
     val deadline: String? = null,
     val owner: String? = null,
 )
@@ -463,7 +463,7 @@ enum class RiScScenarioThreatActor {
 }
 
 @Serializable
-enum class RiScScenarioActionStatusV4 {
+enum class RiSc3X4XScenarioActionStatus {
     @SerialName("Not started")
     NOT_STARTED,
 

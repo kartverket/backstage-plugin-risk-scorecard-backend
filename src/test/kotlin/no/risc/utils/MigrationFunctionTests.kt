@@ -7,7 +7,7 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
-import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScVersion
@@ -94,14 +94,14 @@ class MigrationFunctionTests {
             val expectedVulnerabilities =
                 if (index == 0) {
                     listOf(
-                        RiSc4XScenarioVulnerability.UNMONITORED_USE,
-                        RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
-                        RiSc4XScenarioVulnerability.INFORMATION_LEAK,
-                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
-                        RiSc4XScenarioVulnerability.MISCONFIGURATION,
+                        RiScScenarioVulnerability.UNMONITORED_USE,
+                        RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                        RiScScenarioVulnerability.INFORMATION_LEAK,
+                        RiScScenarioVulnerability.EXCESSIVE_USE,
+                        RiScScenarioVulnerability.MISCONFIGURATION,
                     )
                 } else {
-                    listOf(RiSc4XScenarioVulnerability.MISCONFIGURATION)
+                    listOf(RiScScenarioVulnerability.MISCONFIGURATION)
                 }
 
             assertEquals(
@@ -167,23 +167,23 @@ class MigrationFunctionTests {
             listOf(
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.USER_REPUDIATION,
-                    RiSc4XScenarioVulnerability.UNMONITORED_USE,
+                    RiScScenarioVulnerability.UNMONITORED_USE,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER,
-                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                    RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS,
-                    RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS,
+                    RiScScenarioVulnerability.UNAUTHORIZED_ACCESS,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.DISCLOSED_SECRET,
-                    RiSc4XScenarioVulnerability.INFORMATION_LEAK,
+                    RiScScenarioVulnerability.INFORMATION_LEAK,
                 ),
                 MigrationChangedTypedValue(
                     RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
-                    RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                    RiScScenarioVulnerability.EXCESSIVE_USE,
                 ),
             )
 
@@ -605,7 +605,7 @@ class MigrationFunctionTests {
                                 listOf(
                                     MigrationChangedTypedValue(
                                         RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE,
-                                        RiSc4XScenarioVulnerability.EXCESSIVE_USE,
+                                        RiScScenarioVulnerability.EXCESSIVE_USE,
                                     ),
                                 ),
                             changedActions =

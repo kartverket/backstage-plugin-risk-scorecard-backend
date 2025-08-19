@@ -10,12 +10,12 @@ import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
-import no.risc.risc.models.RiSc4XScenarioVulnerability
+import no.risc.risc.models.RiScScenarioVulnerability
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioActionStatus
-import no.risc.risc.models.RiScScenarioActionStatusV4
+import no.risc.risc.models.RiSc3X4XScenarioActionStatus
 import no.risc.risc.models.RiScVersion
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange40Action
@@ -38,7 +38,7 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  * - 4.1 -> 4.2 (add lastUpdated field to action)
- * - 4.2 -> 5.0 (change action status names)
+ * - 4.2 -> 5.0 (change action status values)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -124,7 +124,7 @@ fun migrate(
  * - 3.3 -> 4.0 (breaking changes)
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  * - 4.1 -> 4.2 (add lastUpdated field to action)
- * - 4.2 -> 5.0 (change action status names)
+ * - 4.2 -> 5.0 (change action status values)
  *
  * @param riSc The RiSc to migrate
  * @param migrationStatus The migration status so far
@@ -228,24 +228,24 @@ private fun updateScenarioFrom33To40(
     addChanges: (MigrationChange40Scenario) -> Unit,
 ): RiSc4XScenario {
     // Vulnerability enum mapping from 3.3 to 4.0
-    fun replaceVulnerability(vulnerability: RiSc3XScenarioVulnerability): RiSc4XScenarioVulnerability =
+    fun replaceVulnerability(vulnerability: RiSc3XScenarioVulnerability): RiScScenarioVulnerability =
         when (vulnerability) {
             // Changed
-            RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
-            RiSc3XScenarioVulnerability.DISCLOSED_SECRET -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
-            RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE -> RiSc4XScenarioVulnerability.EXCESSIVE_USE
-            RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS -> RiSc4XScenarioVulnerability.UNAUTHORIZED_ACCESS
-            RiSc3XScenarioVulnerability.USER_REPUDIATION -> RiSc4XScenarioVulnerability.UNMONITORED_USE
+            RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER -> RiScScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc3XScenarioVulnerability.DISCLOSED_SECRET -> RiScScenarioVulnerability.INFORMATION_LEAK
+            RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE -> RiScScenarioVulnerability.EXCESSIVE_USE
+            RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS -> RiScScenarioVulnerability.UNAUTHORIZED_ACCESS
+            RiSc3XScenarioVulnerability.USER_REPUDIATION -> RiScScenarioVulnerability.UNMONITORED_USE
             // Remain the same
-            RiSc3XScenarioVulnerability.DEPENDENCY_VULNERABILITY -> RiSc4XScenarioVulnerability.DEPENDENCY_VULNERABILITY
-            RiSc3XScenarioVulnerability.INFORMATION_LEAK -> RiSc4XScenarioVulnerability.INFORMATION_LEAK
-            RiSc3XScenarioVulnerability.INPUT_TAMPERING -> RiSc4XScenarioVulnerability.INPUT_TAMPERING
-            RiSc3XScenarioVulnerability.MISCONFIGURATION -> RiSc4XScenarioVulnerability.MISCONFIGURATION
+            RiSc3XScenarioVulnerability.DEPENDENCY_VULNERABILITY -> RiScScenarioVulnerability.DEPENDENCY_VULNERABILITY
+            RiSc3XScenarioVulnerability.INFORMATION_LEAK -> RiScScenarioVulnerability.INFORMATION_LEAK
+            RiSc3XScenarioVulnerability.INPUT_TAMPERING -> RiScScenarioVulnerability.INPUT_TAMPERING
+            RiSc3XScenarioVulnerability.MISCONFIGURATION -> RiScScenarioVulnerability.MISCONFIGURATION
         }
 
     val changedActions = mutableListOf<MigrationChange40Action>()
     val changedVulnerabilities =
-        mutableListOf<MigrationChangedTypedValue<RiSc3XScenarioVulnerability, RiSc4XScenarioVulnerability>>()
+        mutableListOf<MigrationChangedTypedValue<RiSc3XScenarioVulnerability, RiScScenarioVulnerability>>()
     val removedExistingActions: String? =
         if (scenario.existingActions.isNullOrEmpty()) null else scenario.existingActions
 
@@ -479,17 +479,17 @@ fun updateScenarioFrom42To50(
     addChanges: (MigrationChange50Scenario) -> Unit,
 ): RiSc5XScenario {
     // Action status enum mapping from 4.2 to 5.0
-    fun replaceActionStatus(actionStatus: RiScScenarioActionStatusV4): RiScScenarioActionStatus =
+    fun replaceActionStatus(actionStatus: RiSc3X4XScenarioActionStatus): RiScScenarioActionStatus =
         when (actionStatus) {
-            RiScScenarioActionStatusV4.NOT_STARTED,
-            RiScScenarioActionStatusV4.IN_PROGRESS,
-            RiScScenarioActionStatusV4.ON_HOLD,
+            RiSc3X4XScenarioActionStatus.NOT_STARTED,
+            RiSc3X4XScenarioActionStatus.IN_PROGRESS,
+            RiSc3X4XScenarioActionStatus.ON_HOLD,
             -> RiScScenarioActionStatus.NOT_OK
-            RiScScenarioActionStatusV4.COMPLETED -> RiScScenarioActionStatus.OK
-            RiScScenarioActionStatusV4.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
+            RiSc3X4XScenarioActionStatus.COMPLETED -> RiScScenarioActionStatus.OK
+            RiSc3X4XScenarioActionStatus.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
         }
 
-    val changedActionStatus = mutableListOf<MigrationChangedTypedValue<RiScScenarioActionStatusV4, RiScScenarioActionStatus>>()
+    val changedActionStatus = mutableListOf<MigrationChangedTypedValue<RiSc3X4XScenarioActionStatus, RiScScenarioActionStatus>>()
     val changedActions = mutableListOf<MigrationChange50Action>()
 
     val migratedScenario =
@@ -527,16 +527,14 @@ fun updateScenarioFrom42To50(
                     },
         )
 
-    if (changedActions.isNotEmpty()) {
-        addChanges(
-            MigrationChange50Scenario(
-                title = scenario.title,
-                id = scenario.id,
-                changedActionStatus = changedActionStatus,
-                changedActions = changedActions,
-            ),
-        )
-    }
+    val changes =  MigrationChange50Scenario(
+        title = migratedScenario.title,
+        id = migratedScenario.id,
+        changedActionStatus = changedActionStatus,
+        changedActions = changedActions,
+    )
+
+    if (changes.hasChanges()) addChanges(changes)
 
     return migratedScenario
 }
