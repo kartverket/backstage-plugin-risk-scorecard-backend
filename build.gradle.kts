@@ -31,7 +31,7 @@ repositories {
 
 val kotlinVersion = "2.2.0"
 val springBootVersion = "3.5.4"
-val springSecurityVersion = "6.5.2"
+val springSecurityVersion = "6.5.3"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.15.3"
