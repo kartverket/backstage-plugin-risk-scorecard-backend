@@ -80,7 +80,7 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.18.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.1.124.Final") {
+        implementation("io.netty:netty-codec-http2:4.2.4.Final") {
             because("Force specific version for transitive dependency")
         }
     }
