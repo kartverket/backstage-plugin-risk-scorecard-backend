@@ -782,7 +782,8 @@ class GithubConnector(
                                 } else {
                                     "The risk scorecard has been updated, but does not require new approval."
                                 }
-                            ) + " Merge the pull request to include the changes in the default branch.",
+                            ) + "Merge the pull request to include the changes in the default branch. +" +
+                                "\nMake sure to delete the branch after merging if auto-deletion is not enabled for your repository",
                         branch = riScId,
                         baseBranch = baseBranchDeferred.await(),
                     ),
