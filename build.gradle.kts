@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.2.0"
+    val kotlinPluginsVersion = "2.2.10"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -29,14 +29,14 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.2.0"
+val kotlinVersion = "2.2.10"
 val springBootVersion = "3.5.4"
-val springSecurityVersion = "6.5.2"
+val springSecurityVersion = "6.5.3"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.15.3"
 val jsonSchemaValidatorVersion = "1.5.8"
-val nimbusdsVersion = "10.4.1"
+val nimbusdsVersion = "10.4.2"
 val bouncyCastleVersion = "1.81"
 val mockkVersion = "1.14.5"
 val junitVersion = "5.13.4"
@@ -80,7 +80,7 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.18.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.1.124.Final") {
+        implementation("io.netty:netty-codec-http2:4.2.4.Final") {
             because("Force specific version for transitive dependency")
         }
         implementation("org.apache.tomcat.embed:tomcat-embed-core:10.1.44") {
