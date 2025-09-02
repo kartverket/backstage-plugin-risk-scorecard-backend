@@ -83,6 +83,9 @@ dependencies {
         implementation("io.netty:netty-codec-http2:4.1.124.Final") {
             because("Force specific version for transitive dependency")
         }
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:10.1.44") {
+            because("Force secure version to fix vulnerability in version 10.1.43")
+        }
     }
 }
 
