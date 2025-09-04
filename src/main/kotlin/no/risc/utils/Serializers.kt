@@ -14,6 +14,7 @@ import kotlinx.serialization.json.jsonObject
 import java.text.SimpleDateFormat
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Date
 
 class KOffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
@@ -44,12 +45,17 @@ class KNullableOffsetDateTimeSerializer : KSerializer<OffsetDateTime?> {
         }
     }
 
-    override fun deserialize(decoder: Decoder): OffsetDateTime? =
-        if (decoder.decodeNotNullMark()) {
-            delegate.deserialize(decoder)
-        } else {
-            decoder.decodeNull()
+    override fun deserialize(decoder: Decoder): OffsetDateTime? {
+        try {
+            if (decoder.decodeNotNullMark()) {
+                return delegate.deserialize(decoder)
+            } else {
+                return decoder.decodeNull()
+            }
+        } catch (e: DateTimeParseException) {
+            return null
         }
+    }
 }
 
 class KDateSerializer : KSerializer<Date> {
