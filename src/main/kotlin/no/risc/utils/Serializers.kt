@@ -52,7 +52,7 @@ class KNullableOffsetDateTimeSerializer : KSerializer<OffsetDateTime?> {
             } else {
                 return decoder.decodeNull()
             }
-        } catch (e: DateTimeParseException) {
+        } catch (_: DateTimeParseException) {
             return null
         }
     }
