@@ -80,7 +80,7 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.18.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.2.4.Final") {
+        implementation("io.netty:netty-codec-http2:4.2.5.Final") {
             because("Force specific version for transitive dependency")
         }
         implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.10") {
