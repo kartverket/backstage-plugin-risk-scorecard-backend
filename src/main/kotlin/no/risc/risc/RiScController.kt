@@ -61,17 +61,16 @@ class RiScController(
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
     ): List<RiScContentResultDTO> {
-        val result =
-            riScService.fetchAllRiScs(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                accessTokens =
-                    AccessTokens(
-                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                        githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
-                    ),
-                latestSupportedVersion = latestSupportedVersion,
-            )
+        val result = riScService.fetchAllRiScsV2(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+            latestSupportedVersion = latestSupportedVersion
+        )
         return result
     }
 

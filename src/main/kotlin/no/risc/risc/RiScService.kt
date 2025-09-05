@@ -11,6 +11,9 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
+import no.risc.github.RiScMetadata
+import no.risc.github.chooseRiScContentFromStatus
+import no.risc.github.getRiScStatus
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
@@ -245,6 +248,96 @@ class RiScService(
                 }
         }
 
+    suspend fun fetchAllRiScsV2(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
+        coroutineScope {
+            val riScMetadataList: List<RiScMetadata> = githubConnector.fetchRiScMetadata(owner, repository, accessTokens.githubAccessToken)
+
+            riScMetadataList.map { riScMetadata ->
+                async(Dispatchers.IO) {
+                    val riScContents = githubConnector.fetchBranchAndMainRiScContent(
+                        riScMetadata.id,
+                        owner,
+                        repository,
+                        accessTokens.githubAccessToken
+                    )
+
+                    val riScStatus = getRiScStatus(
+                        riScMetadata,
+                        riScContents.mainContent,
+                        riScContents.branchContent
+                    )
+
+                    val riscContent: GithubContentResponse = chooseRiScContentFromStatus(
+                        riScStatus,
+                        riScContents.branchContent,
+                        riScContents.mainContent
+                    )
+
+                    riscContent.responseToRiScResult(
+                        riScMetadata.id,
+                        riScStatus,
+                        accessTokens.gcpAccessToken,
+                        lastPublished =
+                            githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                                owner = owner,
+                                repository = repository,
+                                accessToken = accessTokens.githubAccessToken.value,
+                                riScId = riScMetadata.id,
+                            ),
+                        pullRequestUrl = riScMetadata.prUrl
+                    )
+                }
+            }.awaitAll()
+                .filter { it.riScStatus != RiScStatus.Deleted}
+                // Validate RiSc against JSON schema
+                .map { riScContentResultDTO ->
+                    if (riScContentResultDTO.status == ContentStatus.Success) {
+                        LOGGER.info("Validating RiSc with id '${riScContentResultDTO.riScId}.")
+                        val validationStatus =
+                            JSONValidator.validateAgainstSchema(
+                                riScId = riScContentResultDTO.riScId,
+                                riScContent = riScContentResultDTO.riScContent,
+                            )
+
+                        if (!validationStatus.isValid) {
+                            LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
+                            return@map RiScContentResultDTO(
+                                riScId = riScContentResultDTO.riScId,
+                                status = ContentStatus.SchemaValidationFailed,
+                                riScStatus = null,
+                                riScContent = null,
+                            )
+                        }
+
+                        LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
+                    }
+                    riScContentResultDTO
+                }.map { riScContentResultDTO ->
+                    if (riScContentResultDTO.riScContent == null) return@map riScContentResultDTO
+                    tryOrDefaultWithErrorLogging(
+                        default =
+                            RiScContentResultDTO(
+                                riScId = riScContentResultDTO.riScId,
+                                status = ContentStatus.Failure,
+                                riScStatus = null,
+                                riScContent = null,
+                            ),
+                        logger = LOGGER,
+                    ) {
+                        migrate(
+                            riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
+                            lastPublished = riScContentResultDTO.lastPublished,
+                            endVersion = latestSupportedVersion,
+                        ).let { (migratedRiSc, migrationStatus) ->
+                            riScContentResultDTO.copy(
+                                riScContent = migratedRiSc.toJSON(),
+                                migrationStatus = migrationStatus,
+                            )
+                        }
+                    }
+                }
+        }
+
     /**
      * Fetches the content for the given RiSc identifier from the supplied repository, decrypts it and fetches
      * additional information about the age of the last published version.
@@ -260,7 +353,7 @@ class RiScService(
         accessTokens: AccessTokens,
     ): RiScContentResultDTO =
         when (riScIdentifier.status) {
-            RiScStatus.Published ->
+            RiScStatus.Published, RiScStatus.Deleted ->
                 githubConnector.fetchPublishedRiSc(
                     owner = owner,
                     repository = repository,
