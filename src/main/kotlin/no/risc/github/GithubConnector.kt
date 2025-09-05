@@ -1,5 +1,6 @@
 package no.risc.github
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
@@ -160,6 +161,86 @@ class GithubConnector(
         } catch (e: Exception) {
             GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
         }
+
+    /**
+     * Fetches metadata about all RiScs existing in a GitHub repository.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param githubAccessToken The GitHub access token to use for authorization.
+     */
+    suspend fun fetchRiScMetadata(
+        owner: String,
+        repository: String,
+        githubAccessToken: GithubAccessToken
+    ): List<RiScMetadata> =
+        coroutineScope {
+            val riscIdsFromMainFiles = async(Dispatchers.IO) {
+                fetchPublishedRiScIdentifiers(owner, repository, githubAccessToken.value)
+            }
+            val riscIdsFromBranches = async(Dispatchers.IO) {
+                fetchRiScIdentifiersDrafted(owner, repository, githubAccessToken.value)
+            }
+
+            val riscIdsWithPR = async(Dispatchers.IO) {
+                fetchRiScIdentifiersSentForApproval(
+                    owner,
+                    repository,
+                    githubAccessToken.value
+                )
+            }
+
+            val allIds: Set<String> = (riscIdsFromBranches.await() + riscIdsFromMainFiles.await()).map { it.id }.toSet()
+            val branchIds: Set<String> = riscIdsFromBranches.await().map { it.id }.toSet()
+            val mainIds: Set<String> = riscIdsFromMainFiles.await().map { it.id }.toSet()
+            val prIds: Set<String> = riscIdsWithPR.await().map { it.id }.toSet()
+            val prUrls: Map<String, String?> = riscIdsWithPR.await().associate { it.id to it.pullRequestUrl }
+
+            allIds.map { id ->
+                RiScMetadata(
+                    id = id,
+                    isStoredInMain = id in mainIds,
+                    hasBranch = id in branchIds,
+                    hasOpenPR = id in prIds,
+                    prUrl = prUrls[id]
+                )
+            }
+        }
+
+    /**
+     * Fetches the content of a RiSc from both the main and the branch of the RiSc.
+     *
+     * @param riScId Identifier of the RiSc to fetch.
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param githubAccessToken The GitHub access token to use for authorization.
+     */
+    suspend fun fetchBranchAndMainRiScContent(
+        riScId: String,
+        owner: String,
+        repository: String,
+        githubAccessToken: GithubAccessToken,
+    ): RiScMainAndBranchContent =
+        coroutineScope {
+            val mainRiscContent = async(Dispatchers.IO) {
+                fetchRiScContent(
+                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                    accessToken = githubAccessToken.value,
+                )
+            }
+            val branchRiscContent = async(Dispatchers.IO) {
+                fetchRiScContent(
+                    uri = githubHelper.uriToFindRiScOnDraftBranch(
+                        owner = owner,
+                        repository = repository,
+                        riScId = riScId
+                    ),
+                    accessToken = githubAccessToken.value,
+                )
+            }
+            RiScMainAndBranchContent(mainRiscContent.await(), branchRiscContent.await())
+        }
+
 
     /**
      * Fetches the content of a published RiSc from the default branch of the given repository using the GitHub Contents-API.
