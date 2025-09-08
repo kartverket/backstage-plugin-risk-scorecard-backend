@@ -42,7 +42,7 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> =
-        riScService.fetchAllRiScs(
+        riScService.fetchAllRiScsV2(
             owner = repositoryOwner,
             repository = repositoryName,
             accessTokens =

@@ -248,6 +248,18 @@ class RiScService(
                 }
         }
 
+    /**
+     * Fetches all RiScs in the given repository. There are three types, drafts (RiScs that have pending updates), sent
+     * for approval (RiScs that have pending pull requests) and published (RiScs that have been approved, i.e., appear
+     * in the default branch of the repository). If there exists multiple version of a RiSc with the same ID, they are
+     * prioritised to return the most updated RiSc. Each fetched RiSc is migrated to the latest supported version and
+     * validated against the JSON schema of their version.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiScs from.
+     * @param accessTokens The access tokens to use for authorization.
+     * @param latestSupportedVersion The RiSc schema version to migrate the RiScs to if not already or past this version.
+     */
     suspend fun fetchAllRiScsV2(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
         coroutineScope {
             val riScGithubMetadataList: List<RiScGithubMetadata> = githubConnector.fetchRiScGithubMetadata(
