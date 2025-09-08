@@ -270,38 +270,48 @@ class RiScService(
 
             riScGithubMetadataList.map { riScMetadata ->
                 async(Dispatchers.IO) {
-                    val riScContents = githubConnector.fetchBranchAndMainRiScContent(
-                        riScMetadata.id,
-                        owner,
-                        repository,
-                        accessTokens.githubAccessToken
-                    )
+                    try {
+                        val riScContents = githubConnector.fetchBranchAndMainRiScContent(
+                            riScMetadata.id,
+                            owner,
+                            repository,
+                            accessTokens.githubAccessToken
+                        )
 
-                    val riScStatus = getRiScStatus(
-                        riScMetadata,
-                        riScContents.mainContent,
-                        riScContents.branchContent
-                    )
+                        val riScStatus = getRiScStatus(
+                            riScMetadata,
+                            riScContents.mainContent,
+                            riScContents.branchContent
+                        )
 
-                    val riscContent: GithubContentResponse = chooseRiScContentFromStatus(
-                        riScStatus,
-                        riScContents.branchContent,
-                        riScContents.mainContent
-                    )
+                        val riscContent: GithubContentResponse = chooseRiScContentFromStatus(
+                            riScStatus,
+                            riScContents.branchContent,
+                            riScContents.mainContent
+                        )
 
-                    riscContent.responseToRiScResult(
-                        riScMetadata.id,
-                        riScStatus,
-                        accessTokens.gcpAccessToken,
-                        lastPublished =
-                            githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                owner = owner,
-                                repository = repository,
-                                accessToken = accessTokens.githubAccessToken.value,
-                                riScId = riScMetadata.id,
-                            ),
-                        pullRequestUrl = riScMetadata.prUrl
-                    )
+                        riscContent.responseToRiScResult(
+                            riScMetadata.id,
+                            riScStatus,
+                            accessTokens.gcpAccessToken,
+                            lastPublished =
+                                githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                                    owner = owner,
+                                    repository = repository,
+                                    accessToken = accessTokens.githubAccessToken.value,
+                                    riScId = riScMetadata.id,
+                                ),
+                            pullRequestUrl = riScMetadata.prUrl
+                        )
+                    } catch (_: Exception) {
+                        RiScContentResultDTO(
+                            riScId = riScMetadata.id,
+                            status = ContentStatus.Failure,
+                            riScStatus = RiScStatus.Deleted,
+                            riScContent = null,
+                            pullRequestUrl = null,
+                        )
+                    }
                 }
             }.awaitAll()
                 .filter { it.riScStatus != RiScStatus.Deleted}
