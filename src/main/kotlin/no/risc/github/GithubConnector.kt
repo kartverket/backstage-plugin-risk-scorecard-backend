@@ -169,11 +169,11 @@ class GithubConnector(
      * @param repository The repository to fetch RiSc identifiers from.
      * @param githubAccessToken The GitHub access token to use for authorization.
      */
-    suspend fun fetchRiScMetadata(
+    suspend fun fetchRiScGithubMetadata(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken
-    ): List<RiScMetadata> =
+    ): List<RiScGithubMetadata> =
         coroutineScope {
             val riscIdsFromMainFiles = async(Dispatchers.IO) {
                 fetchPublishedRiScIdentifiers(owner, repository, githubAccessToken.value)
@@ -197,7 +197,7 @@ class GithubConnector(
             val prUrls: Map<String, String?> = riscIdsWithPR.await().associate { it.id to it.pullRequestUrl }
 
             allIds.map { id ->
-                RiScMetadata(
+                RiScGithubMetadata(
                     id = id,
                     isStoredInMain = id in mainIds,
                     hasBranch = id in branchIds,

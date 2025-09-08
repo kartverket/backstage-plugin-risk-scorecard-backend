@@ -11,7 +11,7 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
-import no.risc.github.RiScMetadata
+import no.risc.github.RiScGithubMetadata
 import no.risc.github.chooseRiScContentFromStatus
 import no.risc.github.getRiScStatus
 import no.risc.github.models.GithubContentResponse
@@ -250,9 +250,13 @@ class RiScService(
 
     suspend fun fetchAllRiScsV2(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
         coroutineScope {
-            val riScMetadataList: List<RiScMetadata> = githubConnector.fetchRiScMetadata(owner, repository, accessTokens.githubAccessToken)
+            val riScGithubMetadataList: List<RiScGithubMetadata> = githubConnector.fetchRiScGithubMetadata(
+                owner,
+                repository,
+                accessTokens.githubAccessToken
+            )
 
-            riScMetadataList.map { riScMetadata ->
+            riScGithubMetadataList.map { riScMetadata ->
                 async(Dispatchers.IO) {
                     val riScContents = githubConnector.fetchBranchAndMainRiScContent(
                         riScMetadata.id,
