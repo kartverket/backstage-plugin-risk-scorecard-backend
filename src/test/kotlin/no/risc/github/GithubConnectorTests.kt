@@ -85,33 +85,20 @@ class GithubConnectorTests {
     private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
 
     @Nested
-    inner class TestFetchAllRiScIdentifiers {
+    inner class TestFetchRiScMetadata{
         private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
         private val pathToRiScFiles = "/$owner/$repository/contents/$riscFolderPath"
         private val pathToOpenPullRequests = "/$owner/$repository/pulls"
 
         private fun queueRiScResponses(
-            draftedRiScIDs: List<String>,
-            publishedRiScIDs: List<String>,
-            approvedRiScIDs: List<String>,
+            riscIdsFromMainFiles: List<String>,
+            riscIdsFromBranches: List<String>,
+            riscIdsWithPR: List<String>,
         ) {
             webClient.queueResponse(
                 response =
                     mockableResponseFromObject(
-                        draftedRiScIDs.map { riScID ->
-                            GithubReferenceObjectDTO(
-                                ref = "refs/heads/$riScID",
-                                url = "https://api.github.com/repos/$owner/$repository/git/refs/heads/$riScID",
-                            )
-                        },
-                    ),
-                path = pathToDraftIdentifiers,
-            )
-
-            webClient.queueResponse(
-                response =
-                    mockableResponseFromObject(
-                        publishedRiScIDs.map { riScID ->
+                        riscIdsFromMainFiles.map { riScID ->
                             GithubFileDTO(
                                 content = "{}",
                                 sha = randomSHA(),
@@ -125,7 +112,20 @@ class GithubConnectorTests {
             webClient.queueResponse(
                 response =
                     mockableResponseFromObject(
-                        approvedRiScIDs.mapIndexed { index, riScID ->
+                        riscIdsFromBranches.map { riScID ->
+                            GithubReferenceObjectDTO(
+                                ref = "refs/heads/$riScID",
+                                url = "https://api.github.com/repos/$owner/$repository/git/refs/heads/$riScID",
+                            )
+                        },
+                    ),
+                path = pathToDraftIdentifiers,
+            )
+
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        riscIdsWithPR.mapIndexed { index, riScID ->
                             GithubPullRequestObject(
                                 url = "https://api.github.com/repos/$owner/$repository/pulls/$index",
                                 title = "Update RiSc",
@@ -140,68 +140,102 @@ class GithubConnectorTests {
             )
         }
 
-        private fun fetchRiScIdentifiers(): List<RiScIdentifier> =
+        private fun fetchRiScGithubMetadata(): List<RiScGithubMetadata> =
             runBlocking {
-                githubConnector.fetchAllRiScIdentifiersInRepository(
+                githubConnector.fetchRiScGithubMetadata(
                     owner = owner,
                     repository = repository,
-                    accessToken = "accessToken",
+                    githubAccessToken = GithubAccessToken("accessToken"),
                 )
             }
 
         @Test
-        fun `test fetch all risc identifiers in repository`() {
-            val draftedRiScIDs = listOf(riScName("aaaaa"), riScName("aaaab"))
-            val publishedRiScIDs = listOf(riScName("bbbbb"), riScName("bbbbc"))
-            val approvedRiScIDs = listOf(riScName("ccccc"), riScName("ccccd"))
+        fun `test fetch metadata for all riScs in repository`() {
+            val riScs = listOf(
+                riScName("aaa0a"),
+                riScName("bbb1b"),
+                riScName("ccc2c"),
+                riScName("ddd3d"),
+                riScName("eee4e"),
+            )
+            val riscIdsFromMainFiles = listOf(riScs[0], riScs[1], riScs[2])
+            val riscIdsFromBranches = listOf(riScs[1], riScs[2], riScs[3], riScs[4])
+            val riscIdsWithPR = listOf(riScs[2], riScs[3])
 
-            queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
+            queueRiScResponses(riscIdsFromMainFiles, riscIdsFromBranches, riscIdsWithPR)
+            val githubMetadata = fetchRiScGithubMetadata()
 
-            val identifiers = fetchRiScIdentifiers()
+            assertEquals(5, githubMetadata.size,
+                "All unique risc identifiers should be found"
+            )
 
-            assertEquals(6, identifiers.size, "All unique risc identifiers should be found")
             assertTrue({
-                publishedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == riScID && it.status == RiScStatus.Published }
+                riscIdsFromMainFiles.all { riScID ->
+                    githubMetadata.any { it.id == riScID && it.isStoredInMain }
                 }
-            }, "Unique published RiScs should be included in the list")
+            }, "Metadata of unique published RiScs should be included in the list")
             assertTrue({
-                draftedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == riScID && it.status == RiScStatus.Draft }
+                riscIdsFromBranches.all { riScID ->
+                    githubMetadata.any { it.id == riScID && it.hasBranch }
                 }
-            }, "Unique drafted RiScs should be included in the list")
+            }, "Metadata of unique drafted RiScs should be included in the list")
             assertTrue({
-                approvedRiScIDs.all { riScID ->
-                    identifiers.any { it.id == riScID && it.status == RiScStatus.SentForApproval }
+                riscIdsWithPR.all { riScID ->
+                    githubMetadata.any { it.id == riScID && it.hasOpenPR && it.prUrl != null }
                 }
-            }, "Unique approved RiScs should be included in the list")
+            }, "Metadata of unique approved RiScs should be included in the list")
         }
 
         @Test
-        fun `test fetch all risc identifiers in repository with overlap`() {
-            val publishedRiScIDs = listOf(riScName("aaaaa"), riScName("bbbbb"), riScName("ddddd"))
-            val draftedRiScIDs = listOf(riScName("bbbbb"), riScName("ccccc"))
-            val approvedRiScIDs = listOf(riScName("ccccc"), riScName("ddddd"))
+        fun `test fetch metadata for all riScs in repository has correct properties`() {
+            val riScs = listOf(
+                riScName("aaa0a"),
+                riScName("bbb1b"),
+                riScName("ccc2c"),
+                riScName("ddd3d"),
+                riScName("eee4e"),
+            )
+            val riscIdsFromMainFiles = listOf(riScs[0], riScs[1], riScs[2])
+            val riscIdsFromBranches = listOf(riScs[1], riScs[2], riScs[3], riScs[4])
+            val riscIdsWithPR = listOf(riScs[2], riScs[3])
 
-            queueRiScResponses(draftedRiScIDs, publishedRiScIDs, approvedRiScIDs)
+            queueRiScResponses(riscIdsFromMainFiles, riscIdsFromBranches, riscIdsWithPR)
+            val githubMetadata = fetchRiScGithubMetadata()
 
-            val identifiers = fetchRiScIdentifiers()
+            for (m in githubMetadata) {
+                when (m.id) {
+                    riScName("aaa0a") ->
+                        assertTrue(
+                            m.isStoredInMain && !m.hasBranch && !m.hasOpenPR && m.prUrl == null,
+                            "This riSc should only exist in main"
+                        )
+                    riScName("bbb1b") ->
+                        assertTrue(
+                            m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
+                            "This riSc should exist in main and have a branch"
+                        )
+                    riScName("ccc2c") ->
+                        assertTrue(
+                            m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
+                            "This riSc should exist in main, have a branch, and an open PR"
+                        )
+                    riScName("ddd3d") ->
+                        assertTrue(
+                            !m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
+                            "This riSc should not exist in main, but have a branch and an open PR"
+                        )
+                    riScName("eee4e") ->
+                        assertTrue(
+                            !m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
+                            "This riSc should only exist in a branch"
+                        )
+                }
+            }
 
-            assertEquals(4, identifiers.size, "All unique risc identifiers should be found")
-            assertTrue({
-                identifiers.any { it.id == riScName("aaaaa") && it.status == RiScStatus.Published }
-            }, "Unique published RiScs should be included in the list")
-            assertTrue({
-                identifiers.any { it.id == riScName("bbbbb") && it.status == RiScStatus.Draft }
-            }, "Unique drafted RiScs should be included in the list")
-            assertTrue({
-                identifiers.any { it.id == riScName("ccccc") && it.status == RiScStatus.SentForApproval } &&
-                    identifiers.any { it.id == riScName("ddddd") && it.status == RiScStatus.SentForApproval }
-            }, "Unique approved RiScs should be included in the list")
         }
 
         @Test
-        fun `test fetch all risc identifiers in repository with retrieval errors`() {
+        fun `test fetch metadata for all riScs in repository with retrieval errors`() {
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.INTERNAL_SERVER_ERROR),
                 path = pathToDraftIdentifiers,
@@ -217,10 +251,11 @@ class GithubConnectorTests {
                 path = pathToOpenPullRequests,
             )
 
-            val identifiers = fetchRiScIdentifiers()
+            val riScsMetadata = fetchRiScGithubMetadata()
 
-            assertTrue(identifiers.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
+            assertTrue(riScsMetadata.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
         }
+
     }
 
     @Nested
