@@ -3,8 +3,8 @@ plugins {
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "3.5.4"
-    id("org.jlleitschuh.gradle.ktlint") version "13.0.0"
+    id("org.springframework.boot") version "3.5.5"
+    id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
 }
 
 ktlint {
@@ -30,7 +30,7 @@ repositories {
 }
 
 val kotlinVersion = "2.2.10"
-val springBootVersion = "3.5.4"
+val springBootVersion = "3.5.5"
 val springSecurityVersion = "6.5.3"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
@@ -80,10 +80,10 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.18.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.2.4.Final") {
+        implementation("io.netty:netty-codec-http2:4.2.5.Final") {
             because("Force specific version for transitive dependency")
         }
-        implementation("org.apache.tomcat.embed:tomcat-embed-core:10.1.44") {
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.10") {
             because("Force secure version to fix vulnerability in version 10.1.43")
         }
     }
