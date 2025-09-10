@@ -42,7 +42,7 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
     ): List<RiScContentResultDTO> =
-        riScService.fetchAllRiScsV2(
+        riScService.fetchAllRiScs(
             owner = repositoryOwner,
             repository = repositoryName,
             accessTokens =
@@ -61,7 +61,7 @@ class RiScController(
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
     ): List<RiScContentResultDTO> {
-        val result = riScService.fetchAllRiScsV2(
+        val result = riScService.fetchAllRiScs(
             owner = repositoryOwner,
             repository = repositoryName,
             accessTokens =

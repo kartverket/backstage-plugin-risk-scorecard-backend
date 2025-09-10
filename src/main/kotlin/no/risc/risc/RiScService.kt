@@ -168,7 +168,7 @@ class RiScService(
      * @param accessTokens The access tokens to use for authorization.
      * @param latestSupportedVersion The RiSc schema version to migrate the RiScs to if not already or past this version.
      */
-    suspend fun fetchAllRiScsV2(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
+    suspend fun fetchAllRiScs(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
         coroutineScope {
             val riScGithubMetadataList: List<RiScGithubMetadata> = githubConnector.fetchRiScGithubMetadata(
                 owner,
@@ -192,13 +192,13 @@ class RiScService(
                             riScContents.branchContent
                         )
 
-                        val riscContent: GithubContentResponse = chooseRiScContentFromStatus(
+                        val riScToReturn: GithubContentResponse = chooseRiScContentFromStatus(
                             riScStatus,
                             riScContents.branchContent,
                             riScContents.mainContent
                         )
 
-                        riscContent.responseToRiScResult(
+                        riScToReturn.responseToRiScResult(
                             riScMetadata.id,
                             riScStatus,
                             accessTokens.gcpAccessToken,

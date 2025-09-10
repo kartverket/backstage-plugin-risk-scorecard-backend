@@ -85,7 +85,7 @@ class GithubConnectorTests {
     private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
 
     @Nested
-    inner class TestFetchRiScMetadata{
+    inner class TestFetchRiScGithubMetadata{
         private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
         private val pathToRiScFiles = "/$owner/$repository/contents/$riscFolderPath"
         private val pathToOpenPullRequests = "/$owner/$repository/pulls"
@@ -150,7 +150,7 @@ class GithubConnectorTests {
             }
 
         @Test
-        fun `test fetch metadata for all riScs in repository`() {
+        fun `test fetch github metadata for all riScs in repository`() {
             val riScs = listOf(
                 riScName("aaa0a"),
                 riScName("bbb1b"),
@@ -187,7 +187,7 @@ class GithubConnectorTests {
         }
 
         @Test
-        fun `test fetch metadata for all riScs in repository has correct properties`() {
+        fun `test fetch github metadata for all riScs in repository has correct properties`() {
             val riScs = listOf(
                 riScName("aaa0a"),
                 riScName("bbb1b"),
@@ -235,7 +235,7 @@ class GithubConnectorTests {
         }
 
         @Test
-        fun `test fetch metadata for all riScs in repository with retrieval errors`() {
+        fun `test fetch github metadata for all riScs in repository with retrieval errors`() {
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.INTERNAL_SERVER_ERROR),
                 path = pathToDraftIdentifiers,
