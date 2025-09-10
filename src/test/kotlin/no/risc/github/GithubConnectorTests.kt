@@ -85,7 +85,7 @@ class GithubConnectorTests {
     private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
 
     @Nested
-    inner class TestFetchRiScGithubMetadata{
+    inner class TestFetchRiScGithubMetadata {
         private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
         private val pathToRiScFiles = "/$owner/$repository/contents/$riscFolderPath"
         private val pathToOpenPullRequests = "/$owner/$repository/pulls"
@@ -151,13 +151,14 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch github metadata for all riScs in repository`() {
-            val riScs = listOf(
-                riScName("aaa0a"),
-                riScName("bbb1b"),
-                riScName("ccc2c"),
-                riScName("ddd3d"),
-                riScName("eee4e"),
-            )
+            val riScs =
+                listOf(
+                    riScName("aaa0a"),
+                    riScName("bbb1b"),
+                    riScName("ccc2c"),
+                    riScName("ddd3d"),
+                    riScName("eee4e"),
+                )
             val riscIdsFromMainFiles = listOf(riScs[0], riScs[1], riScs[2])
             val riscIdsFromBranches = listOf(riScs[1], riScs[2], riScs[3], riScs[4])
             val riscIdsWithPR = listOf(riScs[2], riScs[3])
@@ -165,8 +166,10 @@ class GithubConnectorTests {
             queueRiScResponses(riscIdsFromMainFiles, riscIdsFromBranches, riscIdsWithPR)
             val githubMetadata = fetchRiScGithubMetadata()
 
-            assertEquals(5, githubMetadata.size,
-                "All unique risc identifiers should be found"
+            assertEquals(
+                5,
+                githubMetadata.size,
+                "All unique risc identifiers should be found",
             )
 
             assertTrue({
@@ -188,13 +191,14 @@ class GithubConnectorTests {
 
         @Test
         fun `test fetch github metadata for all riScs in repository has correct properties`() {
-            val riScs = listOf(
-                riScName("aaa0a"),
-                riScName("bbb1b"),
-                riScName("ccc2c"),
-                riScName("ddd3d"),
-                riScName("eee4e"),
-            )
+            val riScs =
+                listOf(
+                    riScName("aaa0a"),
+                    riScName("bbb1b"),
+                    riScName("ccc2c"),
+                    riScName("ddd3d"),
+                    riScName("eee4e"),
+                )
             val riscIdsFromMainFiles = listOf(riScs[0], riScs[1], riScs[2])
             val riscIdsFromBranches = listOf(riScs[1], riScs[2], riScs[3], riScs[4])
             val riscIdsWithPR = listOf(riScs[2], riScs[3])
@@ -207,31 +211,30 @@ class GithubConnectorTests {
                     riScName("aaa0a") ->
                         assertTrue(
                             m.isStoredInMain && !m.hasBranch && !m.hasOpenPR && m.prUrl == null,
-                            "This riSc should only exist in main"
+                            "This riSc should only exist in main",
                         )
                     riScName("bbb1b") ->
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
-                            "This riSc should exist in main and have a branch"
+                            "This riSc should exist in main and have a branch",
                         )
                     riScName("ccc2c") ->
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
-                            "This riSc should exist in main, have a branch, and an open PR"
+                            "This riSc should exist in main, have a branch, and an open PR",
                         )
                     riScName("ddd3d") ->
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
-                            "This riSc should not exist in main, but have a branch and an open PR"
+                            "This riSc should not exist in main, but have a branch and an open PR",
                         )
                     riScName("eee4e") ->
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
-                            "This riSc should only exist in a branch"
+                            "This riSc should only exist in a branch",
                         )
                 }
             }
-
         }
 
         @Test
@@ -255,7 +258,6 @@ class GithubConnectorTests {
 
             assertTrue(riScsMetadata.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
         }
-
     }
 
     @Nested

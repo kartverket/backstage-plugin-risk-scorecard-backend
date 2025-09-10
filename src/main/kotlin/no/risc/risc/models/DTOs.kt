@@ -187,7 +187,7 @@ enum class RiScStatus {
     Published,
     DeletionDraft,
     DeletionSentForApproval,
-    Deleted
+    Deleted,
 }
 
 @Serializable

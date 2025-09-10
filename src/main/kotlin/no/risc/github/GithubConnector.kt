@@ -100,23 +100,26 @@ class GithubConnector(
     suspend fun fetchRiScGithubMetadata(
         owner: String,
         repository: String,
-        githubAccessToken: GithubAccessToken
+        githubAccessToken: GithubAccessToken,
     ): List<RiScGithubMetadata> =
         coroutineScope {
-            val riscIdsFromMainFiles = async(Dispatchers.IO) {
-                fetchPublishedRiScIdentifiers(owner, repository, githubAccessToken.value)
-            }
-            val riscIdsFromBranches = async(Dispatchers.IO) {
-                fetchRiScIdentifiersDrafted(owner, repository, githubAccessToken.value)
-            }
+            val riscIdsFromMainFiles =
+                async(Dispatchers.IO) {
+                    fetchPublishedRiScIdentifiers(owner, repository, githubAccessToken.value)
+                }
+            val riscIdsFromBranches =
+                async(Dispatchers.IO) {
+                    fetchRiScIdentifiersDrafted(owner, repository, githubAccessToken.value)
+                }
 
-            val riscIdsWithPR = async(Dispatchers.IO) {
-                fetchRiScIdentifiersSentForApproval(
-                    owner,
-                    repository,
-                    githubAccessToken.value
-                )
-            }
+            val riscIdsWithPR =
+                async(Dispatchers.IO) {
+                    fetchRiScIdentifiersSentForApproval(
+                        owner,
+                        repository,
+                        githubAccessToken.value,
+                    )
+                }
 
             val allIds: Set<String> = (riscIdsFromBranches.await() + riscIdsFromMainFiles.await()).map { it.id }.toSet()
             val branchIds: Set<String> = riscIdsFromBranches.await().map { it.id }.toSet()
@@ -130,7 +133,7 @@ class GithubConnector(
                     isStoredInMain = id in mainIds,
                     hasBranch = id in branchIds,
                     hasOpenPR = id in prIds,
-                    prUrl = prUrls[id]
+                    prUrl = prUrls[id],
                 )
             }
         }
@@ -150,25 +153,27 @@ class GithubConnector(
         githubAccessToken: GithubAccessToken,
     ): RiScMainAndBranchContent =
         coroutineScope {
-            val mainRiscContent = async(Dispatchers.IO) {
-                fetchRiScContent(
-                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
-                    accessToken = githubAccessToken.value,
-                )
-            }
-            val branchRiscContent = async(Dispatchers.IO) {
-                fetchRiScContent(
-                    uri = githubHelper.uriToFindRiScOnDraftBranch(
-                        owner = owner,
-                        repository = repository,
-                        riScId = riScId
-                    ),
-                    accessToken = githubAccessToken.value,
-                )
-            }
+            val mainRiscContent =
+                async(Dispatchers.IO) {
+                    fetchRiScContent(
+                        uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                        accessToken = githubAccessToken.value,
+                    )
+                }
+            val branchRiscContent =
+                async(Dispatchers.IO) {
+                    fetchRiScContent(
+                        uri =
+                            githubHelper.uriToFindRiScOnDraftBranch(
+                                owner = owner,
+                                repository = repository,
+                                riScId = riScId,
+                            ),
+                        accessToken = githubAccessToken.value,
+                    )
+                }
             RiScMainAndBranchContent(mainRiscContent.await(), branchRiscContent.await())
         }
-
 
     /**
      * Fetches the content of a published RiSc from the default branch of the given repository using the GitHub Contents-API.

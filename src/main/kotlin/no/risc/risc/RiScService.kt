@@ -33,7 +33,6 @@ import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
-import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
@@ -168,61 +167,71 @@ class RiScService(
      * @param accessTokens The access tokens to use for authorization.
      * @param latestSupportedVersion The RiSc schema version to migrate the RiScs to if not already or past this version.
      */
-    suspend fun fetchAllRiScs(owner: String, repository: String, accessTokens: AccessTokens, latestSupportedVersion: String) : List<RiScContentResultDTO> =
+    suspend fun fetchAllRiScs(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        latestSupportedVersion: String,
+    ): List<RiScContentResultDTO> =
         coroutineScope {
-            val riScGithubMetadataList: List<RiScGithubMetadata> = githubConnector.fetchRiScGithubMetadata(
-                owner,
-                repository,
-                accessTokens.githubAccessToken
-            )
+            val riScGithubMetadataList: List<RiScGithubMetadata> =
+                githubConnector.fetchRiScGithubMetadata(
+                    owner,
+                    repository,
+                    accessTokens.githubAccessToken,
+                )
 
-            riScGithubMetadataList.map { riScMetadata ->
-                async(Dispatchers.IO) {
-                    try {
-                        val riScContents = githubConnector.fetchBranchAndMainRiScContent(
-                            riScMetadata.id,
-                            owner,
-                            repository,
-                            accessTokens.githubAccessToken
-                        )
+            riScGithubMetadataList
+                .map { riScMetadata ->
+                    async(Dispatchers.IO) {
+                        try {
+                            val riScContents =
+                                githubConnector.fetchBranchAndMainRiScContent(
+                                    riScMetadata.id,
+                                    owner,
+                                    repository,
+                                    accessTokens.githubAccessToken,
+                                )
 
-                        val riScStatus = getRiScStatus(
-                            riScMetadata,
-                            riScContents.mainContent,
-                            riScContents.branchContent
-                        )
+                            val riScStatus =
+                                getRiScStatus(
+                                    riScMetadata,
+                                    riScContents.mainContent,
+                                    riScContents.branchContent,
+                                )
 
-                        val riScToReturn: GithubContentResponse = chooseRiScContentFromStatus(
-                            riScStatus,
-                            riScContents.branchContent,
-                            riScContents.mainContent
-                        )
+                            val riScToReturn: GithubContentResponse =
+                                chooseRiScContentFromStatus(
+                                    riScStatus,
+                                    riScContents.branchContent,
+                                    riScContents.mainContent,
+                                )
 
-                        riScToReturn.responseToRiScResult(
-                            riScMetadata.id,
-                            riScStatus,
-                            accessTokens.gcpAccessToken,
-                            lastPublished =
-                                githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                    owner = owner,
-                                    repository = repository,
-                                    accessToken = accessTokens.githubAccessToken.value,
-                                    riScId = riScMetadata.id,
-                                ),
-                            pullRequestUrl = riScMetadata.prUrl
-                        )
-                    } catch (_: Exception) {
-                        RiScContentResultDTO(
-                            riScId = riScMetadata.id,
-                            status = ContentStatus.Failure,
-                            riScStatus = RiScStatus.Deleted,
-                            riScContent = null,
-                            pullRequestUrl = null,
-                        )
+                            riScToReturn.responseToRiScResult(
+                                riScMetadata.id,
+                                riScStatus,
+                                accessTokens.gcpAccessToken,
+                                lastPublished =
+                                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                                        owner = owner,
+                                        repository = repository,
+                                        accessToken = accessTokens.githubAccessToken.value,
+                                        riScId = riScMetadata.id,
+                                    ),
+                                pullRequestUrl = riScMetadata.prUrl,
+                            )
+                        } catch (_: Exception) {
+                            RiScContentResultDTO(
+                                riScId = riScMetadata.id,
+                                status = ContentStatus.Failure,
+                                riScStatus = RiScStatus.Deleted,
+                                riScContent = null,
+                                pullRequestUrl = null,
+                            )
+                        }
                     }
-                }
-            }.awaitAll()
-                .filter { it.riScStatus != RiScStatus.Deleted}
+                }.awaitAll()
+                .filter { it.riScStatus != RiScStatus.Deleted }
                 // Validate RiSc against JSON schema
                 .map { riScContentResultDTO ->
                     if (riScContentResultDTO.status == ContentStatus.Success) {
