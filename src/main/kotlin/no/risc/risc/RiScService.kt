@@ -11,6 +11,9 @@ import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
+import no.risc.github.RiScGithubMetadata
+import no.risc.github.chooseRiScContentFromStatus
+import no.risc.github.getRiScStatus
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
@@ -30,7 +33,6 @@ import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
-import no.risc.risc.models.RiScIdentifier
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
@@ -157,14 +159,13 @@ class RiScService(
      * Fetches all RiScs in the given repository. There are three types, drafts (RiScs that have pending updates), sent
      * for approval (RiScs that have pending pull requests) and published (RiScs that have been approved, i.e., appear
      * in the default branch of the repository). If there exists multiple version of a RiSc with the same ID, they are
-     * prioritised in the way given by `GithubConnector.fetchAllRiScIdentifiersInRepository`. Each fetched RiSc is
-     * migrated to the latest supported version and validated against the JSON schema of their version.
+     * prioritised to return the most updated RiSc. Each fetched RiSc is migrated to the latest supported version and
+     * validated against the JSON schema of their version.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to fetch RiScs from.
      * @param accessTokens The access tokens to use for authorization.
      * @param latestSupportedVersion The RiSc schema version to migrate the RiScs to if not already or past this version.
-     * @see no.risc.github.GithubConnector.fetchAllRiScIdentifiersInRepository
      */
     suspend fun fetchAllRiScs(
         owner: String,
@@ -173,29 +174,64 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
-            githubConnector
-                .fetchAllRiScIdentifiersInRepository(
-                    owner = owner,
-                    repository = repository,
-                    accessToken = accessTokens.githubAccessToken.value,
-                ).also { riScIds ->
-                    LOGGER.info("Found RiSc's with id's: ${riScIds.joinToString(", ") { it.id }}")
-                }.map { riScId ->
-                    // Fetch content and decrypt
+            val riScGithubMetadataList: List<RiScGithubMetadata> =
+                githubConnector.fetchRiScGithubMetadata(
+                    owner,
+                    repository,
+                    accessTokens.githubAccessToken,
+                )
+
+            riScGithubMetadataList
+                .map { riScMetadata ->
                     async(Dispatchers.IO) {
                         try {
-                            fetchContent(riScId, owner, repository, accessTokens)
+                            val riScContents =
+                                githubConnector.fetchBranchAndMainRiScContent(
+                                    riScMetadata.id,
+                                    owner,
+                                    repository,
+                                    accessTokens.githubAccessToken,
+                                )
+
+                            val riScStatus =
+                                getRiScStatus(
+                                    riScMetadata,
+                                    riScContents.mainContent,
+                                    riScContents.branchContent,
+                                )
+
+                            val riScToReturn: GithubContentResponse =
+                                chooseRiScContentFromStatus(
+                                    riScStatus,
+                                    riScContents.branchContent,
+                                    riScContents.mainContent,
+                                )
+
+                            riScToReturn.responseToRiScResult(
+                                riScMetadata.id,
+                                riScStatus,
+                                accessTokens.gcpAccessToken,
+                                lastPublished =
+                                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                                        owner = owner,
+                                        repository = repository,
+                                        accessToken = accessTokens.githubAccessToken.value,
+                                        riScId = riScMetadata.id,
+                                    ),
+                                pullRequestUrl = riScMetadata.prUrl,
+                            )
                         } catch (_: Exception) {
                             RiScContentResultDTO(
-                                riScId = riScId.id,
+                                riScId = riScMetadata.id,
                                 status = ContentStatus.Failure,
-                                riScStatus = riScId.status,
+                                riScStatus = RiScStatus.Deleted,
                                 riScContent = null,
                                 pullRequestUrl = null,
                             )
                         }
                     }
                 }.awaitAll()
+                .filter { it.riScStatus != RiScStatus.Deleted }
                 // Validate RiSc against JSON schema
                 .map { riScContentResultDTO ->
                     if (riScContentResultDTO.status == ContentStatus.Success) {
@@ -244,50 +280,6 @@ class RiScService(
                     }
                 }
         }
-
-    /**
-     * Fetches the content for the given RiSc identifier from the supplied repository, decrypts it and fetches
-     * additional information about the age of the last published version.
-     *
-     * @param owner The user/organisation the repository belongs to.
-     * @param repository The repository to fetch content from.
-     * @param accessTokens The access tokens to use for authentication.
-     */
-    private suspend fun fetchContent(
-        riScIdentifier: RiScIdentifier,
-        owner: String,
-        repository: String,
-        accessTokens: AccessTokens,
-    ): RiScContentResultDTO =
-        when (riScIdentifier.status) {
-            RiScStatus.Published ->
-                githubConnector.fetchPublishedRiSc(
-                    owner = owner,
-                    repository = repository,
-                    id = riScIdentifier.id,
-                    accessToken = accessTokens.githubAccessToken.value,
-                )
-
-            RiScStatus.SentForApproval, RiScStatus.Draft, RiScStatus.DeletionDraft, RiScStatus.DeletionSentForApproval ->
-                githubConnector.fetchDraftedRiScContent(
-                    owner = owner,
-                    repository = repository,
-                    id = riScIdentifier,
-                    accessToken = accessTokens.githubAccessToken.value,
-                )
-        }.responseToRiScResult(
-            riScId = riScIdentifier.id,
-            riScStatus = riScIdentifier.status,
-            gcpAccessToken = accessTokens.gcpAccessToken,
-            pullRequestUrl = riScIdentifier.pullRequestUrl,
-            lastPublished =
-                githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                    owner = owner,
-                    repository = repository,
-                    accessToken = accessTokens.githubAccessToken.value,
-                    riScId = riScIdentifier.id,
-                ),
-        )
 
     /**
      * Converts the content response object to a RiScContentResult by decrypting it through the crypto service.

@@ -1,5 +1,6 @@
 package no.risc.github
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactor.awaitSingle
@@ -61,78 +62,6 @@ class GithubConnector(
     }
 
     /**
-     * Fetches all RiSc identifiers in the given repository. There are three types, drafts (RiScs that have pending
-     * updates), sent for approval (RiScs that have pending pull requests) and published (RiScs that have been approved,
-     * i.e., appear in the default branch of the repository). If there exists multiple RiSc Identifiers with the same
-     * ID, they are prioritised in the following order:
-     *
-     * 1. Sent for approval
-     * 2. Draft
-     * 3. Published
-     *
-     * @param owner The user/organisation the repository belongs to.
-     * @param repository The repository to fetch RiSc identifiers from.
-     * @param accessToken The GitHub access token to use for authorization.
-     */
-    suspend fun fetchAllRiScIdentifiersInRepository(
-        owner: String,
-        repository: String,
-        accessToken: String,
-    ): List<RiScIdentifier> =
-        coroutineScope {
-            val draftRiScs =
-                async { fetchRiScIdentifiersDrafted(owner = owner, repository = repository, accessToken = accessToken) }
-            val publishedRiScs =
-                async {
-                    fetchPublishedRiScIdentifiers(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-            val riScsSentForApproval =
-                async {
-                    fetchRiScIdentifiersSentForApproval(
-                        owner = owner,
-                        repository = repository,
-                        accessToken = accessToken,
-                    )
-                }
-
-            combinePublishedDraftAndSentForApproval(
-                draftRiScList = draftRiScs.await(),
-                sentForApprovalList = riScsSentForApproval.await(),
-                publishedRiScList = publishedRiScs.await(),
-            )
-        }
-
-    /**
-     * Combines the draft, published and sent for approval RiSc identifiers. Identifiers are added in the order:
-     *
-     * 1. Sent for approval
-     * 2. Draft
-     * 3. Published
-     *
-     * Later identifiers are ignored if there already exists an identifier with the same ID.
-     *
-     * @param draftRiScList RiSc identifiers for RiScs with pending changes
-     * @param sentForApprovalList RiSc identifiers for RiScs with pending pull requests
-     * @param publishedRiScList RiSc identifiers with RiSc files found in the default branch
-     */
-    private fun combinePublishedDraftAndSentForApproval(
-        draftRiScList: List<RiScIdentifier>,
-        sentForApprovalList: List<RiScIdentifier>,
-        publishedRiScList: List<RiScIdentifier>,
-    ): List<RiScIdentifier> =
-        mutableMapOf<String, RiScIdentifier>()
-            .also { identifiers ->
-                sentForApprovalList.map { identifiers.putIfAbsent(it.id, it) }
-                draftRiScList.map { identifiers.putIfAbsent(it.id, it) }
-                publishedRiScList.map { identifiers.putIfAbsent(it.id, it) }
-            }.values
-            .toList()
-
-    /**
      * Fetches the content of the RiSc at the given GitHub Contents-API uri.
      *
      * @param uri The GitHub Contents-API uri for the file of the given RiSc.
@@ -159,6 +88,91 @@ class GithubConnector(
                 }
         } catch (e: Exception) {
             GithubContentResponse(data = null, status = mapWebClientExceptionToGithubStatus(e))
+        }
+
+    /**
+     * Fetches metadata about all RiScs existing in a GitHub repository.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param githubAccessToken The GitHub access token to use for authorization.
+     */
+    suspend fun fetchRiScGithubMetadata(
+        owner: String,
+        repository: String,
+        githubAccessToken: GithubAccessToken,
+    ): List<RiScGithubMetadata> =
+        coroutineScope {
+            val riscIdsFromMainFiles =
+                async(Dispatchers.IO) {
+                    fetchPublishedRiScIdentifiers(owner, repository, githubAccessToken.value)
+                }
+            val riscIdsFromBranches =
+                async(Dispatchers.IO) {
+                    fetchRiScIdentifiersDrafted(owner, repository, githubAccessToken.value)
+                }
+
+            val riscIdsWithPR =
+                async(Dispatchers.IO) {
+                    fetchRiScIdentifiersSentForApproval(
+                        owner,
+                        repository,
+                        githubAccessToken.value,
+                    )
+                }
+
+            val allIds: Set<String> = (riscIdsFromBranches.await() + riscIdsFromMainFiles.await()).map { it.id }.toSet()
+            val branchIds: Set<String> = riscIdsFromBranches.await().map { it.id }.toSet()
+            val mainIds: Set<String> = riscIdsFromMainFiles.await().map { it.id }.toSet()
+            val prIds: Set<String> = riscIdsWithPR.await().map { it.id }.toSet()
+            val prUrls: Map<String, String?> = riscIdsWithPR.await().associate { it.id to it.pullRequestUrl }
+
+            allIds.map { id ->
+                RiScGithubMetadata(
+                    id = id,
+                    isStoredInMain = id in mainIds,
+                    hasBranch = id in branchIds,
+                    hasOpenPR = id in prIds,
+                    prUrl = prUrls[id],
+                )
+            }
+        }
+
+    /**
+     * Fetches the content of a RiSc from both the main and the branch of the RiSc.
+     *
+     * @param riScId Identifier of the RiSc to fetch.
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch RiSc identifiers from.
+     * @param githubAccessToken The GitHub access token to use for authorization.
+     */
+    suspend fun fetchBranchAndMainRiScContent(
+        riScId: String,
+        owner: String,
+        repository: String,
+        githubAccessToken: GithubAccessToken,
+    ): RiScMainAndBranchContent =
+        coroutineScope {
+            val mainRiscContent =
+                async(Dispatchers.IO) {
+                    fetchRiScContent(
+                        uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                        accessToken = githubAccessToken.value,
+                    )
+                }
+            val branchRiscContent =
+                async(Dispatchers.IO) {
+                    fetchRiScContent(
+                        uri =
+                            githubHelper.uriToFindRiScOnDraftBranch(
+                                owner = owner,
+                                repository = repository,
+                                riScId = riScId,
+                            ),
+                        accessToken = githubAccessToken.value,
+                    )
+                }
+            RiScMainAndBranchContent(mainRiscContent.await(), branchRiscContent.await())
         }
 
     /**
