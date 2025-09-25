@@ -15,7 +15,7 @@ data class NewRiScRequestBody(
     val schemaVersion: String,
     val userInfo: UserInfo,
     val sopsConfig: SopsConfig,
-    val defaultRiScTypes: List<DefaultRiScType>,
+    val defaultRiScTypes: List<DefaultRiScType> = listOf(DefaultRiScType.Standard),
 ) {
     fun toRiScWrapperObject(): RiScWrapperObject =
         RiScWrapperObject(
