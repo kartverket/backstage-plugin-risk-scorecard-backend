@@ -31,11 +31,11 @@ repositories {
 
 val kotlinVersion = "2.2.20"
 val springBootVersion = "3.5.6"
-val springSecurityVersion = "6.5.3"
+val springSecurityVersion = "6.5.5"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.15.4"
-val jsonSchemaValidatorVersion = "1.5.8"
+val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.5"
