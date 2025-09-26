@@ -77,7 +77,7 @@ dependencies {
     testImplementation("io.mockk:mockk:$mockkVersion")
 
     constraints {
-        implementation("org.apache.commons:commons-lang3:3.18.0") {
+        implementation("org.apache.commons:commons-lang3:3.19.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
         implementation("io.netty:netty-codec-http2:4.2.6.Final") {
