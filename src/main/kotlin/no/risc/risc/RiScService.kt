@@ -22,6 +22,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
+import no.risc.risc.models.DefaultRiScType
 import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceStatus
@@ -363,7 +364,8 @@ class RiScService(
      * @param content The new content of the RiSc, including the SOPS config.
      * @param accessTokens The access tokens to use for authentication.
      * @param defaultBranch The name of the default branch of the repository.
-     * @param generateDefault Indicates if the content of the RiSc should be based on the default RiSc.
+     * @param generateDefault Indicates if the content of the RiSc should be based on default RiSc types.
+     * @param defaultRiScTypes Types of default RiScs to generate the RiSc from in cases where generateDefault is true
      * @throws CreatingRiScException If the creation fails.
      */
     suspend fun createRiSc(
@@ -373,6 +375,7 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
         generateDefault: Boolean,
+        defaultRiScTypes: List<DefaultRiScType>,
     ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
         LOGGER.info("Generating default content")
@@ -380,7 +383,7 @@ class RiScService(
             content.copy(
                 riSc =
                     if (generateDefault) {
-                        initRiScService.generateDefaultRiSc(content.riSc)
+                        initRiScService.generateDefaultRiSc(content.riSc, defaultRiScTypes)
                     } else {
                         content.riSc
                     },

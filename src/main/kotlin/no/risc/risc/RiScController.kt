@@ -9,6 +9,7 @@ import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceRequestBody
+import no.risc.risc.models.NewRiScRequestBody
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScResult
@@ -81,7 +82,7 @@ class RiScController(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @RequestBody riSc: RiScWrapperObject,
+        @RequestBody newRiSc: NewRiScRequestBody,
         @RequestParam generateDefault: Boolean = false,
     ): CreateRiScResultDTO {
         val createRiscResultDTO =
@@ -93,7 +94,7 @@ class RiScController(
                         gcpAccessToken = GCPAccessToken(gcpAccessToken),
                         githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
-                content = riSc,
+                content = newRiSc.toRiScWrapperObject(),
                 defaultBranch =
                     githubConnector
                         .fetchRepositoryInfo(
@@ -102,6 +103,7 @@ class RiScController(
                             gitHubAccessToken = gitHubAccessToken,
                         ).defaultBranch,
                 generateDefault = generateDefault,
+                defaultRiScTypes = newRiSc.defaultRiScTypes,
             )
         if (createRiscResultDTO.riScContent != null) {
             riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
