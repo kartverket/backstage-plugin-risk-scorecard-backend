@@ -1,8 +1,10 @@
 package no.risc.initRiSc
 
+import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
 import no.risc.initRiSc.model.GenerateRiScRequestBody
+import no.risc.initRiSc.model.RiScTypeDescriptor
 import no.risc.risc.models.DefaultRiScType
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
@@ -42,4 +44,18 @@ class InitRiScServiceIntegration(
                 statusMessage = ProcessingStatus.ErrorWhenCreatingRiSc.message,
             ),
         )
+
+    suspend fun fetchDefaultRiScTypeDescriptors(): List<RiScTypeDescriptor> {
+        val descriptors =
+            initRiScServiceConnector.webClient
+                .get()
+                .uri("/descriptors")
+                .retrieve()
+                .awaitBodyOrNull<List<RiScTypeDescriptor>>()
+
+        if (descriptors == null) {
+            throw FetchException("Failed to fetch initial riScs from Airtable", ProcessingStatus.FailedToFetchFromAirtable)
+        }
+        return descriptors
+    }
 }
