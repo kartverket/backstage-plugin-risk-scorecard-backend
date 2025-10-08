@@ -172,6 +172,7 @@ enum class ProcessingStatus(
     FailedToFetchGCPOAuth2TokenInformation("Failed to fetch GCP OAuth2 token information"),
     FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
     FailedToCreateSops("Failed to create SOPS configuration"),
+    FailedToFetchFromAirtable("Failed to fetch from airtable"),
 }
 
 @Serializable
