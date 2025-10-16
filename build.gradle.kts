@@ -39,7 +39,7 @@ val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.6"
-val junitVersion = "5.13.4"
+val junitVersion = "6.0.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
