@@ -38,7 +38,7 @@ val micrometerVersion = "1.15.5"
 val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
-val mockkVersion = "1.14.5"
+val mockkVersion = "1.14.6"
 val junitVersion = "5.13.4"
 
 dependencies {
