@@ -1,0 +1,62 @@
+schemaVersion: ENC[AES256_GCM,data:rpoQ,iv:eL8gmc0Gu+9o8DGx1TxTq545ph1/q5ZlUSTXg47NPjY=,tag:fvaOfXkjQ4PXK5f7r5xdBg==,type:str]
+title: ENC[AES256_GCM,data:UIYTV8Bz65haeypJ7g==,iv:VdODe41U9GkzdpnDor3Uws19EwNksQwZ6KSlmHmjrsg=,tag:cALa0EZ1anuTYDCzhxRvtg==,type:str]
+scope: ""
+valuations: []
+scenarios:
+    - title: ENC[AES256_GCM,data:UGpYuRO7,iv:IDzGqLnJZMMiE7LX+WpY8h0i/qPo39L+3bEI9OgrSy0=,tag:ZxN7GkSN9u5N9A5kmcUpbg==,type:str]
+      scenario:
+        ID: ENC[AES256_GCM,data:+hZHn/4=,iv:R+yt5rwnd//vny6sEyFiVPtijTDTGsPIAm3aANyjFJg=,tag:b+Fk+lBO3C2OdMg6DcHymg==,type:str]
+        description: ""
+        threatActors: []
+        vulnerabilities: []
+        risk:
+            summary: ""
+            probability: ENC[AES256_GCM,data:n06WRIGJ,iv:qnlR0UuF30IrSwuHV+LEu0Dvo0PPLOtCMgSbmf1D4co=,tag:TadK42H23oYb/7ivA7EPTA==,type:float]
+            consequence: ENC[AES256_GCM,data:m7klxg==,iv:DQuCEiT1CUapJtujAImqHnKYZ9ZeUvNa46ouMvxoPSM=,tag:hyctYEwv/eXva6852AuzQA==,type:float]
+        actions: []
+        remainingRisk:
+            summary: ""
+            probability: ENC[AES256_GCM,data:p4dE8RNO,iv:u1NYk7e8Ou7V4n/3du10QbEHiVLNfXRBtqzapajf2Tw=,tag:RqTBqUFfdzg4ywdUv2q+jA==,type:float]
+            consequence: ENC[AES256_GCM,data:D7Sdlg==,iv:yUkn8AX1jZga5PfdVN0bEioGdjS+nsk9mnqlqmVrVtQ=,tag:2mVx8unD0cqOG1MG4BoYRA==,type:float]
+sops:
+    shamir_threshold: 2
+    key_groups:
+        - gcp_kms:
+            - resource_id: projects/skvis-prod-9329/locations/europe-north1/keyRings/skvis-risc-key-ring/cryptoKeys/skvis-risc-crypto-key
+              created_at: "2025-08-21T10:33:05Z"
+              enc: CiQAikFTnOTZvtZhpxMdIqJ2MEzlBgNHqKcLuluczC3HqU1vVD8SSgBdjvferzUJFWBqGFxjHGn5V7Z+C7FXbAFDtAaHtuErx5NFe1glZH3q7hJ8BIHCR6njNdoQ8hfVQgkMuHL5FO8+dXxkm+nATnBQ
+          hc_vault: []
+          age:
+            - recipient: age145s860ux96jvx6d7nwvzar588qjmgv5p47sp6nmmt2jnmhqh4scqcuk0mg
+              enc: |
+                -----BEGIN AGE ENCRYPTED FILE-----
+                YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBmaloyNkt6ZGE4eXZDSjA4
+                dDlCVUdTM0J3bmJjTFpmSkNSazI1aHovUTNBCm84ODJVd1VqTnk4ZjI3aGovbHI2
+                WUZMT0NTQkVOYlRhWlVHOXlpVXNiOWcKLS0tIFBiTk51UXRjSzAyVGFCTGpPbTRL
+                M0Vsd2pqQ2ZGdEg5UXorbjB4SjJyUTAKKhmmp/tnPryzE4tJJ7GQoHBjLZL82ci7
+                N+ZzyzUzqQqL0b/Kd6AwxZDZ9VfL+WM7auzukeItCVGMexvoWQ5Txyo=
+                -----END AGE ENCRYPTED FILE-----
+        - hc_vault: []
+          age:
+            - recipient: age18e0t6ve0vdxqzzjt7rxf0r6vzc37fhs5cad2qz40r02c3spzgvvq8uxz23
+              enc: |
+                -----BEGIN AGE ENCRYPTED FILE-----
+                YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSArUlpSNHFHZGNnWGJvT2V0
+                NVhGUkY2Qzg2VXoxWFdxczhOYUZIaFJMdGdZClplM1RWUWNhNnNnbzN0WU1yRVJ5
+                dHo5MURmYjZsVk1CTnVWR1RQckZFSmcKLS0tIDRJM1IyZ3U5R2ZFcXdJRmIwMWkv
+                M2JIS3BvcDR0eGI0K05KMVFaM3lBekUKNa28dk4iJ0ANeTZmLMa02+8+J0tgDVlG
+                KE6MXxUoQOJF5dhl1SOsynApLJj4ynTGAgNikh/ymsUEKizMLI29ifY=
+                -----END AGE ENCRYPTED FILE-----
+            - recipient: age1kjpgclkjev08aa8l2uy277gn0cngrkrkazt240405ezqywkm5axqt3d3tq
+              enc: |
+                -----BEGIN AGE ENCRYPTED FILE-----
+                YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBhVVZWZ1RhUjZBNExOUmFt
+                RTRUV1dEYnI3K01NWVU0SGdyMWtGWkVXL0U0CnAwVVFUR3A4M2pvdmVZNjJMN2sr
+                djVSbXJxZWV5UGYySTNuMUg3NDR3WU0KLS0tIFJjM3E0RENBVk9ZcmsraURIRUYv
+                Znd5eWlXeklCc0tTN28xYnpTZ05zM1EKEtuggduvpB0Gm39vSg9wIeTVdHKUFPeR
+                ssLsbirzzq1pGyxG+7HeXoMAg7smpNkXE6PMTw4S0dJBrMpmAYYQIYk=
+                -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-08-21T10:33:05Z"
+    mac: ENC[AES256_GCM,data:n//ZrYqa+ADYpQqmWtzYQWmFfSE0fSJv+KQ1u3h1Gv8X1mcG89dB+coFvxzUoouj15RfLW6Dvyr20nVcDHT1TU4xuUYXCQC902ENXMVU+RRYTRf+NtLhjpJj0lUBpwLkcmSVhQCwDK3YwbxrNtBLiWlsMHeuMqFimjfmaVsIOYQ=,iv:cPTZ+ZcVGRxPjctnq26Hq/SyvC/Kn9b0n5A4HhQ1kig=,tag:B5glNlcuULa6vYn66gAWbQ==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.10.2
