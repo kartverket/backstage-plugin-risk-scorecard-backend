@@ -132,6 +132,7 @@ data class RiSc5XScenarioActionChange(
         @Serializable(KNullableOffsetDateTimeSerializer::class)
         OffsetDateTime?,
     >? = null,
+    val lastUpdatedBy: SimpleTrackedProperty<String?>? = null,
 )
 
 /***************

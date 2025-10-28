@@ -1,5 +1,8 @@
 # Schema changelog
 
+## 5.1
+- Adds lastUpdatedBy field in actions
+
 ## 5.0
 - Changes status field in actions to 'OK', 'Not OK' and 'Not relevant'. 
 - The following mapping is applied from previous status values to new status values:
