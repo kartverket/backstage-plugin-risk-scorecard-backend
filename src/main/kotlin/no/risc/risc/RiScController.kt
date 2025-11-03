@@ -103,7 +103,7 @@ class RiScController(
                             gitHubAccessToken = gitHubAccessToken,
                         ).defaultBranch,
                 generateDefault = generateDefault,
-                defaultRiScTypes = newRiSc.defaultRiScTypes,
+                defaultRiScId = newRiSc.defaultRiScId,
             )
         if (createRiscResultDTO.riScContent != null) {
             riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
