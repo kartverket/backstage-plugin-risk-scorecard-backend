@@ -5,7 +5,6 @@ import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
 import no.risc.initRiSc.model.GenerateRiScRequestBody
 import no.risc.initRiSc.model.RiScTypeDescriptor
-import no.risc.risc.models.DefaultRiScType
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import org.springframework.stereotype.Component
@@ -29,12 +28,12 @@ class InitRiScServiceIntegration(
      */
     suspend fun generateDefaultRiSc(
         initialRiSc: String,
-        defaultRiScTypes: List<DefaultRiScType>,
+        defaultRiScId: String,
     ): String =
         initRiScServiceConnector.webClient
             .post()
             .uri("/generate")
-            .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc, defaultRiScTypes)))
+            .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc, defaultRiScId)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(
             "Failed to generate default RiSc",
