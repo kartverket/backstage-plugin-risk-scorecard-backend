@@ -11,5 +11,6 @@ data class RiScTypeDescriptor(
     val defaultScope: String,
     val numberOfScenarios: Int?,
     val numberOfActions: Int?,
-    val preferredEntityType: String?,
+    val preferredBackstageComponentType: String?,
+    val priorityIndex: Int?,
 )
