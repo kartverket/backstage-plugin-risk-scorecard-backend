@@ -22,9 +22,7 @@ class InitRiScServiceIntegration(
      * @param initialRiSc A JSON serialized RiSc to base the default RiSc on. Must include the `title` and `scope`
      *                    fields. These are the only fields used from `initialRiSc`.
      *
-     * @param defaultRiScTypes A list of predefined default RiSc types to generate the RiSc from. Currently, only a
-     *                         single default RiSc is supported. Therefore, the first RiSc from the defaultRiScTypes
-     *                         list is selected for the RiSc generation.
+     * @param defaultRiScId ID of default RiSc to generate the RiSc from.
      */
     suspend fun generateDefaultRiSc(
         initialRiSc: String,

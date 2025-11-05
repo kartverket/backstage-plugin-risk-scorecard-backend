@@ -2,13 +2,6 @@ package no.risc.risc.models
 
 import kotlinx.serialization.Serializable
 
-enum class DefaultRiScType {
-    Ops,
-    InternalJob,
-    Standard,
-    Begrenset,
-}
-
 @Serializable
 data class NewRiScRequestBody(
     val riSc: String,
