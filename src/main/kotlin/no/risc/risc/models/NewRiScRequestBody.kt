@@ -6,6 +6,7 @@ enum class DefaultRiScType {
     Ops,
     InternalJob,
     Standard,
+    Begrenset,
 }
 
 @Serializable

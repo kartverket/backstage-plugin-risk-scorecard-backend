@@ -1,9 +1,9 @@
 plugins {
-    val kotlinPluginsVersion = "2.2.20"
+    val kotlinPluginsVersion = "2.2.21"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "3.5.6"
+    id("org.springframework.boot") version "3.5.7"
     id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
 }
 
@@ -29,17 +29,17 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.2.20"
+val kotlinVersion = "2.2.21"
 val springBootVersion = "3.5.6"
-val springSecurityVersion = "6.5.5"
+val springSecurityVersion = "6.5.6"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.15.4"
+val micrometerVersion = "1.15.5"
 val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
-val mockkVersion = "1.14.5"
-val junitVersion = "5.13.4"
+val mockkVersion = "1.14.6"
+val junitVersion = "6.0.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -80,10 +80,10 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.19.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.2.6.Final") {
+        implementation("io.netty:netty-codec-http2:4.2.7.Final") {
             because("Force specific version for transitive dependency")
         }
-        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.11") {
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.13") {
             because("Force secure version to fix vulnerability in version 10.1.43")
         }
     }
