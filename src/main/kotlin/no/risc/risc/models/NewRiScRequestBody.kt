@@ -9,7 +9,7 @@ data class NewRiScRequestBody(
     val schemaVersion: String,
     val userInfo: UserInfo,
     val sopsConfig: SopsConfig,
-    val defaultRiScId: String,
+    val defaultRiScId: String?,
 ) {
     fun toRiScWrapperObject(): RiScWrapperObject =
         RiScWrapperObject(

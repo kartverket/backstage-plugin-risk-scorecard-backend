@@ -374,20 +374,26 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
         generateDefault: Boolean,
-        defaultRiScId: String,
+        defaultRiScId: String?,
     ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
         LOGGER.info("Generating default content")
-        val riScContentWrapperObject =
-            content.copy(
-                riSc =
-                    if (generateDefault) {
-                        initRiScService.generateDefaultRiSc(content.riSc, defaultRiScId)
-                    } else {
-                        content.riSc
-                    },
+
+        if (generateDefault && defaultRiScId == null) {
+            throw CreatingRiScException(
+                message = "Cannot create a default RiSc because a default RiSc ID was not specified.",
+                riScId = uniqueRiScId,
             )
+        }
+
+        var riScContent = content.riSc
+        if (generateDefault && defaultRiScId != null) {
+            riScContent = initRiScService.generateDefaultRiSc(content.riSc, defaultRiScId)
+        }
+        val riScContentWrapperObject = content.copy(riSc = riScContent)
+
         LOGGER.info("Generated default content")
+
         try {
             val result =
                 updateOrCreateRiSc(
