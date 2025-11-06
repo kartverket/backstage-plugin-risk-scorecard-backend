@@ -3,6 +3,7 @@
 package no.risc.github
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -234,11 +235,16 @@ class GithubHelper(
      * retrieved for the entire git history, unless a specific start date-time is given. If a RiSc ID is given, only
      * commits that change the content file for that RiSc are retrieved.
      *
+     * Note: GitHub RESP API defaults to `per_page=30`if perPage is not provided. To retrieve more results you must
+     * either pass `per_page`(e.g 100) or iterate pages via `page`until fewer results are returned.
+     *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to retrieve commits from.
      * @param riScId The RiSc to retrieve commits for. Only applicable if given (`!= null`)
      * @param branch The branch to retrieve commits on. If not given (`!= null`), the default branch is used.
      * @param since The date-time to retrieve commits since.
+     * @param perPage The number of commits to retrieve per page.
+     * @param page The page number to retrieve.
      *
      * @see <a href="https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#list-commits">List commits
      *      API documentation</a>
@@ -249,16 +255,18 @@ class GithubHelper(
         riScId: String? = null,
         branch: String? = null,
         since: OffsetDateTime? = null,
-    ): String =
-        if (branch == null && riScId == null && since == null) {
-            "/$owner/$repository/commits"
-        } else {
-            "/$owner/$repository/commits?${
-                branch?.let { "sha=$branch&" } ?: ""
-            }${
-                since?.let { "since=$since&" } ?: ""
-            }${
-                riScId?.let { "path=${riscPath(riScId)}" } ?: ""
-            }"
-        }
+        perPage: Int? = null,
+        page: Int? = null,
+    ): String {
+        val base = "/$owner/$repository/commits"
+        val queryParts = mutableListOf<String>()
+
+        branch?.let { queryParts +=("sha=$it") }
+        since?.let { queryParts += "since=$it" }
+        riScId?.let { queryParts += "path=${riscPath(it)}" }
+        perPage?.let { queryParts += "per_page=$it" }
+        page?.let { queryParts += "page=$it" }
+
+        return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
+    }
 }

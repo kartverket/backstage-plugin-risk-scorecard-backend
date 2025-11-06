@@ -50,6 +50,7 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.time.OffsetDateTime
+import kotlin.compareTo
 
 @Component
 class GithubConnector(
@@ -308,8 +309,53 @@ class GithubConnector(
         }
 
     /**
+     * Fetches commits from the GitHub commits endpoint in pages and returns the combined result.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to check.
+     * @param accessToken The GitHub access token to use for authorization.
+     * @param since Optional - OffsetDateTime - to fetch commits since that timestamp.
+    */
+    private suspend fun fetchPagedCommits(
+        owner: String,
+        repository: String,
+        accessToken: String,
+        since: OffsetDateTime? = null,
+    ): List<GithubCommitObject> {
+        val commits = mutableListOf<GithubCommitObject>()
+        var page = 1
+        val pageSize = 100
+
+        while (true) {
+            val pageCommits =
+                getGithubResponse(
+                    githubHelper.uriToFetchCommits(
+                        owner = owner,
+                        repository = repository,
+                        since = since,
+                        perPage = pageSize,
+                        page = page,
+                    ),
+                    accessToken,
+                ).awaitBody<List<GithubCommitObject>>()
+
+            if (pageCommits.isEmpty()) break
+            commits += pageCommits
+            if (pageCommits.size < pageSize) break
+            page++
+        }
+        return commits
+    }
+
+    /**
      * Determines when the newest version of the RiSc was published and how many commits have since been made to the
      * default branch of the given repository.
+     *
+     * Behaviour notes:
+     * - The implementation should explicitly request the most recent commit (e.g. `perPage = 1`) to obtain the
+     *   last published timestamp.
+     * - Counting commits since that timestamp must handle pagination (e.g. loop pages with `per_page = 100`) because a
+     *   single GitHub request without `per_page` may be capped at 30 results.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to use.
@@ -329,23 +375,15 @@ class GithubConnector(
                         owner = owner,
                         repository = repository,
                         riScId = riScId,
+                        perPage = 1,
                     ),
                     accessToken,
                 ).awaitBody<List<GithubCommitObject>>().first().commit.committer.date
 
-            val commits =
-                getGithubResponse(
-                    githubHelper.uriToFetchCommits(
-                        owner = owner,
-                        repository = repository,
-                        since = lastPublishedDate,
-                    ),
-                    accessToken,
-                ).awaitBody<List<GithubCommitObject>>()
-
+            val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
             LastPublished(
                 dateTime = lastPublishedDate,
-                numberOfCommits = commits.count { lastPublishedDate.isBefore(it.commit.committer.date) },
+                numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
             )
         }
 
