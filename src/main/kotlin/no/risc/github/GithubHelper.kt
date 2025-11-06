@@ -3,7 +3,6 @@
 package no.risc.github
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -236,9 +235,9 @@ class GithubHelper(
      * commits that change the content file for that RiSc are retrieved.
      *
      * Note: GitHub RESP API defaults to `per_page=30`if perPage is not provided. To retrieve more results you must
-     * either pass `per_page`(e.g 100) or iterate pages via `page`until fewer results are returned.
+     * either pass `per_page`(e.g., 100) or iterate pages via `page`until fewer results are returned.
      *
-     * @param owner The user/organisation the repository belongs to.
+     * @param owner The user/organization the repository belongs to.
      * @param repository The repository to retrieve commits from.
      * @param riScId The RiSc to retrieve commits for. Only applicable if given (`!= null`)
      * @param branch The branch to retrieve commits on. If not given (`!= null`), the default branch is used.
