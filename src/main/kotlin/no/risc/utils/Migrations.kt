@@ -606,7 +606,12 @@ fun updateScenarioFrom50To51(
     return migratedScenario
 }
 
-// TODO: write docs
+/**
+ *  Migrate RiSc with changes from 5.0 to 5.1
+ *
+ * Add lastUpdatedBy field to action to keep track who the action was last updated by.
+ * The field is initially set to empty
+ * */
 fun migrateFrom50To51(
     riSc: RiSc5X,
     migrationStatus: MigrationStatus,
