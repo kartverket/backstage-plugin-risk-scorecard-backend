@@ -260,7 +260,7 @@ class GithubHelper(
         val base = "/$owner/$repository/commits"
         val queryParts = mutableListOf<String>()
 
-        branch?.let { queryParts +=("sha=$it") }
+        branch?.let { queryParts += ("sha=$it") }
         since?.let { queryParts += "since=$it" }
         riScId?.let { queryParts += "path=${riscPath(it)}" }
         perPage?.let { queryParts += "per_page=$it" }

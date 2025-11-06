@@ -315,7 +315,7 @@ class GithubConnector(
      * @param repository The repository to check.
      * @param accessToken The GitHub access token to use for authorization.
      * @param since Optional - OffsetDateTime - to fetch commits since that timestamp.
-    */
+     **/
     private suspend fun fetchPagedCommits(
         owner: String,
         repository: String,
