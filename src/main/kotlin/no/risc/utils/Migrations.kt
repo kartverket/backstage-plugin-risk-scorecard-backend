@@ -590,7 +590,7 @@ fun updateScenarioFrom50To51(
         scenario.copy(
             actions =
                 scenario.actions.map { action ->
-                    action.copy(lastUpdatedBy = "") // TODO: Other default value?
+                    action.copy(lastUpdatedBy = "")
                 },
         )
 
@@ -627,8 +627,8 @@ fun migrateFrom50To51(
                 },
         ),
         migrationStatus.copy(
-            migrationChanges = true, // TODO: perhaps remove? (in the end)
-            migrationRequiresNewApproval = true, // TODO: perhaps remove? (in the end)
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
             migrationChanges51 = if (changedScenarios.isNotEmpty()) MigrationChange51(scenarios = changedScenarios) else null,
         ),
     )
