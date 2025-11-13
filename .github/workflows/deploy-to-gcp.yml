@@ -52,7 +52,7 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-      #test
+
       - name: Deploy to Cloud Run
         if: github.ref != 'refs/heads/main'
         run: |
