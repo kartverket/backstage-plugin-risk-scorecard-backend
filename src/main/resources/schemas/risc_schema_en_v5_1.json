@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v5_1.json",
+  "title": "Risk Scorecard (RiSc)",
+  "description": "Schema for risk scorecard",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "description": "Schema version",
+      "type": "string",
+      "default": "'5.1'"
+    },
+    "title": {
+      "description": "Title of the risk scorecard",
+      "type": "string"
+    },
+    "scope": {
+      "description": "The scope of the score card",
+      "type": "string"
+    },
+    "valuations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "confidentiality": {
+            "type": "string",
+            "enum": [
+              "Public",
+              "Internal",
+              "Confidential",
+              "Strictly confidential"
+            ]
+          },
+          "integrity": {
+            "type": "string",
+            "enum": [
+              "Insignificant",
+              "Expected",
+              "Dependent",
+              "Critical"
+            ]
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "Insignificant",
+              "2 days",
+              "4 hours",
+              "Immediate"
+            ]
+          }
+        },
+        "required": [
+          "description",
+          "confidentiality",
+          "integrity",
+          "availability"
+        ],
+        "additionalProperties": false
+      },
+      "uniqueItems": true
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/$defs/scenario"
+          }
+        },
+        "required": [
+          "title",
+          "scenario"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "sops": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "title",
+    "scope",
+    "scenarios"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "risk": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "probability": {
+          "description": "Number of events/day",
+          "type": "number",
+          "anyOf": [
+            {
+              "type": "number",
+              "enum": [0.0025, 0.05, 1, 20, 400]
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        },
+        "consequence": {
+          "description": "Monetary amount per day",
+          "type": "number",
+          "anyOf": [
+            {
+              "type": "number",
+              "enum": [8000, 160000, 3200000, 64000000, 1280000000]
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ]
+        }
+      },
+      "required": [
+        "probability",
+        "consequence"
+      ],
+      "additionalProperties": false
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^(?:(https?|s?ftp):\\/\\/)?(?:([\\w-]+)\\.)?([\\w-]+)\\.([\\w]+)\\/?(?:([^?#$]+))?(?:\\?([^#$]+))?(?:#(.*))?$"
+    },
+    "scenario": {
+      "type": "object",
+      "properties": {
+        "ID": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9]{5,}$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/url"
+        },
+        "threatActors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Script kiddie",
+              "Hacktivist",
+              "Reckless employee",
+              "Insider",
+              "Organised crime",
+              "Terrorist organisation",
+              "Nation/government"
+            ]
+          }
+        },
+        "vulnerabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Flawed design",
+              "Misconfiguration",
+              "Dependency vulnerability",
+              "Unauthorized access",
+              "Unmonitored use",
+              "Input tampering",
+              "Information leak",
+              "Excessive use"
+            ]
+          }
+        },
+        "risk": {
+          "$ref": "#/$defs/risk"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "action": {
+                "$ref": "#/$defs/action"
+              }
+            },
+            "required": [
+              "title",
+              "action"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "remainingRisk": {
+          "$ref": "#/$defs/risk"
+        }
+      },
+      "required": [
+        "ID",
+        "description",
+        "threatActors",
+        "vulnerabilities",
+        "risk",
+        "actions",
+        "remainingRisk"
+      ],
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "ID": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9]{5,}$"
+        },
+        "description": {
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {"$ref": "#/$defs/url"},
+            {
+              "type": "string",
+              "maxLength": 0
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "Not OK",
+            "Not relevant"
+          ]
+        },
+        "lastUpdated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastUpdatedBy": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ID",
+        "description",
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
