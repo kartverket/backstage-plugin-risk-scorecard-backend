@@ -56,7 +56,7 @@ jobs:
       - name: Deploy to Cloud Run
         if: github.ref != 'refs/heads/main'
         run: |
-          gcloud run deploy risc-scorecard-backend \
+          gcloud run deploy risc-backend \
             --image="${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
             --region=europe-north1 \
             --platform=managed \
