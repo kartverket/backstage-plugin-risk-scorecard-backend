@@ -7,7 +7,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
-import no.risc.risc.models.DefaultRiScType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -32,7 +31,7 @@ class InitRiScServiceIntegrationTests {
 
         assertThrows<SopsConfigGenerateFetchException> {
             runBlocking {
-                initRiScServiceIntegration.generateDefaultRiSc("", listOf(DefaultRiScType.Standard))
+                initRiScServiceIntegration.generateDefaultRiSc("", "id1")
             }
         }
     }
@@ -56,7 +55,7 @@ class InitRiScServiceIntegrationTests {
             runBlocking {
                 initRiScServiceIntegration.generateDefaultRiSc(
                     """{ "title": "title", "scope": "scope"}""",
-                    listOf(DefaultRiScType.Standard),
+                    "id1",
                 )
             }
 
