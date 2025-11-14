@@ -28,6 +28,9 @@ import no.risc.utils.comparison.MigrationChange42Scenario
 import no.risc.utils.comparison.MigrationChange50
 import no.risc.utils.comparison.MigrationChange50Action
 import no.risc.utils.comparison.MigrationChange50Scenario
+import no.risc.utils.comparison.MigrationChange51
+import no.risc.utils.comparison.MigrationChange51Action
+import no.risc.utils.comparison.MigrationChange51Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -158,6 +161,9 @@ private fun handleMigrate(
 
             riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_2 ->
                 migrateFrom42To50(riSc, migrationStatus)
+
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_0 ->
+                migrateFrom50To51(riSc, migrationStatus)
 
             else -> throw IllegalStateException("Unsupported migration")
         }
@@ -572,6 +578,58 @@ fun migrateFrom42To50(
             migrationRequiresNewApproval = true,
             migrationChanges50 =
                 if (changedScenarios.isNotEmpty()) MigrationChange50(scenarios = changedScenarios) else null,
+        ),
+    )
+}
+
+fun updateScenarioFrom50To51(
+    scenario: RiSc5XScenario,
+    addChanges: (MigrationChange51Scenario) -> Unit,
+): RiSc5XScenario {
+    val migratedScenario =
+        scenario.copy(
+            actions =
+                scenario.actions.map { action ->
+                    action.copy(lastUpdatedBy = "")
+                },
+        )
+
+    val changes =
+        MigrationChange51Scenario(
+            title = migratedScenario.title,
+            id = migratedScenario.id,
+            changedActions = migratedScenario.actions.map { MigrationChange51Action(it.title, it.id, it.lastUpdatedBy) },
+        )
+
+    if (changes.hasChanges()) addChanges(changes)
+
+    return migratedScenario
+}
+
+/**
+ *  Migrate RiSc with changes from 5.0 to 5.1
+ *
+ * Add lastUpdatedBy field to action to keep track who the action was last updated by.
+ * The field is initially set to empty
+ * */
+fun migrateFrom50To51(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange51Scenario>()
+
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_1,
+            scenarios =
+                riSc.scenarios.map { scenario ->
+                    updateScenarioFrom50To51(scenario, changedScenarios::add)
+                },
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges51 = if (changedScenarios.isNotEmpty()) MigrationChange51(scenarios = changedScenarios) else null,
         ),
     )
 }

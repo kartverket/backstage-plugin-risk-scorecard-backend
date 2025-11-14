@@ -101,6 +101,28 @@ data class MigrationChange50Action(
     val changedActionStatus: MigrationChangedTypedValue<RiSc3X4XScenarioActionStatus, RiScScenarioActionStatus>,
 )
 
+// Changes for the migration from version 5.0 to 5.1
+@Serializable
+data class MigrationChange51(
+    val scenarios: List<MigrationChange51Scenario>,
+)
+
+@Serializable
+data class MigrationChange51Scenario(
+    val title: String,
+    val id: String,
+    val changedActions: List<MigrationChange51Action>,
+) {
+    fun hasChanges() = changedActions.isNotEmpty()
+}
+
+@Serializable
+data class MigrationChange51Action(
+    val title: String,
+    val id: String,
+    val lastUpdatedBy: String? = null,
+)
+
 // General change object
 @Serializable
 data class MigrationChangedValue<T>(
