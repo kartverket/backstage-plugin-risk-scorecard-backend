@@ -2,6 +2,13 @@ package no.risc.risc.models
 
 import kotlinx.serialization.Serializable
 
+enum class DefaultRiScType {
+    Ops,
+    InternalJob,
+    Standard,
+    Begrenset,
+}
+
 @Serializable
 data class NewRiScRequestBody(
     val riSc: String,
@@ -9,7 +16,7 @@ data class NewRiScRequestBody(
     val schemaVersion: String,
     val userInfo: UserInfo,
     val sopsConfig: SopsConfig,
-    val defaultRiScId: String?,
+    val defaultRiScTypes: List<DefaultRiScType> = listOf(DefaultRiScType.Standard),
 ) {
     fun toRiScWrapperObject(): RiScWrapperObject =
         RiScWrapperObject(
