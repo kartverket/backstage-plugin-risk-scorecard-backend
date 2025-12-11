@@ -2,11 +2,9 @@
 
 This guide explains how to manually create RiSc (Risk Scorecard) files in GitHub without using the UI.
 
-> 🚀 **Want a quick reference?** See [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) for a one-page summary.
-
 ## Overview
 
-While the recommended way to create RiSc files is through the Backstage UI, you can also create them manually by directly adding files to your GitHub repository. However, you **must follow specific naming conventions** for the system to recognize your RiSc files.
+While the recommended way to create RiSc files is through the Risc scorecard plugin in kartverket.dev, you can also create them manually by directly adding files to your GitHub repository. However, you **must follow specific naming conventions** for the system to recognize your RiSc files.
 
 ## Naming Convention Requirements
 
@@ -26,8 +24,7 @@ risc-abc12
 Where:
 - `<prefix>` is configured in your environment (typically `risc`)
 - `<identifier>` is a unique 5-character alphanumeric string (e.g., `abc12`, `xyz99`, `a1b2c`)
-
-> 💡 **Note:** The prefix is used for optimization. While the system can technically work with any branch name, using the standard prefix significantly improves performance by reducing GitHub API calls.
+- `<identifier>` can also be a suited name for your risc scorecard.
 
 ### 2. File Path
 
@@ -89,18 +86,8 @@ touch .security/riscs/risc-abc12.risc.yaml
 
 ### 4. Add RiSc Content
 
-Edit the file and add your RiSc content following the JSON schema. Here's a minimal example:
-
-```yaml
-schemaVersion: "5.0"
-title: "My Risk Analysis"
-description: "Description of the risk analysis"
-objectType: "system"
-participants:
-  riskOwner: "owner@example.com"
-  responsibleManager: "manager@example.com"
-# ... additional required fields based on schema version
-```
+Edit the file and add your RiSc content. If you want your RiSc content to contain the same scenarios and actions as an existing RiSc,
+you can copy the content from the existing file.
 
 ### 5. Commit and Push
 
@@ -117,7 +104,7 @@ git push origin risc-abc12
 
 ### 6. Verify in Backstage
 
-The RiSc should now appear in the Backstage UI as a draft. You can:
+The RiSc should now appear in the Risc scorecard plugin. You can:
 - View and edit it through the UI
 - Create a pull request to publish it
 - Continue editing manually if needed
@@ -152,11 +139,11 @@ riscs/risc-abc12.risc.yaml              ❌ WRONG (missing .security/)
 ### ❌ Missing Prefix in Branch Name
 
 ```
-Branch: abc12                           ⚠️ WORKS but not recommended
-File:   .security/riscs/abc12.risc.yaml ⚠️ WORKS but not recommended
+Branch: abc12                           ❌ WRONG (missing prefix)
+File:   .security/riscs/abc12.risc.yaml ❌ WORKS (missing prefix)
 ```
 
-While technically possible, omitting the prefix causes performance issues. Always use the prefix.
+Always use the prefix.
 
 ## Configuration Reference
 
@@ -168,13 +155,11 @@ The naming convention is controlled by environment variables:
 | `FILENAME_POSTFIX` | `risc` | Postfix before the .yaml extension |
 | `RISC_FOLDER_PATH` | `.security/riscs` | Folder where RiSc files are stored |
 
-If your deployment uses different values, adjust the examples accordingly.
-
 ## Troubleshooting
 
 ### RiSc Not Showing in UI
 
-If your manually created RiSc doesn't appear in Backstage:
+If your manually created RiSc doesn't appear in the RoS UI:
 
 1. **Check branch name format**: Ensure it follows `<prefix>-<identifier>` (e.g., `risc-abc12`)
 2. **Verify file path**: Must be `<folder>/<branch-name>.<postfix>.yaml`
@@ -182,28 +167,7 @@ If your manually created RiSc doesn't appear in Backstage:
 4. **Wait for sync**: The system may take a moment to detect the new branch
 5. **Check logs**: Review backend logs for any errors
 
-### Schema Validation Errors
-
-If the RiSc is detected but shows validation errors:
-
-1. Ensure `schemaVersion` field is present and valid (e.g., `"5.0"`)
-2. Verify all required fields are included
-3. Check field types match the schema (strings, numbers, arrays, etc.)
-4. Refer to the schema documentation for your version
-
 ## Need Help?
 
 - Check the [main README](README.md) for more information
-- Review [schema changelog](docs/schemaChangelog.md) for schema version details
-- Contact your team's Backstage administrator
-
-## Recommended Approach
-
-**For best results, use the Backstage UI** to create RiSc files. Manual creation should only be used when:
-- You need to batch-create multiple RiSc files
-- You're migrating existing risk analyses
-- You're automating RiSc creation through scripts
-- The UI is temporarily unavailable
-
-The UI handles all naming conventions automatically and provides helpful validation feedback.
-
+- Contact the RoS team.
