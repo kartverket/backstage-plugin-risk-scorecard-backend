@@ -50,7 +50,6 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.time.OffsetDateTime
-import kotlin.compareTo
 
 @Component
 class GithubConnector(
