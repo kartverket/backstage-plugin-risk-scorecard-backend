@@ -219,6 +219,14 @@ class GithubConnector(
 
         if (fetchedContent.status != GithubStatus.NotFound) return fetchedContent
 
+        // Log helpful information for manually created RiSc files
+        LOGGER.warn(
+            "RiSc file not found for branch '${id.id}'. " +
+                "Expected file path: '${githubHelper.riscPath(id.id)}'. " +
+                "If manually creating RiSc files, ensure branch name matches file name exactly. " +
+                "See docs/MANUAL_RISC_CREATION.md for naming conventions.",
+        )
+
         // Handle deleted RiSc
         val publishedVersion = fetchPublishedRiSc(owner, repository, id.id, accessToken)
 
@@ -289,6 +297,14 @@ class GithubConnector(
      * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
      * default branch. These are all RiScs that have a separate branch connect to them.
      *
+     * This method uses GitHub's prefix filtering API to efficiently fetch only branches that start with
+     * the configured prefix (e.g., "risc-"). This is a performance optimization that reduces API calls.
+     *
+     * **Important for manual RiSc creation:**
+     * Branch names MUST follow the pattern: `<prefix>-<5-char-id>` (e.g., `risc-abc12`)
+     * If you manually create RiSc branches without the prefix, they will not be detected by this system.
+     * See docs/MANUAL_RISC_CREATION.md for complete naming conventions.
+     *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to check.
      * @param accessToken The GitHub access token to use for authorization.
@@ -299,13 +315,24 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
-            getGithubResponse(
-                // This URI retrieves only branches that start with "<filenamePrefix>-"
-                uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
-                accessToken = accessToken,
-            ).awaitBody<List<GithubReferenceObjectDTO>>()
-                // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
-                .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
+            val identifiers =
+                getGithubResponse(
+                    // This URI retrieves only branches that start with "<filenamePrefix>-"
+                    uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
+                    accessToken = accessToken,
+                ).awaitBody<List<GithubReferenceObjectDTO>>()
+                    // Want only the part after the last "/" in the branch path, ignoring "refs/heads/", etc.
+                    .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
+
+            if (identifiers.isEmpty()) {
+                LOGGER.info(
+                    "No draft RiSc branches found in $owner/$repository. " +
+                        "Branches must be named '<prefix>-<id>' (e.g., '$filenamePrefix-abc12'). " +
+                        "If you manually created RiSc files, ensure branch names follow this convention.",
+                )
+            }
+
+            identifiers
         }
 
     /**

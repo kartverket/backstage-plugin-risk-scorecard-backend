@@ -84,6 +84,8 @@ For local development the **ISSUER_URI** can be set to "http://localhost:7007/ap
 Because RoS-as-Code is based on using Github for storage, we need to set som rules on how things are to be named.
 This is to be able to determine the states of the RiSc analyses and to be able to detect the changes that are being made.
 
+> 📖 **Creating RiSc files manually?** See the detailed guide: [Manual RiSc Creation Guide](MANUAL_RISC_CREATION.md)
+
 <br>
 
 ## RiSc file names
