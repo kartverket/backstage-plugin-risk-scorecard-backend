@@ -9,12 +9,11 @@ on:
 
 env:
   IMAGE_NAME: ${{ github.repository }}
-  PROJECT_ID: 'spire-ros-5lmr'
-  AR_REPO_LOCATION: 'europe-north1'
-  AR_URL: 'europe-north1-docker.pkg.dev/spire-ros-5lmr/risc-plugin'
-  SERVICE_ACCOUNT: 'risc-plugin-github-actions@spire-ros-5lmr.iam.gserviceaccount.com'
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/457384642040/locations/global/workloadIdentityPools/github-actions-pool/providers/github'
-
+  PROJECT_ID: "spire-ros-5lmr"
+  AR_REPO_LOCATION: "europe-north1"
+  AR_URL: "europe-north1-docker.pkg.dev/spire-ros-5lmr/risc-plugin"
+  SERVICE_ACCOUNT: "risc-plugin-github-actions@spire-ros-5lmr.iam.gserviceaccount.com"
+  WORKLOAD_IDENTITY_PROVIDER: "projects/457384642040/locations/global/workloadIdentityPools/github-actions-pool/providers/github"
 
 defaults:
   run:
@@ -22,18 +21,18 @@ defaults:
 
 jobs:
   push_to_ar:
-    name: 'Docker build and push to GCP'
+    name: "Docker build and push to GCP"
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: "read"
+      id-token: "write"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - id: auth
-        name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v2'
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
         with:
           service_account: ${{ env.SERVICE_ACCOUNT }}
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
@@ -49,7 +48,26 @@ jobs:
           docker build -t "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" .
 
       - name: Push the Docker image to Google Artifact Registry
+        if: github.ref == 'refs/heads/main'
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          fi
+          docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+      - name: Deploy to Cloud Run
+        if: github.ref == 'refs/heads/main'
+        run: |
+          gcloud run deploy risc-backend \
+            --image="${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+            --region=europe-north1 \
+            --platform=managed \
+            --update-env-vars=RISC_FOLDER_PATH=.security/risc \
+            --update-env-vars=ISSUER_URI=https://risc-457384642040.europe-north1.run.app/api/auth \
+            --update-env-vars=FILENAME_PREFIX=risc \
+            --update-env-vars=FILENAME_POSTFIX=risc \
+            --update-env-vars=CRYPTO_SERVICE_URL=https://risc-crypto-457384642040.europe-north1.run.app \
+            --update-env-vars=INIT_RISC_URL=https://initialize-risc-api-457384642040.europe-north1.run.app \
+            --update-env-vars=ADDITIONAL_ALLOWED_GCP_KEY_NAMES=spire-ros-5lmr \
+            --update-secrets=SLACK_FEEDBACK_WEBHOOK_URL=slack-feedback-webhook-url:latest \
+            --update-secrets=BACKEND_PUBLIC_KEY=backend-public-key:latest \
+            --update-secrets=GITHUB_APP_INSTALLATION_ID=github-app-installation-id:latest \
+            --update-secrets=GITHUB_APP_PRIVATE_KEY=github-app-private-key-base64:latest \
+            --update-secrets=GITHUB_APP_ID=github-app-id:latest
