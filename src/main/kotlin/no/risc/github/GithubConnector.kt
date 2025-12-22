@@ -210,35 +210,28 @@ class GithubConnector(
         id: String,
         accessToken: String,
     ): GithubContentResponse {
-        // Try with prefix first
-        val prefixedResponse =
-            fetchRiScContent(
-                uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
+        val paths = getRiScFilePaths(id)
+
+        val prefixedResponse = fetchRiScContent(
+            uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = paths.prefixedPath),
+            accessToken = accessToken,
+        )
+
+        if (prefixedResponse.status == GithubStatus.Success) return prefixedResponse
+
+        paths.unprefixedPath?.let { unprefixedPath ->
+            val unprefixedResponse = fetchRiScContent(
+                uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = unprefixedPath),
                 accessToken = accessToken,
             )
 
-        // If found, return it
-        if (prefixedResponse.status == GithubStatus.Success) {
-            return prefixedResponse
-        }
-
-        // If not found and we have a prefix configured, try without prefix
-        if (filenamePrefix.isNotBlank() && prefixedResponse.status == GithubStatus.NotFound) {
-            val filenameNoPrefix = "$id.$filenamePostfix.yaml"
-            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filenameNoPrefix"
-            val unprefixedResponse =
-                fetchRiScContent(
-                    uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
-                    accessToken = accessToken,
-                )
-
             if (unprefixedResponse.status == GithubStatus.Success) {
+                LOGGER.info("Found RiSc file without prefix at $unprefixedPath. for id $id")
                 return unprefixedResponse
             }
         }
-
-        // Return the original response (likely NotFound or error)
         return prefixedResponse
+
     }
 
     /**
@@ -461,16 +454,16 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         riScId: String,
-    ): LastPublished? {
-        // Try with prefixed path first
-        val prefixedResult =
+    ): LastPublished? = tryWithAndWithoutPrefix(
+        riScId = riScId,
+        prefixedOperation = { id ->
             tryOrNull {
                 val lastPublishedDate =
                     getGithubResponse(
                         githubHelper.uriToFetchCommits(
                             owner = owner,
                             repository = repository,
-                            riScId = riScId,
+                            riScId = id,
                             perPage = 1,
                         ),
                         accessToken,
@@ -480,21 +473,16 @@ class GithubConnector(
                     val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
                     LastPublished(
                         dateTime = lastPublishedDate,
-                        numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
+                        numberOfCommits = commitsSince.count { it.commit.committer. date > lastPublishedDate },
                     )
                 } else {
                     null
                 }
             }
-
-        if (prefixedResult != null) {
-            return prefixedResult
-        }
-
-        // If not found and we have a prefix configured, try with non-prefixed path
-        if (filenamePrefix.isNotBlank()) {
-            return tryOrNull {
-                val filename = "$riScId.$filenamePostfix.yaml"
+        },
+        unprefixedOperation = { id ->
+            tryOrNull {
+                val filename = "$id.$filenamePostfix. yaml"
                 val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
                 val lastPublishedDate =
                     getGithubResponse(
@@ -513,9 +501,7 @@ class GithubConnector(
                 }
             }
         }
-
-        return null
-    }
+    )
 
     /**
      * Updates the content of a RiSc or creates a new RiSc if no RiSc with the provided ID already exists in the given
@@ -593,15 +579,14 @@ class GithubConnector(
             latestShaForDraft?.let {
                 resolveRiScFilePathOnBranch(owner, repository, normalizedId, branchName, gitHubAccessToken)
             } ?: run {
-                val prefixPath = githubHelper.riscPath(normalizedId)
-                val filename = "$normalizedId.$filenamePostfix.yaml"
-                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                val paths = getRiScFilePaths(normalizedId)
 
-                listOf(prefixPath, pathNoPrefix)
-                    .firstOrNull { path ->
-                        fetchFileInfo(owner, repository, gitHubAccessToken, path, branchName) != null
+                paths.unprefixedPath?.let { unprefixed ->
+                    if (fetchFileInfo(owner, repository, gitHubAccessToken, unprefixed, branchName) != null) {
+                        return@run unprefixed
                     }
-                    ?: prefixPath
+                }
+                paths.prefixedPath
             }
 
         putFileRequestToGithub(
@@ -737,44 +722,37 @@ class GithubConnector(
     ): String? {
         val (_, branchName) = githubHelper.normalizeAndBranch(riScId)
 
-        // Try with prefix first
-        val prefixedSha =
-            tryOrNull {
-                getGithubResponse(
-                    uri =
-                        githubHelper.uriToFindRiScOnDraftBranch(
+        return tryWithAndWithoutPrefix(
+            riScId = riScId,
+            prefixedOperation = { id ->
+                tryOrNull {
+                    getGithubResponse(
+                        uri = githubHelper.uriToFindRiScOnDraftBranch(
                             owner = owner,
                             repository = repository,
-                            riScId = riScId,
+                            riScId = id,
                             branchName = branchName,
                         ),
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<GithubFileDTO>()?.sha
-            }
-
-        if (prefixedSha != null) {
-            return prefixedSha
-        }
-
-        // If not found and we have a prefix configured, try without prefix
-        if (filenamePrefix.isNotBlank()) {
-            val filename = "$riScId.$filenamePostfix.yaml"
-            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
-            return tryOrNull {
-                getGithubResponse(
-                    uri =
-                        githubHelper.repositoryContentsUri(
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<GithubFileDTO>()?.sha
+                }
+            },
+            unprefixedOperation = { id ->
+                tryOrNull {
+                    val filename = "$id.$filenamePostfix.yaml"
+                    val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                    getGithubResponse(
+                        uri = githubHelper.repositoryContentsUri(
                             owner = owner,
                             repository = repository,
                             path = pathNoPrefix,
                             branch = branchName,
                         ),
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<GithubFileDTO>()?.sha
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<GithubFileDTO>()?.sha
+                }
             }
-        }
-
-        return null
+        )
     }
 
     /**
@@ -790,34 +768,27 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ): String? {
-        // Try with prefix first
-        val prefixedSha =
+    ): String? = tryWithAndWithoutPrefix(
+        riScId = riScId,
+        prefixedOperation = { id ->
             tryOrNull {
                 getGithubResponse(
-                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
                     accessToken = accessToken,
                 ).awaitBodyOrNull<GithubFileDTO>()?.sha
             }
-
-        if (prefixedSha != null) {
-            return prefixedSha
-        }
-
-        // If not found and we have a prefix configured, try without prefix
-        if (filenamePrefix.isNotBlank()) {
-            val filename = "$riScId.$filenamePostfix.yaml"
-            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
-            return tryOrNull {
+        },
+        unprefixedOperation = { id ->
+            tryOrNull {
+                val filename = "$id.$filenamePostfix.yaml"
+                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
                 getGithubResponse(
                     uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
                     accessToken = accessToken,
                 ).awaitBodyOrNull<GithubFileDTO>()?.sha
             }
         }
-
-        return null
-    }
+    )
 
     /**
      * Determines if there exists a pull request for merging the draft branch of the given RiSc (`riScId`) into another
@@ -970,18 +941,17 @@ class GithubConnector(
         accessToken: String,
         riScId: String,
         branch: String,
-    ): OffsetDateTime? {
-        // Try with prefixed path first
-        val prefixedResult =
+    ): OffsetDateTime? = tryWithAndWithoutPrefix(
+        riScId = riScId,
+        prefixedOperation = { id ->
             tryOrNull {
                 getGithubResponse(
-                    uri =
-                        githubHelper.uriToFetchCommits(
-                            owner = owner,
-                            repository = repository,
-                            riScId = riScId,
-                            branch = branch,
-                        ),
+                    uri = githubHelper. uriToFetchCommits(
+                        owner = owner,
+                        repository = repository,
+                        riScId = id,
+                        branch = branch,
+                    ),
                     accessToken = accessToken,
                 ).awaitBodyOrNull<List<GithubCommitObject>>()
                     ?.firstOrNull()
@@ -989,15 +959,10 @@ class GithubConnector(
                     ?.committer
                     ?.date
             }
-
-        if (prefixedResult != null) {
-            return prefixedResult
-        }
-
-        // If not found and we have a prefix configured, try with non-prefixed path
-        if (filenamePrefix.isNotBlank()) {
-            return tryOrNull {
-                val filename = "$riScId.$filenamePostfix.yaml"
+        },
+        unprefixedOperation = { id ->
+            tryOrNull {
+                val filename = "$id.$filenamePostfix.yaml"
                 val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
                 getGithubResponse(
                     uri = "/$owner/$repository/commits?path=$pathNoPrefix&sha=$branch",
@@ -1009,9 +974,7 @@ class GithubConnector(
                     ?.date
             }
         }
-
-        return null
-    }
+    )
 
     /**
      * Creates a pull request for the changes to a RiSc with the given riScId. That is, a pull request is created from
@@ -1291,18 +1254,19 @@ class GithubConnector(
         branch: String,
         gitHubAccessToken: GithubAccessToken,
     ): String {
-        val prefixPath = githubHelper.riscPath(riScId)
-        if (fetchFileInfo(owner, repository, gitHubAccessToken, prefixPath, branch) != null) {
-            return prefixPath
+        val pathsToTry = getRiScFilePathsToTry(riScId)
+
+        for (path in pathsToTry) {
+            if (fetchFileInfo(owner, repository, gitHubAccessToken, path, branch) != null) {
+                return path
+            }
         }
 
-        val filenameNoPrefix = "$riScId.$filenamePostfix.yaml"
-        val pathNoPrefix = "${githubHelper.riScFolderPath}/$filenameNoPrefix"
-        if (fetchFileInfo(owner, repository, gitHubAccessToken, pathNoPrefix, branch) != null) {
-            return pathNoPrefix
-        }
-
-        return prefixPath
+        // If no file found, throw a descriptive error instead of returning a path that doesn't exist
+        throw DeletingRiScException(
+            riScId = riScId,
+            message = "RiSc file not found on branch '$branch'.  Tried paths: ${pathsToTry. joinToString(", ")}"
+        )
     }
 
     /**
@@ -1454,4 +1418,69 @@ class GithubConnector(
                 },
         )
     }
+    /**
+     * Attempts an operation with the prefixed file path first, then falls back to
+     * the non-prefixed path if the prefix is configured and the first attempt fails.
+     *
+     * @param riScId The RiSc identifier (may or may not include prefix)
+     * @param prefixedOperation The operation to attempt with the prefixed path
+     * @param unprefixedOperation The operation to attempt with the non-prefixed path
+     * @return The result of whichever operation succeeds, or null if both fail
+     */
+    private suspend fun <T> tryWithAndWithoutPrefix(
+        riScId: String,
+        prefixedOperation: suspend (String) -> T?,
+        unprefixedOperation: suspend (String) -> T?,
+    ): T? {
+        val prefixedResult = prefixedOperation(riScId)
+        if (prefixedResult != null) {
+            return prefixedResult
+        }
+        if (filenamePrefix.isNotBlank()) {
+            return unprefixedOperation(riScId)
+        }
+        return null
+    }
+
+    /**
+     * Data class representing possible file paths for a RiSc file.
+     * @param prefixedPath Path with the configured prefix (e.g., "risc/risc-abc12. risc. yaml")
+     * @param unprefixedPath Path without prefix (e.g., "risc/abc12.risc.yaml"), null if no prefix configured
+     */
+    private data class RiScFilePaths(
+        val prefixedPath: String,
+        val unprefixedPath: String?
+    )
+
+    /**
+     * Generates all possible file paths for a given RiSc ID.
+     * Returns paths in order of preference (prefixed first, then unprefixed).
+     *
+     * @param normalizedId The normalized RiSc identifier (without prefix)
+     * @return RiScFilePaths containing both possible paths
+     */
+    private fun getRiScFilePaths(normalizedId: String): RiScFilePaths {
+        val prefixedPath = githubHelper.riscPath(normalizedId)
+
+        val unprefixedPath = if (filenamePrefix.isNotBlank()) {
+            val filenameNoPrefix = "$normalizedId.$filenamePostfix. yaml"
+            "${githubHelper.riScFolderPath}/$filenameNoPrefix"
+        } else {
+            null
+        }
+
+        return RiScFilePaths(prefixedPath, unprefixedPath)
+    }
+
+    /**
+     * Returns a list of all possible file paths to try, in order of preference.
+     *
+     * @param normalizedId The normalized RiSc identifier (without prefix)
+     * @return List of paths to try (prefixed first, then unprefixed if configured)
+     */
+    private fun getRiScFilePathsToTry(normalizedId: String): List<String> {
+        val paths = getRiScFilePaths(normalizedId)
+        return listOfNotNull(paths.prefixedPath, paths.unprefixedPath)
+    }
+
 }
