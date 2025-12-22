@@ -970,7 +970,6 @@ class GithubConnector(
         accessToken: String,
         riScId: String,
         branch: String,
-
     ): OffsetDateTime? {
         // Try with prefixed path first
         val prefixedResult =
