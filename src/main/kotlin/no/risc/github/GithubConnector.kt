@@ -153,30 +153,51 @@ class GithubConnector(
         githubAccessToken: GithubAccessToken,
     ): RiScMainAndBranchContent =
         coroutineScope {
+            val (normalizedId, branchName) = githubHelper.normalizeAndBranch(riScId)
             val mainRiscContent =
                 async(Dispatchers.IO) {
-                    fetchRiScContent(
-                        uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                    fetchPublishedRiSc(
+                        owner = owner,
+                        repository = repository,
+                        id = normalizedId,
                         accessToken = githubAccessToken.value,
                     )
                 }
             val branchRiscContent =
                 async(Dispatchers.IO) {
-                    fetchRiScContent(
-                        uri =
-                            githubHelper.uriToFindRiScOnDraftBranch(
-                                owner = owner,
-                                repository = repository,
-                                riScId = riScId,
-                            ),
-                        accessToken = githubAccessToken.value,
-                    )
+                    val uriWithExpectedFilename =
+                        githubHelper.repositoryContentsUri(
+                            owner = owner,
+                            repository = repository,
+                            path = githubHelper.riscPath(normalizedId),
+                            branch = branchName,
+                        )
+                    val firstAttempt =
+                        fetchRiScContent(uri = uriWithExpectedFilename, accessToken = githubAccessToken.value)
+
+                    if (firstAttempt.status != GithubStatus.NotFound) {
+                        firstAttempt
+                    } else {
+                        val filenameNoPrefix = "$normalizedId.$filenamePostfix.yaml"
+                        val pathNoPrefix = "${githubHelper.riScFolderPath}/$filenameNoPrefix"
+                        val uriNoPrefix =
+                            githubHelper
+                                .repositoryContentsUri(
+                                    owner = owner,
+                                    repository = repository,
+                                    path = pathNoPrefix,
+                                    branch = branchName,
+                                )
+
+                        fetchRiScContent(uri = uriNoPrefix, accessToken = githubAccessToken.value)
+                    }
                 }
             RiScMainAndBranchContent(mainRiscContent.await(), branchRiscContent.await())
         }
 
     /**
-     * Fetches the content of a published RiSc from the default branch of the given repository using the GitHub Contents-API.
+     * Fetches the published content of a RiSc from the given repository. If the RiSc is not found with the prefixed
+     * filename, it will try to find it with the non-prefixed filename.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository the RiSc belongs to.
@@ -188,11 +209,37 @@ class GithubConnector(
         repository: String,
         id: String,
         accessToken: String,
-    ): GithubContentResponse =
-        fetchRiScContent(
-            uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
-            accessToken = accessToken,
-        )
+    ): GithubContentResponse {
+        // Try with prefix first
+        val prefixedResponse =
+            fetchRiScContent(
+                uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
+                accessToken = accessToken,
+            )
+
+        // If found, return it
+        if (prefixedResponse.status == GithubStatus.Success) {
+            return prefixedResponse
+        }
+
+        // If not found and we have a prefix configured, try without prefix
+        if (filenamePrefix.isNotBlank() && prefixedResponse.status == GithubStatus.NotFound) {
+            val filenameNoPrefix = "$id.$filenamePostfix.yaml"
+            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filenameNoPrefix"
+            val unprefixedResponse =
+                fetchRiScContent(
+                    uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
+                    accessToken = accessToken,
+                )
+
+            if (unprefixedResponse.status == GithubStatus.Success) {
+                return unprefixedResponse
+            }
+        }
+
+        // Return the original response (likely NotFound or error)
+        return prefixedResponse
+    }
 
     /**
      * Fetches the content of the pending changes to a RiSc from the given repository using the GitHub Contents-API. If
@@ -210,24 +257,28 @@ class GithubConnector(
         id: RiScIdentifier,
         accessToken: String,
     ): GithubContentResponse {
+        val (normalizedId, branchName) = githubHelper.normalizeAndBranch(id.id)
+
         val fetchedContent =
             fetchRiScContent(
-                uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = id.id),
+                uri =
+                    githubHelper
+                        .uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = normalizedId, branchName = branchName),
                 accessToken = accessToken,
             )
 
         if (fetchedContent.status != GithubStatus.NotFound) return fetchedContent
 
         // Log helpful information for manually created RiSc files
+
         LOGGER.warn(
-            "RiSc file not found for branch '${id.id}'. " +
-                "Expected file path: '${githubHelper.riscPath(id.id)}'. " +
-                "If manually creating RiSc files, ensure branch name matches file name exactly. " +
-                "See docs/MANUAL_RISC_CREATION.md for naming conventions.",
+            "RiSc file not found for branch '$branchName'. Expected file path: '${githubHelper.riscPath(normalizedId)}'. +" +
+                "If manually creating RiSc files, ensure branch name matches file name exactly. See docs/MANUAL_RISC_CREATION.md +" +
+                "for naming conventions.",
         )
 
         // Handle deleted RiSc
-        val publishedVersion = fetchPublishedRiSc(owner, repository, id.id, accessToken)
+        val publishedVersion = fetchPublishedRiSc(owner, repository, normalizedId, accessToken)
 
         if (publishedVersion.status != GithubStatus.Success) return fetchedContent
 
@@ -255,10 +306,19 @@ class GithubConnector(
                 .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
                 .filter { it.name.endsWith(".$filenamePostfix.yaml") }
-                .map {
+                .map { file ->
+                    val rawId = file.name.removeSuffix(".$filenamePostfix.yaml")
+
+                    // Normalize like the draft function: remove prefix if present
+                    val normalizedId =
+                        if (filenamePrefix.isNotBlank() && rawId.startsWith("$filenamePrefix-")) {
+                            rawId.removePrefix("$filenamePrefix-")
+                        } else {
+                            rawId
+                        }
+
                     RiScIdentifier(
-                        // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
-                        id = it.name.substringBefore(".$filenamePostfix"),
+                        id = normalizedId,
                         status = RiScStatus.Published,
                     )
                 }
@@ -281,15 +341,18 @@ class GithubConnector(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
             ).awaitBody<List<GithubPullRequestObject>>()
-                .map {
+                .mapNotNull {
+                    val raw = it.head.ref.substringAfterLast('/')
+                    if (!filenamePrefix.isBlank() && !raw.startsWith("$filenamePrefix-")) return@mapNotNull null
+                    val normalized = raw.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
                     RiScIdentifier(
                         // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
-                        id = it.head.ref.substringAfterLast('/'),
+                        id = normalized,
                         status = RiScStatus.SentForApproval,
                         pullRequestUrl = it.url,
                     )
                     // Every RiSc identifier starts with "<filenamePrefix>-".
-                }.filter { it.id.startsWith("$filenamePrefix-") }
+                }
         }
 
     /**
@@ -321,7 +384,12 @@ class GithubConnector(
                     accessToken = accessToken,
                 ).awaitBody<List<GithubReferenceObjectDTO>>()
                     // Want only the part after the last "/" in the branch path, ignoring "refs/heads/", etc.
-                    .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
+                    .map {
+                        // branch ref -> last segment, then normalize by stripping prefix
+                        val raw = it.ref.substringAfterLast('/')
+                        val normalized = raw.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
+                        RiScIdentifier(id = normalized, status = RiScStatus.Draft)
+                    }
 
             if (identifiers.isEmpty()) {
                 LOGGER.info(
@@ -393,25 +461,61 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         riScId: String,
-    ): LastPublished? =
-        tryOrNull {
-            val lastPublishedDate =
-                getGithubResponse(
-                    githubHelper.uriToFetchCommits(
-                        owner = owner,
-                        repository = repository,
-                        riScId = riScId,
-                        perPage = 1,
-                    ),
-                    accessToken,
-                ).awaitBody<List<GithubCommitObject>>().first().commit.committer.date
+    ): LastPublished? {
+        // Try with prefixed path first
+        val prefixedResult =
+            tryOrNull {
+                val lastPublishedDate =
+                    getGithubResponse(
+                        githubHelper.uriToFetchCommits(
+                            owner = owner,
+                            repository = repository,
+                            riScId = riScId,
+                            perPage = 1,
+                        ),
+                        accessToken,
+                    ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
 
-            val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
-            LastPublished(
-                dateTime = lastPublishedDate,
-                numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
-            )
+                if (lastPublishedDate != null) {
+                    val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
+                    LastPublished(
+                        dateTime = lastPublishedDate,
+                        numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
+                    )
+                } else {
+                    null
+                }
+            }
+
+        if (prefixedResult != null) {
+            return prefixedResult
         }
+
+        // If not found and we have a prefix configured, try with non-prefixed path
+        if (filenamePrefix.isNotBlank()) {
+            return tryOrNull {
+                val filename = "$riScId.$filenamePostfix.yaml"
+                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                val lastPublishedDate =
+                    getGithubResponse(
+                        "/$owner/$repository/commits?path=$pathNoPrefix&per_page=1",
+                        accessToken,
+                    ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
+
+                if (lastPublishedDate != null) {
+                    val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
+                    LastPublished(
+                        dateTime = lastPublishedDate,
+                        numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
+                    )
+                } else {
+                    null
+                }
+            }
+        }
+
+        return null
+    }
 
     /**
      * Updates the content of a RiSc or creates a new RiSc if no RiSc with the provided ID already exists in the given
@@ -438,12 +542,13 @@ class GithubConnector(
         gitHubAccessToken: GithubAccessToken,
         userInfo: UserInfo,
     ): RiScApprovalPRStatus {
+        val (normalizedId, branchName) = githubHelper.normalizeAndBranch(riScId)
         // Attempt to get SHA for the existing draft
         val latestShaForDraft =
             getSHAForExistingRiScDraftOrNull(
                 owner = owner,
                 repository = repository,
-                riScId = riScId,
+                riScId = normalizedId,
                 accessToken = gitHubAccessToken.value,
             )
         var latestShaForPublished: String? = null
@@ -456,7 +561,7 @@ class GithubConnector(
                         createNewBranch(
                             owner = owner,
                             repository = repository,
-                            newBranchName = riScId,
+                            newBranchName = branchName,
                             accessToken = gitHubAccessToken.value,
                             baseBranch = defaultBranch,
                         )
@@ -468,7 +573,7 @@ class GithubConnector(
                         getSHAForPublishedRiScOrNull(
                             owner = owner,
                             repository = repository,
-                            riScId = riScId,
+                            riScId = normalizedId,
                             accessToken = gitHubAccessToken.value,
                         )
                     }.await()
@@ -484,13 +589,27 @@ class GithubConnector(
             } else {
                 "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             }
+        val filePathOnBranch: String =
+            latestShaForDraft?.let {
+                resolveRiScFilePathOnBranch(owner, repository, normalizedId, branchName, gitHubAccessToken)
+            } ?: run {
+                val prefixPath = githubHelper.riscPath(normalizedId)
+                val filename = "$normalizedId.$filenamePostfix.yaml"
+                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+
+                listOf(prefixPath, pathNoPrefix)
+                    .firstOrNull { path ->
+                        fetchFileInfo(owner, repository, gitHubAccessToken, path, branchName) != null
+                    }
+                    ?: prefixPath
+            }
 
         putFileRequestToGithub(
             repositoryOwner = owner,
             repositoryName = repository,
             gitHubAccessToken = gitHubAccessToken,
-            filePath = githubHelper.riscPath(riScId),
-            branch = riScId,
+            filePath = filePathOnBranch,
+            branch = branchName,
             message = commitMessage,
             content = fileContent.encodeBase64(),
         ).awaitBodyOrNull<String>()
@@ -584,8 +703,9 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ): String? =
-        fetchAllPullRequests(owner, repository, accessToken).find { it.head.ref == riScId }?.let {
+    ): String? {
+        val (_, branchName) = githubHelper.normalizeAndBranch(riScId)
+        return fetchAllPullRequests(owner, repository, accessToken).find { it.head.ref == branchName }?.let {
             try {
                 requestToGithubWithJSONBody(
                     uri = githubHelper.uriToEditPullRequest(owner, repository, it.number),
@@ -598,6 +718,7 @@ class GithubConnector(
                 null
             }
         }
+    }
 
     /**
      * Finds the SHA for the last version of the file associated with the given RiSc on the draft branch of that
@@ -613,11 +734,47 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ) = tryOrNull {
-        getGithubResponse(
-            uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
-            accessToken = accessToken,
-        ).awaitBodyOrNull<GithubFileDTO>()?.sha
+    ): String? {
+        val (_, branchName) = githubHelper.normalizeAndBranch(riScId)
+
+        // Try with prefix first
+        val prefixedSha =
+            tryOrNull {
+                getGithubResponse(
+                    uri =
+                        githubHelper.uriToFindRiScOnDraftBranch(
+                            owner = owner,
+                            repository = repository,
+                            riScId = riScId,
+                            branchName = branchName,
+                        ),
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<GithubFileDTO>()?.sha
+            }
+
+        if (prefixedSha != null) {
+            return prefixedSha
+        }
+
+        // If not found and we have a prefix configured, try without prefix
+        if (filenamePrefix.isNotBlank()) {
+            val filename = "$riScId.$filenamePostfix.yaml"
+            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+            return tryOrNull {
+                getGithubResponse(
+                    uri =
+                        githubHelper.repositoryContentsUri(
+                            owner = owner,
+                            repository = repository,
+                            path = pathNoPrefix,
+                            branch = branchName,
+                        ),
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<GithubFileDTO>()?.sha
+            }
+        }
+
+        return null
     }
 
     /**
@@ -633,11 +790,33 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ) = tryOrNull {
-        getGithubResponse(
-            uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
-            accessToken = accessToken,
-        ).awaitBodyOrNull<GithubFileDTO>()?.sha
+    ): String? {
+        // Try with prefix first
+        val prefixedSha =
+            tryOrNull {
+                getGithubResponse(
+                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<GithubFileDTO>()?.sha
+            }
+
+        if (prefixedSha != null) {
+            return prefixedSha
+        }
+
+        // If not found and we have a prefix configured, try without prefix
+        if (filenamePrefix.isNotBlank()) {
+            val filename = "$riScId.$filenamePostfix.yaml"
+            val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+            return tryOrNull {
+                getGithubResponse(
+                    uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<GithubFileDTO>()?.sha
+            }
+        }
+
+        return null
     }
 
     /**
@@ -654,12 +833,15 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ): Boolean =
-        fetchRiScIdentifiersSentForApproval(
+    ): Boolean {
+        val (normalizedId, _) = githubHelper.normalizeAndBranch(riScId)
+
+        return fetchRiScIdentifiersSentForApproval(
             owner = owner,
             repository = repository,
             accessToken = accessToken,
-        ).any { it.id == riScId }
+        ).any { it.id == normalizedId }
+    }
 
     /**
      * Finds the SHA for the last commit on the provided branch.
@@ -760,12 +942,13 @@ class GithubConnector(
         since: OffsetDateTime,
     ): List<GithubCommitObject> =
         tryOrDefault(default = emptyList()) {
+            val (_, branchName) = githubHelper.normalizeAndBranch(riScId)
             getGithubResponse(
                 uri =
                     githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
-                        branch = riScId,
+                        branch = branchName,
                         since = since,
                     ),
                 accessToken = accessToken,
@@ -787,23 +970,49 @@ class GithubConnector(
         accessToken: String,
         riScId: String,
         branch: String,
-    ): OffsetDateTime? =
-        tryOrNull {
-            getGithubResponse(
-                uri =
-                    githubHelper.uriToFetchCommits(
-                        owner = owner,
-                        repository = repository,
-                        riScId = riScId,
-                        branch = branch,
-                    ),
-                accessToken = accessToken,
-            ).awaitBodyOrNull<List<GithubCommitObject>>()
-                ?.firstOrNull()
-                ?.commit
-                ?.committer
-                ?.date
+
+    ): OffsetDateTime? {
+        // Try with prefixed path first
+        val prefixedResult =
+            tryOrNull {
+                getGithubResponse(
+                    uri =
+                        githubHelper.uriToFetchCommits(
+                            owner = owner,
+                            repository = repository,
+                            riScId = riScId,
+                            branch = branch,
+                        ),
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<List<GithubCommitObject>>()
+                    ?.firstOrNull()
+                    ?.commit
+                    ?.committer
+                    ?.date
+            }
+
+        if (prefixedResult != null) {
+            return prefixedResult
         }
+
+        // If not found and we have a prefix configured, try with non-prefixed path
+        if (filenamePrefix.isNotBlank()) {
+            return tryOrNull {
+                val filename = "$riScId.$filenamePostfix.yaml"
+                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                getGithubResponse(
+                    uri = "/$owner/$repository/commits?path=$pathNoPrefix&sha=$branch",
+                    accessToken = accessToken,
+                ).awaitBodyOrNull<List<GithubCommitObject>>()
+                    ?.firstOrNull()
+                    ?.commit
+                    ?.committer
+                    ?.date
+            }
+        }
+
+        return null
+    }
 
     /**
      * Creates a pull request for the changes to a RiSc with the given riScId. That is, a pull request is created from
@@ -828,6 +1037,8 @@ class GithubConnector(
     ): GithubPullRequestObject =
         coroutineScope {
             // Fetch default branch and if the pull request is for the deletion of the RiSc in parallel to save time.
+            val (normalizedId, branchName) = githubHelper.normalizeAndBranch(riScId)
+
             val baseBranchDeferred =
                 async {
                     fetchRepositoryInfo(
@@ -839,9 +1050,18 @@ class GithubConnector(
 
             val isDeletion =
                 fetchRiScContent(
-                    uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
+                    uri =
+                        githubHelper
+                            .uriToFindRiScOnDraftBranch(
+                                owner = owner,
+                                repository = repository,
+                                riScId = normalizedId,
+                                branchName = branchName,
+                            ),
                     accessToken = gitHubAccessToken,
-                ).status === GithubStatus.NotFound
+                ).status ===
+                    GithubStatus
+                        .NotFound
 
             createNewPullRequest(
                 owner = owner,
@@ -862,7 +1082,7 @@ class GithubConnector(
                                 }
                             ) + "Merge the pull request to include the changes in the default branch." +
                                 "\nMake sure to delete the branch after merging if auto-deletion is not enabled for your repository",
-                        branch = riScId,
+                        branch = branchName,
                         baseBranch = baseBranchDeferred.await(),
                     ),
             )
@@ -918,13 +1138,14 @@ class GithubConnector(
     ): DeleteRiScResultDTO =
         try {
             coroutineScope {
+                val (normalizedId, branchName) = githubHelper.normalizeAndBranch(riScId)
                 // Get the draft SHA in parallel, as it is most likely needed later on.
                 val draftSHADeferred =
                     async {
                         getSHAForExistingRiScDraftOrNull(
                             owner = owner,
                             repository = repository,
-                            riScId = riScId,
+                            riScId = normalizedId,
                             accessToken = accessToken,
                         )
                     }
@@ -943,19 +1164,19 @@ class GithubConnector(
                     getSHAForPublishedRiScOrNull(
                         owner = owner,
                         repository = repository,
-                        riScId = riScId,
+                        riScId = normalizedId,
                         accessToken = accessToken,
                     )
 
                 // If the RiSc has never been published, we can simply delete the branch. No approval needed.
                 if (publishedSHA == null) {
                     githubRequest(
-                        uri = githubHelper.uriToDeleteBranch(owner = owner, repository = repository, branch = riScId),
+                        uri = githubHelper.uriToDeleteBranch(owner = owner, repository = repository, branch = branchName),
                         accessToken = accessToken,
                         method = HttpMethod.DELETE,
                     ).awaitBodilessEntity()
                     return@coroutineScope DeleteRiScResultDTO(
-                        riScId = riScId,
+                        riScId = normalizedId,
                         status = ProcessingStatus.DeletedRiSc,
                         statusMessage = "Risk scorecard was deleted - no approval required as it was never published",
                     )
@@ -968,35 +1189,44 @@ class GithubConnector(
                     createNewBranch(
                         owner = owner,
                         repository = repository,
-                        newBranchName = riScId,
+                        newBranchName = branchName,
                         accessToken = accessToken,
                         baseBranch = defaultBranchDeferred.await(),
                     )
 
                     // The file SHA does not change on creation of a branch, so we can use the SHA of the published version.
-                    draftSHA = publishedSHA
                 }
+                val ghAccess = GithubAccessToken(accessToken)
+                val pathToDelete = resolveRiScFilePathOnBranch(owner, repository, normalizedId, branchName, ghAccess)
 
+                val fileInfoOnBranch = fetchFileInfo(owner, repository, ghAccess, pathToDelete, branchName)
+                val shaToUse =
+                    fileInfoOnBranch?.sha
+                        ?: throw DeletingRiScException(
+                            riScId = normalizedId,
+                            message = "File to delete not found on branch $branchName at path $pathToDelete",
+                        )
                 // Delete the RiSc on the draft branch.
                 requestToGithubWithJSONBody(
                     uri =
                         githubHelper.repositoryContentsUri(
                             owner = owner,
                             repository = repository,
-                            path = githubHelper.riscPath(riScId),
+                            path = pathToDelete,
+                            branch = branchName,
                         ),
                     accessToken = accessToken,
                     content =
                         GithubDeleteFilePayload(
-                            message = "Deleted RiSc with id: $riScId requires new approval",
-                            sha = draftSHA,
-                            branch = riScId,
+                            message = "Deleted RiSc with id: $normalizedId requires new approval",
+                            sha = shaToUse,
+                            branch = branchName,
                         ),
                     method = HttpMethod.DELETE,
                 ).awaitBodilessEntity()
 
                 DeleteRiScResultDTO(
-                    riScId = riScId,
+                    riScId = normalizedId,
                     status = ProcessingStatus.DeletedRiScRequiresApproval,
                     statusMessage = "Risk scorecard was staged for deletion - the deletion requires approval",
                 )
@@ -1054,6 +1284,27 @@ class GithubConnector(
             LOGGER.error("Got 400 bad request for filePath: $filePath with message: ${e.message}")
             throw e
         }
+
+    private suspend fun resolveRiScFilePathOnBranch(
+        owner: String,
+        repository: String,
+        riScId: String,
+        branch: String,
+        gitHubAccessToken: GithubAccessToken,
+    ): String {
+        val prefixPath = githubHelper.riscPath(riScId)
+        if (fetchFileInfo(owner, repository, gitHubAccessToken, prefixPath, branch) != null) {
+            return prefixPath
+        }
+
+        val filenameNoPrefix = "$riScId.$filenamePostfix.yaml"
+        val pathNoPrefix = "${githubHelper.riScFolderPath}/$filenameNoPrefix"
+        if (fetchFileInfo(owner, repository, gitHubAccessToken, pathNoPrefix, branch) != null) {
+            return pathNoPrefix
+        }
+
+        return prefixPath
+    }
 
     /**
      * Attempts to find the file at the given file path on the given branch in the given repository

@@ -17,6 +17,7 @@ import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.slack.SlackService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -37,6 +38,7 @@ class RiScController(
     private val githubConnector: GithubConnector,
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
+    @Value("\${filename.prefix}") private val filenamePrefix: String,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
@@ -110,7 +112,13 @@ class RiScController(
         if (createRiscResultDTO.riScContent != null) {
             riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
         }
-        return createRiscResultDTO
+        val normalizedId =
+            createRiscResultDTO
+                .riScId
+                .removePrefix(
+                    if (filenamePrefix.isBlank()) "" else "$filenamePrefix-",
+                )
+        return createRiscResultDTO.copy(riScId = normalizedId)
     }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])

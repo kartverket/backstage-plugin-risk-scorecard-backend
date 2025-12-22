@@ -12,14 +12,22 @@ import java.time.OffsetDateTime
 class GithubHelper(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
-    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
+    @Value("\${github.repository.risc-folder-path}") internal val riScFolderPath: String,
 ) {
     /**
      * Constructs the file path to the file for the given RiSc.
      *
      * @param riScId The ID of the RiSc.
      */
-    internal fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
+    internal fun riscPath(riScId: String): String {
+        val filename =
+            if (filenamePrefix.isBlank()) {
+                "$riScId.$filenamePostfix.yaml"
+            } else {
+                "$filenamePrefix-$riScId.$filenamePostfix.yaml"
+            }
+        return "$riScFolderPath/$filename"
+    }
 
     /**
      * Constructs a URI for performing file/directory operations (retrieval, update and deletion). If no branch is
@@ -85,12 +93,13 @@ class GithubHelper(
         owner: String,
         repository: String,
         riScId: String,
+        branchName: String,
     ): String =
         repositoryContentsUri(
             owner = owner,
             repository = repository,
             path = riscPath(riScId),
-            branch = riScId,
+            branch = branchName,
         )
 
     /**
@@ -267,5 +276,11 @@ class GithubHelper(
         page?.let { queryParts += "page=$it" }
 
         return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
+    }
+
+    fun normalizeAndBranch(riScId: String): Pair<String, String> {
+        val normalized = riScId.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
+        val branchName = if (filenamePrefix.isBlank()) normalized else "$filenamePrefix-$normalized"
+        return normalized to branchName
     }
 }
