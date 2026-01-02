@@ -55,7 +55,7 @@ import java.time.OffsetDateTime
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
-    private val githubHelper: GithubHelper,
+    internal val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
@@ -212,18 +212,20 @@ class GithubConnector(
     ): GithubContentResponse {
         val paths = getRiScFilePaths(id)
 
-        val prefixedResponse = fetchRiScContent(
-            uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = paths.prefixedPath),
-            accessToken = accessToken,
-        )
+        val prefixedResponse =
+            fetchRiScContent(
+                uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = paths.prefixedPath),
+                accessToken = accessToken,
+            )
 
         if (prefixedResponse.status == GithubStatus.Success) return prefixedResponse
 
         paths.unprefixedPath?.let { unprefixedPath ->
-            val unprefixedResponse = fetchRiScContent(
-                uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = unprefixedPath),
-                accessToken = accessToken,
-            )
+            val unprefixedResponse =
+                fetchRiScContent(
+                    uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = unprefixedPath),
+                    accessToken = accessToken,
+                )
 
             if (unprefixedResponse.status == GithubStatus.Success) {
                 LOGGER.info("Found RiSc file without prefix at $unprefixedPath. for id $id")
@@ -231,7 +233,6 @@ class GithubConnector(
             }
         }
         return prefixedResponse
-
     }
 
     /**
@@ -454,54 +455,55 @@ class GithubConnector(
         repository: String,
         accessToken: String,
         riScId: String,
-    ): LastPublished? = tryWithAndWithoutPrefix(
-        riScId = riScId,
-        prefixedOperation = { id ->
-            tryOrNull {
-                val lastPublishedDate =
-                    getGithubResponse(
-                        githubHelper.uriToFetchCommits(
-                            owner = owner,
-                            repository = repository,
-                            riScId = id,
-                            perPage = 1,
-                        ),
-                        accessToken,
-                    ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
+    ): LastPublished? =
+        tryWithAndWithoutPrefix(
+            riScId = riScId,
+            prefixedOperation = { id ->
+                tryOrNull {
+                    val lastPublishedDate =
+                        getGithubResponse(
+                            githubHelper.uriToFetchCommits(
+                                owner = owner,
+                                repository = repository,
+                                riScId = id,
+                                perPage = 1,
+                            ),
+                            accessToken,
+                        ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
 
-                if (lastPublishedDate != null) {
-                    val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
-                    LastPublished(
-                        dateTime = lastPublishedDate,
-                        numberOfCommits = commitsSince.count { it.commit.committer. date > lastPublishedDate },
-                    )
-                } else {
-                    null
+                    if (lastPublishedDate != null) {
+                        val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
+                        LastPublished(
+                            dateTime = lastPublishedDate,
+                            numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
+                        )
+                    } else {
+                        null
+                    }
                 }
-            }
-        },
-        unprefixedOperation = { id ->
-            tryOrNull {
-                val filename = "$id.$filenamePostfix. yaml"
-                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
-                val lastPublishedDate =
-                    getGithubResponse(
-                        "/$owner/$repository/commits?path=$pathNoPrefix&per_page=1",
-                        accessToken,
-                    ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
+            },
+            unprefixedOperation = { id ->
+                tryOrNull {
+                    val filename = "$id.$filenamePostfix. yaml"
+                    val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                    val lastPublishedDate =
+                        getGithubResponse(
+                            "/$owner/$repository/commits?path=$pathNoPrefix&per_page=1",
+                            accessToken,
+                        ).awaitBody<List<GithubCommitObject>>().firstOrNull()?.commit?.committer?.date
 
-                if (lastPublishedDate != null) {
-                    val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
-                    LastPublished(
-                        dateTime = lastPublishedDate,
-                        numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
-                    )
-                } else {
-                    null
+                    if (lastPublishedDate != null) {
+                        val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
+                        LastPublished(
+                            dateTime = lastPublishedDate,
+                            numberOfCommits = commitsSince.count { it.commit.committer.date > lastPublishedDate },
+                        )
+                    } else {
+                        null
+                    }
                 }
-            }
-        }
-    )
+            },
+        )
 
     /**
      * Updates the content of a RiSc or creates a new RiSc if no RiSc with the provided ID already exists in the given
@@ -727,12 +729,13 @@ class GithubConnector(
             prefixedOperation = { id ->
                 tryOrNull {
                     getGithubResponse(
-                        uri = githubHelper.uriToFindRiScOnDraftBranch(
-                            owner = owner,
-                            repository = repository,
-                            riScId = id,
-                            branchName = branchName,
-                        ),
+                        uri =
+                            githubHelper.uriToFindRiScOnDraftBranch(
+                                owner = owner,
+                                repository = repository,
+                                riScId = id,
+                                branchName = branchName,
+                            ),
                         accessToken = accessToken,
                     ).awaitBodyOrNull<GithubFileDTO>()?.sha
                 }
@@ -742,16 +745,17 @@ class GithubConnector(
                     val filename = "$id.$filenamePostfix.yaml"
                     val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
                     getGithubResponse(
-                        uri = githubHelper.repositoryContentsUri(
-                            owner = owner,
-                            repository = repository,
-                            path = pathNoPrefix,
-                            branch = branchName,
-                        ),
+                        uri =
+                            githubHelper.repositoryContentsUri(
+                                owner = owner,
+                                repository = repository,
+                                path = pathNoPrefix,
+                                branch = branchName,
+                            ),
                         accessToken = accessToken,
                     ).awaitBodyOrNull<GithubFileDTO>()?.sha
                 }
-            }
+            },
         )
     }
 
@@ -768,27 +772,28 @@ class GithubConnector(
         repository: String,
         riScId: String,
         accessToken: String,
-    ): String? = tryWithAndWithoutPrefix(
-        riScId = riScId,
-        prefixedOperation = { id ->
-            tryOrNull {
-                getGithubResponse(
-                    uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<GithubFileDTO>()?.sha
-            }
-        },
-        unprefixedOperation = { id ->
-            tryOrNull {
-                val filename = "$id.$filenamePostfix.yaml"
-                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
-                getGithubResponse(
-                    uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<GithubFileDTO>()?.sha
-            }
-        }
-    )
+    ): String? =
+        tryWithAndWithoutPrefix(
+            riScId = riScId,
+            prefixedOperation = { id ->
+                tryOrNull {
+                    getGithubResponse(
+                        uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = id),
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<GithubFileDTO>()?.sha
+                }
+            },
+            unprefixedOperation = { id ->
+                tryOrNull {
+                    val filename = "$id.$filenamePostfix.yaml"
+                    val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                    getGithubResponse(
+                        uri = githubHelper.repositoryContentsUri(owner = owner, repository = repository, path = pathNoPrefix),
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<GithubFileDTO>()?.sha
+                }
+            },
+        )
 
     /**
      * Determines if there exists a pull request for merging the draft branch of the given RiSc (`riScId`) into another
@@ -941,40 +946,42 @@ class GithubConnector(
         accessToken: String,
         riScId: String,
         branch: String,
-    ): OffsetDateTime? = tryWithAndWithoutPrefix(
-        riScId = riScId,
-        prefixedOperation = { id ->
-            tryOrNull {
-                getGithubResponse(
-                    uri = githubHelper. uriToFetchCommits(
-                        owner = owner,
-                        repository = repository,
-                        riScId = id,
-                        branch = branch,
-                    ),
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<List<GithubCommitObject>>()
-                    ?.firstOrNull()
-                    ?.commit
-                    ?.committer
-                    ?.date
-            }
-        },
-        unprefixedOperation = { id ->
-            tryOrNull {
-                val filename = "$id.$filenamePostfix.yaml"
-                val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
-                getGithubResponse(
-                    uri = "/$owner/$repository/commits?path=$pathNoPrefix&sha=$branch",
-                    accessToken = accessToken,
-                ).awaitBodyOrNull<List<GithubCommitObject>>()
-                    ?.firstOrNull()
-                    ?.commit
-                    ?.committer
-                    ?.date
-            }
-        }
-    )
+    ): OffsetDateTime? =
+        tryWithAndWithoutPrefix(
+            riScId = riScId,
+            prefixedOperation = { id ->
+                tryOrNull {
+                    getGithubResponse(
+                        uri =
+                            githubHelper.uriToFetchCommits(
+                                owner = owner,
+                                repository = repository,
+                                riScId = id,
+                                branch = branch,
+                            ),
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<List<GithubCommitObject>>()
+                        ?.firstOrNull()
+                        ?.commit
+                        ?.committer
+                        ?.date
+                }
+            },
+            unprefixedOperation = { id ->
+                tryOrNull {
+                    val filename = "$id.$filenamePostfix.yaml"
+                    val pathNoPrefix = "${githubHelper.riScFolderPath}/$filename"
+                    getGithubResponse(
+                        uri = "/$owner/$repository/commits?path=$pathNoPrefix&sha=$branch",
+                        accessToken = accessToken,
+                    ).awaitBodyOrNull<List<GithubCommitObject>>()
+                        ?.firstOrNull()
+                        ?.commit
+                        ?.committer
+                        ?.date
+                }
+            },
+        )
 
     /**
      * Creates a pull request for the changes to a RiSc with the given riScId. That is, a pull request is created from
@@ -1265,7 +1272,7 @@ class GithubConnector(
         // If no file found, throw a descriptive error instead of returning a path that doesn't exist
         throw DeletingRiScException(
             riScId = riScId,
-            message = "RiSc file not found on branch '$branch'.  Tried paths: ${pathsToTry. joinToString(", ")}"
+            message = "RiSc file not found on branch '$branch'.  Tried paths: ${pathsToTry. joinToString(", ")}",
         )
     }
 
@@ -1418,6 +1425,7 @@ class GithubConnector(
                 },
         )
     }
+
     /**
      * Attempts an operation with the prefixed file path first, then falls back to
      * the non-prefixed path if the prefix is configured and the first attempt fails.
@@ -1449,7 +1457,7 @@ class GithubConnector(
      */
     private data class RiScFilePaths(
         val prefixedPath: String,
-        val unprefixedPath: String?
+        val unprefixedPath: String?,
     )
 
     /**
@@ -1462,12 +1470,13 @@ class GithubConnector(
     private fun getRiScFilePaths(normalizedId: String): RiScFilePaths {
         val prefixedPath = githubHelper.riscPath(normalizedId)
 
-        val unprefixedPath = if (filenamePrefix.isNotBlank()) {
-            val filenameNoPrefix = "$normalizedId.$filenamePostfix. yaml"
-            "${githubHelper.riScFolderPath}/$filenameNoPrefix"
-        } else {
-            null
-        }
+        val unprefixedPath =
+            if (filenamePrefix.isNotBlank()) {
+                val filenameNoPrefix = "$normalizedId.$filenamePostfix. yaml"
+                "${githubHelper.riScFolderPath}/$filenameNoPrefix"
+            } else {
+                null
+            }
 
         return RiScFilePaths(prefixedPath, unprefixedPath)
     }
@@ -1482,5 +1491,4 @@ class GithubConnector(
         val paths = getRiScFilePaths(normalizedId)
         return listOfNotNull(paths.prefixedPath, paths.unprefixedPath)
     }
-
 }

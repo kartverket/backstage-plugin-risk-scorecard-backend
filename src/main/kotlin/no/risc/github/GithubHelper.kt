@@ -278,9 +278,31 @@ class GithubHelper(
         return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
     }
 
+    /**
+     * Normalizes a RiSc ID by removing the filename prefix if present.
+     *
+     * @param riScId The RiSc ID (may or may not include the prefix)
+     * @return The normalized RiSc ID without prefix
+     */
+    fun normalizeId(riScId: String): String = riScId.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
+
+    /**
+     * Generates a branch name from a normalized RiSc ID by adding the prefix.
+     *
+     * @param normalizedId The normalized RiSc ID (without prefix)
+     * @return The branch name (with prefix if configured)
+     */
+    fun toBranchName(normalizedId: String): String = if (filenamePrefix.isBlank()) normalizedId else "$filenamePrefix-$normalizedId"
+
+    /**
+     * Normalizes a RiSc ID by removing the filename prefix, and generates the corresponding branch name.
+     *
+     * @param riScId The RiSc ID (may or may not include the prefix)
+     * @return Pair of (normalizedId, branchName)
+     */
     fun normalizeAndBranch(riScId: String): Pair<String, String> {
-        val normalized = riScId.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
-        val branchName = if (filenamePrefix.isBlank()) normalized else "$filenamePrefix-$normalized"
+        val normalized = normalizeId(riScId)
+        val branchName = toBranchName(normalized)
         return normalized to branchName
     }
 }

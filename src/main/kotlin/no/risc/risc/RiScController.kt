@@ -3,6 +3,7 @@ package no.risc.risc
 import io.swagger.v3.oas.annotations.tags.Tag
 import no.risc.github.GitHubAppService
 import no.risc.github.GithubConnector
+import no.risc.github.GithubHelper
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
@@ -38,6 +39,7 @@ class RiScController(
     private val githubConnector: GithubConnector,
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
+    private val githubHelper: GithubHelper,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
@@ -112,12 +114,7 @@ class RiScController(
         if (createRiscResultDTO.riScContent != null) {
             riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
         }
-        val normalizedId =
-            createRiscResultDTO
-                .riScId
-                .removePrefix(
-                    if (filenamePrefix.isBlank()) "" else "$filenamePrefix-",
-                )
+        val (normalizedId, _) = githubHelper.normalizeAndBranch(createRiscResultDTO.riScId)
         return createRiscResultDTO.copy(riScId = normalizedId)
     }
 

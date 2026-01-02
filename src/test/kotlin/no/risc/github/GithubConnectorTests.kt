@@ -80,11 +80,12 @@ class GithubConnectorTests {
 
     private fun riScName(riScId: String) = "$filenamePrefix-$riScId"
 
-    private fun normalizeId(riScId: String) = riScId.removePrefix("$filenamePrefix-")
+    private fun normalizeId(riScId: String) = githubConnector.githubHelper.normalizeId(riScId)
 
     private fun riScFilename(riScId: String): String {
-        val normalizedId = normalizeId(riScId)
-        return "${riScName(normalizedId)}.$filenamePostfix.yaml"
+        val (normalizedId, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+
+        return "$normalizedId.$filenamePostfix.yaml"
     }
 
     private fun pathToRiSC(riScId: String) = "$riscFolderPath/${riScFilename(riScId)}"
@@ -275,13 +276,16 @@ class GithubConnectorTests {
 
     @Nested
     inner class TestFetchRiscContent {
-        private fun pathToRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+        private fun pathToRiScContent(riScId: String): String {
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath"
+        }
 
         private fun pathToRiScContentOnDraftBranch(riScId: String): String {
-            val normalized = riScId.removePrefix("$filenamePrefix-")
-            val branchName = "$filenamePrefix-$normalized"
-
-            return "/$owner/$repository/contents/$riscFolderPath/${riScFilename(normalized)}?ref=$branchName"
+            val (normalized, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath?ref=$branchName"
         }
 
         private fun fetchPublishedRiSc(riScId: String) =
@@ -550,8 +554,11 @@ class GithubConnectorTests {
         private val pathToPullRequestEndpoint = "/$owner/$repository/pulls"
         private val pathToRepositoryInfoEndpoint = "/$owner/$repository"
 
-        private fun pathToDraftRiScContent(riScId: String) =
-            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$riScId"
+        private fun pathToDraftRiScContent(riScId: String): String {
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath?ref=$riScId"
+        }
 
         @Test
         fun `test fetch all pull requests`() {
@@ -625,8 +632,7 @@ class GithubConnectorTests {
             val riScId = randomRiSc()
             val baseBranch = "main"
 
-            val normalizedId = riScId.removePrefix("$filenamePrefix-")
-            val branchName = "$filenamePrefix-$normalizedId"
+            val (_, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
 
             val pullRequest =
                 GithubPullRequestObject(
@@ -682,8 +688,7 @@ class GithubConnectorTests {
             val riScId = randomRiSc()
             val baseBranch = "base"
 
-            val normalizedId = riScId.removePrefix("$filenamePrefix-")
-            val branchName = "$filenamePrefix-$normalizedId"
+            val (_, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
 
             val pullRequest =
                 GithubPullRequestObject(
@@ -771,6 +776,14 @@ class GithubConnectorTests {
 
         private fun pathToDefaultBranchCommitsSince(since: OffsetDateTime) = "/$owner/$repository/commits?since=$since"
 
+        private fun unprefixedCommitPath(riScId: String): String {
+            // Mirrors current production unprefixed path with a space before 'yaml'
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val filenameWithSpace = "$normalized.$filenamePostfix. yaml"
+            val pathNoPrefix = "$riscFolderPath/$filenameWithSpace"
+            return "/$owner/$repository/commits?path=$pathNoPrefix&per_page=1"
+        }
+
         private fun githubCommitObjectWithRandomSha(date: OffsetDateTime): GithubCommitObject {
             val sha = randomSHA()
             return GithubCommitObject(
@@ -813,6 +826,17 @@ class GithubConnectorTests {
                         ),
                     ),
                 path = "/$owner/$repository/commits?path=${pathToRiSC(riScId)}&per_page=1",
+            )
+            webClient.queueResponse(
+                response =
+                    mockableResponseFromObject(
+                        listOf(
+                            githubCommitObjectWithRandomSha(lastCommitTime),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusDays(18).minusHours(12)),
+                            githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(2).minusDays(13)),
+                        ),
+                    ),
+                path = unprefixedCommitPath(riScId),
             )
 
             webClient.queueResponse(
@@ -1223,18 +1247,34 @@ class GithubConnectorTests {
 
         private fun pathToGetLastCommitOnBranch(branch: String) = "/$owner/$repository/commits/heads/$branch"
 
-        private fun pathToDraftRiScContent(riScId: String) =
-            "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}?ref=$riScId"
+        private fun pathToDraftRiScContent(riScId: String): String {
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath?ref=$riScId"
+        }
 
-        private fun pathToRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+        private fun pathToRiScContent(riScId: String): String {
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath"
+        }
 
-        private fun pathToDeleteRiScContent(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/${riScFilename(riScId)}"
+        private fun pathToDeleteRiScContent(riScId: String): String {
+            val (normalized, _) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            val prefixedPath = githubConnector.githubHelper.riscPath(normalized)
+            return "/$owner/$repository/contents/$prefixedPath"
+        }
 
         private fun pathToDeleteBranch(branch: String) = "/$owner/$repository/git/refs/heads/$branch"
 
+        private fun pathToDeleteRiScContentOnBranch(
+            normalizedId: String,
+            branch: String,
+        ): String = "/$owner/$repository/contents/${githubConnector.githubHelper.riscPath(normalizedId)}?ref=$branch"
+
         private fun expectedBranchName(riScId: String): String {
-            val normalized = riScId.removePrefix("$filenamePrefix-")
-            return "$filenamePrefix-$normalized"
+            val (_, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
+            return branchName
         }
 
         private fun queueContentResponse(
@@ -1284,6 +1324,8 @@ class GithubConnectorTests {
 
         private fun queueDeleteDraftFileResponse(riScId: String) {
             val sha = randomSHA()
+            val branchName = expectedBranchName(riScId)
+            val deletePath = "/$owner/$repository/contents/${githubConnector.githubHelper.riscPath(riScId)}?ref=$branchName"
             webClient.queueResponse(
                 response =
                     MockableResponse(
@@ -1295,13 +1337,13 @@ class GithubConnectorTests {
                                 "content": null,
                                 "commit": {
                                     "sha": "$sha",
-                                    "message": "Deleted RiSc with id: $riScId requires new approval"
-                                    "url": "https://api.github.com/repos/$owner/$repository/git/commits/$sha", 
+                                    "message": "Deleted RiSc with id: $riScId requires new approval",
+                                    "url": "https://api.github.com/repos/$owner/$repository/git/commits/$sha",
                                 }
                             }
                             """.trimIndent(),
                     ),
-                path = pathToDeleteRiScContent(riScId),
+                path = deletePath,
                 method = HttpMethod.DELETE,
             )
         }
@@ -1380,47 +1422,26 @@ class GithubConnectorTests {
         }
 
         @Test
-        fun `test delete published RiSc with existing branch`() = runBlocking {
+        fun `test delete published RiSc with existing branch`() {
             val riScId = randomRiSc()
-            val normalizedId = riScId.removePrefix("$filenamePrefix-")
-            val branchName = "$filenamePrefix-$normalizedId"
+            val (normalizedId, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
             val unpublishedSHA = randomSHA()
             val publishedSHA = randomSHA()
             val defaultBranch = "base"
+            val deletePath = "/$owner/$repository/contents/${githubConnector.githubHelper.riscPath(normalizedId)}?ref=$branchName"
 
-            // --- Queue responses for resolveRiScFilePathOnBranch ---
-            // First it checks draft content
-            queueDraftContentResponse(normalizedId, unpublishedSHA)
-
-            // Then it checks published content
-            queuePublishedContentResponse(normalizedId, publishedSHA)
-
+            // Queue response for fetching draft SHA - uses branchName as ref, not normalizedId
+            queueContentResponse(normalizedId, unpublishedSHA, pathToDraftRiScContent(branchName))
             queueRepositoryInfoResponse(defaultBranch)
+            queuePublishedContentResponse(normalizedId, publishedSHA)
+            // Queue response for fetching file info on the draft branch (resolveRiScFilePathOnBranch call)
+            queueContentResponse(normalizedId, unpublishedSHA, deletePath)
+            // Queue response for fetching file info on the draft branch (final fetchFileInfo call)
+            queueContentResponse(normalizedId, unpublishedSHA, deletePath)
+            queueDeleteDraftFileResponse(normalizedId)
 
-            // Mock file existence check on branch
-            val deletePath = pathToRiScContent(normalizedId)
-            webClient.queueResponse(
-                response = mockableResponseFromObject(
-                    GithubFileDTO(
-                        content = "{}",
-                        sha = unpublishedSHA,
-                        name = riScFilename(normalizedId)
-                    )
-                ),
-                path = "$deletePath? ref=$branchName"
-            )
+            val response = deleteRiSc(riScId)
 
-            // Queue DELETE response
-            webClient.queueResponse(
-                response = MockableResponse(content = null, httpStatus = HttpStatus.OK),
-                path = deletePath,
-                method = HttpMethod.DELETE,
-            )
-
-            // --- Call deleteRiSc ---
-            val response = deleteRiSc(riScId = riScId)
-
-            // --- Assertions ---
             assertEquals(
                 ProcessingStatus.DeletedRiScRequiresApproval,
                 response.status,
@@ -1445,18 +1466,19 @@ class GithubConnectorTests {
         @Test
         fun `test delete published RiSc without existing branch`() {
             val riScId = randomRiSc()
+            val (normalizedId, branchName) = githubConnector.githubHelper.normalizeAndBranch(riScId)
             val publishedSHA = randomSHA()
             // Last commit on default branch
             val commitSHA = randomSHA()
             val defaultBranch = "main"
+            val filePathOnBranch = "/$owner/$repository/contents/${githubConnector.githubHelper.riscPath(normalizedId)}?ref=$branchName"
 
             webClient.queueResponse(
                 response = MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND),
-                path = pathToDraftRiScContent(riScId),
+                path = pathToDraftRiScContent(branchName),
             )
             queueRepositoryInfoResponse(defaultBranch)
-            queuePublishedContentResponse(riScId, publishedSHA)
-            queueDeleteDraftFileResponse(riScId)
+            queuePublishedContentResponse(normalizedId, publishedSHA)
 
             webClient.queueResponse(
                 response =
@@ -1464,8 +1486,8 @@ class GithubConnectorTests {
                         content =
                             """
                             {
-                              "ref": "refs/heads/$riScId",
-                              "url": "https://api.github.com/repos/$owner/$repository/git/refs/heads/$riScId",
+                              "ref": "refs/heads/$branchName",
+                              "url": "https://api.github.com/repos/$owner/$repository/git/refs/heads/$branchName",
                               "object": {
                                 "type": "commit",
                                 "sha": "$commitSHA",
@@ -1497,6 +1519,11 @@ class GithubConnectorTests {
                 path = pathToGetLastCommitOnBranch(defaultBranch),
             )
 
+            queueContentResponse(normalizedId, publishedSHA, filePathOnBranch)
+
+            queueContentResponse(normalizedId, publishedSHA, filePathOnBranch)
+            queueDeleteDraftFileResponse(normalizedId)
+
             val response = deleteRiSc(riScId)
 
             assertEquals(
@@ -1506,9 +1533,7 @@ class GithubConnectorTests {
             )
 
             val branchRequestContent =
-                webClient
-                    .getNextRequest(path = pathToBranchCreationEndpoint)
-                    .deserializeContent<GithubCreateNewBranchPayload>()
+                webClient.getNextRequest(path = pathToBranchCreationEndpoint).deserializeContent<GithubCreateNewBranchPayload>()
 
             assertEquals(
                 commitSHA,
@@ -1516,7 +1541,7 @@ class GithubConnectorTests {
                 "The new branch should be created from the last commit on the default branch.",
             )
             assertEquals(
-                "refs/heads/$riScId",
+                "refs/heads/$branchName",
                 branchRequestContent.nameOfNewBranch,
                 "A new branch should be created for the riSc.",
             )
@@ -1524,11 +1549,11 @@ class GithubConnectorTests {
             val deleteRequestContent =
                 webClient
                     .getNextRequest(
-                        path = pathToDeleteRiScContent(riScId),
+                        path = filePathOnBranch,
                         method = HttpMethod.DELETE,
                     ).deserializeContent<GithubDeleteFilePayload>()
 
-            assertEquals(riScId, deleteRequestContent.branch, "The RiSc should be deleted on its draft branch.")
+            assertEquals(branchName, deleteRequestContent.branch, "The RiSc should be deleted on its draft branch.")
             assertEquals(
                 publishedSHA,
                 deleteRequestContent.sha,
