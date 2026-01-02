@@ -3,6 +3,7 @@ package no.risc.risc
 import io.swagger.v3.oas.annotations.tags.Tag
 import no.risc.github.GitHubAppService
 import no.risc.github.GithubConnector
+import no.risc.github.GithubHelper
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
@@ -17,6 +18,7 @@ import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.slack.SlackService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -37,6 +39,8 @@ class RiScController(
     private val githubConnector: GithubConnector,
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
+    private val githubHelper: GithubHelper,
+    @Value("\${filename.prefix}") private val filenamePrefix: String,
 ) {
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
@@ -110,7 +114,8 @@ class RiScController(
         if (createRiscResultDTO.riScContent != null) {
             riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
         }
-        return createRiscResultDTO
+        val (normalizedId, _) = githubHelper.normalizeAndBranch(createRiscResultDTO.riScId)
+        return createRiscResultDTO.copy(riScId = normalizedId)
     }
 
     @PutMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])

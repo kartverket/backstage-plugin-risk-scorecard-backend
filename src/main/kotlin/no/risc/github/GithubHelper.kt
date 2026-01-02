@@ -12,14 +12,22 @@ import java.time.OffsetDateTime
 class GithubHelper(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
-    @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
+    @Value("\${github.repository.risc-folder-path}") internal val riScFolderPath: String,
 ) {
     /**
      * Constructs the file path to the file for the given RiSc.
      *
      * @param riScId The ID of the RiSc.
      */
-    internal fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
+    internal fun riscPath(riScId: String): String {
+        val filename =
+            if (filenamePrefix.isBlank()) {
+                "$riScId.$filenamePostfix.yaml"
+            } else {
+                "$filenamePrefix-$riScId.$filenamePostfix.yaml"
+            }
+        return "$riScFolderPath/$filename"
+    }
 
     /**
      * Constructs a URI for performing file/directory operations (retrieval, update and deletion). If no branch is
@@ -85,12 +93,13 @@ class GithubHelper(
         owner: String,
         repository: String,
         riScId: String,
+        branchName: String,
     ): String =
         repositoryContentsUri(
             owner = owner,
             repository = repository,
             path = riscPath(riScId),
-            branch = riScId,
+            branch = branchName,
         )
 
     /**
@@ -267,5 +276,33 @@ class GithubHelper(
         page?.let { queryParts += "page=$it" }
 
         return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
+    }
+
+    /**
+     * Normalizes a RiSc ID by removing the filename prefix if present.
+     *
+     * @param riScId The RiSc ID (may or may not include the prefix)
+     * @return The normalized RiSc ID without prefix
+     */
+    fun normalizeId(riScId: String): String = riScId.removePrefix(if (filenamePrefix.isBlank()) "" else "$filenamePrefix-")
+
+    /**
+     * Generates a branch name from a normalized RiSc ID by adding the prefix.
+     *
+     * @param normalizedId The normalized RiSc ID (without prefix)
+     * @return The branch name (with prefix if configured)
+     */
+    fun toBranchName(normalizedId: String): String = if (filenamePrefix.isBlank()) normalizedId else "$filenamePrefix-$normalizedId"
+
+    /**
+     * Normalizes a RiSc ID by removing the filename prefix, and generates the corresponding branch name.
+     *
+     * @param riScId The RiSc ID (may or may not include the prefix)
+     * @return Pair of (normalizedId, branchName)
+     */
+    fun normalizeAndBranch(riScId: String): Pair<String, String> {
+        val normalized = normalizeId(riScId)
+        val branchName = toBranchName(normalized)
+        return normalized to branchName
     }
 }
