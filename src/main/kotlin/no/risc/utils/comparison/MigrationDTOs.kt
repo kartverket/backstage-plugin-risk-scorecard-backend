@@ -123,6 +123,11 @@ data class MigrationChange51Action(
     val lastUpdatedBy: String? = null,
 )
 
+@Serializable
+data class MigrationChange52(
+    val removedValuationsCount: Int,
+)
+
 // General change object
 @Serializable
 data class MigrationChangedValue<T>(
