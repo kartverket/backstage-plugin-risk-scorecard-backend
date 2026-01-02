@@ -76,6 +76,10 @@ sealed interface RiScVersion {
         VERSION_5_1,
         ;
 
+        @SerialName("5.2")
+        VERSION_5_2,
+        ;
+
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
     }
 
