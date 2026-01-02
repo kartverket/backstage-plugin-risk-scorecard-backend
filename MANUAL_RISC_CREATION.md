@@ -22,7 +22,6 @@ risc-abc12
 ```
 
 Where:
-- `<prefix>` is configured in your environment (typically `risc`)
 - `<identifier>` is a unique 5-character alphanumeric string (e.g., `abc12`, `xyz99`, `a1b2c`)
 - `<identifier>` can also be a suited name for your risc scorecard.
 
@@ -41,7 +40,6 @@ Place your RiSc YAML file in the following location:
 
 Where:
 - `<risc-folder>` is configured in your environment (typically `.security/riscs/`)
-- `<branch-name>` must match your branch name exactly (e.g., `risc-abc12`)
 - `<postfix>` is configured in your environment (typically `risc`)
 
 ### 3. Complete Example
@@ -51,16 +49,15 @@ For a RiSc with identifier `abc12`:
 | Component | Value |
 |-----------|-------|
 | Branch name | `risc-abc12` |
-| File path | `.security/riscs/risc-abc12.risc.yaml` |
+| File path | `.security/riscs/abc12.risc.yaml` |
 | Full GitHub path | `https://github.com/owner/repo/blob/risc-abc12/.security/riscs/risc-abc12.risc.yaml` |
 
 ## Step-by-Step Instructions
 
 ### 1. Generate a Unique Identifier
 
-Create a unique 5-character alphanumeric identifier:
 - Use a combination of letters (a-z, A-Z) and numbers (0-9)
-- Examples: `abc12`, `x7y9z`, `k3m4n`
+- Examples: `abc12`, `x7y9z`, `default`, `custom1`
 - Ensure it's not already in use in your repository
 
 ### 2. Create the Branch
@@ -81,25 +78,25 @@ Create the file at the correct path:
 mkdir -p .security/riscs
 
 # Create the RiSc file (replace abc12 with your identifier)
-touch .security/riscs/risc-abc12.risc.yaml
+touch .security/riscs/abc12.risc.yaml
 ```
 
 ### 4. Add RiSc Content
 
 Edit the file and add your RiSc content. If you want your RiSc content to contain the same scenarios and actions as an existing RiSc,
-you can copy the content from the existing file.
+you can copy the content from an existing risc file.
 
 ### 5. Commit and Push
 
 ```bash
 # Add the file
-git add .security/riscs/risc-abc12.risc.yaml
+git add .security/riscs/abc12.risc.yaml
 
 # Commit with a descriptive message
-git commit -m "Add new RiSc: risc-abc12"
+git commit -m "Add new RiSc file with ID: abc12"
 
 # Push to GitHub
-git push origin risc-abc12
+git push
 ```
 
 ### 6. Verify in Backstage
@@ -111,21 +108,13 @@ The RiSc should now appear in the Risc scorecard plugin. You can:
 
 ## Common Mistakes to Avoid
 
-### ❌ Branch and File Names Don't Match
-
-```
-Branch: risc-abc12
-File:   .security/riscs/risc-xyz99.risc.yaml  ❌ WRONG
-```
-
-The file name (without path and extension) must match the branch name exactly.
-
 ### ❌ Missing or Wrong File Extension
 
 ```
 .security/riscs/risc-abc12.yaml        ❌ WRONG (missing .risc)
 .security/riscs/risc-abc12.risc.yml    ❌ WRONG (should be .yaml not .yml)
 .security/riscs/risc-abc12.risc.yaml   ✅ CORRECT
+.security/riscs/abc123.risc.yaml       ✅ CORRECT 
 ```
 
 ### ❌ Wrong Folder Path
@@ -133,25 +122,24 @@ The file name (without path and extension) must match the branch name exactly.
 ```
 riscs/risc-abc12.risc.yaml              ❌ WRONG (missing .security/)
 .security/risc-abc12.risc.yaml          ❌ WRONG (missing riscs/ folder)
-.security/riscs/risc-abc12.risc.yaml    ✅ CORRECT
+.security/riscs/<filename>.risc.yaml    ✅ CORRECT
 ```
 
 ### ❌ Missing Prefix in Branch Name
 
 ```
 Branch: abc12                           ❌ WRONG (missing prefix)
-File:   .security/riscs/abc12.risc.yaml ❌ WORKS (missing prefix)
+Branch: risc-abc12                      ✅ CORRECT
 ```
 
-Always use the prefix.
+Always use the prefix for branch name.
 
 ## Configuration Reference
 
 The naming convention is controlled by environment variables:
 
 | Variable | Default Value | Description |
-|----------|--------------|-------------|
-| `FILENAME_PREFIX` | `risc` | Prefix for branch names and file names |
+|-------|------------|-------------|
 | `FILENAME_POSTFIX` | `risc` | Postfix before the .yaml extension |
 | `RISC_FOLDER_PATH` | `.security/riscs` | Folder where RiSc files are stored |
 
