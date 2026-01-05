@@ -657,12 +657,13 @@ fun migrateFrom51To52(
             valuations = null,
         ),
         migrationStatus.copy(
-            migrationChanges = migrationStatus.migrationChanges || removedValuationsCount > 0,
+            migrationChanges =
+                migrationStatus.migrationChanges || removedValuationsCount > 0,
             migrationRequiresNewApproval = true,
             migrationChanges52 =
                 MigrationChange52(
                     removedValuationsCount = removedValuationsCount,
-                    ),
-            ),
-        )
+                ),
+        ),
+    )
 }
