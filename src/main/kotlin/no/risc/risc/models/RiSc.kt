@@ -74,7 +74,6 @@ sealed interface RiScVersion {
 
         @SerialName("5.1")
         VERSION_5_1,
-        ;
 
         @SerialName("5.2")
         VERSION_5_2,
