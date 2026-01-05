@@ -171,7 +171,6 @@ private fun handleMigrate(
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 ->
                 migrateFrom51To52(riSc, migrationStatus)
 
-
             else -> throw IllegalStateException("Unsupported migration")
         }
     return handleMigrate(migratedRiSc, lastPublished, migrationStatus, toVersion)
@@ -666,5 +665,3 @@ fun migrateFrom51To52(
         ),
     )
 }
-
-
