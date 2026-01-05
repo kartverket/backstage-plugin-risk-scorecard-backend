@@ -47,7 +47,7 @@ sealed interface RiSc {
                     RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
                         parseJSONToClass<RiSc4X>(content)
 
-                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1 ->
+                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1, RiScVersion.RiSc5XVersion.VERSION_5_2 ->
                         parseJSONToClass<RiSc5X>(content)
 
                     null -> UnknownRiSc(content = content)
