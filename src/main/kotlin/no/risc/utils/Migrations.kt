@@ -662,7 +662,7 @@ fun migrateFrom51To52(
             migrationChanges52 =
                 MigrationChange52(
                     removedValuationsCount = removedValuationsCount,
+                    ),
             ),
-        ),
-    )
+        )
 }
