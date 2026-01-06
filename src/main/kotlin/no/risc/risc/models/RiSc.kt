@@ -393,7 +393,6 @@ data class UnknownRiSc(
  ******************************/
 
 @Serializable
-@Deprecated("Valuations are no longer used in RiSc 5.2 and later.")
 data class RiScValuation(
     val description: String,
     val confidentiality: RiScValuationConfidentiality,
@@ -402,7 +401,6 @@ data class RiScValuation(
 )
 
 @Serializable
-@Deprecated("Valuations are no longer used in RiSc 5.2 and later.")
 enum class RiScValuationConfidentiality {
     @SerialName("Public")
     PUBLIC,
@@ -418,7 +416,6 @@ enum class RiScValuationConfidentiality {
 }
 
 @Serializable
-@Deprecated("Valuations are no longer used in RiSc 5.2 and later.")
 enum class RiScValuationIntegrity {
     @SerialName("Insignificant")
     INSIGNIFICANT,
@@ -434,7 +431,6 @@ enum class RiScValuationIntegrity {
 }
 
 @Serializable
-@Deprecated("Valuations are no longer used in RiSc 5.2 and later.")
 enum class RiScValuationAvailability {
     @SerialName("Insignificant")
     INSIGNIFICANT,
