@@ -31,7 +31,7 @@ class GoogleServiceIntegration(
     private val googleOAuthApiConnector: GoogleOAuthApiConnector,
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
-    @Value("\${googleService.additionalAllowedGCPKeyNames}") private val additionalAllowedGCPKeyNames: List<String>,
+    @Value("\${googleService.additionalAllowedGCPProjectIds}") private val additionalAllowedGCPProjectIds: List<String>,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
@@ -119,8 +119,8 @@ class GoogleServiceIntegration(
         }
 
     /**
-     * Retrieves all GCP crypto keys that can be accessed with the provided GCP access token, provided their name
-     * includes either "-prod-" or is configured in the `additionalAllowedGCPKeyNames` property.
+     * Retrieves all GCP crypto keys that can be accessed with the provided GCP access token, provided they exist in a project where the id
+     * includes either "-prod-" or is configured in the `additionalAllowedGCPProjectIds` property.
      *
      * @param gcpAccessToken The GCP access token to retrieve keys for.
      */
@@ -128,7 +128,7 @@ class GoogleServiceIntegration(
         coroutineScope {
             LOGGER.info("Fetching GCP crypto keys")
             fetchProjectIds(gcpAccessToken)
-                .filter { it.value.contains("-prod-") || additionalAllowedGCPKeyNames.contains(it.value) }
+                .filter { it.value.contains("-prod-") || additionalAllowedGCPProjectIds.contains(it.value) }
                 .map { gcpProjectId ->
                     async(Dispatchers.IO) {
                         val hasAccess =
