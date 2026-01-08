@@ -94,12 +94,15 @@ class GoogleServiceIntegration(
      * @param cryptoKeyResourceId The resource ID (GCP project ID) for the crypto key to test permissions for.
      * @param gcpAccessToken The GCP access token to test permission levels for.
      * @param permissions The required GCP IAM permissions.
+     * @return `true` if all permissions are present, `false` if the response has permissions but not all are present.
+     * If the response has permissions of null, then null is returned, indicating that the resource most likely
+     * does not exist.
      */
     private suspend fun testIAMPermissions(
         cryptoKeyResourceId: String,
         gcpAccessToken: GCPAccessToken,
         permissions: List<GcpIAMPermission>,
-    ): Boolean =
+    ): Boolean? =
         try {
             gcpKmsApiConnector.webClient
                 .post()
@@ -109,7 +112,7 @@ class GoogleServiceIntegration(
                 .retrieve()
                 .awaitBody<TestIAMPermissionBody>()
                 .let { response ->
-                    response.permissions != null && permissions.all { it in response.permissions }
+                    response.permissions?.let { perms -> permissions.all { it in perms } }
                 }
         } catch (_: Exception) {
             throw FetchException(
@@ -138,14 +141,25 @@ class GoogleServiceIntegration(
                                 permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
                             )
 
-                        GcpCryptoKeyObject(
-                            projectId = gcpProjectId.value,
-                            keyRing = gcpProjectId.getRiScKeyRing(),
-                            name = gcpProjectId.getRiScCryptoKey(),
-                            resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
-                            hasEncryptDecryptAccess = hasAccess,
-                        )
+                        hasAccess
+                            ?.let {
+                                GcpCryptoKeyObject(
+                                    projectId = gcpProjectId.value,
+                                    keyRing = gcpProjectId.getRiScKeyRing(),
+                                    name = gcpProjectId.getRiScCryptoKey(),
+                                    resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
+                                    hasEncryptDecryptAccess = it,
+                                )
+                            }.also {
+                                if (it == null) {
+                                    LOGGER.warn(
+                                        "GCP crypto key resource {} does not exist, excluding from results",
+                                        gcpProjectId.getRiScCryptoKeyResourceId(),
+                                    )
+                                }
+                            }
                     }
                 }.awaitAll()
+                .filterNotNull()
         }
 }

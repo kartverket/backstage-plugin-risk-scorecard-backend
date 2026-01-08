@@ -286,4 +286,49 @@ class GoogleServiceIntegrationTests {
             "The crypto keys should include the key ($project2Id) which has been allowed by configuration.",
         )
     }
+
+    @Test
+    fun `test get GCP crypto keys filters out non-existent keys`() {
+        val existingProjectId = "existing-key-prod-test"
+        val nonExistentProjectId = "non-existent-prod-key-test"
+
+        val projectIDs =
+            FetchGcpProjectIdsResponse(
+                projects =
+                    listOf(
+                        GcpProject(projectId = existingProjectId),
+                        GcpProject(projectId = nonExistentProjectId),
+                    ),
+            )
+
+        webClient.queueResponse(response = mockableResponseFromObject(projectIDs), path = fetchGCPProjectIdsURL)
+
+        val permissionsExistingKey =
+            TestIAMPermissionBody(
+                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
+            )
+
+        val permissionsNonExistentKey = TestIAMPermissionBody(permissions = null)
+
+        webClient.queueResponse(
+            response = mockableResponseFromObject(permissionsExistingKey),
+            path = iamPermissionURL(existingProjectId),
+        )
+        webClient.queueResponse(
+            response = mockableResponseFromObject(permissionsNonExistentKey),
+            path = iamPermissionURL(nonExistentProjectId),
+        )
+
+        val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
+
+        assertEquals(1, cryptoKeys.size, "Only the existing key should be returned")
+        assertTrue(
+            cryptoKeys.any { it.projectId == existingProjectId && it.hasEncryptDecryptAccess },
+            "The crypto keys should include the existing key ($existingProjectId) with encrypt access.",
+        )
+        assertTrue(
+            cryptoKeys.all { it.projectId != nonExistentProjectId },
+            "The crypto keys should not include the non-existent key ($nonExistentProjectId).",
+        )
+    }
 }
