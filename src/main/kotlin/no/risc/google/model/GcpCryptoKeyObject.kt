@@ -8,5 +8,5 @@ data class GcpCryptoKeyObject(
     val keyRing: String,
     val name: String,
     val resourceId: String,
-    val hasEncryptDecryptAccess: Boolean,
+    val userPermissions: Set<CryptoKeyPermission>,
 )
