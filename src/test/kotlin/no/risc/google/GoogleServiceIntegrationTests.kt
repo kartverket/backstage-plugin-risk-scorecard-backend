@@ -28,16 +28,16 @@ import org.springframework.http.HttpStatus
 class GoogleServiceIntegrationTests {
     private lateinit var googleService: GoogleServiceIntegration
     private lateinit var webClient: MockableWebClient
-    private lateinit var additionalAllowedGCPKeyNames: MutableList<String>
+    private lateinit var additionalAllowedGCPProjectIds: MutableList<String>
 
     @BeforeEach
     fun beforeEach() {
-        additionalAllowedGCPKeyNames = mutableListOf()
+        additionalAllowedGCPProjectIds = mutableListOf()
         webClient = MockableWebClient()
-        mockGoogleService(additionalAllowedGCPKeyNames)
+        mockGoogleService(additionalAllowedGCPProjectIds)
     }
 
-    fun mockGoogleService(additionalAllowedGCPKeyNames: List<String>) {
+    fun mockGoogleService(additionalAllowedGCPProjectIds: List<String>) {
         googleService =
             GoogleServiceIntegration(
                 googleOAuthApiConnector = mockk<GoogleOAuthApiConnector>().also { every { it.webClient } returns webClient.webClient },
@@ -47,7 +47,7 @@ class GoogleServiceIntegrationTests {
                             webClient.webClient
                     },
                 gcpKmsApiConnector = mockk<GcpKmsApiConnector>().also { every { it.webClient } returns webClient.webClient },
-                additionalAllowedGCPKeyNames = additionalAllowedGCPKeyNames,
+                additionalAllowedGCPProjectIds = additionalAllowedGCPProjectIds,
             )
     }
 
@@ -56,9 +56,9 @@ class GoogleServiceIntegrationTests {
      * re-mocked each time an additional GCP key name is added to the allowed GCP key names, to propagate the changes to
      * the private property in GoogleServiceIntegration.
      */
-    fun allowGCPKeyName(keyName: String) {
-        additionalAllowedGCPKeyNames.add(keyName)
-        mockGoogleService(additionalAllowedGCPKeyNames)
+    fun allowGCPProjectId(projectId: String) {
+        additionalAllowedGCPProjectIds.add(projectId)
+        mockGoogleService(additionalAllowedGCPProjectIds)
     }
 
     @Test
@@ -115,19 +115,20 @@ class GoogleServiceIntegrationTests {
 
     private val fetchGCPProjectIdsURL = "/v1/projects"
 
-    private fun iamPermissionURL(keyName: String): String = "/v1/${GcpProjectId(keyName).getRiScCryptoKeyResourceId()}:testIamPermissions"
+    private fun iamPermissionURL(projectId: String): String =
+        "/v1/${GcpProjectId(projectId).getRiScCryptoKeyResourceId()}:testIamPermissions"
 
     @Test
     fun `test get GCP crypto keys`() {
-        val key1Name = "key1-prod-test"
-        val key2Name = "test-key-prod-test"
+        val project1Id = "key1-prod-test"
+        val project2Id = "test-key-prod-test"
 
         val projectIDs =
             FetchGcpProjectIdsResponse(
                 projects =
                     listOf(
-                        GcpProject(projectId = key1Name),
-                        GcpProject(projectId = key2Name),
+                        GcpProject(projectId = project1Id),
+                        GcpProject(projectId = project2Id),
                     ),
             )
 
@@ -147,23 +148,23 @@ class GoogleServiceIntegrationTests {
 
         webClient.queueResponse(
             response = mockableResponseFromObject(permissionsKey1),
-            path = iamPermissionURL(key1Name),
+            path = iamPermissionURL(project1Id),
         )
         webClient.queueResponse(
             response = mockableResponseFromObject(permissionsKey2),
-            path = iamPermissionURL(key2Name),
+            path = iamPermissionURL(project2Id),
         )
 
         val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
 
         assertEquals(2, cryptoKeys.size, "Both crypto keys should be returned")
         assertTrue(
-            cryptoKeys.any { it.projectId == key1Name && it.hasEncryptDecryptAccess },
-            "The crypto keys should include key1 ($key1Name) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
+            "The crypto keys should include key1 ($project1Id) with encrypt and decrypt access.",
         )
         assertTrue(
-            cryptoKeys.any { it.projectId == key2Name && !it.hasEncryptDecryptAccess },
-            "The crypto keys should include key2 ($key2Name) without encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project2Id && !it.hasEncryptDecryptAccess },
+            "The crypto keys should include key2 ($project2Id) without encrypt and decrypt access.",
         )
     }
 
@@ -178,13 +179,13 @@ class GoogleServiceIntegrationTests {
 
     @Test
     fun `test get GCP crypto keys can't get IAM permissions`() {
-        val keyName = "key-prod-test"
-        val projectIDs = FetchGcpProjectIdsResponse(projects = listOf(GcpProject(projectId = keyName)))
+        val projectId = "project-prod-test"
+        val projectIDs = FetchGcpProjectIdsResponse(projects = listOf(GcpProject(projectId = projectId)))
 
         webClient.queueResponse(response = mockableResponseFromObject(projectIDs), path = fetchGCPProjectIdsURL)
         webClient.queueResponse(
             response = MockableResponse(content = "", httpStatus = HttpStatus.BAD_REQUEST),
-            path = iamPermissionURL(keyName),
+            path = iamPermissionURL(projectId),
         )
 
         assertThrows<FetchException>("getGCPCryptoKeys should throw a FetchException when a call to get IAM permissions fails") {
@@ -193,16 +194,16 @@ class GoogleServiceIntegrationTests {
     }
 
     @Test
-    fun `test get GCP crypto keys non-production keys are ignored`() {
-        val key1Name = "key1-prod-test"
-        val key2Name = "test-key"
+    fun `test get GCP crypto keys non-production project ids are ignored`() {
+        val project1Id = "project1-prod-test"
+        val project2Id = "test-project"
 
         val projectIDs =
             FetchGcpProjectIdsResponse(
                 projects =
                     listOf(
-                        GcpProject(projectId = key1Name),
-                        GcpProject(projectId = key2Name),
+                        GcpProject(projectId = project1Id),
+                        GcpProject(projectId = project2Id),
                     ),
             )
 
@@ -219,34 +220,34 @@ class GoogleServiceIntegrationTests {
 
         webClient.queueResponse(
             response = mockableResponseFromObject(permissionsKey1),
-            path = iamPermissionURL(key1Name),
+            path = iamPermissionURL(project1Id),
         )
 
         val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
 
         assertEquals(1, cryptoKeys.size, "Only the key containing \"-prod-\" should be considered")
         assertTrue(
-            cryptoKeys.any { it.projectId == key1Name && it.hasEncryptDecryptAccess },
-            "The crypto keys should include the production key ($key1Name) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
+            "The crypto keys should include the production key ($project1Id) with encrypt and decrypt access.",
         )
         assertTrue(
-            cryptoKeys.all { it.projectId != key2Name },
-            "The crypto keys should not include the non-production key ($key2Name).",
+            cryptoKeys.all { it.projectId != project2Id },
+            "The crypto keys should not include the non-production key ($project2Id).",
         )
     }
 
     @Test
-    fun `test get GCP crypto keys extra specified keys are included`() {
-        val key1Name = "key1-prod-test"
-        val key2Name = "test-key"
-        allowGCPKeyName(key2Name)
+    fun `test get GCP crypto keys extra keys based on specified project ids are included`() {
+        val project1Id = "project1-prod-test"
+        val project2Id = "test-project"
+        allowGCPProjectId(project2Id)
 
         val projectIDs =
             FetchGcpProjectIdsResponse(
                 projects =
                     listOf(
-                        GcpProject(projectId = key1Name),
-                        GcpProject(projectId = key2Name),
+                        GcpProject(projectId = project1Id),
+                        GcpProject(projectId = project2Id),
                     ),
             )
 
@@ -266,23 +267,23 @@ class GoogleServiceIntegrationTests {
 
         webClient.queueResponse(
             response = mockableResponseFromObject(permissionsKey1),
-            path = iamPermissionURL(key1Name),
+            path = iamPermissionURL(project1Id),
         )
         webClient.queueResponse(
             response = mockableResponseFromObject(permissionsKey2),
-            path = iamPermissionURL(key2Name),
+            path = iamPermissionURL(project2Id),
         )
 
         val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
 
         assertEquals(2, cryptoKeys.size, "Only the key containing \"-prod-\" should be considered")
         assertTrue(
-            cryptoKeys.any { it.projectId == key1Name && it.hasEncryptDecryptAccess },
-            "The crypto keys should include the production key ($key1Name) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
+            "The crypto keys should include the production key ($project1Id) with encrypt and decrypt access.",
         )
         assertTrue(
-            cryptoKeys.any { it.projectId == key2Name && !it.hasEncryptDecryptAccess },
-            "The crypto keys should include the key ($key2Name) which has been allowed by configuration.",
+            cryptoKeys.any { it.projectId == project2Id && !it.hasEncryptDecryptAccess },
+            "The crypto keys should include the key ($project2Id) which has been allowed by configuration.",
         )
     }
 }
