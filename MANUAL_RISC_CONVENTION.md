@@ -16,26 +16,24 @@ Create a branch with the following naming pattern:
 <prefix>-<identifier>
 ```
 
+Where:
+- `<prefix>` is risc
+- `<identifier>` is a unique alphanumeric string (e.g., `abc12`, `xyz99`, `default`)
+- `<identifier>` can also be a suited name for your risc scorecard.
+
 **Example branch name:**
 ```
 risc-abc12
 ```
 
-Where:
-- `<risc>`= risc
-- `<identifier>` is a unique 5-character alphanumeric string (e.g., `abc12`, `xyz99`, `a1b2c`)
-- `<identifier>` can also be a suited name for your risc scorecard.
-
 ### 2. File Name
 The RiSc file must be a YAML file on the following format:
 
 ```
-<prefix>-<identifier>.<postfix>.yaml
+risc-<identifier>.risc.yaml
 ```
 Where:
-- `<prefix>` = risc
-- `<identifier>` = same as in branch name
-- `<postfix>` = risc
+- `<identifier>` is the same as in branch name
 
 **Example filename:**
 ```
@@ -51,15 +49,14 @@ Place your RiSc YAML file in the following location:
 ```
 <risc-folder>/<identifier>.<postfix>.yaml
 ```
+Where:
+- `<risc-folder>` is configured for your environment (`.security/riscs/`)
+- `<identifier>` is the **full branch name** (e.g., `risc-abc12`)
 
-**Example:**
+- **Example:**
 ```
 .security/riscs/risc-abc12.risc.yaml
 ```
-
-Where:
-- `<risc-folder>` is configured in your environment (typically `.security/riscs/`)
-- `<identifier>` is the **full branch name** (e.g., `risc-abc12`)
 
 ### 4. Complete Example
 
@@ -170,6 +167,10 @@ The naming convention is controlled by environment variables:
 |-------|------------|-------------|
 | `FILENAME_POSTFIX` | `risc` | Postfix before the .yaml extension |
 | `RISC_FOLDER_PATH` | `.security/riscs` | Folder where RiSc files are stored |
+
+**Important:** Both these variables are system-defined and not configurable. You can not change where RiSc files are stored
+or modify the naming convention. The identifier portion (`<identifier>`) is the only part you can customize when **manually**
+creating a RiSc.
 
 ## Troubleshooting
 
