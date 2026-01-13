@@ -12,6 +12,8 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XBackstageMetadata
+import no.risc.risc.models.RiSc5XMetadataUnencrypted
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioActionStatus
@@ -32,6 +34,9 @@ import no.risc.utils.comparison.MigrationChange51
 import no.risc.utils.comparison.MigrationChange51Action
 import no.risc.utils.comparison.MigrationChange51Scenario
 import no.risc.utils.comparison.MigrationChange52
+import no.risc.utils.comparison.MigrationChange53
+import no.risc.utils.comparison.MigrationChange53BackstageMetadata
+import no.risc.utils.comparison.MigrationChange53MetadataUnencrypted
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -170,6 +175,9 @@ private fun handleMigrate(
 
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 ->
                 migrateFrom51To52(riSc, migrationStatus)
+
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_2 ->
+                migrateFrom52To53(riSc, migrationStatus)
 
             else -> throw IllegalStateException("Unsupported migration")
         }
@@ -663,6 +671,38 @@ fun migrateFrom51To52(
             migrationChanges52 =
                 MigrationChange52(
                     removedValuationsCount = removedValuationsCount,
+                ),
+        ),
+    )
+}
+
+/**
+ *  Migrate RiSc with changes from 5.1 to 5.2
+ *
+ * Remove valuations from the RiSc file.
+ */
+fun migrateFrom52To53(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val initialBackstageEntityRef = ""
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_3,
+            metadataUnencrypted =
+                RiSc5XMetadataUnencrypted(
+                    RiSc5XBackstageMetadata(entityRef = initialBackstageEntityRef),
+                ),
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges53 =
+                MigrationChange53(
+                    metadataUnencrypted =
+                        MigrationChange53MetadataUnencrypted(
+                            MigrationChange53BackstageMetadata(initialBackstageEntityRef),
+                        ),
                 ),
         ),
     )

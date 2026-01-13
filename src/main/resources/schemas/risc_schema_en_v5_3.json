@@ -8,7 +8,7 @@
     "schemaVersion": {
       "description": "Schema version",
       "type": "string",
-      "default": "'5.1'"
+      "default": "'5.3'"
     },
     "title": {
       "description": "Title of the risk scorecard",
@@ -83,10 +83,12 @@
         "additionalProperties": false
       }
     },
-    "optional_metadata": {
+    "metadata_unencrypted": {
       "type": "object",
       "properties": {
-        "backstage_entity_ref": {"type": "string"}
+        "backstage": {
+          "$ref": "#/$defs/backstage"
+        }
       }
     },
     "sops": {
@@ -101,6 +103,14 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "backstage": {
+      "type": "object",
+      "properties": {
+        "entityRef": {
+          "type":  "string"
+        }
+      }
+    },
     "risk": {
       "type": "object",
       "properties": {
