@@ -2,7 +2,7 @@
 
 ## 5.3
 - Adds an unencrypted object to the RiSc for storing metadata.
-    - A dedicated object for Backstage metadata is introduced, containing the field entityRef, which specifies the Backstage entity that the RiSc pertains to.
+    - A dedicated object for Backstage metadata is introduced, containing the field entityRef, which specifies the Backstage entity that the RiSc belongs to.
 
 ## 5.2
 - Removes the unused valuations field

@@ -677,9 +677,14 @@ fun migrateFrom51To52(
 }
 
 /**
- *  Migrate RiSc with changes from 5.1 to 5.2
+ *  Migrate RiSc with changes from 5.2 to 5.3
  *
- * Remove valuations from the RiSc file.
+ * Unencrypted metadata is introduced. In the first iteration, the metadata includes
+ * an entity reference to the backstage entity the RiSc belongs to.
+ *
+ * From the backend, the entity reference is set to "" (empty) as it is only available from the frontend.
+ * The backend migration is responsible for changing the schema structure to include the entity reference
+ * field, while the frontend is responsible for population the field when migrating.
  */
 fun migrateFrom52To53(
     riSc: RiSc5X,
