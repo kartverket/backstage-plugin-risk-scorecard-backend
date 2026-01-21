@@ -18,6 +18,8 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Supplier
 
 /**
@@ -109,8 +111,8 @@ private class BodyCapturingClientHttpRequest : ClientHttpRequest {
  * 4. An empty 200 OK response.
  */
 class MockableWebClient {
-    private val responses = mutableMapOf<Pair<HttpMethod?, String?>, List<MockableResponse>>()
-    private val requests = mutableListOf<MockableRequest>()
+    private val responses = ConcurrentHashMap<Pair<HttpMethod?, String?>, List<MockableResponse>>()
+    private val requests = ConcurrentLinkedQueue<MockableRequest>()
     val webClient: WebClient =
         WebClient
             .builder()
@@ -147,15 +149,15 @@ class MockableWebClient {
         val matchedPath: String?
 
         // Choose the closest matching response
-        if (requestMethod to requestPath in responses) {
+        if (responses.containsKey(requestMethod to requestPath)) {
             // 1. Match on both HTTP method and path
             matchedMethod = requestMethod
             matchedPath = requestPath
-        } else if (null to requestPath in responses) {
+        } else if (responses.containsKey(null to requestPath)) {
             // 2. Match on only path
             matchedMethod = null
             matchedPath = requestPath
-        } else if (null to null in responses) {
+        } else if (responses.containsKey(null to null)) {
             // 3. Only a wildcard match
             matchedMethod = null
             matchedPath = null
@@ -197,7 +199,7 @@ class MockableWebClient {
     /**
      * Retrieves and removes the oldest request made to the web client
      */
-    fun getNextRequest(): MockableRequest = requests.removeFirst()
+    fun getNextRequest(): MockableRequest = requests.poll() ?: throw NoSuchElementException("No requests available")
 
     /**
      * Retrieves and removes the oldest request made to the web client at the specified path.
@@ -205,7 +207,9 @@ class MockableWebClient {
      * @param path The path to match on.
      * @throws NoSuchElementException If no requests have been made to the given path
      */
-    fun getNextRequest(path: String): MockableRequest = requests.first { it.path == path }.also { requests.remove(it) }
+    fun getNextRequest(path: String): MockableRequest =
+        requests.firstOrNull { it.path == path }?.also { requests.remove(it) }
+            ?: throw NoSuchElementException("No request found for path: $path")
 
     /**
      * Retrieves and removes the oldest request made to the web client at the specified path with the specified HTTP method.
@@ -217,7 +221,9 @@ class MockableWebClient {
     fun getNextRequest(
         path: String,
         method: HttpMethod,
-    ): MockableRequest = requests.first { it.path == path && it.method == method }.also { requests.remove(it) }
+    ): MockableRequest =
+        requests.firstOrNull { it.path == path && it.method == method }?.also { requests.remove(it) }
+            ?: throw NoSuchElementException("No request found for path: $path and method: $method")
 
     /**
      * Indicates whether there are responses queued up for a given path that have not yet been consumed. If there are
