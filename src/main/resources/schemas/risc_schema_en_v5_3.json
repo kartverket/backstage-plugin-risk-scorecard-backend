@@ -18,52 +18,6 @@
       "description": "The scope of the score card",
       "type": "string"
     },
-    "valuations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string"
-          },
-          "confidentiality": {
-            "type": "string",
-            "enum": [
-              "Public",
-              "Internal",
-              "Confidential",
-              "Strictly confidential"
-            ]
-          },
-          "integrity": {
-            "type": "string",
-            "enum": [
-              "Insignificant",
-              "Expected",
-              "Dependent",
-              "Critical"
-            ]
-          },
-          "availability": {
-            "type": "string",
-            "enum": [
-              "Insignificant",
-              "2 days",
-              "4 hours",
-              "Immediate"
-            ]
-          }
-        },
-        "required": [
-          "description",
-          "confidentiality",
-          "integrity",
-          "availability"
-        ],
-        "additionalProperties": false
-      },
-      "uniqueItems": true
-    },
     "scenarios": {
       "type": "array",
       "items": {
