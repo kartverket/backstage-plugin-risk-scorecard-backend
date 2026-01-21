@@ -9,8 +9,7 @@ if [ "$LOCAL" ] ; then
     echo "Starting socat relay service"
     exec socat tcp-l:7007,fork, tcp:host.docker.internal:7007 &
     exec socat tcp-l:8084,fork, tcp:host.docker.internal:8084 &
-    exec socat tcp-l:8888,fork, tcp:host.docker.internal:8888 &
-    exec socat tcp-l:8085,fork, tcp:host.docker.internal:8085 &
+    exec socat tcp-l:8888,fork, tcp:host.docker.internal:8888
 fi
 
 # Then exec the container's main process (what's set as CMD in the Dockerfile).
