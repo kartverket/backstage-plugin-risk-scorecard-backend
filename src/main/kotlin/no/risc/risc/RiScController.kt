@@ -1,6 +1,7 @@
 package no.risc.risc
 
 import io.swagger.v3.oas.annotations.tags.Tag
+import no.risc.config.AppConstants
 import no.risc.github.GitHubAppService
 import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -53,7 +54,7 @@ class RiScController(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
-            latestSupportedVersion = "5.2",
+            latestSupportedVersion = AppConstants.LATEST_SUPPORTED_SCHEMA_VERSION,
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -62,7 +63,7 @@ class RiScController(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @PathVariable latestSupportedVersion: String,
+        @PathVariable latestSupportedVersion: String, // Latest supported version by the frontend
     ): List<RiScContentResultDTO> {
         val result =
             riScService.fetchAllRiScs(
