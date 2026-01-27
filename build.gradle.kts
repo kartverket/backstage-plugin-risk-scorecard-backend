@@ -39,7 +39,7 @@ val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.6"
-val junitVersion = "6.0.0"
+val junitVersion = "6.0.1"
 val springdocVersion = "2.8.4"
 
 dependencies {
