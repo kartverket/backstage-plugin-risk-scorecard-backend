@@ -79,6 +79,9 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.json:json:20231013")
+
     testImplementation("io.mockk:mockk:$mockkVersion")
 
     constraints {

@@ -6,6 +6,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.core.env.Environment
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -26,8 +27,26 @@ class SecurityConfig(
     private val logger: Logger = LoggerFactory.getLogger(SecurityConfig::class.java)
 
     @Bean
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    @Order(0)
+    fun jiraSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
+            .securityMatcher("/api/jira/**")
+            .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource()) }
+            .authorizeHttpRequests { it.anyRequest().permitAll() }
+            .httpBasic { it.disable() }
+            .formLogin { it.disable() }
+            .logout { it.disable() }
+
+        return http.build()
+    }
+
+    @Bean
+    @Order(1)
+    fun apiSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .securityMatcher("/api/**")
+            .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { authorize ->
                 authorize
@@ -35,11 +54,18 @@ class SecurityConfig(
                     .permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**")
                     .permitAll()
-                    .requestMatchers("/api/**")
-                    .authenticated()
                     .anyRequest()
                     .authenticated()
             }.oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
+
+        return http.build()
+    }
+
+    @Bean
+    @Order(2)
+    fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .authorizeHttpRequests { it.anyRequest().permitAll() }
 
         return http.build()
     }

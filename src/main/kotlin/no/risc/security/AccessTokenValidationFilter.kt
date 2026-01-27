@@ -22,6 +22,10 @@ class AccessTokenValidationFilter(
         filterChain: FilterChain,
     ) {
         try {
+            if(request.requestURI.startsWith("/api/jira/")){
+                filterChain.doFilter(request, response)
+                return
+            }
             if (request.method.lowercase() != "get") {
                 val repository =
                     Repository(
