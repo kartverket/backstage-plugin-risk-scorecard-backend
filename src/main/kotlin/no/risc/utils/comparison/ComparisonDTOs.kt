@@ -44,8 +44,8 @@ data class DeletedProperty<S, T>(
 @Serializable
 @SerialName("CHANGED")
 data class ChangedProperty<S, T>(
-    val oldValue: S,
-    val newValue: S,
+    val oldValue: S?,
+    val newValue: S?,
 ) : TrackedProperty<S, T>
 
 /**
@@ -105,8 +105,19 @@ data class RiSc5XChange(
     val scope: SimpleTrackedProperty<String>? = null,
     val valuations: List<SimpleTrackedProperty<RiScValuation>>,
     val scenarios: List<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>>,
+    val metadataUnencrypted: RiSc5XMetadataUnencryptedChange? = null,
     override val migrationChanges: MigrationStatus,
 ) : RiScChange
+
+@Serializable
+data class RiSc5XMetadataUnencryptedChange(
+    val backstage: RiSc5XBackstageMetadataChange?,
+)
+
+@Serializable
+data class RiSc5XBackstageMetadataChange(
+    val entityRef: SimpleTrackedProperty<String?>? = null,
+)
 
 @Serializable
 data class RiSc5XScenarioChange(

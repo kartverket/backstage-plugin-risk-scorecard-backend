@@ -47,7 +47,10 @@ sealed interface RiSc {
                     RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
                         parseJSONToClass<RiSc4X>(content)
 
-                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1, RiScVersion.RiSc5XVersion.VERSION_5_2 ->
+                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1,
+
+                    RiScVersion.RiSc5XVersion.VERSION_5_2, RiScVersion.RiSc5XVersion.VERSION_5_3,
+                    ->
                         parseJSONToClass<RiSc5X>(content)
 
                     null -> UnknownRiSc(content = content)
@@ -77,6 +80,9 @@ sealed interface RiScVersion {
 
         @SerialName("5.2")
         VERSION_5_2,
+
+        @SerialName("5.3")
+        VERSION_5_3,
         ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
@@ -143,9 +149,20 @@ data class RiSc5X(
     val scope: String,
     val valuations: List<RiScValuation>? = null,
     val scenarios: List<RiSc5XScenario>,
+    @SerialName("metadata_unencrypted") val metadataUnencrypted: RiSc5XMetadataUnencrypted? = null,
 ) : RiSc {
     override fun toJSON(): String = serializeJSON(this)
 }
+
+@Serializable
+data class RiSc5XMetadataUnencrypted(
+    val backstage: RiSc5XBackstageMetadata,
+)
+
+@Serializable
+data class RiSc5XBackstageMetadata(
+    val entityRef: String,
+)
 
 object RiSc5XScenarioSerializer : FlattenSerializer<RiSc5XScenario>(
     serializer = RiSc5XScenario.generatedSerializer(),

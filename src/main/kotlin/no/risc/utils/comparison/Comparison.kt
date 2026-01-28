@@ -10,6 +10,8 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XBackstageMetadata
+import no.risc.risc.models.RiSc5XMetadataUnencrypted
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioRisk
@@ -84,6 +86,11 @@ fun comparison5X(
             compareScenarios5X(
                 oldScenarios = migratedOldRiSc.scenarios,
                 newScenarios = updatedRiSc.scenarios,
+            ),
+        metadataUnencrypted =
+            compareMetadataUnencrypted5X(
+                migratedOldRiSc.metadataUnencrypted,
+                updatedRiSc.metadataUnencrypted,
             ),
         migrationChanges = migrationStatus,
     )
@@ -286,6 +293,35 @@ fun compareValuations(
     oldValuations: List<RiScValuation>,
     newValuations: List<RiScValuation>,
 ): List<SimpleTrackedProperty<RiScValuation>> = changeForListOfSimpleProperty(oldValuations, newValuations)
+
+fun compareMetadataUnencrypted5X(
+    oldMetadata: RiSc5XMetadataUnencrypted?,
+    newMetadata: RiSc5XMetadataUnencrypted?,
+): RiSc5XMetadataUnencryptedChange? {
+    val backstageMetadataChange = compareBackstageMetadata5X(oldMetadata?.backstage, newMetadata?.backstage)
+
+    if (backstageMetadataChange != null) {
+        return RiSc5XMetadataUnencryptedChange(
+            backstage = backstageMetadataChange,
+        )
+    }
+    return null
+}
+
+fun compareBackstageMetadata5X(
+    oldMetadata: RiSc5XBackstageMetadata?,
+    newMetadata: RiSc5XBackstageMetadata?,
+): RiSc5XBackstageMetadataChange? {
+    val entityRefChange =
+        changeForNonMandatorySimpleProperty(
+            oldMetadata?.entityRef,
+            newMetadata?.entityRef,
+        )
+    if (entityRefChange != null) {
+        return RiSc5XBackstageMetadataChange(entityRef = entityRefChange)
+    }
+    return null
+}
 
 /**
  * Compares and tracks changes for scenarios for versions 5.X. Only scenarios with changes are
