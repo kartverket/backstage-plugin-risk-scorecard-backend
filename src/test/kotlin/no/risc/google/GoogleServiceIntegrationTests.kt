@@ -7,6 +7,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
 import no.risc.exception.exceptions.FetchException
+import no.risc.google.model.CryptoKeyPermission
 import no.risc.google.model.FetchGcpProjectIdsResponse
 import no.risc.google.model.GcpIAMPermission
 import no.risc.google.model.GcpProject
@@ -120,8 +121,8 @@ class GoogleServiceIntegrationTests {
 
     @Test
     fun `test get GCP crypto keys`() {
-        val project1Id = "key1-prod-test"
-        val project2Id = "test-key-prod-test"
+        val project1Id = "project1-prod-test"
+        val project2Id = "test-project-prod-test"
 
         val projectIDs =
             FetchGcpProjectIdsResponse(
@@ -159,12 +160,12 @@ class GoogleServiceIntegrationTests {
 
         assertEquals(2, cryptoKeys.size, "Both crypto keys should be returned")
         assertTrue(
-            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
-            "The crypto keys should include key1 ($project1Id) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.userPermissions.size == 2 },
+            "The crypto keys should include key from project $project1Id with expected number of permissions",
         )
         assertTrue(
-            cryptoKeys.any { it.projectId == project2Id && !it.hasEncryptDecryptAccess },
-            "The crypto keys should include key2 ($project2Id) without encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project2Id && it.userPermissions.size == 1 },
+            "The crypto keys should include key from project $project2Id with expected number of permissions",
         )
     }
 
@@ -227,8 +228,8 @@ class GoogleServiceIntegrationTests {
 
         assertEquals(1, cryptoKeys.size, "Only the key containing \"-prod-\" should be considered")
         assertTrue(
-            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
-            "The crypto keys should include the production key ($project1Id) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.userPermissions.size == 2 },
+            "The crypto keys should include key from project $project1Id with expected number of permissions",
         )
         assertTrue(
             cryptoKeys.all { it.projectId != project2Id },
@@ -276,14 +277,145 @@ class GoogleServiceIntegrationTests {
 
         val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
 
-        assertEquals(2, cryptoKeys.size, "Only the key containing \"-prod-\" should be considered")
+        assertEquals(2, cryptoKeys.size, "Both the production key and the extra configured key should be considered")
         assertTrue(
-            cryptoKeys.any { it.projectId == project1Id && it.hasEncryptDecryptAccess },
-            "The crypto keys should include the production key ($project1Id) with encrypt and decrypt access.",
+            cryptoKeys.any { it.projectId == project1Id && it.userPermissions.size == 2 },
+            "The crypto keys should include the production key ($project1Id) with expected number of permissions.",
         )
         assertTrue(
-            cryptoKeys.any { it.projectId == project2Id && !it.hasEncryptDecryptAccess },
+            cryptoKeys.any { it.projectId == project2Id && it.userPermissions.size == 1 },
             "The crypto keys should include the key ($project2Id) which has been allowed by configuration.",
+        )
+    }
+
+    @Test
+    fun `test get GCP crypto keys filters out non-existent keys`() {
+        val existingProjectId = "existing-key-prod-test"
+        val nonExistentProjectId = "non-existent-prod-key-test"
+
+        val projectIDs =
+            FetchGcpProjectIdsResponse(
+                projects =
+                    listOf(
+                        GcpProject(projectId = existingProjectId),
+                        GcpProject(projectId = nonExistentProjectId),
+                    ),
+            )
+
+        webClient.queueResponse(response = mockableResponseFromObject(projectIDs), path = fetchGCPProjectIdsURL)
+
+        val permissionsExistingKey =
+            TestIAMPermissionBody(
+                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
+            )
+
+        val permissionsNonExistentKey = TestIAMPermissionBody(permissions = null)
+
+        webClient.queueResponse(
+            response = mockableResponseFromObject(permissionsExistingKey),
+            path = iamPermissionURL(existingProjectId),
+        )
+        webClient.queueResponse(
+            response = mockableResponseFromObject(permissionsNonExistentKey),
+            path = iamPermissionURL(nonExistentProjectId),
+        )
+
+        val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
+
+        assertEquals(1, cryptoKeys.size, "Only the existing key should be returned")
+        assertTrue(
+            cryptoKeys.any { it.projectId == existingProjectId && it.userPermissions.size == 1 },
+            "The crypto keys should include the existing key ($existingProjectId) with expected number of permissions.",
+        )
+        assertTrue(
+            cryptoKeys.all { it.projectId != nonExistentProjectId },
+            "The crypto keys should not include the non-existent key ($nonExistentProjectId).",
+        )
+    }
+
+    @Test
+    fun `test GCP IAM permission mapping to CryptoKeyPermission`() {
+        val encryptOnlyProjectId = "encrypt-only-prod-test"
+        val decryptOnlyProjectId = "decrypt-only-prod-test"
+        val bothPermissionsProjectId = "both-permissions-prod-test"
+        val noPermissionsProjectId = "no-permissions-prod-test"
+
+        val projectIDs =
+            FetchGcpProjectIdsResponse(
+                projects =
+                    listOf(
+                        GcpProject(projectId = encryptOnlyProjectId),
+                        GcpProject(projectId = decryptOnlyProjectId),
+                        GcpProject(projectId = bothPermissionsProjectId),
+                        GcpProject(projectId = noPermissionsProjectId),
+                    ),
+            )
+
+        webClient.queueResponse(response = mockableResponseFromObject(projectIDs), path = fetchGCPProjectIdsURL)
+
+        // Test encrypt only
+        val encryptOnlyPermissions =
+            TestIAMPermissionBody(
+                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
+            )
+
+        // Test decrypt only
+        val decryptOnlyPermissions =
+            TestIAMPermissionBody(
+                permissions = listOf(GcpIAMPermission.USE_TO_DECRYPT),
+            )
+
+        // Test both permissions
+        val bothPermissions =
+            TestIAMPermissionBody(
+                permissions =
+                    listOf(
+                        GcpIAMPermission.USE_TO_ENCRYPT,
+                        GcpIAMPermission.USE_TO_DECRYPT,
+                    ),
+            )
+
+        // Test no permissions (null or empty)
+        val noPermissions =
+            TestIAMPermissionBody(permissions = null)
+
+        webClient.queueResponse(
+            response = mockableResponseFromObject(encryptOnlyPermissions),
+            path = iamPermissionURL(encryptOnlyProjectId),
+        )
+        webClient.queueResponse(
+            response = mockableResponseFromObject(decryptOnlyPermissions),
+            path = iamPermissionURL(decryptOnlyProjectId),
+        )
+        webClient.queueResponse(
+            response = mockableResponseFromObject(bothPermissions),
+            path = iamPermissionURL(bothPermissionsProjectId),
+        )
+        webClient.queueResponse(
+            response = mockableResponseFromObject(noPermissions),
+            path = iamPermissionURL(noPermissionsProjectId),
+        )
+
+        val cryptoKeys = runBlocking { googleService.getGcpCryptoKeys(gcpAccessToken = GCPAccessToken("testToken")) }
+
+        // Should have 3 keys (encrypt-only, decrypt-only, both), excluding the one with no permissions
+        assertEquals(3, cryptoKeys.size, "Should return 3 keys with permissions")
+        assertTrue(
+            cryptoKeys.any { it.projectId == encryptOnlyProjectId && it.userPermissions.single() == CryptoKeyPermission.ENCRYPT },
+            "The crypto key for project $encryptOnlyProjectId should have ENCRYPT permission",
+        )
+        assertTrue(
+            cryptoKeys.any { it.projectId == decryptOnlyProjectId && it.userPermissions.single() == CryptoKeyPermission.DECRYPT },
+            "The crypto key for project $decryptOnlyProjectId should have DECRYPT permission",
+        )
+        assertTrue(
+            cryptoKeys.any { it.projectId == bothPermissionsProjectId && it.userPermissions.size == 2 },
+            "The crypto key for project $bothPermissionsProjectId should have two permissions",
+        )
+        assertEquals(
+            setOf(CryptoKeyPermission.ENCRYPT, CryptoKeyPermission.DECRYPT),
+            cryptoKeys.find { it.projectId == bothPermissionsProjectId }!!.userPermissions,
+            "The key for project $bothPermissionsProjectId should have both ENCRYPT and DECRYPT permissions",
         )
     }
 }
