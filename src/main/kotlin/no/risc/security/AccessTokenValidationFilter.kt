@@ -22,7 +22,7 @@ class AccessTokenValidationFilter(
         filterChain: FilterChain,
     ) {
         try {
-            if(request.requestURI.startsWith("/api/jira/")){
+            if (request.requestURI.startsWith("/api/jira/")) {
                 filterChain.doFilter(request, response)
                 return
             }
