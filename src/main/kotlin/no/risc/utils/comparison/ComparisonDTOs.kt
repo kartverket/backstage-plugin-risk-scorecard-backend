@@ -44,8 +44,8 @@ data class DeletedProperty<S, T>(
 @Serializable
 @SerialName("CHANGED")
 data class ChangedProperty<S, T>(
-    val oldValue: S,
-    val newValue: S,
+    val oldValue: S?,
+    val newValue: S?,
 ) : TrackedProperty<S, T>
 
 /**
