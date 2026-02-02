@@ -41,6 +41,7 @@ val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.6"
 val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
+val caffeineVersion = "3.1.8"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -72,6 +73,8 @@ dependencies {
     }
 
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
+
+    implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
