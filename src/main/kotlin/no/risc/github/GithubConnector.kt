@@ -33,8 +33,8 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.decodeBase64
 import no.risc.utils.encodeBase64
 import no.risc.utils.tryOrDefault
-import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.utils.tryOrNull
+import no.risc.utils.tryWithErrorLogging
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -50,7 +50,6 @@ import org.springframework.web.reactive.function.client.awaitBodyOrNull
 import org.springframework.web.reactive.function.client.toEntity
 import reactor.core.publisher.Mono
 import java.time.OffsetDateTime
-import kotlin.compareTo
 
 @Component
 class GithubConnector(
@@ -243,7 +242,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
+        tryWithErrorLogging(LOGGER) {
             getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
                 .awaitBody<List<GithubFileDTO>>()
                 // All RiSc files end in ".<filenamePostfix>.yaml".
@@ -255,7 +254,7 @@ class GithubConnector(
                         status = RiScStatus.Published,
                     )
                 }
-        }
+        }.getOrThrow()
 
     /**
      * Finds the identifiers of every RiSc in a repository that has a pull request open.
@@ -269,7 +268,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
+        tryWithErrorLogging(logger = LOGGER) {
             getGithubResponse(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
@@ -283,7 +282,7 @@ class GithubConnector(
                     )
                     // Every RiSc identifier starts with "<filenamePrefix>-".
                 }.filter { it.id.startsWith("$filenamePrefix-") }
-        }
+        }.getOrThrow()
 
     /**
      * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
@@ -298,7 +297,7 @@ class GithubConnector(
         repository: String,
         accessToken: String,
     ): List<RiScIdentifier> =
-        tryOrDefaultWithErrorLogging(default = emptyList(), logger = LOGGER) {
+        tryWithErrorLogging(logger = LOGGER) {
             getGithubResponse(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
@@ -306,7 +305,7 @@ class GithubConnector(
             ).awaitBody<List<GithubReferenceObjectDTO>>()
                 // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
                 .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
-        }
+        }.getOrThrow()
 
     /**
      * Fetches commits from the GitHub commits endpoint in pages and returns the combined result.
@@ -1136,7 +1135,7 @@ class GithubConnector(
             is WebClientResponseException.NotFound -> GithubStatus.NotFound
             is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
             is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-            { e is WebClientResponseException && e.message.contains("DataBufferLimitException") } ->
+            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } ->
                 GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
 
             else -> GithubStatus.InternalError

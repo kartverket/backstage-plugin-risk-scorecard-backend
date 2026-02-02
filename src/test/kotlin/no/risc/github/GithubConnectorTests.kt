@@ -43,6 +43,7 @@ import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.api.assertThrows
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.awaitBody
 import java.time.OffsetDateTime
 
@@ -254,9 +255,8 @@ class GithubConnectorTests {
                 path = pathToOpenPullRequests,
             )
 
-            val riScsMetadata = fetchRiScGithubMetadata()
-
-            assertTrue(riScsMetadata.isEmpty(), "Fetch all RiSc identifiers should fail gracefully on network errors.")
+            val message = "Fetch all RiSc identifiers should actually throw so we don't return 200 with and empty list"
+            assertThrows<WebClientResponseException>(message) { fetchRiScGithubMetadata() }
         }
     }
 
