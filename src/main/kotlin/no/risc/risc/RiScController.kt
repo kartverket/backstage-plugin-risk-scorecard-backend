@@ -1,5 +1,6 @@
 package no.risc.risc
 
+import io.swagger.v3.oas.annotations.tags.Tag
 import no.risc.github.GitHubAppService
 import no.risc.github.GithubConnector
 import no.risc.infra.connector.models.AccessTokens
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/risc")
+@Tag(name = "risc", description = "Risk Scorecard management endpoints")
 class RiScController(
     private val riScService: RiScService,
     private val githubConnector: GithubConnector,
@@ -51,7 +53,7 @@ class RiScController(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
-            latestSupportedVersion = "5.0",
+            latestSupportedVersion = "5.2",
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -103,11 +105,8 @@ class RiScController(
                             gitHubAccessToken = gitHubAccessToken,
                         ).defaultBranch,
                 generateDefault = generateDefault,
-                defaultRiScTypes = newRiSc.defaultRiScTypes,
+                defaultRiScId = newRiSc.defaultRiScId,
             )
-        if (createRiscResultDTO.riScContent != null) {
-            riScService.uploadRiScToRosa(createRiscResultDTO.riScId, repositoryName, createRiscResultDTO.riScContent)
-        }
         return createRiscResultDTO
     }
 
@@ -119,33 +118,25 @@ class RiScController(
         @PathVariable id: String,
         @PathVariable repositoryName: String,
         @RequestBody riSc: RiScWrapperObject,
-    ): RiScResult {
-        val riScResult =
-            riScService.updateRiSc(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                riScId = id,
-                content = riSc,
-                accessTokens =
-                    AccessTokens(
-                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
-                    ),
-                defaultBranch =
-                    githubConnector
-                        .fetchRepositoryInfo(
-                            repositoryOwner = repositoryOwner,
-                            repositoryName = repositoryName,
-                            gitHubAccessToken = gitHubAccessToken,
-                        ).defaultBranch,
-            )
-        riScService.uploadRiScToRosa(
-            id,
-            repositoryName,
-            riSc.riSc,
+    ): RiScResult =
+        riScService.updateRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            riScId = id,
+            content = riSc,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                ),
+            defaultBranch =
+                githubConnector
+                    .fetchRepositoryInfo(
+                        repositoryOwner = repositoryOwner,
+                        repositoryName = repositoryName,
+                        gitHubAccessToken = gitHubAccessToken,
+                    ).defaultBranch,
         )
-        return riScResult
-    }
 
     @DeleteMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])
     suspend fun deleteRiSc(
@@ -154,21 +145,17 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable id: String,
-    ): DeleteRiScResultDTO {
-        val deleteRiscResultDTO =
-            riScService.deleteRiSc(
-                owner = repositoryOwner,
-                repository = repositoryName,
-                riScId = id,
-                accessTokens =
-                    AccessTokens(
-                        gcpAccessToken = GCPAccessToken(gcpAccessToken),
-                        githubAccessToken = GithubAccessToken(gitHubAccessToken),
-                    ),
-            )
-        riScService.deleteRiscFromRosa(riScId = id)
-        return deleteRiscResultDTO
-    }
+    ): DeleteRiScResultDTO =
+        riScService.deleteRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            riScId = id,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = GithubAccessToken(gitHubAccessToken),
+                ),
+        )
 
     @PostMapping("/{repositoryOwner}/{repositoryName}/publish/{id}", produces = ["application/json"])
     suspend fun sendRiScForPublishing(

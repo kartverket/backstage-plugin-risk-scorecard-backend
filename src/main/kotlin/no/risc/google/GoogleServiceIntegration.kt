@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.exception.exceptions.FetchException
+import no.risc.google.model.CryptoKeyPermission
 import no.risc.google.model.FetchGcpProjectIdsResponse
 import no.risc.google.model.GcpCryptoKeyObject
 import no.risc.google.model.GcpIAMPermission
@@ -31,7 +32,7 @@ class GoogleServiceIntegration(
     private val googleOAuthApiConnector: GoogleOAuthApiConnector,
     private val gcpCloudResourceApiConnector: GcpCloudResourceApiConnector,
     private val gcpKmsApiConnector: GcpKmsApiConnector,
-    @Value("\${googleService.additionalAllowedGCPKeyNames}") private val additionalAllowedGCPKeyNames: List<String>,
+    @Value("\${googleService.additionalAllowedGCPProjectIds}") private val additionalAllowedGCPProjectIds: List<String>,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(GoogleServiceIntegration::class.java)
@@ -89,38 +90,53 @@ class GoogleServiceIntegration(
         }
 
     /**
-     * Verifies that the given GCP access token has the provided GCP IAM permissions in the given crypto key resource.
+     * Fetches IAM permissions for a specified Google Cloud KMS crypto key using the provided access token.
+     * Only fetches Encrypt/Decrypt permissions - all other permissions are ignored.
      *
-     * @param cryptoKeyResourceId The resource ID (GCP project ID) for the crypto key to test permissions for.
-     * @param gcpAccessToken The GCP access token to test permission levels for.
-     * @param permissions The required GCP IAM permissions.
+     * @param cryptoKeyResourceId The resource ID of the crypto key whose IAM permissions are being queried.
+     * @param gcpAccessToken The GCP access token used to authenticate the request.
+     * @return A set of IAM permissions available for the provided crypto key.
+     * @throws FetchException If the IAM permissions cannot be retrieved for the given crypto key resource ID.
      */
-    private suspend fun testIAMPermissions(
+    private suspend fun getIAMPermissions(
         cryptoKeyResourceId: String,
         gcpAccessToken: GCPAccessToken,
-        permissions: List<GcpIAMPermission>,
-    ): Boolean =
+    ): Set<GcpIAMPermission> =
         try {
             gcpKmsApiConnector.webClient
                 .post()
                 .uri("/v1/$cryptoKeyResourceId:testIamPermissions")
-                .body(BodyInserters.fromValue(TestIAMPermissionBody(permissions)))
-                .header("Authorization", "Bearer ${gcpAccessToken.value}")
+                .body(
+                    BodyInserters.fromValue(
+                        TestIAMPermissionBody(
+                            listOf(
+                                GcpIAMPermission.USE_TO_ENCRYPT,
+                                GcpIAMPermission.USE_TO_DECRYPT,
+                            ),
+                        ),
+                    ),
+                ).header("Authorization", "Bearer ${gcpAccessToken.value}")
                 .retrieve()
                 .awaitBody<TestIAMPermissionBody>()
-                .let { response ->
-                    response.permissions != null && permissions.all { it in response.permissions }
-                }
-        } catch (_: Exception) {
+                .permissions
+                ?.toSet() ?: emptySet()
+        } catch (e: Exception) {
+            LOGGER.warn("Error fetching IAM permissions for $cryptoKeyResourceId: ${e.message}")
             throw FetchException(
                 "Unable to test IAM permissions for $cryptoKeyResourceId",
                 ProcessingStatus.FailedToFetchGCPIAMPermissions,
             )
         }
 
+    private fun mapCryptoKeyPermissionFrom(Gcpiampermission: GcpIAMPermission): CryptoKeyPermission =
+        when (Gcpiampermission) {
+            GcpIAMPermission.USE_TO_DECRYPT -> CryptoKeyPermission.DECRYPT
+            GcpIAMPermission.USE_TO_ENCRYPT -> CryptoKeyPermission.ENCRYPT
+        }
+
     /**
-     * Retrieves all GCP crypto keys that can be accessed with the provided GCP access token, provided their name
-     * includes either "-prod-" or is configured in the `additionalAllowedGCPKeyNames` property.
+     * Retrieves all GCP crypto keys that can be accessed with the provided GCP access token, provided they exist in a project where the id
+     * includes either "-prod-" or is configured in the `additionalAllowedGCPProjectIds` property.
      *
      * @param gcpAccessToken The GCP access token to retrieve keys for.
      */
@@ -128,24 +144,23 @@ class GoogleServiceIntegration(
         coroutineScope {
             LOGGER.info("Fetching GCP crypto keys")
             fetchProjectIds(gcpAccessToken)
-                .filter { it.value.contains("-prod-") || additionalAllowedGCPKeyNames.contains(it.value) }
+                .filter { it.value.contains("-prod-") || additionalAllowedGCPProjectIds.contains(it.value) }
                 .map { gcpProjectId ->
                     async(Dispatchers.IO) {
-                        val hasAccess =
-                            testIAMPermissions(
+                        val permissions =
+                            getIAMPermissions(
                                 cryptoKeyResourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
                                 gcpAccessToken = gcpAccessToken,
-                                permissions = listOf(GcpIAMPermission.USE_TO_ENCRYPT),
                             )
-
                         GcpCryptoKeyObject(
                             projectId = gcpProjectId.value,
                             keyRing = gcpProjectId.getRiScKeyRing(),
                             name = gcpProjectId.getRiScCryptoKey(),
                             resourceId = gcpProjectId.getRiScCryptoKeyResourceId(),
-                            hasEncryptDecryptAccess = hasAccess,
+                            userPermissions = permissions.map { mapCryptoKeyPermissionFrom(it) }.toSet(),
                         )
                     }
                 }.awaitAll()
+                .filter { !it.userPermissions.isEmpty() }
         }
 }

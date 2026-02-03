@@ -44,8 +44,8 @@ data class DeletedProperty<S, T>(
 @Serializable
 @SerialName("CHANGED")
 data class ChangedProperty<S, T>(
-    val oldValue: S,
-    val newValue: S,
+    val oldValue: S?,
+    val newValue: S?,
 ) : TrackedProperty<S, T>
 
 /**
@@ -99,7 +99,7 @@ sealed interface RiScChange {
  ***************/
 
 @Serializable
-@SerialName("5.0")
+@SerialName("5.*")
 data class RiSc5XChange(
     val title: SimpleTrackedProperty<String>? = null,
     val scope: SimpleTrackedProperty<String>? = null,
@@ -132,6 +132,7 @@ data class RiSc5XScenarioActionChange(
         @Serializable(KNullableOffsetDateTimeSerializer::class)
         OffsetDateTime?,
     >? = null,
+    val lastUpdatedBy: SimpleTrackedProperty<String?>? = null,
 )
 
 /***************

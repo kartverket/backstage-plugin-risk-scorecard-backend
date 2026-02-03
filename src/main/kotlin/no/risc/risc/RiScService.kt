@@ -22,7 +22,6 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.InitRiScServiceIntegration
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
-import no.risc.risc.models.DefaultRiScType
 import no.risc.risc.models.DeleteRiScResultDTO
 import no.risc.risc.models.DifferenceDTO
 import no.risc.risc.models.DifferenceStatus
@@ -39,7 +38,6 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
-import no.risc.rosa.RosaIntegration
 import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
@@ -56,7 +54,6 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
-    private val rosaClient: RosaIntegration,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -118,41 +115,47 @@ class RiScService(
                      * does not have a published version yet, and therefore there are no differences to compare.
                      * The frontend handles this.
                      */
-                    ContentStatus.FileNotFound ->
+                    ContentStatus.FileNotFound -> {
                         InternDifference(
                             status = DifferenceStatus.GithubFileNotFound,
                             errorMessage = "Encountered Github problem: File not found",
                         )
+                    }
 
-                    ContentStatus.DecryptionFailed ->
+                    ContentStatus.DecryptionFailed -> {
                         InternDifference(
                             status = DifferenceStatus.DecryptionFailure,
                             errorMessage = "Encountered ROS problem: Could not decrypt content",
                         )
+                    }
 
-                    ContentStatus.Failure ->
+                    ContentStatus.Failure -> {
                         InternDifference(
                             status = DifferenceStatus.GithubFailure,
                             errorMessage = "Encountered Github problem: Github failure",
                         )
+                    }
 
-                    ContentStatus.NoReadAccess ->
+                    ContentStatus.NoReadAccess -> {
                         InternDifference(
                             status = DifferenceStatus.NoReadAccess,
                             errorMessage = "No read access to repository",
                         )
+                    }
 
-                    ContentStatus.SchemaNotFound ->
+                    ContentStatus.SchemaNotFound -> {
                         InternDifference(
                             status = DifferenceStatus.SchemaNotFound,
                             errorMessage = "Could not fetch JSON schema",
                         )
+                    }
 
-                    ContentStatus.SchemaValidationFailed ->
+                    ContentStatus.SchemaValidationFailed -> {
                         InternDifference(
                             status = DifferenceStatus.SchemaValidationFailed,
                             errorMessage = "SchemaValidation failed",
                         )
+                    }
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
             }
 
@@ -365,7 +368,7 @@ class RiScService(
      * @param accessTokens The access tokens to use for authentication.
      * @param defaultBranch The name of the default branch of the repository.
      * @param generateDefault Indicates if the content of the RiSc should be based on default RiSc types.
-     * @param defaultRiScTypes Types of default RiScs to generate the RiSc from in cases where generateDefault is true
+     * @param defaultRiScId The id of the default RiScs to use for generation when generateDefault is true.
      * @throws CreatingRiScException If the creation fails.
      */
     suspend fun createRiSc(
@@ -375,20 +378,26 @@ class RiScService(
         accessTokens: AccessTokens,
         defaultBranch: String,
         generateDefault: Boolean,
-        defaultRiScTypes: List<DefaultRiScType>,
+        defaultRiScId: String?,
     ): CreateRiScResultDTO {
         val uniqueRiScId = generateRiScId(filenamePrefix)
         LOGGER.info("Generating default content")
-        val riScContentWrapperObject =
-            content.copy(
-                riSc =
-                    if (generateDefault) {
-                        initRiScService.generateDefaultRiSc(content.riSc, defaultRiScTypes)
-                    } else {
-                        content.riSc
-                    },
+
+        if (generateDefault && defaultRiScId == null) {
+            throw CreatingRiScException(
+                message = "Cannot create a default RiSc because a default RiSc ID was not specified.",
+                riScId = uniqueRiScId,
             )
+        }
+
+        var riScContent = content.riSc
+        if (generateDefault && defaultRiScId != null) {
+            riScContent = initRiScService.generateDefaultRiSc(content.riSc, defaultRiScId)
+        }
+        val riScContentWrapperObject = content.copy(riSc = riScContent)
+
         LOGGER.info("Generated default content")
+
         try {
             val result =
                 updateOrCreateRiSc(
@@ -558,17 +567,6 @@ class RiScService(
             pendingApproval = pullRequestObject.toPendingApprovalDTO(),
         )
     }
-
-    suspend fun uploadRiScToRosa(
-        riScId: String,
-        repository: String,
-        riSc: String,
-    ): String? {
-        val result = rosaClient.encryptAndUpload(riScId, repository, riSc)
-        return result
-    }
-
-    suspend fun deleteRiscFromRosa(riScId: String) = rosaClient.deleteRiSc(riScId)
 
     /**
      * Converts the GitHub pull request object to a DTO for sending to the frontend.

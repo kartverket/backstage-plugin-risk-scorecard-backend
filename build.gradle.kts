@@ -40,6 +40,7 @@ val nimbusdsVersion = "10.5"
 val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.6"
 val junitVersion = "6.0.0"
+val springdocVersion = "2.8.4"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -64,6 +65,10 @@ dependencies {
 
     implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion") {
         because("Provides endpoints for health and event monitoring that are used in SKIP and Docker.")
+    }
+
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion") {
+        because("Auto-generates OpenAPI 3.0 specification and provides Swagger UI for API documentation.")
     }
 
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")

@@ -789,7 +789,7 @@ class GithubConnectorTests {
                             githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(2).minusDays(13)),
                         ),
                     ),
-                path = pathToRiScCommits(riScId),
+                path = "/$owner/$repository/commits?path=${pathToRiSC(riScId)}&per_page=1",
             )
 
             webClient.queueResponse(
@@ -808,7 +808,11 @@ class GithubConnectorTests {
                             githubCommitObjectWithRandomSha(lastCommitTime.minusMonths(2).minusDays(13)),
                         ),
                     ),
-                path = pathToDefaultBranchCommitsSince(lastCommitTime),
+                path = "/$owner/$repository/commits?since=$lastCommitTime&per_page=100&page=1",
+            )
+            webClient.queueResponse(
+                response = mockableResponseFromObject(emptyList<GithubCommitObject>()),
+                path = "/$owner/$repository/commits?since=$lastCommitTime&per_page=100&page=2",
             )
 
             val lastPublished = fetchLastPublished(riScId)

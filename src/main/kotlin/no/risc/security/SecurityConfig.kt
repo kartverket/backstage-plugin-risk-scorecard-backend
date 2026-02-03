@@ -29,9 +29,17 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .authorizeHttpRequests { it.requestMatchers("/actuator/**").permitAll() }
-            .authorizeHttpRequests { it.requestMatchers("/api/**").authenticated() }
-            .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
+            .authorizeHttpRequests { authorize ->
+                authorize
+                    .requestMatchers("/actuator/**")
+                    .permitAll()
+                    .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/webjars/**")
+                    .permitAll()
+                    .requestMatchers("/api/**")
+                    .authenticated()
+                    .anyRequest()
+                    .authenticated()
+            }.oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
 
         return http.build()
     }
