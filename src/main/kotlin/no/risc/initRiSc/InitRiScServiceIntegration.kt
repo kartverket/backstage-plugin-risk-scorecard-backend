@@ -54,7 +54,7 @@ class InitRiScServiceIntegration(
         if (descriptors == null) {
             throw FetchException(
                 "Failed to fetch RiSc type descriptors: empty response body from init-risc service (Airtable).",
-                ProcessingStatus.FailedToFetchFromAirtable
+                ProcessingStatus.FailedToFetchFromAirtable,
             )
         }
         return descriptors
