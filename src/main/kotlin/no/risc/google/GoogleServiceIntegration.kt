@@ -67,7 +67,6 @@ class GoogleServiceIntegration(
             throw FetchException(
                 "Failed to fetch GCP OAuth2 token information from Google tokeninfo endpoint.",
                 ProcessingStatus.FailedToFetchGCPOAuth2TokenInformation,
-                cause = e,
             )
         }
 
@@ -90,7 +89,6 @@ class GoogleServiceIntegration(
             throw FetchException(
                 "Failed to fetch GCP project IDs.",
                 ProcessingStatus.FailedToFetchGcpProjectIds,
-                cause = e,
             )
         }
 
@@ -129,7 +127,6 @@ class GoogleServiceIntegration(
             throw FetchException(
                 "Failed to fetch IAM permissions for cryptoKeyResourceId=$cryptoKeyResourceId.",
                 ProcessingStatus.FailedToFetchGCPIAMPermissions,
-                cause = e,
             )
         }
 
