@@ -1,12 +1,10 @@
 package no.risc.exception.exceptions
 
-class SopsEncryptionException(
+data class SopsEncryptionException(
     override val message: String,
     val riScId: String,
-    cause: Throwable? = null,
-) : Exception(message, cause)
+) : Exception()
 
-class SOPSDecryptionException(
+data class SOPSDecryptionException(
     override val message: String,
-    cause: Throwable? = null,
-) : Exception(message, cause)
+) : Exception(message)
