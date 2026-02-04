@@ -2,7 +2,8 @@ package no.risc.exception.exceptions
 
 import no.risc.risc.models.ProcessingStatus
 
-data class FetchException(
+class FetchException(
     override val message: String,
     val status: ProcessingStatus,
-) : Exception()
+    cause: Throwable? = null,
+) : Exception(message, cause)
