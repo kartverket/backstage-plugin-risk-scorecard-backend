@@ -34,7 +34,8 @@ class InitRiScServiceIntegration(
             .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc, defaultRiScId)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(
-            "Failed to generate default RiSc for defaultRiScId=$defaultRiScId: empty response body received from init-risc service (Airtable).",
+            "Failed to generate default RiSc for defaultRiScId=$defaultRiScId: " +
+                    "empty response body from init-risc service (Airtable).",
             ProcessRiScResultDTO(
                 riScId = "",
                 status = ProcessingStatus.ErrorWhenCreatingRiSc,
