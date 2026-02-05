@@ -54,11 +54,13 @@ class CryptoServiceIntegration(
             throw SopsEncryptionException(
                 message = "Failed to encrypt RiSc, no response body received from encryption service.",
                 riScId = riScId,
+                cause = e,
             )
         } catch (e: Exception) {
             throw SopsEncryptionException(
                 message = "Crypto encrypt failed.",
                 riScId = riScId,
+                cause = e,
             )
         }
 
@@ -86,6 +88,7 @@ class CryptoServiceIntegration(
         } catch (e: Exception) {
             throw SOPSDecryptionException(
                 message = "Crypto decrypt failed.",
+                cause = e,
             )
         }
 }
