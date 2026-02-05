@@ -60,7 +60,7 @@ class JiraController {
 
         try {
             val cloudId = getCloudId(token)
-            val jiraDomain = System.getenv("JIRA_DOMAIN") ?: "kartverket.atlassian.net"
+            val jiraDomain = System.getenv("JIRA_DOMAIN") ?: "spirekartverket.atlassian.net"
 
             val body: Map<String, Any> =
                 mapOf(
