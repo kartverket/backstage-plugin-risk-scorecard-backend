@@ -10,7 +10,6 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
-import no.risc.risc.models.RiSc5XBackstageMetadata
 import no.risc.risc.models.RiSc5XMetadataUnencrypted
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
@@ -41,13 +40,23 @@ fun compare(
     lastPublished: LastPublished? = null,
 ): RiScChange =
     when (updatedRiSc) {
-        is RiSc5X -> comparison5X(updatedRiSc, oldRiSc, lastPublished)
-        is RiSc4X -> comparison4X(updatedRiSc, oldRiSc, lastPublished)
-        is RiSc3X -> comparison3X(updatedRiSc, oldRiSc, lastPublished)
-        is UnknownRiSc ->
+        is RiSc5X -> {
+            comparison5X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is RiSc4X -> {
+            comparison4X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is RiSc3X -> {
+            comparison3X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is UnknownRiSc -> {
             throw DifferenceException(
                 "The version of the RiSc is unknown and not supported for comparison.",
             )
+        }
     }
 
 /**
@@ -298,27 +307,13 @@ fun compareMetadataUnencrypted5X(
     oldMetadata: RiSc5XMetadataUnencrypted?,
     newMetadata: RiSc5XMetadataUnencrypted?,
 ): RiSc5XMetadataUnencryptedChange? {
-    val backstageMetadataChange = compareBackstageMetadata5X(oldMetadata?.backstage, newMetadata?.backstage)
-
-    if (backstageMetadataChange != null) {
-        return RiSc5XMetadataUnencryptedChange(
-            backstage = backstageMetadataChange,
-        )
-    }
-    return null
-}
-
-fun compareBackstageMetadata5X(
-    oldMetadata: RiSc5XBackstageMetadata?,
-    newMetadata: RiSc5XBackstageMetadata?,
-): RiSc5XBackstageMetadataChange? {
-    val entityRefChange =
+    val belongsToChange =
         changeForNonMandatorySimpleProperty(
-            oldMetadata?.entityRef,
-            newMetadata?.entityRef,
+            oldMetadata?.belongsTo,
+            newMetadata?.belongsTo,
         )
-    if (entityRefChange != null) {
-        return RiSc5XBackstageMetadataChange(entityRef = entityRefChange)
+    if (belongsToChange != null) {
+        return RiSc5XMetadataUnencryptedChange(belongsTo = belongsToChange)
     }
     return null
 }

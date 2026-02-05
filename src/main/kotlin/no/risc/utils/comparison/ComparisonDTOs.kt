@@ -111,12 +111,7 @@ data class RiSc5XChange(
 
 @Serializable
 data class RiSc5XMetadataUnencryptedChange(
-    val backstage: RiSc5XBackstageMetadataChange?,
-)
-
-@Serializable
-data class RiSc5XBackstageMetadataChange(
-    val entityRef: SimpleTrackedProperty<String?>? = null,
+    val belongsTo: SimpleTrackedProperty<String?>? = null,
 )
 
 @Serializable

@@ -135,12 +135,7 @@ data class MigrationChange53(
 
 @Serializable
 data class MigrationChange53MetadataUnencrypted(
-    val backstage: MigrationChange53BackstageMetadata,
-)
-
-@Serializable
-data class MigrationChange53BackstageMetadata(
-    val entityRef: String,
+    val belongsTo: String,
 )
 
 // General change object

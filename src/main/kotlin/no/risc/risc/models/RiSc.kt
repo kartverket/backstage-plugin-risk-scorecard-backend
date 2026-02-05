@@ -41,19 +41,24 @@ sealed interface RiSc {
 
             return try {
                 when (schemaVersion) {
-                    RiScVersion.RiSc3XVersion.VERSION_3_2, RiScVersion.RiSc3XVersion.VERSION_3_3 ->
+                    RiScVersion.RiSc3XVersion.VERSION_3_2, RiScVersion.RiSc3XVersion.VERSION_3_3 -> {
                         parseJSONToClass<RiSc3X>(content)
+                    }
 
-                    RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 ->
+                    RiScVersion.RiSc4XVersion.VERSION_4_0, RiScVersion.RiSc4XVersion.VERSION_4_1, RiScVersion.RiSc4XVersion.VERSION_4_2 -> {
                         parseJSONToClass<RiSc4X>(content)
+                    }
 
                     RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1,
 
                     RiScVersion.RiSc5XVersion.VERSION_5_2, RiScVersion.RiSc5XVersion.VERSION_5_3,
-                    ->
+                    -> {
                         parseJSONToClass<RiSc5X>(content)
+                    }
 
-                    null -> UnknownRiSc(content = content)
+                    null -> {
+                        UnknownRiSc(content = content)
+                    }
                 }
             } catch (_: IllegalArgumentException) {
                 // If parsing fails with an IllegalArgumentException, the riSc is not valid according to the schema.
@@ -156,12 +161,7 @@ data class RiSc5X(
 
 @Serializable
 data class RiSc5XMetadataUnencrypted(
-    val backstage: RiSc5XBackstageMetadata,
-)
-
-@Serializable
-data class RiSc5XBackstageMetadata(
-    val entityRef: String,
+    val belongsTo: String? = null,
 )
 
 object RiSc5XScenarioSerializer : FlattenSerializer<RiSc5XScenario>(
