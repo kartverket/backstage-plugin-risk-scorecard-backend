@@ -34,12 +34,12 @@ val springBootVersion = "3.5.6"
 val springSecurityVersion = "6.5.6"
 val kotlinxSerializationVersion = "1.9.0"
 val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.15.5"
+val micrometerVersion = "1.16.0"
 val jsonSchemaValidatorVersion = "1.5.9"
-val nimbusdsVersion = "10.5"
+val nimbusdsVersion = "10.7"
 val bouncyCastleVersion = "1.82"
 val mockkVersion = "1.14.6"
-val junitVersion = "6.0.0"
+val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
 
 dependencies {
@@ -88,7 +88,7 @@ dependencies {
         implementation("io.netty:netty-codec-http2:4.2.7.Final") {
             because("Force specific version for transitive dependency")
         }
-        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.13") {
+        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.18") {
             because("Force secure version to fix vulnerability in version 10.1.43")
         }
     }
