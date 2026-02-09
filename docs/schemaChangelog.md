@@ -1,5 +1,8 @@
 # Schema changelog
 
+## 5.2
+- Removes the unused valuations field
+
 ## 5.1
 - Adds lastUpdatedBy field in actions
 

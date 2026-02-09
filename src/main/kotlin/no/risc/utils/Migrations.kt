@@ -31,6 +31,7 @@ import no.risc.utils.comparison.MigrationChange50Scenario
 import no.risc.utils.comparison.MigrationChange51
 import no.risc.utils.comparison.MigrationChange51Action
 import no.risc.utils.comparison.MigrationChange51Scenario
+import no.risc.utils.comparison.MigrationChange52
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -42,6 +43,8 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 4.0 -> 4.1 (changed probability and consequence values to use base number 20)
  * - 4.1 -> 4.2 (add lastUpdated field to action)
  * - 4.2 -> 5.0 (change action status values)
+ * - 5.0 -> 5.1 (add lastUpdatedBy field to action)
+ * - 5.1 -> 5.2 (remove valuations)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -164,6 +167,9 @@ private fun handleMigrate(
 
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_0 ->
                 migrateFrom50To51(riSc, migrationStatus)
+
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 ->
+                migrateFrom51To52(riSc, migrationStatus)
 
             else -> throw IllegalStateException("Unsupported migration")
         }
@@ -630,6 +636,34 @@ fun migrateFrom50To51(
             migrationChanges = true,
             migrationRequiresNewApproval = true,
             migrationChanges51 = if (changedScenarios.isNotEmpty()) MigrationChange51(scenarios = changedScenarios) else null,
+        ),
+    )
+}
+
+/**
+ *  Migrate RiSc with changes from 5.1 to 5.2
+ *
+ * Remove valuations from the RiSc file.
+ */
+fun migrateFrom51To52(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val removedValuationsCount = riSc.valuations?.size ?: 0
+
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_2,
+            valuations = null,
+        ),
+        migrationStatus.copy(
+            migrationChanges =
+                migrationStatus.migrationChanges || removedValuationsCount > 0,
+            migrationRequiresNewApproval = true,
+            migrationChanges52 =
+                MigrationChange52(
+                    removedValuationsCount = removedValuationsCount,
+                ),
         ),
     )
 }

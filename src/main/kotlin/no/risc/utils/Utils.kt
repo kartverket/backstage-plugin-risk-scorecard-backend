@@ -78,3 +78,18 @@ inline fun <T> tryOrDefaultWithErrorLogging(
         logger.error(e.toString())
         default
     }
+
+/**
+ * Returns a [Result] containing the result of the provided function, or a failure if an exception is thrown.
+ * If an exception is thrown, the error message is logged before returning the failure.
+ */
+inline fun <T> tryWithErrorLogging(
+    logger: Logger,
+    func: () -> T,
+): Result<T> =
+    try {
+        Result.success(func())
+    } catch (e: Exception) {
+        logger.error(e.toString())
+        Result.failure(e)
+    }
