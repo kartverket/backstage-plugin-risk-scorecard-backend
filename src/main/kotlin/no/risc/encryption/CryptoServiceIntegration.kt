@@ -54,9 +54,14 @@ class CryptoServiceIntegration(
             throw SopsEncryptionException(
                 message = "Failed to encrypt RiSc, no response body received from encryption service.",
                 riScId = riScId,
+                cause = e,
             )
         } catch (e: Exception) {
-            throw SopsEncryptionException(message = e.stackTraceToString(), riScId = riScId)
+            throw SopsEncryptionException(
+                message = "Crypto encrypt failed.",
+                riScId = riScId,
+                cause = e,
+            )
         }
 
     suspend fun decrypt(
@@ -81,6 +86,9 @@ class CryptoServiceIntegration(
         } catch (_: NoSuchElementException) {
             throw SOPSDecryptionException(message = "Failed to decrypt ciphertext, no response body received from decryption service.")
         } catch (e: Exception) {
-            throw SOPSDecryptionException(message = e.stackTraceToString())
+            throw SOPSDecryptionException(
+                message = "Crypto decrypt failed.",
+                cause = e,
+            )
         }
 }
