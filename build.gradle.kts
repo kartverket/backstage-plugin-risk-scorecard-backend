@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.2.21"
+    val kotlinPluginsVersion = "2.3.0"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -15,21 +15,22 @@ group = "no"
 version = "0.0.1-SNAPSHOT"
 
 kotlin {
-    jvmToolchain(23)
+    jvmToolchain(25)
     compilerOptions {
         freeCompilerArgs.add("-Xjsr305=strict")
     }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_23
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.2.21"
+val kotlinVersion = "2.3.0"
 val springBootVersion = "3.5.6"
 val springSecurityVersion = "6.5.6"
 val kotlinxSerializationVersion = "1.9.0"
@@ -78,6 +79,8 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("net.bytebuddy:byte-buddy:1.17.5")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.5")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
 
