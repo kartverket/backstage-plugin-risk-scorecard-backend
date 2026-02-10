@@ -63,11 +63,11 @@ private class BodyCapturingClientHttpRequest : ClientHttpRequest {
 
     override fun bufferFactory(): DataBufferFactory = DefaultDataBufferFactory.sharedInstance
 
-    override fun beforeCommit(action: Supplier<out Mono<Void?>?>) = throw NotImplementedError()
+    override fun beforeCommit(action: Supplier<out Mono<Void>>) = throw NotImplementedError()
 
     override fun isCommitted(): Boolean = throw NotImplementedError()
 
-    override fun writeWith(body: Publisher<out DataBuffer?>): Mono<Void?> {
+    override fun writeWith(body: Publisher<out DataBuffer>): Mono<Void> {
         this.body +=
             Mono
                 .from(body)
@@ -80,19 +80,19 @@ private class BodyCapturingClientHttpRequest : ClientHttpRequest {
         return Mono.empty()
     }
 
-    override fun writeAndFlushWith(body: Publisher<out Publisher<out DataBuffer?>?>): Mono<Void?> = throw NotImplementedError()
+    override fun writeAndFlushWith(body: Publisher<out Publisher<out DataBuffer>>): Mono<Void> = throw NotImplementedError()
 
-    override fun setComplete(): Mono<Void?> = Mono.empty()
+    override fun setComplete(): Mono<Void> = Mono.empty()
 
     override fun getMethod(): HttpMethod = throw NotImplementedError()
 
     override fun getURI(): URI = throw NotImplementedError()
 
-    override fun getCookies(): MultiValueMap<String?, HttpCookie?> = LinkedMultiValueMap()
+    override fun getCookies(): MultiValueMap<String, HttpCookie> = LinkedMultiValueMap()
 
-    override fun getAttributes(): Map<String?, Any?> = mutableMapOf()
+    override fun getAttributes(): Map<String, Any> = mutableMapOf()
 
-    override fun <T : Any?> getNativeRequest(): T & Any = throw NotImplementedError()
+    override fun <T : Any> getNativeRequest(): T = throw NotImplementedError()
 
     override fun getHeaders(): HttpHeaders = HttpHeaders()
 }
@@ -139,7 +139,7 @@ class MockableWebClient {
             .add(
                 MockableRequest(
                     content = bodyCapturingClient.body,
-                    headers = request.headers().toMap(),
+                    headers = request.headers().toSingleValueMap().mapValues { listOf(it.value) },
                     path = requestPath,
                     method = requestMethod,
                 ),
