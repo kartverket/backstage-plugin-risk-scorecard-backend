@@ -39,7 +39,7 @@ val micrometerVersion = "1.16.0"
 val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.7"
 val bouncyCastleVersion = "1.82"
-val mockkVersion = "1.14.6"
+val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
 
