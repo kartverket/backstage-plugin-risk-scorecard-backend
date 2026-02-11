@@ -30,7 +30,7 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.3.0"
+val kotlinVersion = "2.3.10"
 val springBootVersion = "3.5.6"
 val springSecurityVersion = "6.5.6"
 val kotlinxSerializationVersion = "1.9.0"
