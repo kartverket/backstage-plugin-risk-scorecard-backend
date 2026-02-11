@@ -63,10 +63,11 @@ class GoogleServiceIntegration(
         } catch (_: WebClientResponseException.BadRequest) {
             // The response from the endpoint has a status code of 400 if the access token is invalid.
             null
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             throw FetchException(
-                "Failed to fetch GCP OAuth2 token information.",
+                "Failed to fetch GCP OAuth2 token information from Google tokeninfo endpoint.",
                 ProcessingStatus.FailedToFetchGCPOAuth2TokenInformation,
+                cause = e,
             )
         }
 
@@ -85,8 +86,12 @@ class GoogleServiceIntegration(
                 .awaitBody<FetchGcpProjectIdsResponse>()
                 .projects
                 .map { GcpProjectId(it.projectId) }
-        } catch (_: Exception) {
-            throw FetchException("Failed to fetch GCP projects", ProcessingStatus.FailedToFetchGcpProjectIds)
+        } catch (e: Exception) {
+            throw FetchException(
+                "Failed to fetch GCP project IDs.",
+                ProcessingStatus.FailedToFetchGcpProjectIds,
+                cause = e,
+            )
         }
 
     /**
@@ -121,10 +126,10 @@ class GoogleServiceIntegration(
                 .permissions
                 ?.toSet() ?: emptySet()
         } catch (e: Exception) {
-            LOGGER.warn("Error fetching IAM permissions for $cryptoKeyResourceId: ${e.message}")
             throw FetchException(
-                "Unable to test IAM permissions for $cryptoKeyResourceId",
+                "Failed to fetch IAM permissions for cryptoKeyResourceId=$cryptoKeyResourceId.",
                 ProcessingStatus.FailedToFetchGCPIAMPermissions,
+                cause = e,
             )
         }
 
