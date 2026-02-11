@@ -1,5 +1,7 @@
 package no.risc.utils
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import org.slf4j.Logger
 import java.util.Base64
 import java.util.stream.Stream
@@ -42,6 +44,17 @@ fun generateRandomAlphanumericString(
         .limit(length.toLong())
         .toArray()
         .joinToString(separator = "")
+
+/**
+ * Converts a string representing YAML to a string representing JSON.
+ */
+fun yamlToJson(yamlString: String): String {
+    val yamlMapper = ObjectMapper(YAMLFactory())
+    val jsonMapper = ObjectMapper()
+
+    val tree = yamlMapper.readTree(yamlString)
+    return jsonMapper.writeValueAsString(tree)
+}
 
 /**
  * Returns the result of the provided function, unless the provided function throws an exception. If an exception is
