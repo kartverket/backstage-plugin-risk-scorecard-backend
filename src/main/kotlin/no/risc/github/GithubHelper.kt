@@ -13,6 +13,8 @@ class GithubHelper(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
+    @Value("\${initRiSc.repoName}") val initRiScRepoName: String,
+    @Value("\${initRiSc.repoOwner}") val initRiScRepoOwner: String,
 ) {
     /**
      * Constructs the file path to the file for the given RiSc.
@@ -268,4 +270,11 @@ class GithubHelper(
 
         return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
     }
+
+    fun uriToInitRiscConfig(): String =
+        repositoryContentsUri(
+            initRiScRepoOwner,
+            initRiScRepoName,
+            "$riScFolderPath/init-risc-def.json",
+        )
 }
