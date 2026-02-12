@@ -1,5 +1,6 @@
 package no.risc.utils
 
+import no.risc.config.AppConstants
 import no.risc.risc.models.LastPublished
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
@@ -59,7 +60,12 @@ fun migrate(
 ): Pair<RiSc, MigrationStatus> {
     val toVersion = RiScVersion.fromString(endVersion)
 
-    if (riSc.schemaVersion == null || toVersion == null) throw IllegalStateException("Unsupported migration")
+    if (riSc.schemaVersion == null || toVersion == null) {
+        throw IllegalStateException(
+            "Unsupported migration: Unable to migrate the RiSc from " +
+                "$endVersion to the latest version (${AppConstants.LATEST_SUPPORTED_SCHEMA_VERSION}).",
+        )
+    }
 
     return handleMigrate(
         riSc = riSc,
@@ -171,7 +177,16 @@ private fun handleMigrate(
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 ->
                 migrateFrom51To52(riSc, migrationStatus)
 
-            else -> throw IllegalStateException("Unsupported migration")
+            else -> {
+                if (riSc.schemaVersion != null) {
+                    throw IllegalStateException(
+                        "Unsupported migration: Unable to migrate the RiSc from " +
+                            "${riSc.schemaVersion} to the latest version (${AppConstants.LATEST_SUPPORTED_SCHEMA_VERSION}).",
+                    )
+                } else {
+                    throw IllegalStateException("Unsupported migration: schema version of RiSc is null")
+                }
+            }
         }
     return handleMigrate(migratedRiSc, lastPublished, migrationStatus, toVersion)
 }
