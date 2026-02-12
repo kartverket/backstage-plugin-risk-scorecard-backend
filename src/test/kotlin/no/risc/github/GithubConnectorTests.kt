@@ -55,6 +55,8 @@ class GithubConnectorTests {
     private val riscFolderPath = ".security/risc"
     private val owner = "owner"
     private val repository = "risc-repo"
+    private val initRiScRepoName = "init-risc-repo"
+    private val initRiScRepoOwner = "owner"
 
     @BeforeEach
     fun beforeEach() {
@@ -69,6 +71,8 @@ class GithubConnectorTests {
                             filenamePrefix = filenamePrefix,
                             filenamePostfix = filenamePostfix,
                             riScFolderPath = riscFolderPath,
+                            initRiScRepoName = initRiScRepoName,
+                            initRiScRepoOwner = initRiScRepoOwner,
                         ),
                 ),
             )
@@ -209,31 +213,40 @@ class GithubConnectorTests {
 
             for (m in githubMetadata) {
                 when (m.id) {
-                    riScName("aaa0a") ->
+                    riScName("aaa0a") -> {
                         assertTrue(
                             m.isStoredInMain && !m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should only exist in main",
                         )
-                    riScName("bbb1b") ->
+                    }
+
+                    riScName("bbb1b") -> {
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should exist in main and have a branch",
                         )
-                    riScName("ccc2c") ->
+                    }
+
+                    riScName("ccc2c") -> {
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
                             "This riSc should exist in main, have a branch, and an open PR",
                         )
-                    riScName("ddd3d") ->
+                    }
+
+                    riScName("ddd3d") -> {
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
                             "This riSc should not exist in main, but have a branch and an open PR",
                         )
-                    riScName("eee4e") ->
+                    }
+
+                    riScName("eee4e") -> {
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should only exist in a branch",
                         )
+                    }
                 }
             }
         }
