@@ -243,17 +243,31 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         tryWithErrorLogging(LOGGER) {
-            getGithubResponse(uri = githubHelper.uriToFindRiScFiles(owner, repository), accessToken = accessToken)
-                .awaitBody<List<GithubFileDTO>>()
-                // All RiSc files end in ".<filenamePostfix>.yaml".
-                .filter { it.name.endsWith(".$filenamePostfix.yaml") }
-                .map {
-                    RiScIdentifier(
-                        // The identifier of the RiSc is the part of the filename prior to ".<filenamePostfix>".
-                        id = it.name.substringBefore(".$filenamePostfix"),
-                        status = RiScStatus.Published,
-                    )
+            try {
+                getGithubResponse(
+                    uri = githubHelper.uriToFindRiScFiles(owner, repository),
+                    accessToken = accessToken,
+                ).awaitBody<List<GithubFileDTO>>()
+                    .filter { it.name.endsWith(".$filenamePostfix.yaml") }
+                    .map {
+                        RiScIdentifier(
+                            id = it.name.substringBefore(".$filenamePostfix"),
+                            status = RiScStatus.Published,
+                        )
+                    }
+            } catch (e: WebClientResponseException.NotFound) {
+                // Contents path (.security/risc) does not exist -> "no risc" -> empty list
+                emptyList()
+            } catch (e: WebClientResponseException.Conflict) {
+                // Repo exists but is empty (no commits)
+                if (e.responseBodyAsString.contains("Git Repository is empty", ignoreCase = true) ||
+                    e.statusCode.value() == 409
+                ) {
+                    emptyList()
+                } else {
+                    throw e
                 }
+            }
         }.getOrThrow()
 
     /**

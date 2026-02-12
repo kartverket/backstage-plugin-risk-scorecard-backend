@@ -29,7 +29,8 @@ class InitRiScServiceAirtableImpl(
             .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialContent, initRiScId)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(
-            "Failed to generate default RiSc",
+            "Failed to generate default RiSc for defaultRiScId=$defaultRiScId: " +
+                "empty response body from init-risc service (Airtable).",
             ProcessRiScResultDTO(
                 riScId = "",
                 status = ProcessingStatus.ErrorWhenCreatingRiSc,
@@ -46,7 +47,10 @@ class InitRiScServiceAirtableImpl(
                 .awaitBodyOrNull<List<RiScTypeDescriptor>>()
 
         if (descriptors == null) {
-            throw FetchException("Failed to fetch initial riScs from Airtable", ProcessingStatus.FailedToFetchFromAirtable)
+            throw FetchException(
+                "Failed to fetch RiSc type descriptors: empty response body from init-risc service (Airtable).",
+                ProcessingStatus.FailedToFetchFromAirtable,
+            )
         }
         return descriptors
     }

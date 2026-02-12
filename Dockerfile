@@ -1,5 +1,5 @@
-ARG BUILD_IMAGE=eclipse-temurin:23-jre-alpine
-ARG IMAGE=eclipse-temurin:23-alpine
+ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
+ARG IMAGE=eclipse-temurin:25-alpine
 
 # Make sure the logic is in sync with Dockerfile.M4
 FROM ${BUILD_IMAGE} AS build
