@@ -16,15 +16,11 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/initrisc")
 @Tag(name = "initrisc", description = "Init Risc endpoints")
 class InitRiScController(
-    private val initRiScServiceIntegration: InitRiScServiceIntegration,
     private val initRiScService: InitRiScService,
     private val gitHubAppService: GitHubAppService,
 ) {
-    @GetMapping
-    suspend fun getAllDefaultRiScTypeDescriptors(): List<RiScTypeDescriptor> = initRiScServiceIntegration.fetchDefaultRiScTypeDescriptors()
-
-    @GetMapping("/descriptors")
-    suspend fun getInitRiScDescriptors(
+    @GetMapping("", "/descriptors")
+    suspend fun getAllDefaultRiScTypeDescriptors(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
     ): List<RiScTypeDescriptor> =
@@ -35,20 +31,20 @@ class InitRiScController(
             ),
         )
 
-    @GetMapping("/get/{initRiScId}")
+    @GetMapping("/{initRiScId}")
     suspend fun getInitRiSc(
         @PathVariable initRiScId: String,
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
-    ): RiSc5X {
+    ): String {
         val initRiSc =
             initRiScService.getInitRiSc(
                 initRiScId,
+                "{}",
                 AccessTokens(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
-                null,
             )
 
         return initRiSc
