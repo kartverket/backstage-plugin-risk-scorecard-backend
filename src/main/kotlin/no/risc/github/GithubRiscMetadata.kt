@@ -16,6 +16,11 @@ data class RiScMainAndBranchContent(
     val branchContent: GithubContentResponse,
 )
 
+data class RiScMainAndBranchContentWithLastPublishedInfo(
+    val contents: RiScMainAndBranchContent,
+    val lastPublished: no.risc.risc.models.LastPublished? = null,
+)
+
 fun chooseRiScContentFromStatus(
     status: RiScStatus,
     branchRiScContent: GithubContentResponse,
