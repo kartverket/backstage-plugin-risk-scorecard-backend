@@ -12,6 +12,7 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XMetadataUnencrypted
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioActionStatus
@@ -32,6 +33,8 @@ import no.risc.utils.comparison.MigrationChange51
 import no.risc.utils.comparison.MigrationChange51Action
 import no.risc.utils.comparison.MigrationChange51Scenario
 import no.risc.utils.comparison.MigrationChange52
+import no.risc.utils.comparison.MigrationChange53
+import no.risc.utils.comparison.MigrationChange53MetadataUnencrypted
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -150,28 +153,41 @@ private fun handleMigrate(
 
     val (migratedRiSc, migrationStatus) =
         when {
-            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_2 ->
+            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_2 -> {
                 migrateFrom32To33(riSc, migrationStatus)
+            }
 
-            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_3 ->
+            riSc is RiSc3X && riSc.schemaVersion == RiScVersion.RiSc3XVersion.VERSION_3_3 -> {
                 migrateFrom33To40(riSc, migrationStatus)
+            }
 
-            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_0 ->
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_0 -> {
                 migrateFrom40To41(riSc, migrationStatus)
+            }
 
-            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 ->
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_1 -> {
                 migrateFrom41To42(riSc, lastPublished, migrationStatus)
+            }
 
-            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_2 ->
+            riSc is RiSc4X && riSc.schemaVersion == RiScVersion.RiSc4XVersion.VERSION_4_2 -> {
                 migrateFrom42To50(riSc, migrationStatus)
+            }
 
-            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_0 ->
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_0 -> {
                 migrateFrom50To51(riSc, migrationStatus)
+            }
 
-            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 ->
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_1 -> {
                 migrateFrom51To52(riSc, migrationStatus)
+            }
 
-            else -> throw IllegalStateException("Unsupported migration")
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_2 -> {
+                migrateFrom52To53(riSc, migrationStatus)
+            }
+
+            else -> {
+                throw IllegalStateException("Unsupported migration")
+            }
         }
     return handleMigrate(migratedRiSc, lastPublished, migrationStatus, toVersion)
 }
@@ -244,14 +260,22 @@ private fun updateScenarioFrom33To40(
         when (vulnerability) {
             // Changed
             RiSc3XScenarioVulnerability.COMPROMISED_ADMIN_USER -> RiScScenarioVulnerability.UNAUTHORIZED_ACCESS
+
             RiSc3XScenarioVulnerability.DISCLOSED_SECRET -> RiScScenarioVulnerability.INFORMATION_LEAK
+
             RiSc3XScenarioVulnerability.DENIAL_OF_SERVICE -> RiScScenarioVulnerability.EXCESSIVE_USE
+
             RiSc3XScenarioVulnerability.ESCALATION_OF_RIGHTS -> RiScScenarioVulnerability.UNAUTHORIZED_ACCESS
+
             RiSc3XScenarioVulnerability.USER_REPUDIATION -> RiScScenarioVulnerability.UNMONITORED_USE
+
             // Remain the same
             RiSc3XScenarioVulnerability.DEPENDENCY_VULNERABILITY -> RiScScenarioVulnerability.DEPENDENCY_VULNERABILITY
+
             RiSc3XScenarioVulnerability.INFORMATION_LEAK -> RiScScenarioVulnerability.INFORMATION_LEAK
+
             RiSc3XScenarioVulnerability.INPUT_TAMPERING -> RiScScenarioVulnerability.INPUT_TAMPERING
+
             RiSc3XScenarioVulnerability.MISCONFIGURATION -> RiScScenarioVulnerability.MISCONFIGURATION
         }
 
@@ -497,7 +521,9 @@ fun updateScenarioFrom42To50(
             RiSc3X4XScenarioActionStatus.IN_PROGRESS,
             RiSc3X4XScenarioActionStatus.ON_HOLD,
             -> RiScScenarioActionStatus.NOT_OK
+
             RiSc3X4XScenarioActionStatus.COMPLETED -> RiScScenarioActionStatus.OK
+
             RiSc3X4XScenarioActionStatus.ABORTED -> RiScScenarioActionStatus.NOT_RELEVANT
         }
 
@@ -663,6 +689,39 @@ fun migrateFrom51To52(
             migrationChanges52 =
                 MigrationChange52(
                     removedValuationsCount = removedValuationsCount,
+                ),
+        ),
+    )
+}
+
+/**
+ *  Migrate RiSc with changes from 5.2 to 5.3
+ *
+ * Unencrypted metadata is introduced. In the first iteration, the metadata includes
+ * an entity reference to the backstage entity the RiSc belongs to.
+ *
+ * From the backend, the entity reference is set to "" (empty) as it is only available from the frontend.
+ * The backend migration is responsible for changing the schema structure to include the entity reference
+ * field, while the frontend is responsible for population the field when migrating.
+ */
+fun migrateFrom52To53(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val initialBelongsTo = ""
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_3,
+            metadataUnencrypted =
+                RiSc5XMetadataUnencrypted(belongsTo = initialBelongsTo),
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges53 =
+                MigrationChange53(
+                    metadataUnencrypted =
+                        MigrationChange53MetadataUnencrypted(belongsTo = initialBelongsTo),
                 ),
         ),
     )

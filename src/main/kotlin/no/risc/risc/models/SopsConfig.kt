@@ -19,6 +19,7 @@ data class SopsConfig(
     @SerialName("lastmodified") val lastModified: String? = null,
     val mac: String? = null,
     @SerialName("unencrypted_suffix") val unencryptedSuffix: String? = null,
+    @SerialName("mac_only_encrypted") val macOnlyEncrypted: Boolean? = null,
     val version: String? = null,
 )
 

@@ -10,6 +10,7 @@ import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XMetadataUnencrypted
 import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiSc5XScenarioAction
 import no.risc.risc.models.RiScScenarioRisk
@@ -39,13 +40,23 @@ fun compare(
     lastPublished: LastPublished? = null,
 ): RiScChange =
     when (updatedRiSc) {
-        is RiSc5X -> comparison5X(updatedRiSc, oldRiSc, lastPublished)
-        is RiSc4X -> comparison4X(updatedRiSc, oldRiSc, lastPublished)
-        is RiSc3X -> comparison3X(updatedRiSc, oldRiSc, lastPublished)
-        is UnknownRiSc ->
+        is RiSc5X -> {
+            comparison5X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is RiSc4X -> {
+            comparison4X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is RiSc3X -> {
+            comparison3X(updatedRiSc, oldRiSc, lastPublished)
+        }
+
+        is UnknownRiSc -> {
             throw DifferenceException(
                 "The version of the RiSc is unknown and not supported for comparison.",
             )
+        }
     }
 
 /**
@@ -84,6 +95,11 @@ fun comparison5X(
             compareScenarios5X(
                 oldScenarios = migratedOldRiSc.scenarios,
                 newScenarios = updatedRiSc.scenarios,
+            ),
+        metadataUnencrypted =
+            compareMetadataUnencrypted5X(
+                migratedOldRiSc.metadataUnencrypted,
+                updatedRiSc.metadataUnencrypted,
             ),
         migrationChanges = migrationStatus,
     )
@@ -286,6 +302,21 @@ fun compareValuations(
     oldValuations: List<RiScValuation>,
     newValuations: List<RiScValuation>,
 ): List<SimpleTrackedProperty<RiScValuation>> = changeForListOfSimpleProperty(oldValuations, newValuations)
+
+fun compareMetadataUnencrypted5X(
+    oldMetadata: RiSc5XMetadataUnencrypted?,
+    newMetadata: RiSc5XMetadataUnencrypted?,
+): RiSc5XMetadataUnencryptedChange? {
+    val belongsToChange =
+        changeForNonMandatorySimpleProperty(
+            oldMetadata?.belongsTo,
+            newMetadata?.belongsTo,
+        )
+    if (belongsToChange != null) {
+        return RiSc5XMetadataUnencryptedChange(belongsTo = belongsToChange)
+    }
+    return null
+}
 
 /**
  * Compares and tracks changes for scenarios for versions 5.X. Only scenarios with changes are

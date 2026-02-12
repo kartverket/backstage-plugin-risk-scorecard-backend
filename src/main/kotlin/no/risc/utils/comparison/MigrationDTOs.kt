@@ -128,6 +128,16 @@ data class MigrationChange52(
     val removedValuationsCount: Int,
 )
 
+@Serializable
+data class MigrationChange53(
+    val metadataUnencrypted: MigrationChange53MetadataUnencrypted,
+)
+
+@Serializable
+data class MigrationChange53MetadataUnencrypted(
+    val belongsTo: String,
+)
+
 // General change object
 @Serializable
 data class MigrationChangedValue<T>(
