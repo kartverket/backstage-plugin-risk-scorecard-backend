@@ -84,6 +84,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("net.bytebuddy:byte-buddy:1.17.5")
     testImplementation("net.bytebuddy:byte-buddy-agent:1.17.5")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
 
