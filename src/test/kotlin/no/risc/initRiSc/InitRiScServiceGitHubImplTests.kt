@@ -11,6 +11,7 @@ import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiScScenarioActionStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -82,6 +83,86 @@ class InitRiScServiceGitHubImplTests {
                     probability: 0
             """.trimIndent()
 
+        val GITHUB_RESPONSE_DATA2 =
+            """
+            ---
+            schemaVersion: "5.2"
+            title: "ros"
+            scope: "scope"
+            scenarios:
+            - title: "scn1"
+              scenario:
+                ID: "FZ6m3"
+                description: "scenario"
+                threatActors: []
+                vulnerabilities: []
+                risk:
+                  summary: ""
+                  probability: 0.0025
+                  consequence: 8000.0
+                remainingRisk:
+                  summary: ""
+                  probability: 0.0025
+                  consequence: 8000.0
+                actions:
+                - title: "act1"
+                  action:
+                    ID: "n8dB5"
+                    description: ""
+                    url: ""
+                    status: "Not relevant"
+                    lastUpdated: "2026-02-13T14:43:50.92Z"
+                    lastUpdatedBy: ""
+                - title: "act2"
+                  action:
+                    ID: "56FG2"
+                    description: "litt data"
+                    url: "https://vg.no"
+                    status: "OK"
+                    lastUpdated: "2026-02-13T14:43:50.92Z"
+                    lastUpdatedBy: ""
+                - title: "act3"
+                  action:
+                    ID: "4bI3N"
+                    description: ""
+                    url: ""
+                    status: "Not OK"
+                    lastUpdated: "2026-02-13T15:10:49.046Z"
+                    lastUpdatedBy: "Kari Nordmann"
+                - title: "act4"
+                  action:
+                    ID: "ncds2"
+                    description: ""
+                    url: ""
+                    status: "Not OK"
+                - title: "act5"
+                  action:
+                    ID: "owkowckowk"
+                    description: ""
+                    url: ""
+                    status: "Not OK"
+                    lastUpdated: ""
+                - title: "act6"
+                  action:
+                    ID: "jjjj"
+                    description: ""
+                    url: ""
+                    status: "Not OK"
+                    lastUpdated: null
+
+
+            """.trimIndent()
+
+        val INITIAL_CONTENT1 =
+            """
+            {
+              "schemaVersion":"5.2",
+              "title":"Title from initialContent",
+              "scope":"Scope from initialContent",
+              "scenarios":[]
+            }
+            """.trimIndent()
+
         val ACCESS_TOKEN =
             AccessTokens(
                 GithubAccessToken("x"),
@@ -141,14 +222,7 @@ class InitRiScServiceGitHubImplTests {
             val initRiSc =
                 initRiScServiceGitHubImpl.getInitRiSc(
                     "risc-example",
-                    """
-                    {
-                      "schemaVersion":"5.2",
-                      "title":"Title from initialContent",
-                      "scope":"Scope from initialContent",
-                      "scenarios":[]
-                    }
-                    """.trimIndent(),
+                    INITIAL_CONTENT1,
                     ACCESS_TOKEN,
                 )
 
@@ -159,5 +233,31 @@ class InitRiScServiceGitHubImplTests {
             assertEquals("Title from initialContent", initRiSc5X.title)
             assertEquals("Scope from initialContent", initRiSc5X.scope)
             assertEquals(2, initRiSc5X.scenarios.size)
+        }
+
+    @Test
+    fun `getInitRiSc returns a RiSc without lastUpdatedBy, lastUpdated, and action statuses set to NOT OK`() =
+        runTest {
+            coEvery {
+                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-with-data", any<String>())
+            } returns
+                GithubContentResponse(data = GITHUB_RESPONSE_DATA2, status = GithubStatus.Success)
+
+            val initRiSc = initRiScServiceGitHubImpl.getInitRiSc("risc-with-data", INITIAL_CONTENT1, ACCESS_TOKEN)
+            val initRiScParsed = RiSc.fromContent(initRiSc)
+
+            assertTrue(initRiScParsed is RiSc5X)
+            val initRiSc5X = initRiScParsed as RiSc5X
+
+            assertEquals("Title from initialContent", initRiSc5X.title)
+            assertEquals("Scope from initialContent", initRiSc5X.scope)
+            assertEquals(1, initRiSc5X.scenarios.size)
+            assertEquals(6, initRiSc5X.scenarios[0].actions.size)
+
+            initRiSc5X.scenarios[0].actions.forEach {
+                assertEquals(RiScScenarioActionStatus.NOT_OK, it.status)
+                assertEquals(null, it.lastUpdated)
+                assertEquals(null, it.lastUpdatedBy)
+            }
         }
 }
