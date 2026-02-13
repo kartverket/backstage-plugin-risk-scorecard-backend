@@ -29,7 +29,7 @@ class InitRiScServiceAirtableImpl(
             .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialContent, initRiScId)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(
-            "Failed to generate default RiSc for defaultRiScId=$defaultRiScId: " +
+            "Failed to generate default RiSc for initRiScId=$initRiScId: " +
                 "empty response body from init-risc service (Airtable).",
             ProcessRiScResultDTO(
                 riScId = "",

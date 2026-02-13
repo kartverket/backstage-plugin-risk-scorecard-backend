@@ -133,16 +133,23 @@ class InitRiScServiceGitHubImpl(
     }
 
     private suspend fun getInitRiScDescriptorConfigs(accessTokens: AccessTokens): List<InitRiScDescriptorConfig> {
-        val fetchedInitRiScDescriptors = githubConnector.fetchInitRiScDescriptors(accessTokens.githubAccessToken)
-        if (fetchedInitRiScDescriptors.status != GithubStatus.Success || fetchedInitRiScDescriptors.data == null) {
+        val fetchedInitRiScDescriptorConfigs = githubConnector.fetchInitRiScDescriptorConfigs(accessTokens.githubAccessToken)
+        if (fetchedInitRiScDescriptorConfigs.status != GithubStatus.Success || fetchedInitRiScDescriptorConfigs.data == null) {
             throw FetchException(
-                "Failed to fetch initial RiSc from GitHub. Fetch status was ${fetchedInitRiScDescriptors.status} and data was " +
-                    "${if (fetchedInitRiScDescriptors.data == null) "null" else fetchedInitRiScDescriptors.data.substring(0, 20)}...",
+                "Failed to fetch initial RiSc from GitHub. Fetch status was ${fetchedInitRiScDescriptorConfigs.status} and data was " +
+                    "${if (fetchedInitRiScDescriptorConfigs.data == null) {
+                        "null"
+                    } else {
+                        fetchedInitRiScDescriptorConfigs.data.substring(
+                            0,
+                            20,
+                        )
+                    }}...",
                 ProcessingStatus.FailedToFetchInitRiScConfigFromGitHub,
             )
         }
 
-        val initRiscDescriptorConfigs = Json.decodeFromString<List<InitRiScDescriptorConfig>>(fetchedInitRiScDescriptors.data)
+        val initRiscDescriptorConfigs = Json.decodeFromString<List<InitRiScDescriptorConfig>>(fetchedInitRiScDescriptorConfigs.data)
         return initRiscDescriptorConfigs
     }
 }
