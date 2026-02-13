@@ -24,20 +24,21 @@ class InitRiScServiceGitHubImpl(
 ) : InitRiScService {
     override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
         val initRiScDescriptorConfigs = getInitRiScDescriptorConfigs(accessTokens)
-        return initRiScDescriptorConfigs.map {
-            val initRiSc = getInitRiScFromGitHub(it.id, accessTokens)
-            RiScTypeDescriptor(
-                it.id,
-                it.listName,
-                it.listDescription,
-                initRiSc.title,
-                initRiSc.scope,
-                initRiSc.getNumberOfScenarios(),
-                initRiSc.getNumberOfActions(),
-                it.preferredBackstageComponentType,
-                it.priorityIndex,
-            )
-        }
+        return initRiScDescriptorConfigs
+            .map {
+                val initRiSc = getInitRiScFromGitHub(it.id, accessTokens)
+                RiScTypeDescriptor(
+                    it.id,
+                    it.listName,
+                    it.listDescription,
+                    initRiSc.title,
+                    initRiSc.scope,
+                    initRiSc.getNumberOfScenarios(),
+                    initRiSc.getNumberOfActions(),
+                    it.preferredBackstageComponentType,
+                    it.priorityIndex,
+                )
+            }.sortedBy { it.priorityIndex }
     }
 
     /**
@@ -98,6 +99,9 @@ class InitRiScServiceGitHubImpl(
         return fetchedRawInitRiSc.copy(
             scenarios = newScenarios,
         )
+    }
+
+    private fun getSortedInitRiScsByPriority() {
     }
 
     private suspend fun getInitRiScFromGitHub(
