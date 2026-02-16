@@ -2,7 +2,6 @@ package no.risc.initRiSc
 
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.initRiSc.model.RiScTypeDescriptor
-import no.risc.risc.models.RiSc5X
 
 interface InitRiScService {
     /**
