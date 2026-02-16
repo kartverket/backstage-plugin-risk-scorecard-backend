@@ -245,6 +245,9 @@ class InitRiScServiceGitHubImplTests {
             assertEquals("Title from initialContent", initRiSc5X.title)
             assertEquals("Scope from initialContent", initRiSc5X.scope)
             assertEquals(2, initRiSc5X.scenarios.size)
+            assertEquals("Produktet mangler eller bryter avtaler med tredjeparter", initRiSc5X.scenarios[0].title)
+            assertEquals(1, initRiSc5X.scenarios[0].actions.size)
+            assertEquals("cvqIP", initRiSc5X.scenarios[0].actions[0].id)
         }
 
     @Test
