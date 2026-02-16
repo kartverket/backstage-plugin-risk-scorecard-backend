@@ -58,7 +58,7 @@ class InitRiScServiceGitHubImpl(
 
         if (parsedInitialContent !is RiSc5X) {
             throw Exception(
-                "Parsed initial content is not of schema version 5.x. The RiSc was of type ${parsedInitialContent::class.simpleName}",
+                "Parsed initial RiSc content is not of schema version 5.x. The RiSc was of type ${parsedInitialContent::class.simpleName}",
             )
         }
 
