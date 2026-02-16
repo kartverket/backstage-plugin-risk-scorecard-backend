@@ -101,9 +101,6 @@ class InitRiScServiceGitHubImpl(
         )
     }
 
-    private fun getSortedInitRiScsByPriority() {
-    }
-
     private suspend fun getInitRiScFromGitHub(
         id: String,
         accessTokens: AccessTokens,
@@ -118,7 +115,7 @@ class InitRiScServiceGitHubImpl(
 
         if (fetchedInitRiSc.status != GithubStatus.Success || fetchedInitRiSc.data == null) {
             throw FetchException(
-                "Failed to fetch initial RiSc from GitHub. Fetch status was ${fetchedInitRiSc.status} and data was " +
+                "Failed to fetch initial RiSc of ID $id from GitHub. Fetch status was ${fetchedInitRiSc.status} and data was " +
                     "${if (fetchedInitRiSc.data == null) "null" else fetchedInitRiSc.data.substring(0, 20)}...",
                 ProcessingStatus.FailedToFetchInitRiScFromGitHub,
             )
@@ -128,7 +125,7 @@ class InitRiScServiceGitHubImpl(
 
         if (initRiSc !is RiSc5X) {
             throw RiScNotValidOnFetchException(
-                "Fetched initial RiSc is not of schema version 5.x. The RiSc was of type ${initRiSc::class.simpleName}",
+                "Fetched initial RiSc of ID $id is not of schema version 5.x. The RiSc was of type ${initRiSc::class.simpleName}",
                 id,
             )
         }
