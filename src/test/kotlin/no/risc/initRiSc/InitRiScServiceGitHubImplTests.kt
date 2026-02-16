@@ -184,6 +184,13 @@ class InitRiScServiceGitHubImplTests {
                             "listName": "RiSc Example",
                             "listDescription": "Desc",
                             "preferredBackstageComponentType": "service"
+                          },
+                          {
+                            "id": "risc-example-x2",
+                            "priorityIndex": 2,
+                            "listName": "RiSc Example",
+                            "listDescription": "Desc",
+                            "preferredBackstageComponentType": "service"
                           }
                         ]
                         """.trimIndent(),
@@ -195,11 +202,16 @@ class InitRiScServiceGitHubImplTests {
             } returns
                 GithubContentResponse(data = GITHUB_RESPONSE_DATA1, status = GithubStatus.Success)
 
+            coEvery {
+                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-example-x2", any<String>())
+            } returns
+                GithubContentResponse(data = GITHUB_RESPONSE_DATA2, status = GithubStatus.Success)
+
             val descriptors =
                 initRiScServiceGitHubImpl.getInitRiScDescriptors(ACCESS_TOKEN)
             val descriptor = descriptors[0]
 
-            assertEquals(1, descriptors.size)
+            assertEquals(2, descriptors.size)
             assertEquals("risc-example", descriptor.id)
             assertEquals("RiSc Example", descriptor.listName)
             assertEquals("Desc", descriptor.listDescription)
