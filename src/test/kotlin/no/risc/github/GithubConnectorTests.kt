@@ -7,6 +7,7 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
+import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -55,11 +56,16 @@ class GithubConnectorTests {
     private val riscFolderPath = ".security/risc"
     private val owner = "owner"
     private val repository = "risc-repo"
-    private val initRiScRepoName = "init-risc-repo"
-    private val initRiScRepoOwner = "owner"
 
     @BeforeEach
     fun beforeEach() {
+        val initRiScServiceConfig =
+            InitRiScServiceConfig().apply {
+                baseUrl = ""
+                repoName = "init-risc-repo"
+                repoOwner = "owner"
+            }
+
         webClient = MockableWebClient()
         githubConnector =
             spyk(
@@ -71,8 +77,7 @@ class GithubConnectorTests {
                             filenamePrefix = filenamePrefix,
                             filenamePostfix = filenamePostfix,
                             riScFolderPath = riscFolderPath,
-                            initRiScRepoName = initRiScRepoName,
-                            initRiScRepoOwner = initRiScRepoOwner,
+                            initRiScServiceConfig = initRiScServiceConfig,
                         ),
                 ),
             )

@@ -3,6 +3,7 @@ package no.risc.initRiSc
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import no.risc.config.InitRiScServiceConfig
 import no.risc.github.GithubConnector
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubStatus
@@ -18,10 +19,17 @@ import org.junit.jupiter.api.Test
 
 class InitRiScServiceGitHubImplTests {
     val mockedGithubConnector: GithubConnector = mockk()
+
+    val initRiScServiceConfig =
+        InitRiScServiceConfig().apply {
+            baseUrl = ""
+            repoName = "name"
+            repoOwner = "owner"
+        }
+
     private val initRiScServiceGitHubImpl: InitRiScServiceGitHubImpl =
         InitRiScServiceGitHubImpl(
-            initRiScRepoName = "name",
-            initRiScRepoOwner = "owner",
+            initRiScServiceConfig = initRiScServiceConfig,
             githubConnector = mockedGithubConnector,
         )
 
