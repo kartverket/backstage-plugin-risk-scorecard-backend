@@ -1,6 +1,7 @@
 package no.risc.initRiSc
 
 import kotlinx.serialization.json.Json
+import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.github.GithubConnector
@@ -13,13 +14,11 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.utils.yamlToJson
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
 class InitRiScServiceGitHubImpl(
-    @Value("\${initRiSc.repoName}") val initRiScRepoName: String,
-    @Value("\${initRiSc.repoOwner}") val initRiScRepoOwner: String,
+    private val initRiScServiceConfig: InitRiScServiceConfig,
     private val githubConnector: GithubConnector,
 ) : InitRiScService {
     override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
@@ -107,8 +106,8 @@ class InitRiScServiceGitHubImpl(
     ): RiSc5X {
         val fetchedInitRiSc =
             githubConnector.fetchPublishedRiSc(
-                initRiScRepoOwner,
-                initRiScRepoName,
+                initRiScServiceConfig.repoOwner,
+                initRiScServiceConfig.repoName,
                 id,
                 accessTokens.githubAccessToken.value,
             )
