@@ -3,7 +3,6 @@
 package no.risc.github
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import no.risc.config.CryptoServiceConfig
 import no.risc.config.InitRiScServiceConfig
 import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
