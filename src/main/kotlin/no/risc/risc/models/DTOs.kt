@@ -32,6 +32,8 @@ data class DifferenceRequestBody(
 data class DecryptionFailureDTO(
     val status: ContentStatus,
     val message: String,
+    val errorCode: String? = null,
+    val errorMessage: String? = null,
 )
 
 @Serializable
@@ -59,6 +61,9 @@ data class RiScContentResultDTO(
     val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
+    val statusMessage: String? = null,
+    val errorCode: String? = null,
+    val errorMessage: String? = null,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,
@@ -98,6 +103,7 @@ enum class ContentStatus {
     NoReadAccess,
     SchemaNotFound,
     SchemaValidationFailed,
+    UnsupportedMigration,
 }
 
 enum class DifferenceStatus {
@@ -109,6 +115,7 @@ enum class DifferenceStatus {
     NoReadAccess,
     SchemaNotFound,
     SchemaValidationFailed,
+    UnsupportedMigration,
 }
 
 @Serializable
