@@ -153,6 +153,7 @@ class CryptoServiceIntegration(
         } catch (e: Exception) {
             throw SOPSDecryptionException(
                 message = "Crypto decrypt failed: ${e.message}",
+                errorCode = "CONNECTION_REFUSED",
                 cause = e,
             )
         }
