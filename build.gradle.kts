@@ -42,7 +42,6 @@ val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
-val jacksonYamlVersion = "2.21.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
@@ -75,8 +74,6 @@ dependencies {
 
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
 
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonYamlVersion")
-
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
     }
@@ -85,7 +82,6 @@ dependencies {
     testImplementation("net.bytebuddy:byte-buddy:1.18.5")
     testImplementation("net.bytebuddy:byte-buddy-agent:1.18.5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
-
     testImplementation("io.mockk:mockk:$mockkVersion")
 
     constraints {

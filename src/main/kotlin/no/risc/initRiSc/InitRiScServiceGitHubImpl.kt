@@ -1,7 +1,6 @@
 package no.risc.initRiSc
 
 import kotlinx.serialization.json.Json
-import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.github.GithubConnector
@@ -13,12 +12,10 @@ import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScScenarioActionStatus
-import no.risc.utils.yamlToJson
 import org.springframework.stereotype.Service
 
 @Service
 class InitRiScServiceGitHubImpl(
-    private val initRiScServiceConfig: InitRiScServiceConfig,
     private val githubConnector: GithubConnector,
 ) : InitRiScService {
     override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
@@ -105,12 +102,7 @@ class InitRiScServiceGitHubImpl(
         accessTokens: AccessTokens,
     ): RiSc5X {
         val fetchedInitRiSc =
-            githubConnector.fetchPublishedRiSc(
-                initRiScServiceConfig.repoOwner,
-                initRiScServiceConfig.repoName,
-                id,
-                accessTokens.githubAccessToken.value,
-            )
+            githubConnector.fetchInitRiSc(id, accessTokens.githubAccessToken.value)
 
         if (fetchedInitRiSc.status != GithubStatus.Success || fetchedInitRiSc.data == null) {
             throw FetchException(
@@ -119,8 +111,7 @@ class InitRiScServiceGitHubImpl(
                 ProcessingStatus.FailedToFetchInitRiScFromGitHub,
             )
         }
-        val fetchedInitRiScJson = yamlToJson(fetchedInitRiSc.data)
-        val initRiSc = RiSc.fromContent(fetchedInitRiScJson)
+        val initRiSc = RiSc.fromContent(fetchedInitRiSc.data)
 
         if (initRiSc !is RiSc5X) {
             throw RiScNotValidOnFetchException(
