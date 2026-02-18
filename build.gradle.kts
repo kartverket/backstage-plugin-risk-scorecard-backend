@@ -33,12 +33,12 @@ repositories {
 val kotlinVersion = "2.3.10"
 val springBootVersion = "3.5.6"
 val springSecurityVersion = "6.5.6"
-val kotlinxSerializationVersion = "1.9.0"
+val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.16.2"
 val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.7"
-val bouncyCastleVersion = "1.82"
+val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
@@ -79,8 +79,8 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("net.bytebuddy:byte-buddy:1.17.5")
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.5")
+    testImplementation("net.bytebuddy:byte-buddy:1.18.5")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.5")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
 
