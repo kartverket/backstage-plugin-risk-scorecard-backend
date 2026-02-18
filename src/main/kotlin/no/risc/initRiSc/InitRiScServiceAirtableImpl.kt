@@ -3,38 +3,33 @@ package no.risc.initRiSc
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
+import no.risc.infra.connector.models.AccessTokens
 import no.risc.initRiSc.model.GenerateRiScRequestBody
 import no.risc.initRiSc.model.RiScTypeDescriptor
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
-import org.springframework.stereotype.Component
+import org.springframework.context.annotation.Primary
+import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 
-@Component
-class InitRiScServiceIntegration(
+@Primary
+@Service
+class InitRiScServiceAirtableImpl(
     private val initRiScServiceConnector: InitRiScServiceConnector,
-) {
-    /**
-     * Generates a default RiSc based on the passed initial RiSc using the external initialize RiSc service. Returns a
-     * JSON serialized RiSc.
-     *
-     * @param initialRiSc A JSON serialized RiSc to base the default RiSc on. Must include the `title` and `scope`
-     *                    fields. These are the only fields used from `initialRiSc`.
-     *
-     * @param defaultRiScId ID of default RiSc to generate the RiSc from.
-     */
-    suspend fun generateDefaultRiSc(
-        initialRiSc: String,
-        defaultRiScId: String,
+) : InitRiScService {
+    override suspend fun getInitRiSc(
+        initRiScId: String,
+        initialContent: String,
+        accessTokens: AccessTokens,
     ): String =
         initRiScServiceConnector.webClient
             .post()
             .uri("/generate")
-            .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialRiSc, defaultRiScId)))
+            .body(BodyInserters.fromValue(GenerateRiScRequestBody(initialContent, initRiScId)))
             .retrieve()
             .awaitBodyOrNull<String>() ?: throw SopsConfigGenerateFetchException(
-            "Failed to generate default RiSc for defaultRiScId=$defaultRiScId: " +
+            "Failed to generate default RiSc for initRiScId=$initRiScId: " +
                 "empty response body from init-risc service (Airtable).",
             ProcessRiScResultDTO(
                 riScId = "",
@@ -43,7 +38,7 @@ class InitRiScServiceIntegration(
             ),
         )
 
-    suspend fun fetchDefaultRiScTypeDescriptors(): List<RiScTypeDescriptor> {
+    override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
         val descriptors =
             initRiScServiceConnector.webClient
                 .get()

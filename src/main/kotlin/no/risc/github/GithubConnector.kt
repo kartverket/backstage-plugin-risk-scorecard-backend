@@ -1146,13 +1146,25 @@ class GithubConnector(
      */
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
-            is WebClientResponseException.NotFound -> GithubStatus.NotFound
-            is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
-            is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } ->
-                GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            is WebClientResponseException.NotFound -> {
+                GithubStatus.NotFound
+            }
 
-            else -> GithubStatus.InternalError
+            is WebClientResponseException.Unauthorized -> {
+                GithubStatus.Unauthorized
+            }
+
+            is WebClientResponseException.UnprocessableEntity -> {
+                GithubStatus.RequestResponseBodyError
+            }
+
+            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } -> {
+                GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            }
+
+            else -> {
+                GithubStatus.InternalError
+            }
         }
 
     /**
@@ -1191,4 +1203,16 @@ class GithubConnector(
                 },
         )
     }
+
+    suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
+        fetchRiScContent(githubHelper.uriToInitRiscConfig(), gitHubAccessToken.value)
+
+    suspend fun fetchInitRiSc(
+        initRiScId: String,
+        accessToken: String,
+    ): GithubContentResponse =
+        fetchRiScContent(
+            uri = githubHelper.uriToInitRiSc(initRiScId),
+            accessToken = accessToken,
+        )
 }
