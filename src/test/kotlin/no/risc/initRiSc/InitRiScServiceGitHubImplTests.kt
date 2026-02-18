@@ -3,7 +3,6 @@ package no.risc.initRiSc
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import no.risc.config.InitRiScServiceConfig
 import no.risc.github.GithubConnector
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubStatus
@@ -20,145 +19,163 @@ import org.junit.jupiter.api.Test
 class InitRiScServiceGitHubImplTests {
     val mockedGithubConnector: GithubConnector = mockk()
 
-    val initRiScServiceConfig =
-        InitRiScServiceConfig().apply {
-            baseUrl = ""
-            repoName = "name"
-            repoOwner = "owner"
-        }
-
     private val initRiScServiceGitHubImpl: InitRiScServiceGitHubImpl =
         InitRiScServiceGitHubImpl(
-            initRiScServiceConfig = initRiScServiceConfig,
             githubConnector = mockedGithubConnector,
         )
 
     companion object {
         val GITHUB_RESPONSE_DATA1 =
             """
-            schemaVersion: "5.2"
-            title: Initiell RoS - web-app
-            scope: Denne RoS'en er generert fra opplysninger...
-            scenarios:
-              - title: Produktet mangler eller bryter avtaler med tredjeparter
-                scenario:
-                  ID: QQrIA
-                  description: Produktet/tjenesten oppfyller ikke inngåtte avtaler, eller det mangler avtaler eller avtaleinnhold som burde vært på plass. Avtaler som burde vært avsluttet, blir likevel videreført. Tredjeparter kan være datakonsumenter, klienter, datatilbydere og plattformleverandører
-                  threatActors:
-                    - Reckless employee
-                  vulnerabilities:
-                    - Misconfiguration
-                    - Flawed design
-                  risk:
-                    consequence: 1e+06
-                    probability: 1
-                  actions:
-                    - title: Inngå sikkerhetsavtale
-                      action:
-                        ID: cvqIP
-                        description: "Inngå sikkerhetsavtale med underleverandør (f.eks skytjenester) hvis det behandles sikkerhetsgraderte data (altså utover skjermingsverdig ugradert).\n\n```\nInternt metodeverk:   AR-005\nISO 27002:            5.20\nNIST CSF 2.0:         GV.OC-03, GV.SC-05\nOWASP ASVS 4.0.3:     \nNSMs grunnprinsipper: \nSikkerhetsloven:      § 9-2\n```"
-                        status: Not OK
-                        url: ""
-                  remainingRisk:
-                    consequence: 0
-                    probability: 0
-              - title: Annet scenario
-                scenario:
-                  ID: QQrIA2
-                  description: Beskrivelse
-                  threatActors:
-                    - Reckless employee
-                  vulnerabilities:
-                    - Misconfiguration
-                  risk:
-                    consequence: 0
-                    probability: 0
-                  actions:
-                    - title: Inngå sikkerhetsavtale
-                      action:
-                        ID: cvqIP2
-                        description: "beskrivelse"
-                        status: Not OK
-                        url: ""
-                    - title: Inngå sikkerhetsavtale V2
-                      action:
-                        ID: cvqIP3
-                        description: "beskrivelse"
-                        status: Not OK
-                        url: ""
-                  remainingRisk:
-                    consequence: 0
-                    probability: 0
+            {
+              "schemaVersion" : "5.2",
+              "title" : "Initiell RoS - web-app",
+              "scope" : "Denne RoS'en er generert fra opplysninger...",
+              "scenarios" : [ {
+                "title" : "Produktet mangler eller bryter avtaler med tredjeparter",
+                "scenario" : {
+                  "ID" : "QQrIA",
+                  "description" : "Produktet/tjenesten oppfyller ikke inngåtte avtaler, eller det mangler avtaler eller avtaleinnhold som burde vært på plass. Avtaler som burde vært avsluttet, blir likevel videreført. Tredjeparter kan være datakonsumenter, klienter, datatilbydere og plattformleverandører",
+                  "threatActors" : [ "Reckless employee" ],
+                  "vulnerabilities" : [ "Misconfiguration", "Flawed design" ],
+                  "risk" : {
+                    "consequence" : 1000000.0,
+                    "probability" : 1
+                  },
+                  "actions" : [ {
+                    "title" : "Inngå sikkerhetsavtale",
+                    "action" : {
+                      "ID" : "cvqIP",
+                      "description" : "Inngå sikkerhetsavtale med underleverandør (f.eks skytjenester) hvis det behandles sikkerhetsgraderte data (altså utover skjermingsverdig ugradert).\n\n```\nInternt metodeverk:   AR-005\nISO 27002:            5.20\nNIST CSF 2.0:         GV.OC-03, GV.SC-05\nOWASP ASVS 4.0.3:     \nNSMs grunnprinsipper: \nSikkerhetsloven:      § 9-2\n```",
+                      "status" : "Not OK",
+                      "url" : ""
+                    }
+                  } ],
+                  "remainingRisk" : {
+                    "consequence" : 0,
+                    "probability" : 0
+                  }
+                }
+              }, {
+                "title" : "Annet scenario",
+                "scenario" : {
+                  "ID" : "QQrIA2",
+                  "description" : "Beskrivelse",
+                  "threatActors" : [ "Reckless employee" ],
+                  "vulnerabilities" : [ "Misconfiguration" ],
+                  "risk" : {
+                    "consequence" : 0,
+                    "probability" : 0
+                  },
+                  "actions" : [ {
+                    "title" : "Inngå sikkerhetsavtale",
+                    "action" : {
+                      "ID" : "cvqIP2",
+                      "description" : "beskrivelse",
+                      "status" : "Not OK",
+                      "url" : ""
+                    }
+                  }, {
+                    "title" : "Inngå sikkerhetsavtale V2",
+                    "action" : {
+                      "ID" : "cvqIP3",
+                      "description" : "beskrivelse",
+                      "status" : "Not OK",
+                      "url" : ""
+                    }
+                  } ],
+                  "remainingRisk" : {
+                    "consequence" : 0,
+                    "probability" : 0
+                  }
+                }
+              } ]
+            }
             """.trimIndent()
 
         val GITHUB_RESPONSE_DATA2 =
             """
-            ---
-            schemaVersion: "5.2"
-            title: "ros"
-            scope: "scope"
-            scenarios:
-            - title: "scn1"
-              scenario:
-                ID: "FZ6m3"
-                description: "scenario"
-                threatActors: []
-                vulnerabilities: []
-                risk:
-                  summary: ""
-                  probability: 0.0025
-                  consequence: 8000.0
-                remainingRisk:
-                  summary: ""
-                  probability: 0.0025
-                  consequence: 8000.0
-                actions:
-                - title: "act1"
-                  action:
-                    ID: "n8dB5"
-                    description: ""
-                    url: ""
-                    status: "Not relevant"
-                    lastUpdated: "2026-02-13T14:43:50.92Z"
-                    lastUpdatedBy: ""
-                - title: "act2"
-                  action:
-                    ID: "56FG2"
-                    description: "litt data"
-                    url: "https://vg.no"
-                    status: "OK"
-                    lastUpdated: "2026-02-13T14:43:50.92Z"
-                    lastUpdatedBy: ""
-                - title: "act3"
-                  action:
-                    ID: "4bI3N"
-                    description: ""
-                    url: ""
-                    status: "Not OK"
-                    lastUpdated: "2026-02-13T15:10:49.046Z"
-                    lastUpdatedBy: "Kari Nordmann"
-                - title: "act4"
-                  action:
-                    ID: "ncds2"
-                    description: ""
-                    url: ""
-                    status: "Not OK"
-                - title: "act5"
-                  action:
-                    ID: "owkowckowk"
-                    description: ""
-                    url: ""
-                    status: "Not OK"
-                    lastUpdated: ""
-                - title: "act6"
-                  action:
-                    ID: "jjjj"
-                    description: ""
-                    url: ""
-                    status: "Not OK"
-                    lastUpdated: null
-
-
+            {
+              "schemaVersion" : "5.2",
+              "title" : "ros",
+              "scope" : "scope",
+              "scenarios" : [ {
+                "title" : "scn1",
+                "scenario" : {
+                  "ID" : "FZ6m3",
+                  "description" : "scenario",
+                  "threatActors" : [ ],
+                  "vulnerabilities" : [ ],
+                  "risk" : {
+                    "summary" : "",
+                    "probability" : 0.0025,
+                    "consequence" : 8000.0
+                  },
+                  "remainingRisk" : {
+                    "summary" : "",
+                    "probability" : 0.0025,
+                    "consequence" : 8000.0
+                  },
+                  "actions" : [ {
+                    "title" : "act1",
+                    "action" : {
+                      "ID" : "n8dB5",
+                      "description" : "",
+                      "url" : "",
+                      "status" : "Not relevant",
+                      "lastUpdated" : "2026-02-13T14:43:50.92Z",
+                      "lastUpdatedBy" : ""
+                    }
+                  }, {
+                    "title" : "act2",
+                    "action" : {
+                      "ID" : "56FG2",
+                      "description" : "litt data",
+                      "url" : "https://vg.no",
+                      "status" : "OK",
+                      "lastUpdated" : "2026-02-13T14:43:50.92Z",
+                      "lastUpdatedBy" : ""
+                    }
+                  }, {
+                    "title" : "act3",
+                    "action" : {
+                      "ID" : "4bI3N",
+                      "description" : "",
+                      "url" : "",
+                      "status" : "Not OK",
+                      "lastUpdated" : "2026-02-13T15:10:49.046Z",
+                      "lastUpdatedBy" : "Kari Nordmann"
+                    }
+                  }, {
+                    "title" : "act4",
+                    "action" : {
+                      "ID" : "ncds2",
+                      "description" : "",
+                      "url" : "",
+                      "status" : "Not OK"
+                    }
+                  }, {
+                    "title" : "act5",
+                    "action" : {
+                      "ID" : "owkowckowk",
+                      "description" : "",
+                      "url" : "",
+                      "status" : "Not OK",
+                      "lastUpdated" : ""
+                    }
+                  }, {
+                    "title" : "act6",
+                    "action" : {
+                      "ID" : "jjjj",
+                      "description" : "",
+                      "url" : "",
+                      "status" : "Not OK",
+                      "lastUpdated" : null
+                    }
+                  } ]
+                }
+              } ]
+            }
             """.trimIndent()
 
         val INITIAL_CONTENT1 =
@@ -206,12 +223,12 @@ class InitRiScServiceGitHubImplTests {
                 )
 
             coEvery {
-                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-example", any<String>())
+                mockedGithubConnector.fetchInitRiSc("risc-example", any<String>())
             } returns
                 GithubContentResponse(data = GITHUB_RESPONSE_DATA1, status = GithubStatus.Success)
 
             coEvery {
-                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-example-x2", any<String>())
+                mockedGithubConnector.fetchInitRiSc("risc-example-x2", any<String>())
             } returns
                 GithubContentResponse(data = GITHUB_RESPONSE_DATA2, status = GithubStatus.Success)
 
@@ -235,7 +252,7 @@ class InitRiScServiceGitHubImplTests {
     fun `getInitRiSc returns the correct initial risc`() =
         runTest {
             coEvery {
-                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-example", any<String>())
+                mockedGithubConnector.fetchInitRiSc("risc-example", any<String>())
             } returns
                 GithubContentResponse(data = GITHUB_RESPONSE_DATA1, status = GithubStatus.Success)
 
@@ -262,7 +279,7 @@ class InitRiScServiceGitHubImplTests {
     fun `getInitRiSc returns a RiSc without lastUpdatedBy, lastUpdated, and action statuses set to NOT OK`() =
         runTest {
             coEvery {
-                mockedGithubConnector.fetchPublishedRiSc("owner", "name", "risc-with-data", any<String>())
+                mockedGithubConnector.fetchInitRiSc("risc-with-data", any<String>())
             } returns
                 GithubContentResponse(data = GITHUB_RESPONSE_DATA2, status = GithubStatus.Success)
 
