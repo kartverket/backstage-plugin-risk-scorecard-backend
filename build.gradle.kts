@@ -5,7 +5,7 @@ plugins {
     kotlin("plugin.serialization") version kotlinPluginsVersion
     id("org.springframework.boot") version "4.0.2"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
+    id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
 }
 
 ktlint {
@@ -31,15 +31,15 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.3.0"
+val kotlinVersion = "2.3.10"
 val springBootVersion = "4.0.2"
 val springSecurityVersion = "7.0.2"
-val kotlinxSerializationVersion = "1.9.0"
+val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.16.2"
 val jsonSchemaValidatorVersion = "1.5.9"
 val nimbusdsVersion = "10.7"
-val bouncyCastleVersion = "1.82"
+val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
 val springdocVersion = "2.8.4"
@@ -80,13 +80,13 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("net.bytebuddy:byte-buddy:1.17.5")
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.5")
+    testImplementation("net.bytebuddy:byte-buddy:1.18.5")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.5")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
 
     constraints {
-        implementation("org.apache.commons:commons-lang3:3.19.0") {
+        implementation("org.apache.commons:commons-lang3:3.20.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
         implementation("io.netty:netty-codec-http2:4.2.7.Final") {
