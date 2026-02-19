@@ -3,7 +3,7 @@ plugins {
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "4.0.3"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
 }
 
