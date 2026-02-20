@@ -25,6 +25,32 @@ fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()
  */
 fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${generateRandomAlphanumericString(5)}"
 
+/**
+ * Generates a RiScId based on Backstage entity info.
+ *
+ * - If only [riscName] is provided (both [backstageKind] and [backstageName] are null), returns
+ *   `<filenamePrefix>-<riscName>`.
+ * - If all Backstage fields are present, returns
+ *   `<filenamePrefix>-<riscName>-backstage_<backstageKind>_<namespace>_<backstageName>`,
+ *   where [backstageNamespace] defaults to `"default"` if not provided.
+ * - Returns null if [riscName] is null, or if exactly one of [backstageKind] or [backstageName] is null.
+ */
+fun generateRiScIdFromBackstageInfo(
+    filenamePrefix: String,
+    riscName: String?,
+    backstageKind: String?,
+    backstageNamespace: String?,
+    backstageName: String?,
+): String? {
+    if (riscName == null) return null
+    if (backstageKind == null && backstageName == null) {
+        return "$filenamePrefix-$riscName"
+    }
+    if (backstageKind == null || backstageName == null) return null
+    val namespace = backstageNamespace ?: "default"
+    return "$filenamePrefix-$riscName-backstage_${backstageKind}_${namespace}_$backstageName"
+}
+
 private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 /**
