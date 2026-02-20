@@ -41,6 +41,7 @@ import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
 import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
+import no.risc.utils.generateRiScIdFromBackstageInfo
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
@@ -381,8 +382,14 @@ class RiScService(
         defaultBranch: String,
         generateDefault: Boolean,
         defaultRiScId: String?,
+        riscName: String? = null,
+        backstageKind: String? = null,
+        backstageNamespace: String? = null,
+        backstageName: String? = null,
     ): CreateRiScResultDTO {
-        val uniqueRiScId = generateRiScId(filenamePrefix)
+        val uniqueRiScId =
+            generateRiScIdFromBackstageInfo(filenamePrefix, riscName, backstageKind, backstageNamespace, backstageName)
+                ?: generateRiScId(filenamePrefix)
         LOGGER.info("Generating default content")
 
         if (generateDefault && defaultRiScId == null) {

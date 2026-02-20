@@ -106,6 +106,10 @@ class RiScController(
                         ).defaultBranch,
                 generateDefault = generateDefault,
                 defaultRiScId = newRiSc.defaultRiScId,
+                riscName = newRiSc.riscName,
+                backstageKind = newRiSc.backstageKind,
+                backstageNamespace = newRiSc.backstageNamespace,
+                backstageName = newRiSc.backstageName,
             )
         return createRiscResultDTO
     }
