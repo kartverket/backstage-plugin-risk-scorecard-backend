@@ -38,9 +38,12 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
+import no.risc.utils.BackstageEntity
 import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
+import no.risc.utils.generateRiScIdFromBackstageInfo
 import no.risc.utils.migrate
+import no.risc.utils.riScIdMatchesBackstageFilter
 import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
@@ -51,7 +54,7 @@ import org.springframework.stereotype.Service
 @Service
 class RiScService(
     private val githubConnector: GithubConnector,
-    @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${filename.prefix}") val branchPrefix: String,
     private val cryptoService: CryptoServiceIntegration,
     private val initRiScService: InitRiScServiceIntegration,
 ) {
@@ -176,14 +179,21 @@ class RiScService(
         repository: String,
         accessTokens: AccessTokens,
         latestSupportedVersion: String,
+        backstageEntity: BackstageEntity? = null,
     ): List<RiScContentResultDTO> =
         coroutineScope {
             val riScGithubMetadataList: List<RiScGithubMetadata> =
-                githubConnector.fetchRiScGithubMetadata(
-                    owner,
-                    repository,
-                    accessTokens.githubAccessToken,
-                )
+                githubConnector
+                    .fetchRiScGithubMetadata(
+                        owner,
+                        repository,
+                        accessTokens.githubAccessToken,
+                    ).filter {
+                        riScIdMatchesBackstageFilter(
+                            riScId = it.id,
+                            backstageEntity = backstageEntity,
+                        )
+                    }
 
             riScGithubMetadataList
                 .map { riScMetadata ->
@@ -379,8 +389,12 @@ class RiScService(
         defaultBranch: String,
         generateDefault: Boolean,
         defaultRiScId: String?,
+        riscName: String? = null,
+        backstageEntity: BackstageEntity? = null,
     ): CreateRiScResultDTO {
-        val uniqueRiScId = generateRiScId(filenamePrefix)
+        val uniqueRiScId =
+            generateRiScIdFromBackstageInfo(branchPrefix, riscName, backstageEntity)
+                ?: generateRiScId(branchPrefix)
         LOGGER.info("Generating default content")
 
         if (generateDefault && defaultRiScId == null) {

@@ -10,6 +10,10 @@ data class NewRiScRequestBody(
     val userInfo: UserInfo,
     val sopsConfig: SopsConfig,
     val defaultRiScId: String? = null,
+    val riscName: String? = null,
+    val backstageNamespace: String? = null,
+    val backstageKind: String? = null,
+    val backstageName: String? = null,
 ) {
     fun toRiScWrapperObject(): RiScWrapperObject =
         RiScWrapperObject(
