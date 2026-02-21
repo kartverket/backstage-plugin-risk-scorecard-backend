@@ -44,6 +44,9 @@ class RiScController(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
+        @RequestParam backstageKind: String? = null,
+        @RequestParam backstageNamespace: String? = null,
+        @RequestParam backstageName: String? = null,
     ): List<RiScContentResultDTO> =
         riScService.fetchAllRiScs(
             owner = repositoryOwner,
@@ -54,6 +57,9 @@ class RiScController(
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
             latestSupportedVersion = "5.2",
+            backstageKind = backstageKind,
+            backstageNamespace = backstageNamespace,
+            backstageName = backstageName,
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -63,6 +69,9 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
+        @RequestParam backstageKind: String? = null,
+        @RequestParam backstageNamespace: String? = null,
+        @RequestParam backstageName: String? = null,
     ): List<RiScContentResultDTO> {
         val result =
             riScService.fetchAllRiScs(
@@ -74,6 +83,9 @@ class RiScController(
                         githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                     ),
                 latestSupportedVersion = latestSupportedVersion,
+                backstageKind = backstageKind,
+                backstageNamespace = backstageNamespace,
+                backstageName = backstageName,
             )
         return result
     }
