@@ -38,6 +38,7 @@ import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
+import no.risc.utils.BackstageEntity
 import no.risc.utils.comparison.compare
 import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
@@ -179,9 +180,7 @@ class RiScService(
         repository: String,
         accessTokens: AccessTokens,
         latestSupportedVersion: String,
-        backstageKind: String? = null,
-        backstageNamespace: String? = null,
-        backstageName: String? = null,
+        backstageEntity: BackstageEntity? = null,
     ): List<RiScContentResultDTO> =
         coroutineScope {
             LOGGER.info("Fetching all RiScs for $owner/$repository")
@@ -195,9 +194,7 @@ class RiScService(
                     ).filter {
                         riScIdMatchesBackstageFilter(
                             riScId = it.id,
-                            backstageKind = backstageKind,
-                            backstageNamespace = backstageNamespace,
-                            backstageName = backstageName,
+                            backstageEntity = backstageEntity,
                         )
                     }
 
@@ -395,12 +392,10 @@ class RiScService(
         generateDefault: Boolean,
         defaultRiScId: String?,
         riscName: String? = null,
-        backstageKind: String? = null,
-        backstageNamespace: String? = null,
-        backstageName: String? = null,
+        backstageEntity: BackstageEntity? = null,
     ): CreateRiScResultDTO {
         val uniqueRiScId =
-            generateRiScIdFromBackstageInfo(branchPrefix, riscName, backstageKind, backstageNamespace, backstageName)
+            generateRiScIdFromBackstageInfo(branchPrefix, riscName, backstageEntity)
                 ?: generateRiScId(branchPrefix)
         LOGGER.info("Generating default content")
 

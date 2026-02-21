@@ -17,6 +17,7 @@ import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.slack.SlackService
+import no.risc.utils.BackstageEntity
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -38,6 +39,12 @@ class RiScController(
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
 ) {
+    private fun backstageEntityOf(
+        kind: String?,
+        namespace: String?,
+        name: String?,
+    ): BackstageEntity? = if (kind != null && name != null) BackstageEntity(kind, namespace, name) else null
+
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
@@ -57,9 +64,7 @@ class RiScController(
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
             latestSupportedVersion = "5.2",
-            backstageKind = backstageKind,
-            backstageNamespace = backstageNamespace,
-            backstageName = backstageName,
+            backstageEntity = backstageEntityOf(backstageKind, backstageNamespace, backstageName),
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -83,9 +88,7 @@ class RiScController(
                         githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                     ),
                 latestSupportedVersion = latestSupportedVersion,
-                backstageKind = backstageKind,
-                backstageNamespace = backstageNamespace,
-                backstageName = backstageName,
+                backstageEntity = backstageEntityOf(backstageKind, backstageNamespace, backstageName),
             )
         return result
     }
@@ -119,9 +122,7 @@ class RiScController(
                 generateDefault = generateDefault,
                 defaultRiScId = newRiSc.defaultRiScId,
                 riscName = newRiSc.riscName,
-                backstageKind = newRiSc.backstageKind,
-                backstageNamespace = newRiSc.backstageNamespace,
-                backstageName = newRiSc.backstageName,
+                backstageEntity = backstageEntityOf(newRiSc.backstageKind, newRiSc.backstageNamespace, newRiSc.backstageName),
             )
         return createRiscResultDTO
     }

@@ -28,9 +28,7 @@ class UtilsTests {
             generateRiScIdFromBackstageInfo(
                 branchPrefix = "risc",
                 riscName = "my-risc",
-                backstageKind = "component",
-                backstageNamespace = "my-namespace",
-                backstageName = "my-service",
+                backstageEntity = BackstageEntity(kind = "component", namespace = "my-namespace", name = "my-service"),
             )
         assertEquals("risc-my-risc-backstage_component_my-namespace_my-service", result)
     }
@@ -41,9 +39,7 @@ class UtilsTests {
             generateRiScIdFromBackstageInfo(
                 branchPrefix = "risc",
                 riscName = "my-risc",
-                backstageKind = "component",
-                backstageNamespace = null,
-                backstageName = "my-service",
+                backstageEntity = BackstageEntity(kind = "component", namespace = null, name = "my-service"),
             )
         assertEquals("risc-my-risc-backstage_component_default_my-service", result)
     }
@@ -54,9 +50,7 @@ class UtilsTests {
             generateRiScIdFromBackstageInfo(
                 branchPrefix = "risc",
                 riscName = "my-risc",
-                backstageKind = null,
-                backstageNamespace = null,
-                backstageName = null,
+                backstageEntity = null,
             )
         assertEquals("risc-my-risc", result)
     }
@@ -67,35 +61,7 @@ class UtilsTests {
             generateRiScIdFromBackstageInfo(
                 branchPrefix = "risc",
                 riscName = null,
-                backstageKind = null,
-                backstageNamespace = null,
-                backstageName = null,
-            )
-        assertNull(result)
-    }
-
-    @Test
-    fun `generateRiScIdFromBackstageInfo returns null when backstageKind is null but backstageName is present`() {
-        val result =
-            generateRiScIdFromBackstageInfo(
-                branchPrefix = "risc",
-                riscName = "my-risc",
-                backstageKind = null,
-                backstageNamespace = null,
-                backstageName = "my-service",
-            )
-        assertNull(result)
-    }
-
-    @Test
-    fun `generateRiScIdFromBackstageInfo returns null when backstageName is null but backstageKind is present`() {
-        val result =
-            generateRiScIdFromBackstageInfo(
-                branchPrefix = "risc",
-                riscName = "my-risc",
-                backstageKind = "component",
-                backstageNamespace = null,
-                backstageName = null,
+                backstageEntity = null,
             )
         assertNull(result)
     }
@@ -105,9 +71,7 @@ class UtilsTests {
         assertTrue(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-abc12",
-                backstageKind = null,
-                backstageNamespace = null,
-                backstageName = null,
+                backstageEntity = null,
             ),
         )
     }
@@ -117,9 +81,7 @@ class UtilsTests {
         assertTrue(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-abc12",
-                backstageKind = "service",
-                backstageNamespace = null,
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "service", namespace = null, name = "x"),
             ),
         )
     }
@@ -129,9 +91,7 @@ class UtilsTests {
         assertTrue(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-my-risc",
-                backstageKind = "service",
-                backstageNamespace = null,
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "service", namespace = null, name = "x"),
             ),
         )
     }
@@ -141,9 +101,7 @@ class UtilsTests {
         assertTrue(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-a-backstage_service_default_x",
-                backstageKind = "service",
-                backstageNamespace = null,
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "service", namespace = null, name = "x"),
             ),
         )
     }
@@ -153,9 +111,7 @@ class UtilsTests {
         assertTrue(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-a-backstage_service_my-ns_x",
-                backstageKind = "service",
-                backstageNamespace = "my-ns",
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "service", namespace = "my-ns", name = "x"),
             ),
         )
     }
@@ -165,9 +121,7 @@ class UtilsTests {
         assertFalse(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-a-backstage_service_default_x",
-                backstageKind = "service",
-                backstageNamespace = null,
-                backstageName = "other",
+                backstageEntity = BackstageEntity(kind = "service", namespace = null, name = "other"),
             ),
         )
     }
@@ -177,9 +131,7 @@ class UtilsTests {
         assertFalse(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-a-backstage_service_default_x",
-                backstageKind = "api",
-                backstageNamespace = null,
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "api", namespace = null, name = "x"),
             ),
         )
     }
@@ -189,9 +141,7 @@ class UtilsTests {
         assertFalse(
             riScIdMatchesBackstageFilter(
                 riScId = "risc-a-backstage_service_other-ns_x",
-                backstageKind = "service",
-                backstageNamespace = "default",
-                backstageName = "x",
+                backstageEntity = BackstageEntity(kind = "service", namespace = "default", name = "x"),
             ),
         )
     }

@@ -10,6 +10,12 @@ data class Repository(
     val repositoryName: String,
 )
 
+data class BackstageEntity(
+    val kind: String,
+    val namespace: String?,
+    val name: String,
+)
+
 /**
  * Encodes the string as Base64.
  */
@@ -28,48 +34,40 @@ fun generateRiScId(branchPrefix: String) = "$branchPrefix-${generateRandomAlphan
 /**
  * Generates a RiScId based on Backstage entity info.
  *
- * - If only [riscName] is provided (both [backstageKind] and [backstageName] are null), returns
- *   `<branchPrefix>-<riscName>`.
- * - If all Backstage fields are present, returns
- *   `<branchPrefix>-<riscName>-backstage_<backstageKind>_<namespace>_<backstageName>`,
- *   where [backstageNamespace] defaults to `"default"` if not provided.
- * - Returns null if [riscName] is null, or if exactly one of [backstageKind] or [backstageName] is null.
+ * - If only [riscName] is provided ([backstageEntity] is null), returns `<branchPrefix>-<riscName>`.
+ * - If [backstageEntity] is present, returns
+ *   `<branchPrefix>-<riscName>-backstage_<kind>_<namespace>_<name>`,
+ *   where [BackstageEntity.namespace] defaults to `"default"` if not provided.
+ * - Returns null if [riscName] is null.
  */
 fun generateRiScIdFromBackstageInfo(
     branchPrefix: String,
     riscName: String?,
-    backstageKind: String?,
-    backstageNamespace: String?,
-    backstageName: String?,
+    backstageEntity: BackstageEntity?,
 ): String? {
     if (riscName == null) return null
-    if (backstageKind == null && backstageName == null) {
-        return "$branchPrefix-$riscName"
-    }
-    if (backstageKind == null || backstageName == null) return null
-    val namespace = backstageNamespace ?: "default"
-    return "$branchPrefix-$riscName-backstage_${backstageKind}_${namespace}_$backstageName"
+    if (backstageEntity == null) return "$branchPrefix-$riscName"
+    val namespace = backstageEntity.namespace ?: "default"
+    return "$branchPrefix-$riscName-backstage_${backstageEntity.kind}_${namespace}_${backstageEntity.name}"
 }
 
 /**
  * Returns true if the given RiSc ID should be included when filtering by Backstage entity.
  *
- * - No filter (both [backstageKind] and [backstageName] are null) → all IDs match.
+ * - No filter ([backstageEntity] is null) → all IDs match.
  * - IDs without `-backstage_` segment → always match (old naming, backward compat).
  * - IDs with `-backstage_` segment → match only if they end with
- *   `-backstage_<backstageKind>_<namespace>_<backstageName>`,
- *   where [backstageNamespace] defaults to `"default"`.
+ *   `-backstage_<kind>_<namespace>_<name>`,
+ *   where [BackstageEntity.namespace] defaults to `"default"`.
  */
 fun riScIdMatchesBackstageFilter(
     riScId: String,
-    backstageKind: String?,
-    backstageNamespace: String?,
-    backstageName: String?,
+    backstageEntity: BackstageEntity?,
 ): Boolean {
-    if (backstageKind == null || backstageName == null) return true
+    if (backstageEntity == null) return true
     if (!riScId.contains("-backstage_")) return true
-    val namespace = backstageNamespace ?: "default"
-    return riScId.endsWith("-backstage_${backstageKind}_${namespace}_$backstageName")
+    val namespace = backstageEntity.namespace ?: "default"
+    return riScId.endsWith("-backstage_${backstageEntity.kind}_${namespace}_${backstageEntity.name}")
 }
 
 private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
