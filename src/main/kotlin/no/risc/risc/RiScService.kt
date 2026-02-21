@@ -54,7 +54,7 @@ import org.springframework.stereotype.Service
 @Service
 class RiScService(
     private val githubConnector: GithubConnectorPort,
-    @Value("\${filename.prefix}") val filenamePrefix: String,
+    @Value("\${filename.prefix}") val branchPrefix: String,
     private val cryptoService: CryptoServicePort,
     private val initRiScService: InitRiScServiceIntegration,
 ) {
@@ -400,8 +400,8 @@ class RiScService(
         backstageName: String? = null,
     ): CreateRiScResultDTO {
         val uniqueRiScId =
-            generateRiScIdFromBackstageInfo(filenamePrefix, riscName, backstageKind, backstageNamespace, backstageName)
-                ?: generateRiScId(filenamePrefix)
+            generateRiScIdFromBackstageInfo(branchPrefix, riscName, backstageKind, backstageNamespace, backstageName)
+                ?: generateRiScId(branchPrefix)
         LOGGER.info("Generating default content")
 
         if (generateDefault && defaultRiScId == null) {

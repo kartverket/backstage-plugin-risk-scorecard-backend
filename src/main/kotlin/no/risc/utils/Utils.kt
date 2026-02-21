@@ -21,22 +21,22 @@ fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArr
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
 /**
- * Generates a RiScId on the following format `<filenamePrefix>-<5-letter-alphanumeric-string>`.
+ * Generates a RiScId on the following format `<branchPrefix>-<5-letter-alphanumeric-string>`.
  */
-fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${generateRandomAlphanumericString(5)}"
+fun generateRiScId(branchPrefix: String) = "$branchPrefix-${generateRandomAlphanumericString(5)}"
 
 /**
  * Generates a RiScId based on Backstage entity info.
  *
  * - If only [riscName] is provided (both [backstageKind] and [backstageName] are null), returns
- *   `<filenamePrefix>-<riscName>`.
+ *   `<branchPrefix>-<riscName>`.
  * - If all Backstage fields are present, returns
- *   `<filenamePrefix>-<riscName>-backstage_<backstageKind>_<namespace>_<backstageName>`,
+ *   `<branchPrefix>-<riscName>-backstage_<backstageKind>_<namespace>_<backstageName>`,
  *   where [backstageNamespace] defaults to `"default"` if not provided.
  * - Returns null if [riscName] is null, or if exactly one of [backstageKind] or [backstageName] is null.
  */
 fun generateRiScIdFromBackstageInfo(
-    filenamePrefix: String,
+    branchPrefix: String,
     riscName: String?,
     backstageKind: String?,
     backstageNamespace: String?,
@@ -44,11 +44,11 @@ fun generateRiScIdFromBackstageInfo(
 ): String? {
     if (riscName == null) return null
     if (backstageKind == null && backstageName == null) {
-        return "$filenamePrefix-$riscName"
+        return "$branchPrefix-$riscName"
     }
     if (backstageKind == null || backstageName == null) return null
     val namespace = backstageNamespace ?: "default"
-    return "$filenamePrefix-$riscName-backstage_${backstageKind}_${namespace}_$backstageName"
+    return "$branchPrefix-$riscName-backstage_${backstageKind}_${namespace}_$backstageName"
 }
 
 /**

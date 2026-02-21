@@ -56,7 +56,7 @@ import java.time.OffsetDateTime
 @Profile("!(local-github | local-sandboxed)")
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
-    @Value("\${filename.prefix}") private val filenamePrefix: String,
+    @Value("\${filename.prefix}") private val branchPrefix: String,
     private val githubHelper: GithubHelper,
 ) : WebClientConnector("https://api.github.com/repos"),
     GithubConnectorPort {
@@ -257,10 +257,9 @@ class GithubConnector(
                 ).awaitBody<List<GithubFileDTO>>()
                     .filter { it.name.endsWith(".$filenamePostfix.yaml") }
                     .map {
-                        RiScIdentifier(
-                            id = it.name.substringBefore(".$filenamePostfix"),
-                            status = RiScStatus.Published,
-                        )
+                        val fileId = it.name.substringBefore(".$filenamePostfix")
+                        val id = if (fileId.contains("-backstage_")) "$branchPrefix-$fileId" else fileId
+                        RiScIdentifier(id = id, status = RiScStatus.Published)
                     }
             } catch (e: WebClientResponseException.NotFound) {
                 // Contents path (.security/risc) does not exist -> "no risc" -> empty list
@@ -301,8 +300,8 @@ class GithubConnector(
                         status = RiScStatus.SentForApproval,
                         pullRequestUrl = it.url,
                     )
-                    // Every RiSc identifier starts with "<filenamePrefix>-".
-                }.filter { it.id.startsWith("$filenamePrefix-") }
+                    // Every RiSc identifier starts with "<branchPrefix>-".
+                }.filter { it.id.startsWith("$branchPrefix-") }
         }.getOrThrow()
 
     /**

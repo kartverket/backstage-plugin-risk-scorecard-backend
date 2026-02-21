@@ -26,7 +26,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo returns full backstage format when all fields are present`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = "my-risc",
                 backstageKind = "component",
                 backstageNamespace = "my-namespace",
@@ -39,7 +39,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo uses default namespace when backstageNamespace is null`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = "my-risc",
                 backstageKind = "component",
                 backstageNamespace = null,
@@ -52,7 +52,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo returns simple format when only riscName is provided`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = "my-risc",
                 backstageKind = null,
                 backstageNamespace = null,
@@ -65,7 +65,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo returns null when riscName is null`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = null,
                 backstageKind = null,
                 backstageNamespace = null,
@@ -78,7 +78,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo returns null when backstageKind is null but backstageName is present`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = "my-risc",
                 backstageKind = null,
                 backstageNamespace = null,
@@ -91,7 +91,7 @@ class UtilsTests {
     fun `generateRiScIdFromBackstageInfo returns null when backstageName is null but backstageKind is present`() {
         val result =
             generateRiScIdFromBackstageInfo(
-                filenamePrefix = "risc",
+                branchPrefix = "risc",
                 riscName = "my-risc",
                 backstageKind = "component",
                 backstageNamespace = null,
