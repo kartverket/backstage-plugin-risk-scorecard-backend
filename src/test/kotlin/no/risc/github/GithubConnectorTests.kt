@@ -51,7 +51,7 @@ class GithubConnectorTests {
     private lateinit var githubConnector: GithubConnector
     private lateinit var webClient: MockableWebClient
     private val filenamePostfix = "risc"
-    private val filenamePrefix = "risc"
+    private val branchPrefix = "risc"
     private val riscFolderPath = ".security/risc"
     private val owner = "owner"
     private val repository = "risc-repo"
@@ -62,11 +62,11 @@ class GithubConnectorTests {
         githubConnector =
             spyk(
                 GithubConnector(
-                    filenamePrefix = filenamePrefix,
+                    branchPrefix = branchPrefix,
                     filenamePostfix = filenamePostfix,
                     githubHelper =
                         GithubHelper(
-                            filenamePrefix = filenamePrefix,
+                            branchPrefix = branchPrefix,
                             filenamePostfix = filenamePostfix,
                             riScFolderPath = riscFolderPath,
                         ),
@@ -79,7 +79,7 @@ class GithubConnectorTests {
 
     private fun randomRiSc(): String = riScName(generateRandomAlphanumericString(5))
 
-    private fun riScName(riScId: String) = "$filenamePrefix-$riScId"
+    private fun riScName(riScId: String) = "$branchPrefix-$riScId"
 
     private fun riScFilename(riScId: String) = "$riScId.$filenamePostfix.yaml"
 
@@ -87,7 +87,7 @@ class GithubConnectorTests {
 
     @Nested
     inner class TestFetchRiScGithubMetadata {
-        private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
+        private val pathToDraftIdentifiers = "/$owner/$repository/git/matching-refs/heads/$branchPrefix-"
         private val pathToRiScFiles = "/$owner/$repository/contents/$riscFolderPath"
         private val pathToOpenPullRequests = "/$owner/$repository/pulls"
 

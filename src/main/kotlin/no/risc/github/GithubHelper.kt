@@ -10,7 +10,7 @@ import java.time.OffsetDateTime
 
 @Component
 class GithubHelper(
-    @Value("\${filename.prefix}") private val filenamePrefix: String,
+    @Value("\${filename.prefix}") private val branchPrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
 ) {
@@ -19,7 +19,15 @@ class GithubHelper(
      *
      * @param riScId The ID of the RiSc.
      */
-    internal fun riscPath(riScId: String): String = "$riScFolderPath/$riScId.$filenamePostfix.yaml"
+    internal fun riscPath(riScId: String): String {
+        val filename =
+            if (riScId.startsWith("$branchPrefix-") && riScId.contains("-backstage_")) {
+                riScId.removePrefix("$branchPrefix-")
+            } else {
+                riScId
+            }
+        return "$riScFolderPath/$filename.$filenamePostfix.yaml"
+    }
 
     /**
      * Constructs a URI for performing file/directory operations (retrieval, update and deletion). If no branch is
@@ -104,7 +112,7 @@ class GithubHelper(
     fun uriToFindAllRiScBranches(
         owner: String,
         repository: String,
-    ): String = "/$owner/$repository/git/matching-refs/heads/$filenamePrefix-"
+    ): String = "/$owner/$repository/git/matching-refs/heads/$branchPrefix-"
 
     /**
      * Constructs a URI to retrieve information about the provided repository.
