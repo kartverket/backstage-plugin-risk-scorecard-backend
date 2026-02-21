@@ -51,6 +51,27 @@ fun generateRiScIdFromBackstageInfo(
     return "$filenamePrefix-$riscName-backstage_${backstageKind}_${namespace}_$backstageName"
 }
 
+/**
+ * Returns true if the given RiSc ID should be included when filtering by Backstage entity.
+ *
+ * - No filter (both [backstageKind] and [backstageName] are null) → all IDs match.
+ * - IDs without `-backstage_` segment → always match (old naming, backward compat).
+ * - IDs with `-backstage_` segment → match only if they end with
+ *   `-backstage_<backstageKind>_<namespace>_<backstageName>`,
+ *   where [backstageNamespace] defaults to `"default"`.
+ */
+fun riScIdMatchesBackstageFilter(
+    riScId: String,
+    backstageKind: String?,
+    backstageNamespace: String?,
+    backstageName: String?,
+): Boolean {
+    if (backstageKind == null || backstageName == null) return true
+    if (!riScId.contains("-backstage_")) return true
+    val namespace = backstageNamespace ?: "default"
+    return riScId.endsWith("-backstage_${backstageKind}_${namespace}_$backstageName")
+}
+
 private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 
 /**

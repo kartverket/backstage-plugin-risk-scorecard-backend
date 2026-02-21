@@ -42,6 +42,7 @@ import no.risc.utils.comparison.compare
 import no.risc.utils.generateRiScId
 import no.risc.utils.generateRiScIdFromBackstageInfo
 import no.risc.utils.migrate
+import no.risc.utils.riScIdMatchesBackstageFilter
 import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
@@ -177,14 +178,25 @@ class RiScService(
         repository: String,
         accessTokens: AccessTokens,
         latestSupportedVersion: String,
+        backstageKind: String? = null,
+        backstageNamespace: String? = null,
+        backstageName: String? = null,
     ): List<RiScContentResultDTO> =
         coroutineScope {
             val riScGithubMetadataList: List<RiScGithubMetadata> =
-                githubConnector.fetchRiScGithubMetadata(
-                    owner,
-                    repository,
-                    accessTokens.githubAccessToken,
-                )
+                githubConnector
+                    .fetchRiScGithubMetadata(
+                        owner,
+                        repository,
+                        accessTokens.githubAccessToken,
+                    ).filter {
+                        riScIdMatchesBackstageFilter(
+                            riScId = it.id,
+                            backstageKind = backstageKind,
+                            backstageNamespace = backstageNamespace,
+                            backstageName = backstageName,
+                        )
+                    }
 
             riScGithubMetadataList
                 .map { riScMetadata ->
