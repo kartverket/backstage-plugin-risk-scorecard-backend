@@ -97,12 +97,12 @@ dependencies {
         implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.18") {
             because("Force secure version to fix vulnerability in version 10.1.43")
         }
-        implementation("ch.qos.logback:logback-core:1.5.25") {
+        implementation("ch.qos.logback:logback-core:1.5.32") {
             because(
                 "Force secure version to fix CVE-2026-1225 and CVE-2025-11226 (logback-core versions < 1.5.25 allow arbitrary class instantiation and code execution)",
             )
         }
-        implementation("ch.qos.logback:logback-classic:1.5.25") {
+        implementation("ch.qos.logback:logback-classic:1.5.32") {
             because("Force secure version, aligned with logback-core 1.5.25")
         }
     }
