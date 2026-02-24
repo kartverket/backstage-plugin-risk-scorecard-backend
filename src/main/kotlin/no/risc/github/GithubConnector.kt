@@ -8,6 +8,7 @@ import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
+import no.risc.exception.exceptions.RiScConflictException
 import no.risc.github.models.GithubCommitObject
 import no.risc.github.models.GithubContentResponse
 import no.risc.github.models.GithubCreateNewPullRequestPayload
@@ -472,15 +473,31 @@ class GithubConnector(
                 "Update RiSc with id: $riScId" + if (requiresNewApproval) " requires new approval" else ""
             }
 
-        putFileRequestToGithub(
-            repositoryOwner = owner,
-            repositoryName = repository,
-            gitHubAccessToken = gitHubAccessToken,
-            filePath = githubHelper.riscPath(riScId),
-            branch = riScId,
-            message = commitMessage,
-            content = fileContent.encodeBase64(),
-        ).awaitBodyOrNull<String>()
+        val maxAttempts = 2
+        for (attempt in 1..maxAttempts) {
+            try {
+                putFileRequestToGithub(
+                    repositoryOwner = owner,
+                    repositoryName = repository,
+                    gitHubAccessToken = gitHubAccessToken,
+                    filePath = githubHelper.riscPath(riScId),
+                    branch = riScId,
+                    message = commitMessage,
+                    content = fileContent.encodeBase64(),
+                ).awaitBodyOrNull<String>()
+                break
+            } catch (e: WebClientResponseException.Conflict) {
+                if (attempt == maxAttempts) {
+                    throw RiScConflictException(
+                        message = "RiSc with id $riScId was updated by another process. Please try again.",
+                        riScId = riScId,
+                    )
+                }
+                LOGGER.warn(
+                    "Got 409 Conflict when updating RiSc $riScId (attempt $attempt/$maxAttempts), retrying with fresh SHA...",
+                )
+            }
+        }
 
         val riScApprovalPRStatus =
             coroutineScope {
