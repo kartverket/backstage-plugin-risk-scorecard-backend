@@ -74,7 +74,7 @@ class SecurityConfig(
         require(!issuerUri.isNullOrBlank()) { "ISSUER_URI must be configured in the environment" }
 
         logger.info("Starting build of JwtDecoder using ISSUER_URI=$issuerUri")
-        val millis = 60_000L
+        val millis = 30_000L
 
         while (true) {
             try {
