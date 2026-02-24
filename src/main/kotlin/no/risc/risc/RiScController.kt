@@ -56,6 +56,27 @@ class RiScController(
             latestSupportedVersion = "5.2",
         )
 
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/{riScId}")
+    suspend fun getRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable latestSupportedVersion: String,
+        @PathVariable riScId: String,
+    ): RiScContentResultDTO =
+        riScService.fetchRisc(
+            riScId = riScId,
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+            latestSupportedVersion = latestSupportedVersion,
+        )
+
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
     suspend fun getAllRiScs(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
