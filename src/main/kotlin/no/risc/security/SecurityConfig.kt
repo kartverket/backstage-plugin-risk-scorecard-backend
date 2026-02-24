@@ -95,11 +95,12 @@ class SecurityConfig(
                 logger.info("JwtDecoder successfully instantiated")
                 return JwtDecoder { token -> jwtDecoder.decode(token) }
             } catch (e: Exception) {
-                logger
-                    .error(
-                        "Could not instantiate JwtDecoder. Retrying in ${millis / 1000} seconds...",
-                        e,
-                    )
+                val rootCause = generateSequence(e as Throwable) { it.cause }.last()
+                logger.error(
+                    "Could not instantiate JwtDecoder (cause: ${rootCause.message}). " +
+                        "Is the auth service (provided by the Backstage plugin backend) running at $issuerUri? " +
+                        "Retrying in ${millis / 1000} seconds...",
+                )
                 sleep(millis)
             }
         }
