@@ -15,8 +15,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.Mono
 import kotlin.math.min
 
 // Custom exception to carry crypto service error details
@@ -33,6 +35,29 @@ class CryptoServiceIntegration(
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
     }
+
+    private fun handleCryptoServiceError(operation: String): (ClientResponse) -> Mono<Throwable> =
+        { response ->
+            response.bodyToMono<String>().flatMap { errorBody ->
+                var errorCode: String? = null
+                var errorMessage: String? = null
+                try {
+                    val json = Json.parseToJsonElement(errorBody).jsonObject
+                    errorCode = json["errorCode"]?.jsonPrimitive?.contentOrNull
+                    errorMessage = json["errorMessage"]?.jsonPrimitive?.contentOrNull
+                    LOGGER.error("$operation failed: errorCode=$errorCode")
+                } catch (_: Exception) {
+                    // Ignore parsing errors
+                }
+                Mono.error(
+                    CryptoServiceErrorException(
+                        "Crypto service returned error: $errorBody",
+                        errorCode,
+                        errorMessage,
+                    ),
+                )
+            }
+        }
 
     suspend fun encrypt(
         text: String,
@@ -55,28 +80,8 @@ class CryptoServiceIntegration(
                         ),
                     ),
                 ).retrieve()
-                .onStatus({ status -> status.isError }) { response ->
-                    response.bodyToMono<String>().flatMap { errorBody ->
-                        // Try to extract errorCode and errorMessage from JSON response
-                        var errorCode: String? = null
-                        var errorMessage: String? = null
-                        try {
-                            val json = Json.parseToJsonElement(errorBody).jsonObject
-                            errorCode = json["errorCode"]?.jsonPrimitive?.contentOrNull
-                            errorMessage = json["errorMessage"]?.jsonPrimitive?.contentOrNull
-                            LOGGER.error("Encryption failed: errorCode=$errorCode")
-                        } catch (_: Exception) {
-                            // Ignore parsing errors
-                        }
-                        reactor.core.publisher.Mono.error(
-                            CryptoServiceErrorException(
-                                "Crypto service returned error: $errorBody",
-                                errorCode,
-                                errorMessage,
-                            ),
-                        )
-                    }
-                }.awaitBody<String>()
+                .onStatus({ status -> status.isError }, handleCryptoServiceError("Encryption"))
+                .awaitBody<String>()
                 .also {
                     LOGGER.info(
                         "Successfully encrypted text ${text.substring(0, min(text.length, 20))}..." +
@@ -109,28 +114,8 @@ class CryptoServiceIntegration(
                 .header("gcpAccessToken", gcpAccessToken.value)
                 .bodyValue(ciphertext)
                 .retrieve()
-                .onStatus({ status -> status.isError }) { response ->
-                    response.bodyToMono<String>().flatMap { errorBody ->
-                        // Try to extract errorCode and errorMessage from JSON response
-                        var errorCode: String? = null
-                        var errorMessage: String? = null
-                        try {
-                            val json = Json.parseToJsonElement(errorBody).jsonObject
-                            errorCode = json["errorCode"]?.jsonPrimitive?.contentOrNull
-                            errorMessage = json["errorMessage"]?.jsonPrimitive?.contentOrNull
-                            LOGGER.error("Decryption failed: errorCode=$errorCode")
-                        } catch (_: Exception) {
-                            // Ignore parsing errors
-                        }
-                        reactor.core.publisher.Mono.error(
-                            CryptoServiceErrorException(
-                                "Crypto service returned error: $errorBody",
-                                errorCode,
-                                errorMessage,
-                            ),
-                        )
-                    }
-                }.awaitBody<RiScWithConfig>()
+                .onStatus({ status -> status.isError }, handleCryptoServiceError("Decryption"))
+                .awaitBody<RiScWithConfig>()
                 .also {
                     LOGGER.info(
                         "Successfully decrypted ciphertext ${ciphertext.substring(0, min(ciphertext.length, 20))}..." +
