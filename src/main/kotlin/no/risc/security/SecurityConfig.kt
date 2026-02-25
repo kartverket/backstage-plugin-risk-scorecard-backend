@@ -90,7 +90,6 @@ class SecurityConfig(
                                     JOSEObjectType.JOSE_JSON,
                                     JOSEObjectType.JWT,
                                     JOSEObjectType.JOSE,
-                                    // JOSEObjectType("JWT"),
                                     // required for tokens issued by Backstage
                                     JOSEObjectType("vnd.backstage.user"),
                                     null,

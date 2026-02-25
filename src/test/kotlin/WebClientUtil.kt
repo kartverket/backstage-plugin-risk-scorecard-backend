@@ -139,7 +139,7 @@ class MockableWebClient {
             .add(
                 MockableRequest(
                     content = bodyCapturingClient.body,
-                    headers = request.headers().toSingleValueMap().mapValues { listOf(it.value) },
+                    headers = buildMap { request.headers().forEach { key, values -> put(key, values) } },
                     path = requestPath,
                     method = requestMethod,
                 ),
