@@ -30,7 +30,6 @@ import no.risc.risc.models.LastPublished
 import no.risc.risc.models.PendingApprovalDTO
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
-import no.risc.utils.formatRiScFetchSummary
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
@@ -40,6 +39,7 @@ import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
+import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
