@@ -100,3 +100,11 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    jvmArgs(
+        "--add-opens",
+        "java.base/java.nio=ALL-UNNAMED",
+        "-Dio.netty.tryReflectionSetAccessible=true",
+    )
+}
