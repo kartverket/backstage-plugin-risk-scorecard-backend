@@ -30,6 +30,7 @@ import no.risc.risc.models.LastPublished
 import no.risc.risc.models.PendingApprovalDTO
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
+import no.risc.utils.formatRiScFetchSummary
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiScContentResultDTO
@@ -282,13 +283,7 @@ class RiScService(
                         }
                     }
                 }.also { results ->
-                    val successful = results.count { it.status == ContentStatus.Success }
-                    val failed = results.count { it.status == ContentStatus.Failure }
-                    val validationFailed = results.count { it.status == ContentStatus.SchemaValidationFailed }
-                    LOGGER.info(
-                        "Fetched ${results.size} RiScs for $owner/$repository " +
-                            "($successful successful, $failed failed, $validationFailed validation failures)",
-                    )
+                    LOGGER.info(formatRiScFetchSummary(owner, repository, results))
                 }
         }
 
