@@ -29,7 +29,7 @@ class CryptoServiceIntegration(
         riScId: String,
     ): String =
         try {
-            LOGGER.info("Trying to encrypt text: ${text.substring(0, min(text.length, 20))}...")
+            LOGGER.debug("Trying to encrypt text: ${text.substring(0, min(text.length, 20))}...")
             cryptoServiceConnector.webClient
                 .post()
                 .uri("/encrypt")
@@ -45,7 +45,7 @@ class CryptoServiceIntegration(
                 ).retrieve()
                 .awaitBody<String>()
                 .also {
-                    LOGGER.info(
+                    LOGGER.debug(
                         "Successfully encrypted text ${text.substring(0, min(text.length, 20))}..." +
                             "to ${it.substring(0, min(it.length, 20))}...",
                     )
@@ -69,7 +69,7 @@ class CryptoServiceIntegration(
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig =
         try {
-            LOGGER.info("Trying to decrypt ciphertext: ${ciphertext.substring(0, min(ciphertext.length, 20))}...")
+            LOGGER.debug("Trying to decrypt ciphertext: ${ciphertext.substring(0, min(ciphertext.length, 20))}...")
             cryptoServiceConnector.webClient
                 .post()
                 .uri("/decrypt")
@@ -78,7 +78,7 @@ class CryptoServiceIntegration(
                 .retrieve()
                 .awaitBody<RiScWithConfig>()
                 .also {
-                    LOGGER.info(
+                    LOGGER.debug(
                         "Successfully decrypted ciphertext ${ciphertext.substring(0, min(ciphertext.length, 20))}..." +
                             "to ${it.riSc.substring(0, min(it.riSc.length, 20))}...",
                     )
