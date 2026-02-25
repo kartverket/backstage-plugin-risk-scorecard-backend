@@ -1489,8 +1489,7 @@ class GithubConnectorTests {
         private val accessToken = GithubAccessToken("accessToken")
         private val userInfo = UserInfo(name = "Test User", email = "test@example.com")
 
-        private fun fileUrl(riScId: String) =
-            "/$owner/$repository/contents/$riscFolderPath/$riScId.$filenamePostfix.yaml?ref=$riScId"
+        private fun fileUrl(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/$riScId.$filenamePostfix.yaml?ref=$riScId"
 
         private fun pullRequestsUrl() = "/$owner/$repository/pulls"
 

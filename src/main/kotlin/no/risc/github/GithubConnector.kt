@@ -489,7 +489,9 @@ class GithubConnector(
             } catch (e: WebClientResponseException.Conflict) {
                 if (attempt == maxAttempts) {
                     throw RiScConflictException(
-                        message = "RiSc with id $riScId was updated by another process. Please try again.",
+                        message =
+                            "Failed to update RiSc with id $riScId: SHA mismatch after $maxAttempts attempts +" +
+                                "(repo: $owner/$repository, branch: $riScId).",
                         riScId = riScId,
                     )
                 }
