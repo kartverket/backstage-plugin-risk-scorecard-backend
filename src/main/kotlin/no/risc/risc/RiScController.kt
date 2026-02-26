@@ -2,7 +2,7 @@ package no.risc.risc
 
 import io.swagger.v3.oas.annotations.tags.Tag
 import no.risc.github.GitHubAppService
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController
 @Tag(name = "risc", description = "Risk Scorecard management endpoints")
 class RiScController(
     private val riScService: RiScService,
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
 ) {
