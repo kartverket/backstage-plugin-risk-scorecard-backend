@@ -8,6 +8,7 @@ import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.File
@@ -15,6 +16,7 @@ import java.io.InputStreamReader
 import kotlin.collections.set
 
 @Service
+@Profile("!(local-crypto | local-sandboxed)")
 class SopsCryptoService(
     private val props: SopsCryptoProperties,
 ) : CryptoServicePort {

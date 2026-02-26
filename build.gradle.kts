@@ -103,3 +103,11 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
         "-Dio.netty.tryReflectionSetAccessible=true",
     )
 }
+
+tasks.register<org.springframework.boot.gradle.tasks.run.BootRun>("bootRunLocal") {
+    dependsOn("testClasses")
+    group = "application"
+    description = "Run with local-sandboxed profile (includes test classpath for local mocks)"
+    classpath = sourceSets["main"].runtimeClasspath + sourceSets["test"].runtimeClasspath
+    mainClass.set("no.risc.RiScApplicationKt")
+}
