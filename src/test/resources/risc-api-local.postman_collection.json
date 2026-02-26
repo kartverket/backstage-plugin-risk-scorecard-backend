@@ -1,0 +1,1300 @@
+{
+  "info": {
+    "name": "RiSc API – Local Sandboxed",
+    "description": "Test collection for the RiSc backend with spring.profiles.active=local-sandboxed.\nNo auth headers required. Files are stored under ./local-github/<repo>/.\n\nState transitions covered:\n  (new)                    → Draft                     [A02]\n  Draft                    → Draft                     [A04]  (UpdatedRiSc)\n  Draft                    → SentForApproval            [A05]  (CreatedPullRequest)\n  SentForApproval          → Draft                     [A07]  (UpdatedRiScRequiresNewApproval)\n  Draft                    → SentForApproval            [A09]  (CreatedPullRequest)\n  SentForApproval          → Published                 [A10]  ⚙️ simulate PR merge\n  Published                → SentForApproval            [A11]  (UpdatedRiScAndCreatedPullRequest)\n  Draft (never published)  → Deleted                   [B02]  (DeletedRiSc)\n  Published                → DeletionDraft              [C04]  (DeletedRiScRequiresApproval)\n  DeletionDraft            → DeletionSentForApproval   [C06]  (CreatedPullRequest)\n  DeletionSentForApproval  → Deleted                   [C07]  ⚙️ simulate deletion PR merge\n\nSteps marked ⚙️ MANUAL require local filesystem operations — instructions are printed to\nthe Postman console (open View → Show Postman Console) when the step is sent.\n\nNOTE: The riSc field must be JSON (not YAML).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "owner",
+      "value": "local-owner"
+    },
+    {
+      "key": "repo",
+      "value": "my-repo"
+    },
+    {
+      "key": "riScId",
+      "value": ""
+    },
+    {
+      "key": "gcpToken",
+      "value": "dummy-gcp-token"
+    }
+  ],
+  "item": [
+    {
+      "name": "A – Full lifecycle",
+      "description": "Runs a RiSc through every normal-lifecycle state:\nDraft → SentForApproval → Draft (re-approval) → SentForApproval → Published → SentForApproval\n\nRun A01–A13 in order. Step A10 requires a manual filesystem operation.",
+      "item": [
+        {
+          "name": "A01 – List (baseline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A02 – Create → Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('riScId returned', () => pm.expect(res.riScId).to.be.a('string').and.not.empty);",
+                  "pm.test('status is CreatedRiSc', () => pm.expect(res.status).to.eql('CreatedRiSc'));",
+                  "if (res.riScId) { pm.collectionVariables.set('riScId', res.riScId); console.log('riScId set to', res.riScId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Test Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A03 – List → assert Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc appears in list', () => pm.expect(found).to.be.ok);",
+                  "pm.test('RiSc status is Draft', () => pm.expect(found && found.riScStatus).to.eql('Draft'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A04 – Update draft → Draft (UpdatedRiSc)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is UpdatedRiSc', () => pm.expect(res.status).to.eql('UpdatedRiSc'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Updated Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test \\u2014 updated scope\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\",\\\"Insider\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\",\\\"Information leak\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}},{\\\"title\\\":\\\"Enable audit logging\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN2\\\",\\\"description\\\":\\\"Enable full audit logging for data access\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A05 – Send for approval → SentForApproval (CreatedPullRequest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is CreatedPullRequest', () => pm.expect(res.status).to.eql('CreatedPullRequest'));",
+                  "pm.test('pendingApproval returned', () => pm.expect(res.pendingApproval).to.not.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local Developer\",\n  \"email\": \"dev@localhost\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/publish/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "publish",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A06 – List → assert SentForApproval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is SentForApproval', () => pm.expect(found && found.riScStatus).to.eql('SentForApproval'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A07 – Update (requiresNewApproval=true) → Draft, closes PR (UpdatedRiScRequiresNewApproval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is UpdatedRiScRequiresNewApproval', () => pm.expect(res.status).to.eql('UpdatedRiScRequiresNewApproval'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Updated Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test \\u2014 updated scope\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\",\\\"Insider\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\",\\\"Information leak\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}},{\\\"title\\\":\\\"Enable audit logging\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN2\\\",\\\"description\\\":\\\"Enable full audit logging for data access\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\",\n  \"isRequiresNewApproval\": true,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A08 – List → assert Draft (PR was closed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is Draft', () => pm.expect(found && found.riScStatus).to.eql('Draft'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A09 – Send for approval again → SentForApproval (CreatedPullRequest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is CreatedPullRequest', () => pm.expect(res.status).to.eql('CreatedPullRequest'));",
+                  "pm.test('pendingApproval returned', () => pm.expect(res.pendingApproval).to.not.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local Developer\",\n  \"email\": \"dev@localhost\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/publish/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "publish",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A10 – Get difference (draft vs published)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Updated Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test — updated scope\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\",\\\"Insider\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\",\\\"Information leak\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}},{\\\"title\\\":\\\"Enable audit logging\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN2\\\",\\\"description\\\":\\\"Enable full audit logging for data access\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}/difference",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}",
+                "difference"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A10b – ⚙️ MANUAL: Simulate PR merge → Published",
+          "description": "MANUAL STEP — before sending this request, run the following shell commands from the project root to simulate GitHub merging the PR:\n\n  REPO=my-repo  ID=<riScId from variable>\n  cp ./local-github/${REPO}/branch/${ID}/*.yaml ./local-github/${REPO}/branch/default/\n  rm -rf ./local-github/${REPO}/branch/${ID}\n  rm -rf ./local-github/${REPO}/pr/${ID}\n\nThe instructions are also printed to the Postman console when you send this step.\nSending this request (GET /all) then confirms the RiSc reached Published state.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id   = pm.collectionVariables.get('riScId');",
+                  "const repo = pm.collectionVariables.get('repo');",
+                  "console.log('');",
+                  "console.log('⚙️  MANUAL STEP — simulate PR merge before sending this request.');",
+                  "console.log('Run from project root:');",
+                  "console.log('  REPO=' + repo + '  ID=' + id);",
+                  "console.log('  cp ./local-github/' + repo + '/branch/' + id + '/*.yaml ./local-github/' + repo + '/branch/default/');",
+                  "console.log('  rm -rf ./local-github/' + repo + '/branch/' + id);",
+                  "console.log('  rm -rf ./local-github/' + repo + '/pr/' + id);",
+                  "console.log('');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is Published', () => pm.expect(found && found.riScStatus).to.eql('Published'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A11 – Update published → SentForApproval, auto-PR (UpdatedRiScAndCreatedPullRequest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is UpdatedRiScAndCreatedPullRequest', () => pm.expect(res.status).to.eql('UpdatedRiScAndCreatedPullRequest'));",
+                  "pm.test('pendingApproval returned', () => pm.expect(res.pendingApproval).to.not.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Updated Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test — updated scope\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\",\\\"Insider\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\",\\\"Information leak\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}},{\\\"title\\\":\\\"Enable audit logging\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN2\\\",\\\"description\\\":\\\"Enable full audit logging for data access\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}},{\\\"title\\\":\\\"Data breach\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN2\\\",\\\"description\\\":\\\"Sensitive data is exposed due to misconfigured storage\\\",\\\"threatActors\\\":[\\\"Organised crime\\\"],\\\"vulnerabilities\\\":[\\\"Information leak\\\"],\\\"risk\\\":{\\\"probability\\\":0.02,\\\"consequence\\\":320000},\\\"actions\\\":[{\\\"title\\\":\\\"Encrypt storage\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN3\\\",\\\"description\\\":\\\"Enable encryption at rest for all data stores\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.001,\\\"consequence\\\":16000}}}]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A12 – List → assert SentForApproval (after auto-PR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is SentForApproval', () => pm.expect(found && found.riScStatus).to.eql('SentForApproval'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "B – Delete never-published RiSc",
+      "description": "A RiSc that was never published is deleted immediately — no PR or approval needed.\nTransition: Draft → Deleted (DeletedRiSc)",
+      "item": [
+        {
+          "name": "B01 – Create → Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('riScId returned', () => pm.expect(res.riScId).to.be.a('string').and.not.empty);",
+                  "pm.test('status is CreatedRiSc', () => pm.expect(res.status).to.eql('CreatedRiSc'));",
+                  "if (res.riScId) { pm.collectionVariables.set('riScId', res.riScId); console.log('riScId set to', res.riScId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Test Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B02 – Delete draft → Deleted immediately (DeletedRiSc)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is DeletedRiSc', () => pm.expect(res.status).to.eql('DeletedRiSc'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B03 – List → assert RiSc is gone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('deleted RiSc no longer in list', () => pm.expect(found).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "C – Delete published RiSc",
+      "description": "A published RiSc must go through an approval flow before it is fully deleted.\nTransitions: Draft → SentForApproval → Published → DeletionDraft → DeletionSentForApproval → Deleted\n\nStep C03 requires a manual filesystem operation to simulate the first PR merge.",
+      "item": [
+        {
+          "name": "C01 – Create → Draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('riScId returned', () => pm.expect(res.riScId).to.be.a('string').and.not.empty);",
+                  "pm.test('status is CreatedRiSc', () => pm.expect(res.status).to.eql('CreatedRiSc'));",
+                  "if (res.riScId) { pm.collectionVariables.set('riScId', res.riScId); console.log('riScId set to', res.riScId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"Test Risk Scorecard\\\",\\\"scope\\\":\\\"Local development test\\\",\\\"scenarios\\\":[{\\\"title\\\":\\\"Unauthorized access\\\",\\\"scenario\\\":{\\\"ID\\\":\\\"SCEN1\\\",\\\"description\\\":\\\"An attacker gains unauthorized access to user data\\\",\\\"threatActors\\\":[\\\"Organised crime\\\"],\\\"vulnerabilities\\\":[\\\"Unauthorized access\\\"],\\\"risk\\\":{\\\"probability\\\":0.05,\\\"consequence\\\":160000},\\\"actions\\\":[{\\\"title\\\":\\\"Implement access controls\\\",\\\"action\\\":{\\\"ID\\\":\\\"ACTN1\\\",\\\"description\\\":\\\"Implement role-based access control\\\",\\\"status\\\":\\\"Not OK\\\"}}],\\\"remainingRisk\\\":{\\\"probability\\\":0.0025,\\\"consequence\\\":8000}}}]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C02 – Send for approval → SentForApproval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is CreatedPullRequest', () => pm.expect(res.status).to.eql('CreatedPullRequest'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local Developer\",\n  \"email\": \"dev@localhost\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/publish/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "publish",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C03 – ⚙️ MANUAL: Simulate PR merge → Published",
+          "description": "MANUAL STEP — before sending this request, run the following shell commands from the project root to simulate GitHub merging the PR:\n\n  REPO=my-repo  ID=<riScId from variable>\n  cp ./local-github/${REPO}/branch/${ID}/*.yaml ./local-github/${REPO}/branch/default/\n  rm -rf ./local-github/${REPO}/branch/${ID}\n  rm -rf ./local-github/${REPO}/pr/${ID}\n\nThe instructions are also printed to the Postman console when you send this step.\nSending this request (GET /all) then confirms the RiSc reached Published state.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id   = pm.collectionVariables.get('riScId');",
+                  "const repo = pm.collectionVariables.get('repo');",
+                  "console.log('');",
+                  "console.log('⚙️  MANUAL STEP — simulate PR merge before sending this request.');",
+                  "console.log('Run from project root:');",
+                  "console.log('  REPO=' + repo + '  ID=' + id);",
+                  "console.log('  cp ./local-github/' + repo + '/branch/' + id + '/*.yaml ./local-github/' + repo + '/branch/default/');",
+                  "console.log('  rm -rf ./local-github/' + repo + '/branch/' + id);",
+                  "console.log('  rm -rf ./local-github/' + repo + '/pr/' + id);",
+                  "console.log('');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is Published', () => pm.expect(found && found.riScStatus).to.eql('Published'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C04 – Delete published → DeletionDraft (DeletedRiScRequiresApproval)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is DeletedRiScRequiresApproval', () => pm.expect(res.status).to.eql('DeletedRiScRequiresApproval'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C05 – List → assert DeletionDraft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is DeletionDraft', () => pm.expect(found && found.riScStatus).to.eql('DeletionDraft'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C06 – Send deletion for approval → DeletionSentForApproval (CreatedPullRequest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('status is CreatedPullRequest', () => pm.expect(res.status).to.eql('CreatedPullRequest'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Local Developer\",\n  \"email\": \"dev@localhost\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/publish/{{riScId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "publish",
+                "{{riScId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C07 – List → assert DeletionSentForApproval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('RiSc status is DeletionSentForApproval', () => pm.expect(found && found.riScStatus).to.eql('DeletionSentForApproval'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "C08 – ⚙️ MANUAL: Simulate deletion PR merge → Deleted",
+          "description": "MANUAL STEP — before sending this request, run the following shell commands from the project root to simulate GitHub merging the deletion PR (remove the published file, postfix is FILENAME_POSTFIX, typically 'risc'):\n\n  REPO=my-repo  ID=<riScId from variable>  POSTFIX=risc\n  rm ./local-github/${REPO}/branch/default/${ID}.${POSTFIX}.yaml\n  rm -rf ./local-github/${REPO}/branch/${ID}\n  rm -rf ./local-github/${REPO}/pr/${ID}\n\nThe instructions are also printed to the Postman console when you send this step.\nSending this request (GET /all) then confirms the RiSc is gone.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id   = pm.collectionVariables.get('riScId');",
+                  "const repo = pm.collectionVariables.get('repo');",
+                  "console.log('');",
+                  "console.log('⚙️  MANUAL STEP — simulate deletion PR merge before sending this request.');",
+                  "console.log('Run from project root (POSTFIX is FILENAME_POSTFIX, typically \"risc\"):');",
+                  "console.log('  REPO=' + repo + '  ID=' + id + '  POSTFIX=risc');",
+                  "console.log('  rm ./local-github/' + repo + '/branch/default/' + id + '.${POSTFIX}.yaml');",
+                  "console.log('  rm -rf ./local-github/' + repo + '/branch/' + id);",
+                  "console.log('  rm -rf ./local-github/' + repo + '/pr/' + id);",
+                  "console.log('');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json();",
+                  "const found = Array.isArray(items) && items.find(r => r.riScId === pm.collectionVariables.get('riScId'));",
+                  "pm.test('deleted RiSc no longer in list', () => pm.expect(found).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Misc",
+      "item": [
+        {
+          "name": "Misc – Send feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "This is test feedback from local development"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/feedback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "feedback"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Misc – List with Backstage filter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}/all?backstageKind=component&backstageNamespace=default&backstageName=my-service",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "backstageKind",
+                  "value": "component"
+                },
+                {
+                  "key": "backstageNamespace",
+                  "value": "default"
+                },
+                {
+                  "key": "backstageName",
+                  "value": "my-service"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Misc – Create RiSc with Backstage entity (named ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.riScId) {",
+                  "  pm.collectionVariables.set('riScId', res.riScId);",
+                  "  console.log('riScId set to', res.riScId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "GCP-Access-Token",
+                "value": "{{gcpToken}}"
+              },
+              {
+                "key": "GitHub-Access-Token",
+                "value": "{{gcpToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riSc\": \"{\\\"schemaVersion\\\":\\\"5.2\\\",\\\"title\\\":\\\"My Service Risk Scorecard\\\",\\\"scope\\\":\\\"The my-service component\\\",\\\"scenarios\\\":[]}\",\n  \"isRequiresNewApproval\": false,\n  \"schemaVersion\": \"5.2\",\n  \"userInfo\": {\n    \"name\": \"Local Developer\",\n    \"email\": \"dev@localhost\"\n  },\n  \"sopsConfig\": {\n    \"shamir_threshold\": 1,\n    \"gcp_kms\": [],\n    \"age\": [\n      {\n        \"recipient\": \"age1ayuv56c98uukut752jpxl68tpch2yjvx5z3agk0t73h79kq3z4fstrtvqf\"\n      }\n    ]\n  },\n  \"riscName\": \"auth-flow\",\n  \"backstageKind\": \"component\",\n  \"backstageNamespace\": \"default\",\n  \"backstageName\": \"my-service\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/risc/{{owner}}/{{repo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "risc",
+                "{{owner}}",
+                "{{repo}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

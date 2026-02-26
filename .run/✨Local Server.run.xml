@@ -6,7 +6,7 @@
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/.env" />
     </option>
-    <module name="backstage-plugin-risk-scorecard-backend.main" />
+    <module name="backstage-plugin-risk-scorecard-backend" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="no.risc.RiScApplicationKt" />
     <method v="2">
       <option name="Make" enabled="true" />

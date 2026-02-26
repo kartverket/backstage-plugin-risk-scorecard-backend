@@ -38,6 +38,7 @@ import no.risc.utils.tryWithErrorLogging
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Profile
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec
@@ -52,6 +53,7 @@ import reactor.core.publisher.Mono
 import java.time.OffsetDateTime
 
 @Component
+@Profile("!(local-github | local-sandboxed)")
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
