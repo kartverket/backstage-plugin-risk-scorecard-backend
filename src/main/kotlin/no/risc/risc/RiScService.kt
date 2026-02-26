@@ -4,13 +4,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import no.risc.encryption.CryptoServiceIntegration
+import no.risc.encryption.CryptoServicePort
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.github.RiScGithubMetadata
 import no.risc.github.chooseRiScContentFromStatus
 import no.risc.github.getRiScStatus
@@ -51,10 +51,10 @@ import org.springframework.stereotype.Service
 
 @Service
 class RiScService(
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     @Value("\${filename.prefix}") val filenamePrefix: String,
-    private val cryptoService: CryptoServiceIntegration,
-    private val initRiScService: InitRiScService,
+    private val cryptoService: CryptoServicePort,
+    private val initRiScService: InitRiScServiceIntegration,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
