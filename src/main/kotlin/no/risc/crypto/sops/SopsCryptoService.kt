@@ -2,6 +2,7 @@ package no.risc.crypto.sops
 
 import no.risc.crypto.sops.model.RiScWithConfig
 import no.risc.crypto.sops.model.SopsConfig
+import no.risc.encryption.CryptoServicePort
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
@@ -16,7 +17,7 @@ import kotlin.collections.set
 @Service
 class SopsCryptoService(
     private val props: SopsCryptoProperties,
-) {
+) : CryptoServicePort {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SopsCryptoService::class.java)
 
@@ -54,7 +55,7 @@ class SopsCryptoService(
         return cleanConfig
     }
 
-    fun decryptWithSopsConfig(
+    override fun decryptWithSopsConfig(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig {
@@ -139,7 +140,7 @@ class SopsCryptoService(
             }
     }
 
-    fun encrypt(
+    override fun encrypt(
         text: String,
         config: SopsConfig,
         gcpAccessToken: GCPAccessToken,
