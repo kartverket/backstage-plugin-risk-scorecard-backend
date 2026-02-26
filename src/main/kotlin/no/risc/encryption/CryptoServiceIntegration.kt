@@ -31,7 +31,7 @@ class CryptoServiceErrorException(
 @Component
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
-) {
+) : CryptoServicePort {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
     }
@@ -60,7 +60,7 @@ class CryptoServiceIntegration(
             }
         }
 
-    suspend fun encrypt(
+    override suspend fun encrypt(
         text: String,
         sopsConfig: SopsConfig,
         gcpAccessToken: GCPAccessToken,
@@ -103,7 +103,7 @@ class CryptoServiceIntegration(
             )
         }
 
-    suspend fun decrypt(
+    override suspend fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig =
