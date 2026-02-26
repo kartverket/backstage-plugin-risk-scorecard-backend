@@ -112,7 +112,7 @@ enum class DifferenceStatus {
 }
 
 @Serializable
-abstract class RiScResult {
+sealed class RiScResult {
     abstract val riScId: String
     abstract val status: ProcessingStatus
     abstract val statusMessage: String
