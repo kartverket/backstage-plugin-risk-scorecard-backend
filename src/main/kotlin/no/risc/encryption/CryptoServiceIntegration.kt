@@ -1,5 +1,9 @@
 package no.risc.encryption
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.risc.encryption.models.EncryptionRequest
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
@@ -11,8 +15,18 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.awaitBody
+import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.Mono
 import kotlin.math.min
+
+// Custom exception to carry crypto service error details
+class CryptoServiceErrorException(
+    message: String,
+    val errorCode: String?,
+    val errorMessage: String?,
+) : RuntimeException(message)
 
 @Component
 class CryptoServiceIntegration(
@@ -21,6 +35,29 @@ class CryptoServiceIntegration(
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
     }
+
+    private fun handleCryptoServiceError(operation: String): (ClientResponse) -> Mono<Throwable> =
+        { response ->
+            response.bodyToMono<String>().flatMap { errorBody ->
+                var errorCode: String? = null
+                var errorMessage: String? = null
+                try {
+                    val json = Json.parseToJsonElement(errorBody).jsonObject
+                    errorCode = json["errorCode"]?.jsonPrimitive?.contentOrNull
+                    errorMessage = json["errorMessage"]?.jsonPrimitive?.contentOrNull
+                    LOGGER.error("$operation failed: errorCode=$errorCode")
+                } catch (_: Exception) {
+                    // Ignore parsing errors
+                }
+                Mono.error(
+                    CryptoServiceErrorException(
+                        "Crypto service returned error: $errorBody",
+                        errorCode,
+                        errorMessage,
+                    ),
+                )
+            }
+        }
 
     suspend fun encrypt(
         text: String,
@@ -43,6 +80,7 @@ class CryptoServiceIntegration(
                         ),
                     ),
                 ).retrieve()
+                .onStatus({ status -> status.isError }, handleCryptoServiceError("Encryption"))
                 .awaitBody<String>()
                 .also {
                     LOGGER.debug(
@@ -58,7 +96,7 @@ class CryptoServiceIntegration(
             )
         } catch (e: Exception) {
             throw SopsEncryptionException(
-                message = "Crypto encrypt failed.",
+                message = "Crypto encrypt failed: ${e.message}",
                 riScId = riScId,
                 cause = e,
             )
@@ -76,6 +114,7 @@ class CryptoServiceIntegration(
                 .header("gcpAccessToken", gcpAccessToken.value)
                 .bodyValue(ciphertext)
                 .retrieve()
+                .onStatus({ status -> status.isError }, handleCryptoServiceError("Decryption"))
                 .awaitBody<RiScWithConfig>()
                 .also {
                     LOGGER.debug(
@@ -83,11 +122,23 @@ class CryptoServiceIntegration(
                             "to ${it.riSc.substring(0, min(it.riSc.length, 20))}...",
                     )
                 }
-        } catch (_: NoSuchElementException) {
-            throw SOPSDecryptionException(message = "Failed to decrypt ciphertext, no response body received from decryption service.")
+        } catch (e: NoSuchElementException) {
+            LOGGER.error("Decryption failed: No response body received from decryption service.", e)
+            throw SOPSDecryptionException(
+                message = "Failed to decrypt ciphertext, no response body received from decryption service.",
+                cause = e,
+            )
+        } catch (e: CryptoServiceErrorException) {
+            throw SOPSDecryptionException(
+                message = "Crypto decrypt failed: ${e.errorMessage ?: e.message}",
+                errorCode = e.errorCode,
+                errorMessage = e.errorMessage,
+                cause = e,
+            )
         } catch (e: Exception) {
             throw SOPSDecryptionException(
-                message = "Crypto decrypt failed.",
+                message = "Crypto decrypt failed: ${e.message}",
+                errorCode = "CONNECTION_REFUSED",
                 cause = e,
             )
         }
