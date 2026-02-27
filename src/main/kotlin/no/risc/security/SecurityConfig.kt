@@ -10,7 +10,10 @@ import org.springframework.core.env.Environment
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
 import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
@@ -92,6 +95,12 @@ class SecurityConfig(
                                     null,
                                 )
                         }.build()
+                jwtDecoder.setJwtValidator(
+                    DelegatingOAuth2TokenValidator(
+                        JwtTimestampValidator(),
+                        JwtIssuerValidator(issuerUri),
+                    ),
+                )
                 logger.info("JwtDecoder successfully instantiated")
                 return JwtDecoder { token -> jwtDecoder.decode(token) }
             } catch (e: Exception) {

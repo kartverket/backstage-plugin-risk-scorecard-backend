@@ -1150,25 +1150,13 @@ class GithubConnector(
      */
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
-            is WebClientResponseException.NotFound -> {
-                GithubStatus.NotFound
-            }
-
-            is WebClientResponseException.Unauthorized -> {
-                GithubStatus.Unauthorized
-            }
-
-            is WebClientResponseException.UnprocessableEntity -> {
-                GithubStatus.RequestResponseBodyError
-            }
-
-            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } -> {
+            is WebClientResponseException.NotFound -> GithubStatus.NotFound
+            is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
+            is WebClientResponseException if e.statusCode.value() == 422 -> GithubStatus.RequestResponseBodyError
+            is WebClientResponseException if e.message?.contains("DataBufferLimitException") == true ->
                 GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
-            }
 
-            else -> {
-                GithubStatus.InternalError
-            }
+            else -> GithubStatus.InternalError
         }
 
     /**
