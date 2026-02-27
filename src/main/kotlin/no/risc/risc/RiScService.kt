@@ -7,6 +7,7 @@ import kotlinx.coroutines.coroutineScope
 import no.risc.encryption.CryptoServiceIntegration
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DifferenceException
+import no.risc.exception.exceptions.RiScConflictException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
@@ -511,6 +512,8 @@ class RiScService(
                     "Risk scorecard was updated" +
                         if (riScApprovalPRStatus.hasClosedPr) " and has to be approved by a risk owner again" else "",
             )
+        } catch (e: RiScConflictException) {
+            throw e
         } catch (e: Exception) {
             throw UpdatingRiScException(
                 message = "Failed with error ${e.message} for risk scorecard with id $riScId",
