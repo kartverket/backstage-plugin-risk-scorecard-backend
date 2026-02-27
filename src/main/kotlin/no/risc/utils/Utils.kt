@@ -10,6 +10,12 @@ data class Repository(
     val repositoryName: String,
 )
 
+data class BackstageEntity(
+    val kind: String,
+    val namespace: String?,
+    val name: String,
+)
+
 /**
  * Encodes the string as Base64.
  */
@@ -21,9 +27,48 @@ fun String.encodeBase64(): String = Base64.getEncoder().encodeToString(toByteArr
 fun String.decodeBase64(): String = Base64.getMimeDecoder().decode(toByteArray()).decodeToString()
 
 /**
- * Generates a RiScId on the following format `<filenamePrefix>-<5-letter-alphanumeric-string>`.
+ * Generates a RiScId on the following format `<branchPrefix>-<5-letter-alphanumeric-string>`.
  */
-fun generateRiScId(filenamePrefix: String) = "$filenamePrefix-${generateRandomAlphanumericString(5)}"
+fun generateRiScId(branchPrefix: String) = "$branchPrefix-${generateRandomAlphanumericString(5)}"
+
+/**
+ * Generates a RiScId based on Backstage entity info.
+ *
+ * - If only [riscName] is provided ([backstageEntity] is null), returns `<branchPrefix>-<riscName>`.
+ * - If [backstageEntity] is present, returns
+ *   `<branchPrefix>-<riscName>-backstage_<kind>_<namespace>_<name>`,
+ *   where [BackstageEntity.namespace] defaults to `"default"` if not provided.
+ * - Returns null if [riscName] is null.
+ */
+fun generateRiScIdFromBackstageInfo(
+    branchPrefix: String,
+    riscName: String?,
+    backstageEntity: BackstageEntity?,
+): String? {
+    if (riscName == null) return null
+    if (backstageEntity == null) return "$branchPrefix-$riscName"
+    val namespace = backstageEntity.namespace ?: "default"
+    return "$branchPrefix-$riscName-backstage_${backstageEntity.kind}_${namespace}_${backstageEntity.name}"
+}
+
+/**
+ * Returns true if the given RiSc ID should be included when filtering by Backstage entity.
+ *
+ * - No filter ([backstageEntity] is null) → all IDs match.
+ * - IDs without `-backstage_` segment → always match (old naming, backward compat).
+ * - IDs with `-backstage_` segment → match only if they end with
+ *   `-backstage_<kind>_<namespace>_<name>`,
+ *   where [BackstageEntity.namespace] defaults to `"default"`.
+ */
+fun riScIdMatchesBackstageFilter(
+    riScId: String,
+    backstageEntity: BackstageEntity?,
+): Boolean {
+    if (backstageEntity == null) return true
+    if (!riScId.contains("-backstage_")) return true
+    val namespace = backstageEntity.namespace ?: "default"
+    return riScId.endsWith("-backstage_${backstageEntity.kind}_${namespace}_${backstageEntity.name}")
+}
 
 private val alphaNumericChars: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 

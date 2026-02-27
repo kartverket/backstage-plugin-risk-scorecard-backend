@@ -9,20 +9,22 @@ import no.risc.risc.models.RiScWithConfig
 import no.risc.risc.models.SopsConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBody
 import kotlin.math.min
 
 @Component
+@Profile("!(local-crypto | local-sandboxed)")
 class CryptoServiceIntegration(
     private val cryptoServiceConnector: CryptoServiceConnector,
-) {
+) : CryptoServicePort {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(CryptoServiceIntegration::class.java)
     }
 
-    suspend fun encrypt(
+    override suspend fun encrypt(
         text: String,
         sopsConfig: SopsConfig,
         gcpAccessToken: GCPAccessToken,
@@ -64,7 +66,7 @@ class CryptoServiceIntegration(
             )
         }
 
-    suspend fun decrypt(
+    override suspend fun decrypt(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig =

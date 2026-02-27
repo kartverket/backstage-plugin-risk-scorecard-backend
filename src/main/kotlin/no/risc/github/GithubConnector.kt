@@ -38,6 +38,7 @@ import no.risc.utils.tryWithErrorLogging
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Profile
 import org.springframework.http.HttpMethod
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec
@@ -52,11 +53,13 @@ import reactor.core.publisher.Mono
 import java.time.OffsetDateTime
 
 @Component
+@Profile("!(local-github | local-sandboxed)")
 class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
-    @Value("\${filename.prefix}") private val filenamePrefix: String,
+    @Value("\${filename.prefix}") private val branchPrefix: String,
     private val githubHelper: GithubHelper,
-) : WebClientConnector("https://api.github.com/repos") {
+) : WebClientConnector("https://api.github.com/repos"),
+    GithubConnectorPort {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
     }
@@ -101,7 +104,7 @@ class GithubConnector(
      * @param repository The repository to fetch RiSc identifiers from.
      * @param githubAccessToken The GitHub access token to use for authorization.
      */
-    suspend fun fetchRiScGithubMetadata(
+    override suspend fun fetchRiScGithubMetadata(
         owner: String,
         repository: String,
         githubAccessToken: GithubAccessToken,
@@ -150,7 +153,7 @@ class GithubConnector(
      * @param repository The repository to fetch RiSc identifiers from.
      * @param githubAccessToken The GitHub access token to use for authorization.
      */
-    suspend fun fetchBranchAndMainRiScContent(
+    override suspend fun fetchBranchAndMainRiScContent(
         riScId: String,
         owner: String,
         repository: String,
@@ -187,7 +190,7 @@ class GithubConnector(
      * @param id The ID of the RiSC.
      * @param accessToken The GitHub access token to use for authorization.
      */
-    suspend fun fetchPublishedRiSc(
+    override suspend fun fetchPublishedRiSc(
         owner: String,
         repository: String,
         id: String,
@@ -254,10 +257,9 @@ class GithubConnector(
                 ).awaitBody<List<GithubFileDTO>>()
                     .filter { it.name.endsWith(".$filenamePostfix.yaml") }
                     .map {
-                        RiScIdentifier(
-                            id = it.name.substringBefore(".$filenamePostfix"),
-                            status = RiScStatus.Published,
-                        )
+                        val fileId = it.name.substringBefore(".$filenamePostfix")
+                        val id = if (fileId.contains("-backstage_")) "$branchPrefix-$fileId" else fileId
+                        RiScIdentifier(id = id, status = RiScStatus.Published)
                     }
             } catch (e: WebClientResponseException.NotFound) {
                 // Contents path (.security/risc) does not exist -> "no risc" -> empty list
@@ -298,8 +300,8 @@ class GithubConnector(
                         status = RiScStatus.SentForApproval,
                         pullRequestUrl = it.url,
                     )
-                    // Every RiSc identifier starts with "<filenamePrefix>-".
-                }.filter { it.id.startsWith("$filenamePrefix-") }
+                    // Every RiSc identifier starts with "<branchPrefix>-".
+                }.filter { it.id.startsWith("$branchPrefix-") }
         }.getOrThrow()
 
     /**
@@ -379,7 +381,7 @@ class GithubConnector(
      * @param accessToken The GitHub access token to use for authorization.
      * @param riScId The ID of the RiSc to gather information for.
      */
-    internal suspend fun fetchLastPublishedRiScDateAndCommitNumber(
+    override suspend fun fetchLastPublishedRiScDateAndCommitNumber(
         owner: String,
         repository: String,
         accessToken: String,
@@ -419,7 +421,7 @@ class GithubConnector(
      * @param gitHubAccessToken The GitHub access token to make the changes with.
      * @param userInfo Information on the user responsible for the update/creation.
      */
-    internal suspend fun updateOrCreateDraft(
+    override suspend fun updateOrCreateDraft(
         owner: String,
         repository: String,
         riScId: String,
@@ -809,7 +811,7 @@ class GithubConnector(
      * @param userInfo Information about the user that is creating the pull request, i.e., the user who has approved the changes.
      * @throws CreatePullRequestException If creation of the pull request failed.
      */
-    suspend fun createPullRequestForRiSc(
+    override suspend fun createPullRequestForRiSc(
         owner: String,
         repository: String,
         riScId: String,
@@ -901,7 +903,7 @@ class GithubConnector(
      * @param riScId The ID of the RiSc to delete.
      * @throws DeletingRiScException On all errors
      */
-    suspend fun deleteRiSc(
+    override suspend fun deleteRiSc(
         owner: String,
         repository: String,
         accessToken: String,
@@ -1180,7 +1182,7 @@ class GithubConnector(
      * @param gitHubAccessToken The GitHub access token to use for fetching the information
      * @throws PermissionDeniedOnGitHubException when the GitHub access token used does not have read access to the repository.
      */
-    suspend fun fetchRepositoryInfo(
+    override suspend fun fetchRepositoryInfo(
         gitHubAccessToken: String,
         repositoryOwner: String,
         repositoryName: String,

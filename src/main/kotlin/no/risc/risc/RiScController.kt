@@ -2,7 +2,7 @@ package no.risc.risc
 
 import io.swagger.v3.oas.annotations.tags.Tag
 import no.risc.github.GitHubAppService
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.infra.connector.models.GithubAccessToken
@@ -17,6 +17,7 @@ import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.UserInfo
 import no.risc.slack.SlackService
+import no.risc.utils.BackstageEntity
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -34,16 +35,25 @@ import org.springframework.web.bind.annotation.RestController
 @Tag(name = "risc", description = "Risk Scorecard management endpoints")
 class RiScController(
     private val riScService: RiScService,
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     private val gitHubAppService: GitHubAppService,
     private val slackService: SlackService,
 ) {
+    private fun backstageEntityOf(
+        kind: String?,
+        namespace: String?,
+        name: String?,
+    ): BackstageEntity? = if (kind != null && name != null) BackstageEntity(kind, namespace, name) else null
+
     @GetMapping("/{repositoryOwner}/{repositoryName}/all")
     suspend fun getAllRiScsDefault(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
+        @RequestParam backstageKind: String? = null,
+        @RequestParam backstageNamespace: String? = null,
+        @RequestParam backstageName: String? = null,
     ): List<RiScContentResultDTO> =
         riScService.fetchAllRiScs(
             owner = repositoryOwner,
@@ -54,6 +64,7 @@ class RiScController(
                     githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                 ),
             latestSupportedVersion = "5.2",
+            backstageEntity = backstageEntityOf(backstageKind, backstageNamespace, backstageName),
         )
 
     @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all")
@@ -63,6 +74,9 @@ class RiScController(
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
         @PathVariable latestSupportedVersion: String,
+        @RequestParam backstageKind: String? = null,
+        @RequestParam backstageNamespace: String? = null,
+        @RequestParam backstageName: String? = null,
     ): List<RiScContentResultDTO> {
         val result =
             riScService.fetchAllRiScs(
@@ -74,6 +88,7 @@ class RiScController(
                         githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
                     ),
                 latestSupportedVersion = latestSupportedVersion,
+                backstageEntity = backstageEntityOf(backstageKind, backstageNamespace, backstageName),
             )
         return result
     }
@@ -106,6 +121,8 @@ class RiScController(
                         ).defaultBranch,
                 generateDefault = generateDefault,
                 defaultRiScId = newRiSc.defaultRiScId,
+                riscName = newRiSc.riscName,
+                backstageEntity = backstageEntityOf(newRiSc.backstageKind, newRiSc.backstageNamespace, newRiSc.backstageName),
             )
         return createRiscResultDTO
     }
