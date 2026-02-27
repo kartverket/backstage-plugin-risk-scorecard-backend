@@ -1207,4 +1207,16 @@ class GithubConnector(
                 },
         )
     }
+
+    suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
+        fetchRiScContent(githubHelper.uriToInitRiscConfig(), gitHubAccessToken.value)
+
+    suspend fun fetchInitRiSc(
+        initRiScId: String,
+        accessToken: String,
+    ): GithubContentResponse =
+        fetchRiScContent(
+            uri = githubHelper.uriToInitRiSc(initRiScId),
+            accessToken = accessToken,
+        )
 }
