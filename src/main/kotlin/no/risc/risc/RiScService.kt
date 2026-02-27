@@ -39,6 +39,7 @@ import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
+import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
@@ -110,7 +111,7 @@ class RiScService(
                         }
                     }
 
-                    /**
+                    /*
                      * This case is considered valid, because if the file is not found, we can assume that the riSc
                      * does not have a published version yet, and therefore there are no differences to compare.
                      * The frontend handles this.
@@ -178,6 +179,8 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
+            LOGGER.info("Fetching all RiScs for $owner/$repository")
+
             val riScGithubMetadataList: List<RiScGithubMetadata> =
                 githubConnector.fetchRiScGithubMetadata(
                     owner,
@@ -239,7 +242,6 @@ class RiScService(
                 // Validate RiSc against JSON schema
                 .map { riScContentResultDTO ->
                     if (riScContentResultDTO.status == ContentStatus.Success) {
-                        LOGGER.info("Validating RiSc with id '${riScContentResultDTO.riScId}.")
                         val validationStatus =
                             JSONValidator.validateAgainstSchema(
                                 riScId = riScContentResultDTO.riScId,
@@ -247,7 +249,7 @@ class RiScService(
                             )
 
                         if (!validationStatus.isValid) {
-                            LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
+                            LOGGER.warn("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
                             return@map RiScContentResultDTO(
                                 riScId = riScContentResultDTO.riScId,
                                 status = ContentStatus.SchemaValidationFailed,
@@ -255,8 +257,6 @@ class RiScService(
                                 riScContent = null,
                             )
                         }
-
-                        LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                     }
                     riScContentResultDTO
                 }.map { riScContentResultDTO ->
@@ -282,6 +282,8 @@ class RiScService(
                             )
                         }
                     }
+                }.also { results ->
+                    LOGGER.info(formatRiScFetchSummary(owner, repository, results))
                 }
         }
 
