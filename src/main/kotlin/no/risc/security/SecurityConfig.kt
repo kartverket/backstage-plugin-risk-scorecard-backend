@@ -74,7 +74,7 @@ class SecurityConfig(
         require(!issuerUri.isNullOrBlank()) { "ISSUER_URI must be configured in the environment" }
 
         logger.info("Starting build of JwtDecoder using ISSUER_URI=$issuerUri")
-        val millis = 60_000L
+        val millis = 30_000L
 
         while (true) {
             try {
@@ -95,11 +95,12 @@ class SecurityConfig(
                 logger.info("JwtDecoder successfully instantiated")
                 return JwtDecoder { token -> jwtDecoder.decode(token) }
             } catch (e: Exception) {
-                logger
-                    .error(
-                        "Could not instantiate JwtDecoder. Retrying in ${millis / 1000} seconds...",
-                        e,
-                    )
+                val rootCause = generateSequence(e as Throwable) { it.cause }.last()
+                logger.error(
+                    "Could not instantiate JwtDecoder (cause: ${rootCause.message}). " +
+                        "Is the auth service (provided by the Backstage plugin backend) running at $issuerUri? " +
+                        "Retrying in ${millis / 1000} seconds...",
+                )
                 sleep(millis)
             }
         }
