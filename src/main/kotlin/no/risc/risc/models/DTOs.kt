@@ -184,6 +184,8 @@ enum class ProcessingStatus(
     FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
     FailedToCreateSops("Failed to create SOPS configuration"),
     FailedToFetchFromAirtable("Failed to fetch from airtable"),
+    FailedToFetchInitRiScFromGitHub("Failed to fetch initial RiSc from GitHub"),
+    FailedToFetchInitRiScConfigFromGitHub("Failed to fetch initial RiSc config from GitHub"),
 }
 
 @Serializable

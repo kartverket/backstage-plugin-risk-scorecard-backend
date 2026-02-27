@@ -75,9 +75,13 @@ class GithubConnector(
             getGithubResponse(uri = uri, accessToken = accessToken)
                 .toEntity<GithubFileDTO>()
                 .awaitSingle()
-                .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
-                .body
-                .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
+                .also {
+                    LOGGER.debug(
+                        "GET to GitHub contents-API responded with {}. RiSc content: {}",
+                        it.statusCode,
+                        it.body?.content?.substring(0, 10),
+                    )
+                }.body
                 ?.content
                 ?.decodeBase64()
                 .let { fileContent ->
@@ -1107,7 +1111,7 @@ class GithubConnector(
             .header("X-GitHub-Api-Version", "2022-11-28")
             .let(attachBody)
             .retrieve()
-            .also { LOGGER.info("Sending ${method.name()}-request to $uri") }
+            .also { LOGGER.debug("Sending ${method.name()}-request to $uri") }
 
     /**
      * Constructs a GET-request to the specified URI at GitHub with standard headers.
@@ -1146,13 +1150,25 @@ class GithubConnector(
      */
     private fun mapWebClientExceptionToGithubStatus(e: Exception): GithubStatus =
         when (e) {
-            is WebClientResponseException.NotFound -> GithubStatus.NotFound
-            is WebClientResponseException.Unauthorized -> GithubStatus.Unauthorized
-            is WebClientResponseException.UnprocessableEntity -> GithubStatus.RequestResponseBodyError
-            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } ->
-                GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            is WebClientResponseException.NotFound -> {
+                GithubStatus.NotFound
+            }
 
-            else -> GithubStatus.InternalError
+            is WebClientResponseException.Unauthorized -> {
+                GithubStatus.Unauthorized
+            }
+
+            is WebClientResponseException.UnprocessableEntity -> {
+                GithubStatus.RequestResponseBodyError
+            }
+
+            { e is WebClientResponseException && e.message?.contains("DataBufferLimitException") == true } -> {
+                GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            }
+
+            else -> {
+                GithubStatus.InternalError
+            }
         }
 
     /**
@@ -1191,4 +1207,16 @@ class GithubConnector(
                 },
         )
     }
+
+    suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
+        fetchRiScContent(githubHelper.uriToInitRiscConfig(), gitHubAccessToken.value)
+
+    suspend fun fetchInitRiSc(
+        initRiScId: String,
+        accessToken: String,
+    ): GithubContentResponse =
+        fetchRiScContent(
+            uri = githubHelper.uriToInitRiSc(initRiScId),
+            accessToken = accessToken,
+        )
 }

@@ -7,6 +7,7 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
+import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -58,6 +59,13 @@ class GithubConnectorTests {
 
     @BeforeEach
     fun beforeEach() {
+        val initRiScServiceConfig =
+            InitRiScServiceConfig().apply {
+                baseUrl = ""
+                repoName = "init-risc-repo"
+                repoOwner = "owner"
+            }
+
         webClient = MockableWebClient()
         githubConnector =
             spyk(
@@ -69,6 +77,7 @@ class GithubConnectorTests {
                             filenamePrefix = filenamePrefix,
                             filenamePostfix = filenamePostfix,
                             riScFolderPath = riscFolderPath,
+                            initRiScServiceConfig = initRiScServiceConfig,
                         ),
                 ),
             )
@@ -209,31 +218,40 @@ class GithubConnectorTests {
 
             for (m in githubMetadata) {
                 when (m.id) {
-                    riScName("aaa0a") ->
+                    riScName("aaa0a") -> {
                         assertTrue(
                             m.isStoredInMain && !m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should only exist in main",
                         )
-                    riScName("bbb1b") ->
+                    }
+
+                    riScName("bbb1b") -> {
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should exist in main and have a branch",
                         )
-                    riScName("ccc2c") ->
+                    }
+
+                    riScName("ccc2c") -> {
                         assertTrue(
                             m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
                             "This riSc should exist in main, have a branch, and an open PR",
                         )
-                    riScName("ddd3d") ->
+                    }
+
+                    riScName("ddd3d") -> {
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && m.hasOpenPR && m.prUrl != null,
                             "This riSc should not exist in main, but have a branch and an open PR",
                         )
-                    riScName("eee4e") ->
+                    }
+
+                    riScName("eee4e") -> {
                         assertTrue(
                             !m.isStoredInMain && m.hasBranch && !m.hasOpenPR && m.prUrl == null,
                             "This riSc should only exist in a branch",
                         )
+                    }
                 }
             }
         }
