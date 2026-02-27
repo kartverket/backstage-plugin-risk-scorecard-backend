@@ -75,9 +75,13 @@ class GithubConnector(
             getGithubResponse(uri = uri, accessToken = accessToken)
                 .toEntity<GithubFileDTO>()
                 .awaitSingle()
-                .also { LOGGER.info("GET to GitHub contents-API responded with ${it.statusCode}") }
-                .body
-                .also { LOGGER.info("RiSc content: ${it?.content?.substring(0, 10)}") }
+                .also {
+                    LOGGER.debug(
+                        "GET to GitHub contents-API responded with {}. RiSc content: {}",
+                        it.statusCode,
+                        it.body?.content?.substring(0, 10),
+                    )
+                }.body
                 ?.content
                 ?.decodeBase64()
                 .let { fileContent ->
@@ -1107,7 +1111,7 @@ class GithubConnector(
             .header("X-GitHub-Api-Version", "2022-11-28")
             .let(attachBody)
             .retrieve()
-            .also { LOGGER.info("Sending ${method.name()}-request to $uri") }
+            .also { LOGGER.debug("Sending ${method.name()}-request to $uri") }
 
     /**
      * Constructs a GET-request to the specified URI at GitHub with standard headers.
