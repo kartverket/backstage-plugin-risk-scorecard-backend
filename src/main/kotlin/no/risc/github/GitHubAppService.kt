@@ -55,15 +55,16 @@ class GitHubAppService(
     }
 
     fun getGitHubAccessToken(tokenFromHeader: String?): GithubAccessToken =
-        tokenFromHeader?.let { GithubAccessToken(it) }
-            ?: if (environment.activeProfiles.contains("local")) {
+        when {
+            tokenFromHeader != null -> GithubAccessToken(tokenFromHeader)
+            environment.activeProfiles.contains("local-sandboxed") -> GithubAccessToken("local-dummy")
+            environment.activeProfiles.contains("local") ->
                 throw ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "A GitHub personal access token MUST be provided when running locally.",
                 )
-            } else {
-                getInstallationToken()
-            }
+            else -> getInstallationToken()
+        }
 
     private fun fetchGitHubInstallationToken(): GitHubAccessTokenResponse =
         RestClient

@@ -100,3 +100,12 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.register<org.springframework.boot.gradle.tasks.run.BootRun>("bootRunLocal") {
+    dependsOn("testClasses")
+    group = "application"
+    description = "Run with local-sandboxed profile (includes test classpath for local mocks)"
+    classpath = sourceSets["main"].runtimeClasspath + sourceSets["test"].runtimeClasspath
+    mainClass.set("no.risc.RiScApplicationKt")
+    systemProperty("spring.profiles.active", "local-sandboxed")
+}
