@@ -1,0 +1,64 @@
+{
+  "schemaVersion" : "5.2",
+  "title" : "Initiell RoS - web-app",
+  "scope" : "Denne RoS'en er generert fra opplysninger...",
+  "scenarios" : [ {
+    "title" : "Produktet mangler eller bryter avtaler med tredjeparter",
+    "scenario" : {
+      "ID" : "QQrIA",
+      "description" : "Produktet/tjenesten oppfyller ikke inngåtte avtaler, eller det mangler avtaler eller avtaleinnhold som burde vært på plass. Avtaler som burde vært avsluttet, blir likevel videreført. Tredjeparter kan være datakonsumenter, klienter, datatilbydere og plattformleverandører",
+      "threatActors" : [ "Reckless employee" ],
+      "vulnerabilities" : [ "Misconfiguration", "Flawed design" ],
+      "risk" : {
+        "consequence" : 1000000.0,
+        "probability" : 1
+      },
+      "actions" : [ {
+        "title" : "Inngå sikkerhetsavtale",
+        "action" : {
+          "ID" : "cvqIP",
+          "description" : "Inngå sikkerhetsavtale med underleverandør (f.eks skytjenester) hvis det behandles sikkerhetsgraderte data (altså utover skjermingsverdig ugradert).\n\n```\nInternt metodeverk:   AR-005\nISO 27002:            5.20\nNIST CSF 2.0:         GV.OC-03, GV.SC-05\nOWASP ASVS 4.0.3:     \nNSMs grunnprinsipper: \nSikkerhetsloven:      § 9-2\n```",
+          "status" : "Not OK",
+          "url" : ""
+        }
+      } ],
+      "remainingRisk" : {
+        "consequence" : 0,
+        "probability" : 0
+      }
+    }
+  }, {
+    "title" : "Annet scenario",
+    "scenario" : {
+      "ID" : "QQrIA2",
+      "description" : "Beskrivelse",
+      "threatActors" : [ "Reckless employee" ],
+      "vulnerabilities" : [ "Misconfiguration" ],
+      "risk" : {
+        "consequence" : 0,
+        "probability" : 0
+      },
+      "actions" : [ {
+        "title" : "Inngå sikkerhetsavtale",
+        "action" : {
+          "ID" : "cvqIP2",
+          "description" : "beskrivelse",
+          "status" : "Not OK",
+          "url" : ""
+        }
+      }, {
+        "title" : "Inngå sikkerhetsavtale V2",
+        "action" : {
+          "ID" : "cvqIP3",
+          "description" : "beskrivelse",
+          "status" : "Not OK",
+          "url" : ""
+        }
+      } ],
+      "remainingRisk" : {
+        "consequence" : 0,
+        "probability" : 0
+      }
+    }
+  } ]
+}

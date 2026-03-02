@@ -1,0 +1,16 @@
+[
+  {
+    "id": "risc-example",
+    "priorityIndex": 1,
+    "listName": "RiSc Example",
+    "listDescription": "Desc",
+    "preferredBackstageComponentType": "service"
+  },
+  {
+    "id": "risc-example-x2",
+    "priorityIndex": 2,
+    "listName": "RiSc Example",
+    "listDescription": "Desc",
+    "preferredBackstageComponentType": "service"
+  }
+]

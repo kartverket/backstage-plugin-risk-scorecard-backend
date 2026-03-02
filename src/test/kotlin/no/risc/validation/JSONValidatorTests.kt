@@ -1,9 +1,9 @@
 package no.risc.validation
 
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
+import no.risc.getResource
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -31,13 +31,6 @@ class JSONValidatorTests {
             }
             """.trimIndent()
     }
-
-    private fun getResource(resourcePath: String): String =
-        object {}
-            .javaClass.classLoader
-            .getResource(resourcePath)
-            ?.readText()
-            ?: fail("Could not read resource $resourcePath")
 
     @Test
     fun `test validate against schema without output`() {

@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
+import no.risc.getResource
 import no.risc.infra.connector.InitRiScServiceConnector
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
@@ -48,16 +49,7 @@ class InitRiScServiceAirtableImplTests {
 
     @Test
     fun `test generate default RiSc returns generated RiSc string`() {
-        val riSc =
-            """
-            {
-              "schemaVersion": "4.0",
-              "title": "Transformasjon",
-              "scope": "Sikkerhet av backend.",
-              "valuations": [],
-              "scenarios": []
-            }
-            """.trimIndent()
+        val riSc = getResource("airtable-risc-v4.0.json")
 
         webClient.queueResponse(MockableResponse(content = riSc))
 
