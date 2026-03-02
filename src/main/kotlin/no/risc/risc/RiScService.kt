@@ -54,7 +54,7 @@ class RiScService(
     private val githubConnector: GithubConnectorPort,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServicePort,
-    private val initRiScService: InitRiScServiceIntegration,
+    private val initRiScService: InitRiScService,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
