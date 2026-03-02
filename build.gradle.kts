@@ -3,7 +3,8 @@ plugins {
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "3.5.7"
+    id("org.springframework.boot") version "4.0.2"
+    id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
 }
 
@@ -31,8 +32,8 @@ repositories {
 }
 
 val kotlinVersion = "2.3.10"
-val springBootVersion = "3.5.6"
-val springSecurityVersion = "6.5.6"
+val springBootVersion = "4.0.2"
+val springSecurityVersion = "7.0.2"
 val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.16.2"
@@ -41,17 +42,17 @@ val nimbusdsVersion = "10.7"
 val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
-val springdocVersion = "2.8.4"
+val springdocVersion = "3.0.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion")
 
-    implementation("org.springframework.security:spring-security-oauth2-jose:$springSecurityVersion")
-    implementation("org.springframework.security:spring-security-oauth2-resource-server:$springSecurityVersion")
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation("org.springframework.security:spring-security-oauth2-resource-server")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion") {
         because("spring-security-oauth2-jose requires an external library for JWT encoding, like Nimbus-JOSE-JWT.")
     }
