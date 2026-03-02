@@ -161,6 +161,118 @@ class RiScService(
             }
 
     /**
+     * Fetches and processes a single RiSc identified by [riScMetadata], including content retrieval, decryption,
+     * JSON schema validation, and migration to [latestSupportedVersion].
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository the RiSc is in.
+     * @param accessTokens The access tokens to use for authorization.
+     * @param latestSupportedVersion The RiSc schema version to migrate the RiSc to if not already or past this version.
+     * @param riScMetadata GitHub metadata for the RiSc to fetch.
+     */
+    private suspend fun fetchAndProcessRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        latestSupportedVersion: String,
+        riScMetadata: RiScGithubMetadata,
+    ): RiScContentResultDTO {
+        val rawResult =
+            try {
+                val riScContents =
+                    githubConnector.fetchBranchAndMainRiScContent(
+                        riScMetadata.id,
+                        owner,
+                        repository,
+                        accessTokens.githubAccessToken,
+                    )
+
+                val riScStatus =
+                    getRiScStatus(
+                        riScMetadata,
+                        riScContents.mainContent,
+                        riScContents.branchContent,
+                    )
+
+                val riScToReturn: GithubContentResponse =
+                    chooseRiScContentFromStatus(
+                        riScStatus,
+                        riScContents.branchContent,
+                        riScContents.mainContent,
+                    )
+
+                riScToReturn.responseToRiScResult(
+                    riScMetadata.id,
+                    riScStatus,
+                    accessTokens.gcpAccessToken,
+                    lastPublished =
+                        githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                            owner = owner,
+                            repository = repository,
+                            accessToken = accessTokens.githubAccessToken.value,
+                            riScId = riScMetadata.id,
+                        ),
+                    pullRequestUrl = riScMetadata.prUrl,
+                )
+            } catch (_: Exception) {
+                RiScContentResultDTO(
+                    riScId = riScMetadata.id,
+                    status = ContentStatus.Failure,
+                    riScStatus = RiScStatus.Deleted,
+                    riScContent = null,
+                    pullRequestUrl = null,
+                )
+            }
+
+        // Validate RiSc against JSON schema
+        val validated =
+            if (rawResult.status == ContentStatus.Success) {
+                val validationStatus =
+                    JSONValidator.validateAgainstSchema(
+                        riScId = rawResult.riScId,
+                        riScContent = rawResult.riScContent,
+                    )
+                if (!validationStatus.isValid) {
+                    LOGGER.warn("RiSc with id: ${rawResult.riScId} failed validation")
+                    RiScContentResultDTO(
+                        riScId = rawResult.riScId,
+                        status = ContentStatus.SchemaValidationFailed,
+                        riScStatus = null,
+                        riScContent = null,
+                    )
+                } else {
+                    rawResult
+                }
+            } else {
+                rawResult
+            }
+
+        if (validated.riScContent == null) return validated
+
+        return tryOrDefaultWithErrorLogging(
+            default =
+                RiScContentResultDTO(
+                    riScId = validated.riScId,
+                    status = ContentStatus.Failure,
+                    riScStatus = null,
+                    riScContent = null,
+                ),
+            logger = LOGGER,
+        ) {
+            migrate(
+                riSc = RiSc.fromContent(validated.riScContent),
+                lastPublished = validated.lastPublished,
+                endVersion = latestSupportedVersion,
+            ).let { (migratedRiSc, migrationStatus) ->
+                validated.copy(
+                    riScContent = migratedRiSc.toJSON(),
+                    migrationStatus = migrationStatus,
+                )
+            }
+        }
+    }
+
+    /**
      * Fetches all RiScs in the given repository. There are three types, drafts (RiScs that have pending updates), sent
      * for approval (RiScs that have pending pull requests) and published (RiScs that have been approved, i.e., appear
      * in the default branch of the repository). If there exists multiple version of a RiSc with the same ID, they are
@@ -191,101 +303,57 @@ class RiScService(
             riScGithubMetadataList
                 .map { riScMetadata ->
                     async(Dispatchers.IO) {
-                        try {
-                            val riScContents =
-                                githubConnector.fetchBranchAndMainRiScContent(
-                                    riScMetadata.id,
-                                    owner,
-                                    repository,
-                                    accessTokens.githubAccessToken,
-                                )
-
-                            val riScStatus =
-                                getRiScStatus(
-                                    riScMetadata,
-                                    riScContents.mainContent,
-                                    riScContents.branchContent,
-                                )
-
-                            val riScToReturn: GithubContentResponse =
-                                chooseRiScContentFromStatus(
-                                    riScStatus,
-                                    riScContents.branchContent,
-                                    riScContents.mainContent,
-                                )
-
-                            riScToReturn.responseToRiScResult(
-                                riScMetadata.id,
-                                riScStatus,
-                                accessTokens.gcpAccessToken,
-                                lastPublished =
-                                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                        owner = owner,
-                                        repository = repository,
-                                        accessToken = accessTokens.githubAccessToken.value,
-                                        riScId = riScMetadata.id,
-                                    ),
-                                pullRequestUrl = riScMetadata.prUrl,
-                            )
-                        } catch (_: Exception) {
-                            RiScContentResultDTO(
-                                riScId = riScMetadata.id,
-                                status = ContentStatus.Failure,
-                                riScStatus = RiScStatus.Deleted,
-                                riScContent = null,
-                                pullRequestUrl = null,
-                            )
-                        }
+                        fetchAndProcessRiSc(owner, repository, accessTokens, latestSupportedVersion, riScMetadata)
                     }
                 }.awaitAll()
                 .filter { it.riScStatus != RiScStatus.Deleted }
-                // Validate RiSc against JSON schema
-                .map { riScContentResultDTO ->
-                    if (riScContentResultDTO.status == ContentStatus.Success) {
-                        val validationStatus =
-                            JSONValidator.validateAgainstSchema(
-                                riScId = riScContentResultDTO.riScId,
-                                riScContent = riScContentResultDTO.riScContent,
-                            )
-
-                        if (!validationStatus.isValid) {
-                            LOGGER.warn("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
-                            return@map RiScContentResultDTO(
-                                riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.SchemaValidationFailed,
-                                riScStatus = null,
-                                riScContent = null,
-                            )
-                        }
-                    }
-                    riScContentResultDTO
-                }.map { riScContentResultDTO ->
-                    if (riScContentResultDTO.riScContent == null) return@map riScContentResultDTO
-                    tryOrDefaultWithErrorLogging(
-                        default =
-                            RiScContentResultDTO(
-                                riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.Failure,
-                                riScStatus = null,
-                                riScContent = null,
-                            ),
-                        logger = LOGGER,
-                    ) {
-                        migrate(
-                            riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
-                            lastPublished = riScContentResultDTO.lastPublished,
-                            endVersion = latestSupportedVersion,
-                        ).let { (migratedRiSc, migrationStatus) ->
-                            riScContentResultDTO.copy(
-                                riScContent = migratedRiSc.toJSON(),
-                                migrationStatus = migrationStatus,
-                            )
-                        }
-                    }
-                }.also { results ->
+                .also { results ->
                     LOGGER.info(formatRiScFetchSummary(owner, repository, results))
                 }
         }
+
+    /**
+     * Fetches a single RiSc by ID from the given repository. The RiSc is migrated to the latest supported version and
+     * validated against the JSON schema of its version.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository to fetch the RiSc from.
+     * @param accessTokens The access tokens to use for authorization.
+     * @param riScId The ID of the RiSc to fetch.
+     * @param latestSupportedVersion The RiSc schema version to migrate the RiSc to if not already or past this version.
+     */
+    suspend fun fetchRiSc(
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        riScId: String,
+        latestSupportedVersion: String,
+    ): RiScContentResultDTO {
+        LOGGER.info("Fetching RiSc $riScId for $owner/$repository")
+        val riScMetadata =
+            githubConnector
+                .fetchRiScGithubMetadata(owner, repository, accessTokens.githubAccessToken)
+                .find { it.id == riScId }
+                ?: return RiScContentResultDTO(
+                    riScId = riScId,
+                    status = ContentStatus.FileNotFound,
+                    riScStatus = null,
+                    riScContent = null,
+                )
+
+        val result = fetchAndProcessRiSc(owner, repository, accessTokens, latestSupportedVersion, riScMetadata)
+
+        return if (result.riScStatus == RiScStatus.Deleted) {
+            RiScContentResultDTO(
+                riScId = riScId,
+                status = ContentStatus.FileNotFound,
+                riScStatus = null,
+                riScContent = null,
+            )
+        } else {
+            result
+        }
+    }
 
     /**
      * Converts the content response object to a RiScContentResult by decrypting it through the crypto service.

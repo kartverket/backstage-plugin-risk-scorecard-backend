@@ -79,6 +79,47 @@ class RiScController(
         return result
     }
 
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{id}")
+    suspend fun getRiSc(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable id: String,
+    ): RiScContentResultDTO =
+        riScService.fetchRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+            riScId = id,
+            latestSupportedVersion = AppConstants.LATEST_SUPPORTED_SCHEMA_VERSION,
+        )
+
+    @GetMapping("/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/{id}")
+    suspend fun getRiScOfVersion(
+        @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
+        @PathVariable repositoryOwner: String,
+        @PathVariable repositoryName: String,
+        @PathVariable latestSupportedVersion: String,
+        @PathVariable id: String,
+    ): RiScContentResultDTO =
+        riScService.fetchRiSc(
+            owner = repositoryOwner,
+            repository = repositoryName,
+            accessTokens =
+                AccessTokens(
+                    gcpAccessToken = GCPAccessToken(gcpAccessToken),
+                    githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+                ),
+            riScId = id,
+            latestSupportedVersion = latestSupportedVersion,
+        )
+
     @PostMapping("/{repositoryOwner}/{repositoryName}")
     suspend fun createNewRiSc(
         @RequestHeader("GCP-Access-Token") gcpAccessToken: String,
