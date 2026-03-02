@@ -221,7 +221,7 @@ class RiScService(
                         ),
                     pullRequestUrl = riScMetadata.prUrl,
                 )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 RiScContentResultDTO(
                     riScId = riScMetadata.id,
                     status = ContentStatus.Failure,
@@ -229,7 +229,7 @@ class RiScService(
                     riScContent = null,
                     pullRequestUrl = null,
                     statusMessage = "Failed to fetch RiSc: ${e.message ?: "Unknown error"}",
-                    )
+                )
             }
 
         // Validate RiSc against JSON schema
@@ -248,7 +248,7 @@ class RiScService(
                         riScStatus = null,
                         riScContent = null,
                         statusMessage = "Schema validation failed",
-                        )
+                    )
                 } else {
                     rawResult
                 }
@@ -266,7 +266,7 @@ class RiScService(
                     riScStatus = null,
                     riScContent = null,
                     statusMessage = "Migration failed",
-                    ),
+                ),
             logger = LOGGER,
         ) {
             migrate(
