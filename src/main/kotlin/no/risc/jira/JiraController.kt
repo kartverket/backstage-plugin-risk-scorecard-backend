@@ -53,7 +53,7 @@ class JiraController {
 
     @PostMapping("/issue/create")
     fun createIssue(
-        @RequestHeader(HttpHeaders.AUTHORIZATION) authHeader: String,
+        @RequestHeader("Atlassian-Access-Token") authHeader: String,
         @RequestBody issueData: Map<String, Any>,
     ): ResponseEntity<out Any?>? {
         val token = authHeader.replace("Bearer ", "")
@@ -123,7 +123,7 @@ class JiraController {
     @DeleteMapping("/issue/{issueKey}")
     fun deleteIssue(
         @PathVariable issueKey: String,
-        @RequestHeader(HttpHeaders.AUTHORIZATION) authHeader: String,
+        @RequestHeader("Atlassian-Access-Token") authHeader: String,
     ): ResponseEntity<Map<String, Any>> {
         val token = authHeader.replace("Bearer ", "")
         try {
