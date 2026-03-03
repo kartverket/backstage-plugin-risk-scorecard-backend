@@ -32,7 +32,7 @@ repositories {
 }
 
 val kotlinVersion = "2.3.10"
-val springBootVersion = "4.0.2"
+val springBootVersion = "4.0.3"
 val springSecurityVersion = "7.0.2"
 val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
@@ -42,7 +42,7 @@ val nimbusdsVersion = "10.7"
 val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
-val springdocVersion = "3.0.1"
+val springdocVersion = "3.0.2"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
