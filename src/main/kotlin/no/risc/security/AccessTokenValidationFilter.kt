@@ -8,11 +8,13 @@ import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.utils.Repository
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 @WebFilter(urlPatterns = ["/api/**"])
+@Profile("!(local-sandboxed)")
 class AccessTokenValidationFilter(
     private val validationService: ValidationService,
 ) : OncePerRequestFilter() {
