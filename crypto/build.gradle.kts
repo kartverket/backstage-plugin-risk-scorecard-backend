@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring")
     kotlin("plugin.serialization")
     id("org.springframework.boot")
+    id("io.spring.dependency-management")
     id("org.jlleitschuh.gradle.ktlint")
 }
 
@@ -26,17 +27,13 @@ java {
 tasks.bootJar { enabled = false }
 tasks.jar { enabled = true }
 
-val springBootVersion = "3.5.6"
 val kotlinxSerializationVersion = "1.10.0"
 
 dependencies {
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:$springBootVersion")) {
-        because("Imports Spring Boot BOM so Jackson and other managed deps resolve without explicit versions.")
-    }
-    implementation("org.springframework.boot:spring-boot-starter:$springBootVersion") {
+    implementation("org.springframework.boot:spring-boot-starter") {
         because("Provides @ConfigurationProperties, @Service, and core Spring Boot infrastructure.")
     }
-    implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion") {
+    implementation("org.springframework.boot:spring-boot-starter-actuator") {
         because("Provides HealthIndicator used by SopsHealthIndicator.")
     }
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")

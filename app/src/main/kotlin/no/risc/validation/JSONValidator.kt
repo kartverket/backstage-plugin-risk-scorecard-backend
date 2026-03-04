@@ -58,21 +58,32 @@ object JSONValidator {
     fun validateAgainstSchema(
         riScId: String,
         riScContent: String?,
-    ): OutputUnit =
-        RiScVersion
-            .allVersions()
-            .map { it.asString().replace(".", "_") }
-            .map {
-                validateAgainstSchema(
-                    riScId = riScId,
-                    schema = readSchema(schemaVersion = it, riScId = riScId, isUpdate = false),
-                    riScContent = riScContent,
-                )
-            }.firstOrNull { it.isValid }
-            ?: OutputUnit().also {
-                it.isValid = false
+    ): OutputUnit {
+        val resultsByVersion =
+            RiScVersion
+                .allVersions()
+                .map { it.asString().replace(".", "_") }
+                .associateWith { version ->
+                    validateAgainstSchema(
+                        riScId = riScId,
+                        schema = readSchema(schemaVersion = version, riScId = riScId, isUpdate = false),
+                        riScContent = riScContent,
+                    )
+                }
+
+        return resultsByVersion.values.firstOrNull { it.isValid }
+            ?: OutputUnit().also { output ->
+                output.isValid = false
                 LOGGER.error("RiSc with id: $riScId failed validation against all schemas.")
+                resultsByVersion.forEach { (version, result) ->
+                    val errors =
+                        result.details
+                            ?.joinToString("; ") { "${it.instanceLocation}: ${it.errors}" }
+                            ?: "no details available"
+                    LOGGER.error("  Schema v$version errors: $errors")
+                }
             }
+    }
 
     /**
      * Validates the content of a RiSc against the provided JSON schema.
