@@ -315,11 +315,13 @@ class RiScService(
                     pullRequestUrl = pullRequestUrl,
                     lastPublished = lastPublished,
                 )
+            } catch (e: SOPSDecryptionException) {
+                throw e
             } catch (e: Exception) {
                 LOGGER.error("An error occurred when decrypting: ${e.message}, ${e.printStackTrace()}")
                 RiScContentResultDTO(
                     riScId = riScId,
-                    status = if (e is SOPSDecryptionException) ContentStatus.DecryptionFailed else ContentStatus.Failure,
+                    status = ContentStatus.Failure,
                     riScStatus = riScStatus,
                     riScContent = null,
                 )

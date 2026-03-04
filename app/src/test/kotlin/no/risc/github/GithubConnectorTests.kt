@@ -7,6 +7,7 @@ import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import mockableResponseFromObject
+import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
@@ -68,6 +69,7 @@ class GithubConnectorTests {
                             filenamePrefix = filenamePrefix,
                             filenamePostfix = filenamePostfix,
                             riScFolderPath = riscFolderPath,
+                            initRiScServiceConfig = InitRiScServiceConfig(),
                         ),
                 ),
             )

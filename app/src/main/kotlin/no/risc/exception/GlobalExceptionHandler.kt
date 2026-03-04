@@ -87,7 +87,7 @@ internal class GlobalExceptionHandler {
         return ProcessRiScResultDTO(
             riScId = ex.riScId,
             status = ProcessingStatus.ErrorWhenUpdatingRiSc,
-            statusMessage = "Could not encrypt RiSc",
+            statusMessage = "Could not encrypt RiSc${ex.errorCode?.let { " [$it]" } ?: ""}",
         )
     }
 
@@ -99,6 +99,7 @@ internal class GlobalExceptionHandler {
         return DecryptionFailureDTO(
             status = ContentStatus.DecryptionFailed,
             message = ex.message,
+            errorCode = ex.errorCode,
         )
     }
 

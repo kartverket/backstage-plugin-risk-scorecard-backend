@@ -32,6 +32,7 @@ data class DifferenceRequestBody(
 data class DecryptionFailureDTO(
     val status: ContentStatus,
     val message: String,
+    val errorCode: String? = null,
 )
 
 @Serializable

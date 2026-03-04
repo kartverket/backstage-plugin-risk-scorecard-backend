@@ -272,7 +272,7 @@ class GithubConnector(
                     throw e
                 }
             }
-        }.getOrThrow()
+        }.getOrElse { emptyList() }
 
     /**
      * Finds the identifiers of every RiSc in a repository that has a pull request open.
@@ -300,7 +300,7 @@ class GithubConnector(
                     )
                     // Every RiSc identifier starts with "<filenamePrefix>-".
                 }.filter { it.id.startsWith("$filenamePrefix-") }
-        }.getOrThrow()
+        }.getOrElse { emptyList() }
 
     /**
      * Finds the identifiers of every RiSc in a repository that has pending changes that have not been published to the
@@ -323,7 +323,7 @@ class GithubConnector(
             ).awaitBody<List<GithubReferenceObjectDTO>>()
                 // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
                 .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
-        }.getOrThrow()
+        }.getOrElse { emptyList() }
 
     /**
      * Fetches commits from the GitHub commits endpoint in pages and returns the combined result.
