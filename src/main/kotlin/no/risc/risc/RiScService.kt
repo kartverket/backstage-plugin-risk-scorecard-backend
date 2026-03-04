@@ -327,15 +327,6 @@ class RiScService(
                     statusMessage = null,
                 )
             } catch (e: Exception) {
-                val errorInfo =
-                    if (e is SOPSDecryptionException) {
-                        e.errorCode ?: "Unknown error"
-                    } else {
-                        if (e.message != null) "${e.message?.substring(0, 20)}..." else "Unknown error"
-                    }
-                LOGGER.warn("An error occurred when decrypting: $errorInfo")
-                LOGGER.debug("Full error message: ${e.message}")
-
                 if (e is SOPSDecryptionException) {
                     RiScContentResultDTO(
                         riScId = riScId,
