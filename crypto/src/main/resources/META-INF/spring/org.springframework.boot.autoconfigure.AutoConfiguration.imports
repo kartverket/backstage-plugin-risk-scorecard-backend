@@ -1,0 +1,3 @@
+no.risc.encryption.sops.EncryptionService
+no.risc.encryption.sops.DecryptionService
+no.risc.health.SopsHealthIndicator
