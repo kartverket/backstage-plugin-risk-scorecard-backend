@@ -157,6 +157,13 @@ class RiScService(
                             errorMessage = "SchemaValidation failed",
                         )
                     }
+
+                    ContentStatus.UnsupportedMigration -> {
+                        InternDifference(
+                            status = DifferenceStatus.UnsupportedMigration,
+                            errorMessage = "Migration failed",
+                        )
+                    }
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
             }
 
@@ -227,13 +234,14 @@ class RiScService(
                                     ),
                                 pullRequestUrl = riScMetadata.prUrl,
                             )
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
                             RiScContentResultDTO(
                                 riScId = riScMetadata.id,
                                 status = ContentStatus.Failure,
                                 riScStatus = RiScStatus.Deleted,
                                 riScContent = null,
                                 pullRequestUrl = null,
+                                statusMessage = "Failed to fetch RiSc: ${e.message ?: "Unknown error"}",
                             )
                         }
                     }
@@ -255,6 +263,7 @@ class RiScService(
                                 status = ContentStatus.SchemaValidationFailed,
                                 riScStatus = null,
                                 riScContent = null,
+                                statusMessage = "Schema validation failed",
                             )
                         }
                     }
@@ -265,9 +274,10 @@ class RiScService(
                         default =
                             RiScContentResultDTO(
                                 riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.Failure,
+                                status = ContentStatus.UnsupportedMigration,
                                 riScStatus = null,
                                 riScContent = null,
+                                statusMessage = "Migration failed",
                             ),
                         logger = LOGGER,
                     ) {
@@ -314,16 +324,18 @@ class RiScService(
                     sopsConfig = decryptedContent.sopsConfig,
                     pullRequestUrl = pullRequestUrl,
                     lastPublished = lastPublished,
+                    statusMessage = null,
                 )
             } catch (e: SOPSDecryptionException) {
                 throw e
             } catch (e: Exception) {
-                LOGGER.error("An error occurred when decrypting: ${e.message}, ${e.printStackTrace()}")
+                LOGGER.error("An error occurred when decrypting: ${e.message}")
                 RiScContentResultDTO(
                     riScId = riScId,
                     status = ContentStatus.Failure,
                     riScStatus = riScStatus,
                     riScContent = null,
+                    statusMessage = e.message ?: "Unknown error",
                 )
             }
         } else {
@@ -332,6 +344,7 @@ class RiScService(
                 status = if (status == GithubStatus.NotFound) ContentStatus.FileNotFound else ContentStatus.Failure,
                 riScStatus = riScStatus,
                 riScContent = null,
+                statusMessage = if (status == GithubStatus.NotFound) "File not found" else "Failed to fetch content from GitHub",
             )
         }
 

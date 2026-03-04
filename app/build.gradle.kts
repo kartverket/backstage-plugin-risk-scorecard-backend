@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring")
     kotlin("plugin.serialization")
     id("org.springframework.boot")
+    id("io.spring.dependency-management")
     id("org.jlleitschuh.gradle.ktlint")
 }
 
@@ -23,8 +24,8 @@ java {
 }
 
 val kotlinVersion = "2.3.10"
-val springBootVersion = "3.5.6"
-val springSecurityVersion = "6.5.6"
+val springBootVersion = "4.0.3"
+val springSecurityVersion = "7.0.2"
 val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.16.2"
@@ -33,19 +34,19 @@ val nimbusdsVersion = "10.7"
 val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
-val springdocVersion = "2.8.4"
+val springdocVersion = "3.0.2"
 
 dependencies {
     implementation(project(":crypto"))
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
     implementation("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion")
 
-    implementation("org.springframework.security:spring-security-oauth2-jose:$springSecurityVersion")
-    implementation("org.springframework.security:spring-security-oauth2-resource-server:$springSecurityVersion")
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation("org.springframework.security:spring-security-oauth2-resource-server")
     implementation("com.nimbusds:nimbus-jose-jwt:$nimbusdsVersion") {
         because("spring-security-oauth2-jose requires an external library for JWT encoding, like Nimbus-JOSE-JWT.")
     }
@@ -67,9 +68,6 @@ dependencies {
     }
 
     implementation("com.networknt:json-schema-validator:$jsonSchemaValidatorVersion")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin") {
-        because("Required for Jackson Kotlin extension functions used in REST serialization.")
-    }
 
     testImplementation(platform("org.junit:junit-bom:$junitVersion")) {
         because("The BOM (bill of materials) provides correct versions for all JUnit libraries used.")
