@@ -46,7 +46,7 @@ class CryptoServiceIntegration(
                     errorCode = json["errorCode"]?.jsonPrimitive?.contentOrNull
                     errorMessage = json["errorMessage"]?.jsonPrimitive?.contentOrNull
                     LOGGER.error("$operation failed. Error code: $errorCode")
-                    LOGGER.debug("Full error message: $errorMessage")
+                    LOGGER.debug("Full error message:\n$errorMessage")
                 } catch (_: Exception) {
                     // Ignore parsing errors
                 }
