@@ -89,11 +89,31 @@ dependencies {
         implementation("org.apache.commons:commons-lang3:3.20.0") {
             because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
         }
-        implementation("io.netty:netty-codec-http2:4.2.7.Final") {
-            because("Force specific version for transitive dependency")
+        implementation("io.netty:netty-codec-http:4.2.8.Final") {
+            because("Force secure version to fix CVE-2025-67735 (CRLF injection in netty-codec-http < 4.2.8.Final)")
+        }
+        implementation("io.netty:netty-codec-http2:4.2.8.Final") {
+            because("Force secure version, aligned with netty-codec-http 4.2.8.Final")
         }
         implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.18") {
             because("Force secure version to fix vulnerability in version 10.1.43")
+        }
+        implementation("ch.qos.logback:logback-core:1.5.25") {
+            because(
+                "Force secure version to fix CVE-2026-1225 and CVE-2025-11226 (logback-core versions < 1.5.25 allow arbitrary class instantiation and code execution)",
+            )
+        }
+        implementation("ch.qos.logback:logback-classic:1.5.25") {
+            because("Force secure version, aligned with logback-core 1.5.25")
+        }
+        implementation("tools.jackson.core:jackson-core:3.1.0") {
+            because("Force secure version to fix CVE-2026-29062 and GHSA-72hv-8253-57qq in transitive dependency (jackson-core < 3.1.0)")
+        }
+        implementation("tools.jackson.core:jackson-databind:3.1.0") {
+            because("Align with jackson-core:3.1.0 constraint to keep Jackson 3.x artifacts consistent")
+        }
+        implementation("com.fasterxml.jackson.core:jackson-core:2.21.1") {
+            because("Force secure version to fix GHSA-72hv-8253-57qq in transitive dependency (jackson-core >= 2.19.0, < 2.21.1)")
         }
     }
 }
