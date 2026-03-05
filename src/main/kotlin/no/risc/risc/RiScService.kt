@@ -19,7 +19,7 @@ import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.initRiSc.InitRiScServiceIntegration
+import no.risc.initRiSc.InitRiScService
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DeleteRiScResultDTO
@@ -39,6 +39,7 @@ import no.risc.risc.models.RiScWrapperObject
 import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
+import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
 import no.risc.utils.tryOrDefaultWithErrorLogging
@@ -53,7 +54,7 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val cryptoService: CryptoServiceIntegration,
-    private val initRiScService: InitRiScServiceIntegration,
+    private val initRiScService: InitRiScService,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -110,7 +111,7 @@ class RiScService(
                         }
                     }
 
-                    /**
+                    /*
                      * This case is considered valid, because if the file is not found, we can assume that the riSc
                      * does not have a published version yet, and therefore there are no differences to compare.
                      * The frontend handles this.
@@ -156,6 +157,13 @@ class RiScService(
                             errorMessage = "SchemaValidation failed",
                         )
                     }
+
+                    ContentStatus.UnsupportedMigration -> {
+                        InternDifference(
+                            status = DifferenceStatus.UnsupportedMigration,
+                            errorMessage = "Migration failed",
+                        )
+                    }
                 }.toDTO(response.sopsConfig?.lastModified ?: "")
             }
 
@@ -178,6 +186,8 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
+            LOGGER.info("Fetching all RiScs for $owner/$repository")
+
             val riScGithubMetadataList: List<RiScGithubMetadata> =
                 githubConnector.fetchRiScGithubMetadata(
                     owner,
@@ -224,13 +234,14 @@ class RiScService(
                                     ),
                                 pullRequestUrl = riScMetadata.prUrl,
                             )
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
                             RiScContentResultDTO(
                                 riScId = riScMetadata.id,
                                 status = ContentStatus.Failure,
                                 riScStatus = RiScStatus.Deleted,
                                 riScContent = null,
                                 pullRequestUrl = null,
+                                statusMessage = "Failed to fetch RiSc: ${e.message ?: "Unknown error"}",
                             )
                         }
                     }
@@ -239,7 +250,6 @@ class RiScService(
                 // Validate RiSc against JSON schema
                 .map { riScContentResultDTO ->
                     if (riScContentResultDTO.status == ContentStatus.Success) {
-                        LOGGER.info("Validating RiSc with id '${riScContentResultDTO.riScId}.")
                         val validationStatus =
                             JSONValidator.validateAgainstSchema(
                                 riScId = riScContentResultDTO.riScId,
@@ -247,16 +257,15 @@ class RiScService(
                             )
 
                         if (!validationStatus.isValid) {
-                            LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
+                            LOGGER.warn("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
                             return@map RiScContentResultDTO(
                                 riScId = riScContentResultDTO.riScId,
                                 status = ContentStatus.SchemaValidationFailed,
                                 riScStatus = null,
                                 riScContent = null,
+                                statusMessage = "Schema validation failed",
                             )
                         }
-
-                        LOGGER.info("RiSc with id: ${riScContentResultDTO.riScId} successfully validated")
                     }
                     riScContentResultDTO
                 }.map { riScContentResultDTO ->
@@ -265,9 +274,10 @@ class RiScService(
                         default =
                             RiScContentResultDTO(
                                 riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.Failure,
+                                status = ContentStatus.UnsupportedMigration,
                                 riScStatus = null,
                                 riScContent = null,
+                                statusMessage = "Migration failed",
                             ),
                         logger = LOGGER,
                     ) {
@@ -282,6 +292,8 @@ class RiScService(
                             )
                         }
                     }
+                }.also { results ->
+                    LOGGER.info(formatRiScFetchSummary(owner, repository, results))
                 }
         }
 
@@ -312,15 +324,29 @@ class RiScService(
                     sopsConfig = decryptedContent.sopsConfig,
                     pullRequestUrl = pullRequestUrl,
                     lastPublished = lastPublished,
+                    statusMessage = null,
                 )
             } catch (e: Exception) {
                 LOGGER.error("An error occurred when decrypting: ${e.message}")
-                RiScContentResultDTO(
-                    riScId = riScId,
-                    status = if (e is SOPSDecryptionException) ContentStatus.DecryptionFailed else ContentStatus.Failure,
-                    riScStatus = riScStatus,
-                    riScContent = null,
-                )
+                if (e is SOPSDecryptionException) {
+                    RiScContentResultDTO(
+                        riScId = riScId,
+                        status = ContentStatus.DecryptionFailed,
+                        riScStatus = riScStatus,
+                        riScContent = null,
+                        statusMessage = e.errorMessage ?: e.message ?: "Decryption failed",
+                        errorCode = e.errorCode,
+                        errorMessage = e.errorMessage,
+                    )
+                } else {
+                    RiScContentResultDTO(
+                        riScId = riScId,
+                        status = ContentStatus.Failure,
+                        riScStatus = riScStatus,
+                        riScContent = null,
+                        statusMessage = e.message ?: "Unknown error",
+                    )
+                }
             }
         } else {
             RiScContentResultDTO(
@@ -328,6 +354,7 @@ class RiScService(
                 status = if (status == GithubStatus.NotFound) ContentStatus.FileNotFound else ContentStatus.Failure,
                 riScStatus = riScStatus,
                 riScContent = null,
+                statusMessage = if (status == GithubStatus.NotFound) "File not found" else "Failed to fetch content from GitHub",
             )
         }
 
@@ -392,7 +419,7 @@ class RiScService(
 
         var riScContent = content.riSc
         if (generateDefault && defaultRiScId != null) {
-            riScContent = initRiScService.generateDefaultRiSc(content.riSc, defaultRiScId)
+            riScContent = initRiScService.getInitRiSc(defaultRiScId, content.riSc, accessTokens)
         }
         val riScContentWrapperObject = content.copy(riSc = riScContent)
 

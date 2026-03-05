@@ -7,20 +7,23 @@ import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import no.risc.exception.exceptions.SopsConfigGenerateFetchException
 import no.risc.infra.connector.InitRiScServiceConnector
+import no.risc.infra.connector.models.AccessTokens
+import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.infra.connector.models.GithubAccessToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class InitRiScServiceIntegrationTests {
-    private lateinit var initRiScServiceIntegration: InitRiScServiceIntegration
+class InitRiScServiceAirtableImplTests {
+    private lateinit var initRiScServiceAirtableImpl: InitRiScServiceAirtableImpl
     private lateinit var webClient: MockableWebClient
 
     @BeforeEach
     fun beforeEach() {
         webClient = MockableWebClient()
-        initRiScServiceIntegration =
-            InitRiScServiceIntegration(
+        initRiScServiceAirtableImpl =
+            InitRiScServiceAirtableImpl(
                 initRiScServiceConnector = mockk<InitRiScServiceConnector>().also { every { it.webClient } returns webClient.webClient },
             )
     }
@@ -31,7 +34,14 @@ class InitRiScServiceIntegrationTests {
 
         assertThrows<SopsConfigGenerateFetchException> {
             runBlocking {
-                initRiScServiceIntegration.generateDefaultRiSc("", "id1")
+                initRiScServiceAirtableImpl.getInitRiSc(
+                    "id1",
+                    "",
+                    AccessTokens(
+                        GithubAccessToken("gh_access_token"),
+                        GCPAccessToken("gcp_access_token"),
+                    ),
+                )
             }
         }
     }
@@ -53,9 +63,13 @@ class InitRiScServiceIntegrationTests {
 
         val response =
             runBlocking {
-                initRiScServiceIntegration.generateDefaultRiSc(
-                    """{ "title": "title", "scope": "scope"}""",
+                initRiScServiceAirtableImpl.getInitRiSc(
                     "id1",
+                    """{ "title": "title", "scope": "scope"}""",
+                    AccessTokens(
+                        GithubAccessToken("gh_access_token"),
+                        GCPAccessToken("gcp_access_token"),
+                    ),
                 )
             }
 

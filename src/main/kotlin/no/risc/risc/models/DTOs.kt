@@ -32,6 +32,8 @@ data class DifferenceRequestBody(
 data class DecryptionFailureDTO(
     val status: ContentStatus,
     val message: String,
+    val errorCode: String? = null,
+    val errorMessage: String? = null,
 )
 
 @Serializable
@@ -59,6 +61,9 @@ data class RiScContentResultDTO(
     val lastPublished: LastPublished? = null,
     val sopsConfig: SopsConfig? = null,
     val pullRequestUrl: String? = null,
+    val statusMessage: String? = null,
+    val errorCode: String? = null,
+    val errorMessage: String? = null,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,
@@ -98,6 +103,7 @@ enum class ContentStatus {
     NoReadAccess,
     SchemaNotFound,
     SchemaValidationFailed,
+    UnsupportedMigration,
 }
 
 enum class DifferenceStatus {
@@ -109,10 +115,11 @@ enum class DifferenceStatus {
     NoReadAccess,
     SchemaNotFound,
     SchemaValidationFailed,
+    UnsupportedMigration,
 }
 
 @Serializable
-abstract class RiScResult {
+sealed class RiScResult {
     abstract val riScId: String
     abstract val status: ProcessingStatus
     abstract val statusMessage: String
@@ -177,6 +184,8 @@ enum class ProcessingStatus(
     FailedToFetchGCPIAMPermissions("Failed to fetch GCP IAM permissions for crypto key"),
     FailedToCreateSops("Failed to create SOPS configuration"),
     FailedToFetchFromAirtable("Failed to fetch from airtable"),
+    FailedToFetchInitRiScFromGitHub("Failed to fetch initial RiSc from GitHub"),
+    FailedToFetchInitRiScConfigFromGitHub("Failed to fetch initial RiSc config from GitHub"),
 }
 
 @Serializable

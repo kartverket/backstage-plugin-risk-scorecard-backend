@@ -10,7 +10,10 @@ import org.springframework.core.env.Environment
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
 import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
@@ -74,7 +77,7 @@ class SecurityConfig(
         require(!issuerUri.isNullOrBlank()) { "ISSUER_URI must be configured in the environment" }
 
         logger.info("Starting build of JwtDecoder using ISSUER_URI=$issuerUri")
-        val millis = 60_000L
+        val millis = 30_000L
 
         while (true) {
             try {
@@ -92,14 +95,21 @@ class SecurityConfig(
                                     null,
                                 )
                         }.build()
+                jwtDecoder.setJwtValidator(
+                    DelegatingOAuth2TokenValidator(
+                        JwtTimestampValidator(),
+                        JwtIssuerValidator(issuerUri),
+                    ),
+                )
                 logger.info("JwtDecoder successfully instantiated")
                 return JwtDecoder { token -> jwtDecoder.decode(token) }
             } catch (e: Exception) {
-                logger
-                    .error(
-                        "Could not instantiate JwtDecoder. Retrying in ${millis / 1000} seconds...",
-                        e,
-                    )
+                val rootCause = generateSequence(e as Throwable) { it.cause }.last()
+                logger.error(
+                    "Could not instantiate JwtDecoder (cause: ${rootCause.message}). " +
+                        "Is the auth service (provided by the Backstage plugin backend) running at $issuerUri? " +
+                        "Retrying in ${millis / 1000} seconds...",
+                )
                 sleep(millis)
             }
         }

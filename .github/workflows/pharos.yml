@@ -1,0 +1,26 @@
+name: Pharos
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pharos:
+    name: Run Pharos on docker image
+    permissions:
+      actions: read
+      packages: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Run Pharos"
+        uses: kartverket/pharos@v0.6.0
+        with:
+          image_url: ghcr.io/${{ github.repository }}:latest
+          # Backstage config files are misclassified as kubernetes config files, resulting in false security issues
+          skip_dirs: '.security/.backstage/component,.security/.backstage/system'
+          skip_files: 'catalog-info.yaml,.security/catalog-info.yaml'

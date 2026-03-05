@@ -3,6 +3,7 @@
 package no.risc.github
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import no.risc.config.InitRiScServiceConfig
 import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -13,6 +14,7 @@ class GithubHelper(
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${github.repository.risc-folder-path}") private val riScFolderPath: String,
+    private val initRiScServiceConfig: InitRiScServiceConfig,
 ) {
     /**
      * Constructs the file path to the file for the given RiSc.
@@ -268,4 +270,18 @@ class GithubHelper(
 
         return if (queryParts.isEmpty()) base else "$base?${queryParts.joinToString("&")}"
     }
+
+    fun uriToInitRiscConfig(): String =
+        repositoryContentsUri(
+            initRiScServiceConfig.repoOwner,
+            initRiScServiceConfig.repoName,
+            "init-risc-def.json",
+        )
+
+    fun uriToInitRiSc(initRiScId: String) =
+        repositoryContentsUri(
+            initRiScServiceConfig.repoOwner,
+            initRiScServiceConfig.repoName,
+            "initial-riscs/$initRiScId.json",
+        )
 }

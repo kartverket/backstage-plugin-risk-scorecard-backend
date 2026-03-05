@@ -14,3 +14,12 @@ data class RiScTypeDescriptor(
     val preferredBackstageComponentType: String?,
     val priorityIndex: Int?,
 )
+
+@Serializable
+data class InitRiScDescriptorConfig(
+    val id: String,
+    val priorityIndex: Int,
+    val listName: String,
+    val listDescription: String,
+    val preferredBackstageComponentType: String?,
+)

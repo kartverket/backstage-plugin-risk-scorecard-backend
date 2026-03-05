@@ -1,5 +1,6 @@
 package no.risc.utils
 
+import no.risc.config.AppConstants
 import no.risc.risc.models.LastPublished
 import no.risc.risc.models.MigrationStatus
 import no.risc.risc.models.MigrationVersions
@@ -31,7 +32,7 @@ import java.io.File
 import java.time.OffsetDateTime
 
 class MigrationFunctionTests {
-    private val latestSupportedVersion = "5.0"
+    private val latestSupportedVersion = AppConstants.LATEST_SUPPORTED_SCHEMA_VERSION
 
     @Test
     fun `test migrateFrom32To33`() {
