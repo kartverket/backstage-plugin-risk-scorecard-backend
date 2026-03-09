@@ -3,6 +3,7 @@ package no.risc.github
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.reactor.awaitSingle
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.DeletingRiScException
@@ -72,16 +73,17 @@ class GithubConnector(
         accessToken: String,
     ): GithubContentResponse =
         try {
-            getGithubResponse(uri = uri, accessToken = accessToken)
-                .toEntity<GithubFileDTO>()
-                .awaitSingle()
-                .also {
-                    LOGGER.debug(
-                        "GET to GitHub contents-API responded with {}. RiSc content: {}",
-                        it.statusCode,
-                        it.body?.content?.substring(0, 10),
-                    )
-                }.body
+            retryOnTransient {
+                githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET)
+                    .toEntity<GithubFileDTO>()
+                    .awaitSingle()
+            }.also {
+                LOGGER.debug(
+                    "GET to GitHub contents-API responded with {}. RiSc content: {}",
+                    it.statusCode,
+                    it.body?.content?.substring(0, 10),
+                )
+            }.body
                 ?.content
                 ?.decodeBase64()
                 .let { fileContent ->
@@ -248,11 +250,10 @@ class GithubConnector(
     ): List<RiScIdentifier> =
         tryWithErrorLogging(LOGGER) {
             try {
-                getGithubResponse(
+                getGithubBody<List<GithubFileDTO>>(
                     uri = githubHelper.uriToFindRiScFiles(owner, repository),
                     accessToken = accessToken,
-                ).awaitBody<List<GithubFileDTO>>()
-                    .filter { it.name.endsWith(".$filenamePostfix.yaml") }
+                ).filter { it.name.endsWith(".$filenamePostfix.yaml") }
                     .map {
                         RiScIdentifier(
                             id = it.name.substringBefore(".$filenamePostfix"),
@@ -287,19 +288,18 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         tryWithErrorLogging(logger = LOGGER) {
-            getGithubResponse(
+            getGithubBody<List<GithubPullRequestObject>>(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
-            ).awaitBody<List<GithubPullRequestObject>>()
-                .map {
-                    RiScIdentifier(
-                        // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
-                        id = it.head.ref.substringAfterLast('/'),
-                        status = RiScStatus.SentForApproval,
-                        pullRequestUrl = it.url,
-                    )
-                    // Every RiSc identifier starts with "<filenamePrefix>-".
-                }.filter { it.id.startsWith("$filenamePrefix-") }
+            ).map {
+                RiScIdentifier(
+                    // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
+                    id = it.head.ref.substringAfterLast('/'),
+                    status = RiScStatus.SentForApproval,
+                    pullRequestUrl = it.url,
+                )
+                // Every RiSc identifier starts with "<filenamePrefix>-".
+            }.filter { it.id.startsWith("$filenamePrefix-") }
         }.getOrThrow()
 
     /**
@@ -316,11 +316,11 @@ class GithubConnector(
         accessToken: String,
     ): List<RiScIdentifier> =
         tryWithErrorLogging(logger = LOGGER) {
-            getGithubResponse(
+            getGithubBody<List<GithubReferenceObjectDTO>>(
                 // This URI retrieves only branches that start with "<filenamePrefix>-"
                 uri = githubHelper.uriToFindAllRiScBranches(owner = owner, repository = repository),
                 accessToken = accessToken,
-            ).awaitBody<List<GithubReferenceObjectDTO>>()
+            )
                 // Want only the part after the last "/" in the branch path, ignoring "origin/", etc.
                 .map { RiScIdentifier(id = it.ref.substringAfterLast('/'), status = RiScStatus.Draft) }
         }.getOrThrow()
@@ -345,7 +345,7 @@ class GithubConnector(
 
         while (true) {
             val pageCommits =
-                getGithubResponse(
+                getGithubBody<List<GithubCommitObject>>(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
@@ -354,7 +354,7 @@ class GithubConnector(
                         page = page,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubCommitObject>>()
+                )
 
             if (pageCommits.isEmpty()) break
             commits += pageCommits
@@ -387,7 +387,7 @@ class GithubConnector(
     ): LastPublished? =
         tryOrNull {
             val lastPublishedDate =
-                getGithubResponse(
+                getGithubBody<List<GithubCommitObject>>(
                     githubHelper.uriToFetchCommits(
                         owner = owner,
                         repository = repository,
@@ -395,7 +395,7 @@ class GithubConnector(
                         perPage = 1,
                     ),
                     accessToken,
-                ).awaitBody<List<GithubCommitObject>>().first().commit.committer.date
+                ).first().commit.committer.date
 
             val commitsSince = fetchPagedCommits(owner, repository, accessToken, lastPublishedDate)
             LastPublished(
@@ -605,10 +605,10 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ) = tryOrNull {
-        getGithubResponse(
+        getGithubBodyOrNull<GithubFileDTO>(
             uri = githubHelper.uriToFindRiScOnDraftBranch(owner = owner, repository = repository, riScId = riScId),
             accessToken = accessToken,
-        ).awaitBodyOrNull<GithubFileDTO>()?.sha
+        )?.sha
     }
 
     /**
@@ -625,10 +625,10 @@ class GithubConnector(
         riScId: String,
         accessToken: String,
     ) = tryOrNull {
-        getGithubResponse(
+        getGithubBodyOrNull<GithubFileDTO>(
             uri = githubHelper.uriToFindRiSc(owner = owner, repository = repository, id = riScId),
             accessToken = accessToken,
-        ).awaitBodyOrNull<GithubFileDTO>()?.sha
+        )?.sha
     }
 
     /**
@@ -669,7 +669,7 @@ class GithubConnector(
         accessToken: String,
         branchName: String,
     ): String? =
-        getGithubResponse(
+        getGithubBodyOrNull<GithubCommitObject>(
             uri =
                 githubHelper.uriToGetLastCommitOnBranch(
                     owner = owner,
@@ -677,7 +677,7 @@ class GithubConnector(
                     branchName = branchName,
                 ),
             accessToken = accessToken,
-        ).awaitBodyOrNull<GithubCommitObject>()?.sha
+        )?.sha
 
     /**
      * Creates a new branch through the GitHub API by branching out from the last commit on the provided base branch.
@@ -728,10 +728,10 @@ class GithubConnector(
         accessToken: String,
     ): List<GithubPullRequestObject> =
         tryOrDefault(default = emptyList()) {
-            getGithubResponse(
+            getGithubBody<List<GithubPullRequestObject>>(
                 uri = githubHelper.uriToFetchAllPullRequests(owner = owner, repository = repository),
                 accessToken = accessToken,
-            ).awaitBody<List<GithubPullRequestObject>>()
+            )
         }
 
     /**
@@ -751,7 +751,7 @@ class GithubConnector(
         since: OffsetDateTime,
     ): List<GithubCommitObject> =
         tryOrDefault(default = emptyList()) {
-            getGithubResponse(
+            getGithubBodyOrNull<List<GithubCommitObject>>(
                 uri =
                     githubHelper.uriToFetchCommits(
                         owner = owner,
@@ -760,7 +760,7 @@ class GithubConnector(
                         since = since,
                     ),
                 accessToken = accessToken,
-            ).awaitBodyOrNull<List<GithubCommitObject>>() ?: emptyList()
+            ) ?: emptyList()
         }
 
     /**
@@ -780,7 +780,7 @@ class GithubConnector(
         branch: String,
     ): OffsetDateTime? =
         tryOrNull {
-            getGithubResponse(
+            getGithubBodyOrNull<List<GithubCommitObject>>(
                 uri =
                     githubHelper.uriToFetchCommits(
                         owner = owner,
@@ -789,8 +789,7 @@ class GithubConnector(
                         branch = branch,
                     ),
                 accessToken = accessToken,
-            ).awaitBodyOrNull<List<GithubCommitObject>>()
-                ?.firstOrNull()
+            )?.firstOrNull()
                 ?.commit
                 ?.committer
                 ?.date
@@ -1064,7 +1063,7 @@ class GithubConnector(
         branch: String,
     ): GithubFileDTO? =
         try {
-            getGithubResponse(
+            getGithubBodyOrNull<GithubFileDTO>(
                 uri =
                     githubHelper.repositoryContentsUri(
                         owner = repositoryOwner,
@@ -1073,7 +1072,7 @@ class GithubConnector(
                         branch = branch,
                     ),
                 accessToken = gitHubAccessToken.value,
-            ).awaitBodyOrNull<GithubFileDTO>() ?: throw GitHubFetchException(
+            ) ?: throw GitHubFetchException(
                 message = "Unable to parse file information for file $filePath on $repositoryOwner/$repositoryName on branch: $branch",
                 response =
                     ProcessRiScResultDTO(
@@ -1114,15 +1113,73 @@ class GithubConnector(
             .also { LOGGER.debug("Sending ${method.name()}-request to $uri") }
 
     /**
-     * Constructs a GET-request to the specified URI at GitHub with standard headers.
+     * Returns true if this HTTP error is a well-known transient condition that is safe to retry
+     * (HTTP 429 Too Many Requests, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout).
+     */
+    private fun WebClientResponseException.isTransient(): Boolean = statusCode.value() in setOf(429, 502, 503, 504)
+
+    /**
+     * Retries the given suspending [block] up to [maxAttempts] times when a transient GitHub API
+     * error occurs (HTTP 429, 502, 503, 504). Uses exponential backoff between attempts.
+     */
+    private suspend fun <T> retryOnTransient(
+        maxAttempts: Int = 3,
+        initialDelayMs: Long = 200,
+        maxDelayMs: Long = 2000,
+        block: suspend () -> T,
+    ): T {
+        var delayMs = initialDelayMs
+        var lastException: WebClientResponseException? = null
+        repeat(maxAttempts) { attempt ->
+            try {
+                return block()
+            } catch (e: WebClientResponseException) {
+                if (!e.isTransient()) throw e
+                lastException = e
+                if (attempt < maxAttempts - 1) {
+                    LOGGER.warn(
+                        "Transient GitHub API error (HTTP {}), retrying in {}ms (attempt {}/{})...",
+                        e.statusCode.value(),
+                        delayMs,
+                        attempt + 1,
+                        maxAttempts,
+                    )
+                    delay(delayMs)
+                    delayMs = minOf(delayMs * 2, maxDelayMs)
+                }
+            }
+        }
+        LOGGER.error(
+            "GitHub API request failed after {} attempts with transient error: {}",
+            maxAttempts,
+            lastException?.message,
+        )
+        throw lastException!!
+    }
+
+    /**
+     * Sends a GET request to GitHub and deserializes the response body as [T],
+     * with automatic retry on transient errors (429, 502, 503, 504).
      *
      * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
      * @param accessToken The GitHub Access Token to use for authorization.
      */
-    private suspend fun getGithubResponse(
+    private suspend inline fun <reified T : Any> getGithubBody(
         uri: String,
         accessToken: String,
-    ): ResponseSpec = githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET)
+    ): T = retryOnTransient { githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET).awaitBody<T>() }
+
+    /**
+     * Sends a GET request to GitHub and deserializes the response body as [T], or returns null if
+     * the body is absent, with automatic retry on transient errors (429, 502, 503, 504).
+     *
+     * @param uri The URI at GitHub to use ("https://api.github.com/repos$uri").
+     * @param accessToken The GitHub Access Token to use for authorization.
+     */
+    private suspend inline fun <reified T : Any> getGithubBodyOrNull(
+        uri: String,
+        accessToken: String,
+    ): T? = retryOnTransient { githubRequest(uri = uri, accessToken = accessToken, method = HttpMethod.GET).awaitBodyOrNull<T>() }
 
     /**
      * Constructs a request to the specified URI at GitHub with standard headers and the provided JSON body. Uses
@@ -1155,6 +1212,14 @@ class GithubConnector(
             is WebClientResponseException if e.statusCode.value() == 422 -> GithubStatus.RequestResponseBodyError
             is WebClientResponseException if e.message?.contains("DataBufferLimitException") == true ->
                 GithubStatus.ResponseBodyTooLargeForWebClientError.also { LOGGER.error(e.message) }
+            is WebClientResponseException if e.isTransient() ->
+                GithubStatus.InternalError.also {
+                    LOGGER.error(
+                        "Transient GitHub API error (HTTP {}) not resolved after retries: {}",
+                        e.statusCode.value(),
+                        e.message,
+                    )
+                }
 
             else -> GithubStatus.InternalError
         }
@@ -1174,10 +1239,10 @@ class GithubConnector(
         repositoryName: String,
     ): RepositoryInfo {
         val repositoryDTO =
-            getGithubResponse(
+            getGithubBody<GithubRepositoryDTO>(
                 uri = githubHelper.uriToGetRepositoryInfo(owner = repositoryOwner, repository = repositoryName),
                 accessToken = gitHubAccessToken,
-            ).awaitBody<GithubRepositoryDTO>()
+            )
 
         if (!repositoryDTO.permissions.pull) {
             throw PermissionDeniedOnGitHubException(
