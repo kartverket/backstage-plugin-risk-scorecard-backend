@@ -44,6 +44,10 @@ val mockkVersion = "1.14.9"
 val junitVersion = "6.0.2"
 val springdocVersion = "3.0.2"
 
+// Override Spring Boot BOM managed versions to fix security vulnerabilities
+extra["jackson-bom.version"] = "3.1.0" // Fix CVE-2026-29062 and GHSA-72hv-8253-57qq (DoS via nesting depth / async parser)
+extra["jackson-2-bom.version"] = "2.21.1" // Fix GHSA-72hv-8253-57qq (Number Length Constraint Bypass in Async Parser)
+
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("org.springframework.boot:spring-boot-starter-webmvc:$springBootVersion")
