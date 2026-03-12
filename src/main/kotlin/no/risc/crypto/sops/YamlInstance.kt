@@ -1,4 +1,4 @@
-package no.risc.crypto.sops.utils
+package no.risc.crypto.sops
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper

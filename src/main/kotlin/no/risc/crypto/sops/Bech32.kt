@@ -1,4 +1,4 @@
-package no.risc.crypto.sops.utils
+package no.risc.crypto.sops
 
 import java.security.SecureRandom
 import java.util.Locale

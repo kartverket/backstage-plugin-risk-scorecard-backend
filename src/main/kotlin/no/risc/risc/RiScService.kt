@@ -5,6 +5,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import no.risc.crypto.sops.SopsCryptoService
+import no.risc.crypto.sops.model.SopsConfig
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
@@ -36,7 +37,6 @@ import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
-import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
 import no.risc.utils.formatRiScFetchSummary

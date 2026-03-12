@@ -1,12 +1,10 @@
 package no.risc.crypto.sops
 
-import no.risc.crypto.sops.utils.YamlInstance
-import no.risc.crypto.sops.utils.randomBech32
+import no.risc.crypto.sops.model.RiScWithConfig
+import no.risc.crypto.sops.model.SopsConfig
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.risc.models.RiScWithConfig
-import no.risc.risc.models.SopsConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties

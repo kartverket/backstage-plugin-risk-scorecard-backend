@@ -1,6 +1,5 @@
 package no.risc.crypto.sops
 
-import no.risc.crypto.sops.utils.toBech32Data
 import org.slf4j.LoggerFactory
 import java.util.regex.Pattern
 
