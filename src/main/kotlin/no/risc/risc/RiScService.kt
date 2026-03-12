@@ -164,7 +164,7 @@ class RiScService(
                             errorMessage = "Migration failed",
                         )
                     }
-                }.toDTO(response.sopsConfig?.lastModified ?: "")
+                }.toDTO(response.sopsConfig?.lastmodified ?: "")
             }
 
     /**

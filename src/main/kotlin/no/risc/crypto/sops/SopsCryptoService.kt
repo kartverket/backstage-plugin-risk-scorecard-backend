@@ -37,11 +37,11 @@ class SopsCryptoService {
             YamlInstance.objectMapper.treeToValue(sopsNode, SopsConfig::class.java)
         val cleanConfig =
             sopsConfig.copy(
-                gcpKms =
-                    sopsConfig.keyGroups?.flatMap { it.gcpKms ?: emptyList() },
+                gcp_kms =
+                    sopsConfig.key_groups?.flatMap { it.gcp_kms ?: emptyList() },
                 age =
                     sopsConfig
-                        .keyGroups
+                        .key_groups
                         ?.flatMap { it.age ?: emptyList() }
                         ?.filter {
                             it.recipient != securityTeamPublicKey
@@ -49,10 +49,10 @@ class SopsCryptoService {
                         ?.filter {
                             it.recipient != securityPlatformPublicKey
                         },
-                shamirThreshold = sopsConfig.shamirThreshold,
-                lastModified = sopsConfig.lastModified,
+                shamir_threshold = sopsConfig.shamir_threshold,
+                lastmodified = sopsConfig.lastmodified,
                 version = sopsConfig.version,
-                keyGroups = emptyList(),
+                key_groups = emptyList(),
             )
         return cleanConfig
     }
@@ -147,9 +147,9 @@ class SopsCryptoService {
                         listOf(
                             mapOf(
                                 "resource_id" to
-                                    config.gcpKms
+                                    config.gcp_kms
                                         ?.first()
-                                        ?.resourceId,
+                                        ?.resource_id,
                             ),
                         ),
                 ),
@@ -182,7 +182,7 @@ class SopsCryptoService {
                     listOf(
                         mapOf(
                             "shamir_threshold" to
-                                config.shamirThreshold,
+                                config.shamir_threshold,
                             "key_groups" to keyGroups,
                         ),
                     ),
