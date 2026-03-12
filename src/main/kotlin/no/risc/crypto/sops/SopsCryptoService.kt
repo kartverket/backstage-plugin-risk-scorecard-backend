@@ -22,6 +22,7 @@ class SopsCryptoService {
     lateinit var backendPublicKey: String
     lateinit var securityTeamPublicKey: String
     lateinit var securityPlatformPublicKey: String
+    lateinit var agePrivateKey: String
 
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SopsCryptoService::class.java)
@@ -61,10 +62,9 @@ class SopsCryptoService {
     fun decryptWithSopsConfig(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
-        sopsAgeKey: String,
     ): RiScWithConfig {
         val sopsConfig = extractSopsConfig(ciphertext)
-        val plaintext = decrypt(ciphertext, gcpAccessToken, sopsAgeKey)
+        val plaintext = decrypt(ciphertext, gcpAccessToken, agePrivateKey)
         return RiScWithConfig(plaintext, sopsConfig)
     }
 
