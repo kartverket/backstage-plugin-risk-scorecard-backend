@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
       args:
         LOCAL: true
-        BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:23-jre-alpine}
-        IMAGE: ${IMAGE:-eclipse-temurin:23-alpine}
+        BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:25-jre-alpine}
+        IMAGE: ${IMAGE:-eclipse-temurin:25-alpine}
     ports:
       - "8080:8080"
       - "8081:8081"
