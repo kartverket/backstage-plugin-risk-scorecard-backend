@@ -1500,4 +1500,117 @@ class GithubConnectorTests {
             ) { deleteRiSc(riScId) }
         }
     }
+
+    @Nested
+    inner class TestUpdateOrCreateDraftRetry {
+        private val defaultBranch = "main"
+        private val accessToken = GithubAccessToken("accessToken")
+        private val userInfo = UserInfo(name = "Test User", email = "test@example.com")
+
+        private fun fileUrl(riScId: String) = "/$owner/$repository/contents/$riscFolderPath/$riScId.$filenamePostfix.yaml?ref=$riScId"
+
+        private fun pullRequestsUrl() = "/$owner/$repository/pulls"
+
+        private fun commitsUrl(riScId: String) =
+            "/$owner/$repository/commits?sha=$defaultBranch&path=$riscFolderPath/$riScId.$filenamePostfix.yaml"
+
+        private fun queueDraftFileInfo(
+            riScId: String,
+            sha: String,
+        ) = webClient.queueResponse(
+            response =
+                mockableResponseFromObject(
+                    GithubFileDTO(content = "{}", sha = sha, name = "$riScId.$filenamePostfix.yaml"),
+                ),
+            path = fileUrl(riScId),
+            method = HttpMethod.GET,
+        )
+
+        private suspend fun callUpdateOrCreateDraft(riScId: String) =
+            githubConnector.updateOrCreateDraft(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                defaultBranch = defaultBranch,
+                fileContent = "{}",
+                requiresNewApproval = true,
+                gitHubAccessToken = accessToken,
+                userInfo = userInfo,
+            )
+
+        @Test
+        fun `test updateOrCreateDraft retries on 409 and succeeds`() {
+            val riScId = randomRiSc()
+            val sha1 = randomSHA()
+            val sha2 = randomSHA()
+
+            // getSHAForExistingRiScDraftOrNull — draft branch exists
+            queueDraftFileInfo(riScId, sha1)
+            // fetchFileInfo for first attempt
+            queueDraftFileInfo(riScId, sha1)
+            // First PUT → 409 Conflict
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.CONFLICT),
+                path = fileUrl(riScId),
+                method = HttpMethod.PUT,
+            )
+            // fetchFileInfo for retry
+            queueDraftFileInfo(riScId, sha2)
+            // Second PUT → 200 OK
+            webClient.queueResponse(
+                response = MockableResponse(content = """{"content": {}}"""),
+                path = fileUrl(riScId),
+                method = HttpMethod.PUT,
+            )
+            // doesPullRequestForRiScExists — no PRs
+            webClient.queueResponse(
+                response = mockableResponseFromObject(emptyList<GithubPullRequestObject>()),
+                path = pullRequestsUrl(),
+                method = HttpMethod.GET,
+            )
+            // fetchLatestCommitTimestampOnBranch — no commits
+            webClient.queueResponse(
+                response = mockableResponseFromObject(emptyList<GithubCommitObject>()),
+                path = commitsUrl(riScId),
+                method = HttpMethod.GET,
+            )
+
+            val result = runBlocking { callUpdateOrCreateDraft(riScId) }
+
+            assertEquals(
+                null,
+                result.pullRequest,
+                "No pull request should be created when requiresNewApproval is true and no PR exists.",
+            )
+        }
+
+        @Test
+        fun `test updateOrCreateDraft throws RiScConflictException when all retries return 409`() {
+            val riScId = randomRiSc()
+            val sha = randomSHA()
+
+            // getSHAForExistingRiScDraftOrNull
+            queueDraftFileInfo(riScId, sha)
+            // fetchFileInfo for first attempt
+            queueDraftFileInfo(riScId, sha)
+            // First PUT → 409
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.CONFLICT),
+                path = fileUrl(riScId),
+                method = HttpMethod.PUT,
+            )
+            // fetchFileInfo for retry
+            queueDraftFileInfo(riScId, sha)
+            // Second PUT → 409
+            webClient.queueResponse(
+                response = MockableResponse(content = null, httpStatus = HttpStatus.CONFLICT),
+                path = fileUrl(riScId),
+                method = HttpMethod.PUT,
+            )
+
+            assertThrows<no.risc.exception.exceptions.RiScConflictException>(
+                "Should throw RiScConflictException when all retry attempts return 409.",
+            ) { runBlocking { callUpdateOrCreateDraft(riScId) } }
+        }
+    }
 }
