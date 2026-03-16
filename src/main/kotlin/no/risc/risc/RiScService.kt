@@ -199,103 +199,112 @@ class RiScService(
             riScGithubMetadataList
                 .map { riScMetadata ->
                     async(Dispatchers.IO) {
-                        try {
-                            val riScContents =
-                                githubConnector.fetchBranchAndMainRiScContent(
-                                    riScMetadata.id,
-                                    owner,
-                                    repository,
-                                    accessTokens.githubAccessToken,
-                                )
-
-                            val riScStatus =
-                                getRiScStatus(
-                                    riScMetadata,
-                                    riScContents.mainContent,
-                                    riScContents.branchContent,
-                                )
-
-                            val riScToReturn: GithubContentResponse =
-                                chooseRiScContentFromStatus(
-                                    riScStatus,
-                                    riScContents.branchContent,
-                                    riScContents.mainContent,
-                                )
-
-                            riScToReturn.responseToRiScResult(
-                                riScMetadata.id,
-                                riScStatus,
-                                accessTokens.gcpAccessToken,
-                                lastPublished =
-                                    githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
-                                        owner = owner,
-                                        repository = repository,
-                                        accessToken = accessTokens.githubAccessToken.value,
-                                        riScId = riScMetadata.id,
-                                    ),
-                                pullRequestUrl = riScMetadata.prUrl,
-                            )
-                        } catch (e: Exception) {
-                            RiScContentResultDTO(
-                                riScId = riScMetadata.id,
-                                status = ContentStatus.Failure,
-                                riScStatus = RiScStatus.Deleted,
-                                riScContent = null,
-                                pullRequestUrl = null,
-                                statusMessage = "Failed to fetch RiSc: ${e.message ?: "Unknown error"}",
-                            )
-                        }
+                        fetchRiSc(riScMetadata, owner, repository, accessTokens, latestSupportedVersion)
                     }
                 }.awaitAll()
                 .filter { it.riScStatus != RiScStatus.Deleted }
-                // Validate RiSc against JSON schema
-                .map { riScContentResultDTO ->
-                    if (riScContentResultDTO.status == ContentStatus.Success) {
-                        val validationStatus =
-                            JSONValidator.validateAgainstSchema(
-                                riScId = riScContentResultDTO.riScId,
-                                riScContent = riScContentResultDTO.riScContent,
-                            )
-
-                        if (!validationStatus.isValid) {
-                            LOGGER.warn("RiSc with id: ${riScContentResultDTO.riScId} failed validation")
-                            return@map RiScContentResultDTO(
-                                riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.SchemaValidationFailed,
-                                riScStatus = null,
-                                riScContent = null,
-                                statusMessage = "Schema validation failed",
-                            )
-                        }
-                    }
-                    riScContentResultDTO
-                }.map { riScContentResultDTO ->
-                    if (riScContentResultDTO.riScContent == null) return@map riScContentResultDTO
-                    tryOrDefaultWithErrorLogging(
-                        default =
-                            RiScContentResultDTO(
-                                riScId = riScContentResultDTO.riScId,
-                                status = ContentStatus.UnsupportedMigration,
-                                riScStatus = null,
-                                riScContent = null,
-                                statusMessage = "Migration failed",
-                            ),
-                        logger = LOGGER,
-                    ) {
-                        migrate(
-                            riSc = RiSc.fromContent(riScContentResultDTO.riScContent),
-                            lastPublished = riScContentResultDTO.lastPublished,
-                            endVersion = latestSupportedVersion,
-                        ).let { (migratedRiSc, migrationStatus) ->
-                            riScContentResultDTO.copy(
-                                riScContent = migratedRiSc.toJSON(),
-                                migrationStatus = migrationStatus,
-                            )
-                        }
-                    }
-                }.also { results ->
+                .also { results ->
                     LOGGER.info(formatRiScFetchSummary(owner, repository, results))
                 }
+        }
+
+    internal suspend fun fetchRiSc(
+        riScMetadata: RiScGithubMetadata,
+        owner: String,
+        repository: String,
+        accessTokens: AccessTokens,
+        latestSupportedVersion: String,
+    ): RiScContentResultDTO =
+        try {
+            val riScContents =
+                githubConnector.fetchBranchAndMainRiScContent(
+                    riScMetadata.id,
+                    owner,
+                    repository,
+                    accessTokens.githubAccessToken,
+                )
+
+            val riScStatus =
+                getRiScStatus(
+                    riScMetadata,
+                    riScContents.mainContent,
+                    riScContents.branchContent,
+                )
+
+            val riScToReturn: GithubContentResponse =
+                chooseRiScContentFromStatus(
+                    riScStatus,
+                    riScContents.branchContent,
+                    riScContents.mainContent,
+                )
+
+            val result =
+                riScToReturn.responseToRiScResult(
+                    riScMetadata.id,
+                    riScStatus,
+                    accessTokens.gcpAccessToken,
+                    lastPublished =
+                        githubConnector.fetchLastPublishedRiScDateAndCommitNumber(
+                            owner = owner,
+                            repository = repository,
+                            accessToken = accessTokens.githubAccessToken.value,
+                            riScId = riScMetadata.id,
+                        ),
+                    pullRequestUrl = riScMetadata.prUrl,
+                )
+
+            // Validate RiSc against JSON schema
+            if (result.status == ContentStatus.Success) {
+                val validationStatus =
+                    JSONValidator.validateAgainstSchema(
+                        riScId = result.riScId,
+                        riScContent = result.riScContent,
+                    )
+
+                if (!validationStatus.isValid) {
+                    LOGGER.warn("RiSc with id: ${result.riScId} failed validation")
+                    return RiScContentResultDTO(
+                        riScId = result.riScId,
+                        status = ContentStatus.SchemaValidationFailed,
+                        riScStatus = null,
+                        riScContent = null,
+                        statusMessage = "Schema validation failed",
+                    )
+                }
+            }
+
+            if (result.riScContent == null) return result
+            tryOrDefaultWithErrorLogging(
+                default =
+                    RiScContentResultDTO(
+                        riScId = result.riScId,
+                        status = ContentStatus.UnsupportedMigration,
+                        riScStatus = null,
+                        riScContent = null,
+                        statusMessage = "Migration failed",
+                    ),
+                logger = LOGGER,
+            ) {
+                migrate(
+                    riSc = RiSc.fromContent(result.riScContent),
+                    lastPublished = result.lastPublished,
+                    endVersion = latestSupportedVersion,
+                ).let { (migratedRiSc, migrationStatus) ->
+                    result.copy(
+                        riScContent = migratedRiSc.toJSON(),
+                        migrationStatus = migrationStatus,
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            RiScContentResultDTO(
+                riScId = riScMetadata.id,
+                status = ContentStatus.Failure,
+                riScStatus = RiScStatus.Deleted,
+                riScContent = null,
+                pullRequestUrl = null,
+                statusMessage = "Failed to fetch RiSc: ${e.message ?: "Unknown error"}",
+            )
         }
 
     /**
