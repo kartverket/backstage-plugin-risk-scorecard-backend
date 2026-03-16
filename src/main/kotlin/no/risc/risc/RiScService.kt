@@ -327,7 +327,6 @@ class RiScService(
                     statusMessage = null,
                 )
             } catch (e: Exception) {
-                LOGGER.error("An error occurred when decrypting: ${e.message}")
                 if (e is SOPSDecryptionException) {
                     RiScContentResultDTO(
                         riScId = riScId,
