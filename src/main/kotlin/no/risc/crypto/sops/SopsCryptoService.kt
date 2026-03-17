@@ -122,6 +122,7 @@ class SopsCryptoService {
                         throw SOPSDecryptionException(
                             message = result,
                             errorCode = errorCode,
+                            errorMessage = SOPSDecryptionException.errorMessageFromCode(errorCode),
                         )
                     }
                 }

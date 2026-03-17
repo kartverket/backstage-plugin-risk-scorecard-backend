@@ -99,6 +99,8 @@ internal class GlobalExceptionHandler {
         return DecryptionFailureDTO(
             status = ContentStatus.DecryptionFailed,
             message = ex.message,
+            errorCode = ex.errorCode,
+            errorMessage = ex.errorMessage,
         )
     }
 

@@ -12,6 +12,16 @@ class SOPSDecryptionException(
     val errorMessage: String? = null,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
+    companion object {
+        fun errorMessageFromCode(errorCode: String): String =
+            when (errorCode) {
+                "MISSING_DATA_KEY" -> "Failed to get the data key required for decryption"
+                "NO_MATCHING_KEY" -> "No matching key found for decryption"
+                "AUTHENTICATION_FAILED" -> "Authentication failed when accessing the encryption key"
+                else -> "Decryption failed"
+            }
+    }
+
     fun rootCauseMessage(): String? {
         var root: Throwable? = this
         while (root?.cause != null && root.cause !== root) {
