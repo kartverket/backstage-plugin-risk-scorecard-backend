@@ -130,6 +130,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Verify SOPS is available in container
+        if: ${{ !github.event.pull_request.draft }}
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          SOPS_OUTPUT=$(docker run --rm --entrypoint sops ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }} --version)
+          echo "SOPS version output: $SOPS_OUTPUT"
+          echo "$SOPS_OUTPUT" | grep -q "3.11.0"
+
       - name: Set output with build values
         id: setOutput
         run: |
