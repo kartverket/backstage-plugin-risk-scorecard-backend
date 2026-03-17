@@ -494,7 +494,7 @@ class GithubConnector(
                 if (attempt == maxAttempts) {
                     throw RiScConflictException(
                         message =
-                            "Failed to update RiSc with id $riScId: SHA mismatch after $maxAttempts attempts +" +
+                            "Failed to update RiSc with id $riScId: SHA mismatch after $maxAttempts attempts " +
                                 "(repo: $owner/$repository, branch: $riScId).",
                         riScId = riScId,
                     )
