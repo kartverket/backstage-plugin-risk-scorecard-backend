@@ -18,7 +18,7 @@ cp .env.example .env
 ## Run with IntelliJ
 
 ### Install SOPS
-SOPS is necessary for running the backend locally with IntelliJ. It is not necessary if using Docker.
+SOPS is necessary for running the backend locally with IntelliJ. Install with the command:
 
 ```shell
 brew install sops
@@ -76,7 +76,7 @@ For local development the **ISSUER_URI** can be set to "http://localhost:7007/ap
 
 ## Json schema and file specific environment variables
 
-- **RISC_FOLDER_PATH**: The folder in which the risc analyses are stored, used for read/write of RiSc's and the file used to encrypt RiSc's, i.e. `.sops.yaml`.
+- **RISC_FOLDER_PATH**: The folder in which the RiSc analyses are stored, used for read/write of RiSc's.
 - **FILE_NAME_PREFIX**: Used to find the correct files.
 - **FILE_NAME_PREFIX**: Used to find the correct files.
 
