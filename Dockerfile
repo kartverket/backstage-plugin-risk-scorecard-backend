@@ -39,7 +39,7 @@ COPY --chmod=0755 docker-entrypoint.sh /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-CMD ["java", "-jar", "/app/backend.jar"]
+CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
 
 # Use the health endpoint of the application to provide information through docker about the health state of the application
 HEALTHCHECK --start-period=30s --start-interval=10s --interval=5m \
