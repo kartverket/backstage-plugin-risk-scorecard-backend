@@ -7,21 +7,16 @@ import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import kotlin.collections.set
 
-@ConfigurationProperties(prefix = "crypto.sops")
 @Service
-class SopsCryptoService {
-    lateinit var backendPublicKey: String
-    lateinit var securityTeamPublicKey: String
-    lateinit var securityPlatformPublicKey: String
-    lateinit var agePrivateKey: String
-
+class SopsCryptoService(
+    private val props: SopsCryptoProperties,
+) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SopsCryptoService::class.java)
     }
@@ -44,10 +39,10 @@ class SopsCryptoService {
                         .key_groups
                         ?.flatMap { it.age ?: emptyList() }
                         ?.filter {
-                            it.recipient != securityTeamPublicKey
-                        }?.filter { it.recipient != backendPublicKey }
+                            it.recipient != props.securityTeamPublicKey
+                        }?.filter { it.recipient != props.backendPublicKey }
                         ?.filter {
-                            it.recipient != securityPlatformPublicKey
+                            it.recipient != props.securityPlatformPublicKey
                         },
                 shamir_threshold = sopsConfig.shamir_threshold,
                 lastmodified = sopsConfig.lastmodified,
@@ -62,7 +57,7 @@ class SopsCryptoService {
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig {
         val sopsConfig = extractSopsConfig(ciphertext)
-        val plaintext = decrypt(ciphertext, gcpAccessToken, agePrivateKey)
+        val plaintext = decrypt(ciphertext, gcpAccessToken, props.agePrivateKey)
         return RiScWithConfig(plaintext, sopsConfig)
     }
 
@@ -143,7 +138,7 @@ class SopsCryptoService {
         val keyGroups =
             listOfNotNull(
                 mapOf(
-                    "age" to listOf(securityTeamPublicKey),
+                    "age" to listOf(props.securityTeamPublicKey),
                     "gcp_kms" to
                         listOf(
                             mapOf(
@@ -156,16 +151,16 @@ class SopsCryptoService {
                 ),
                 mapOf(
                     "age" to
-                        listOf(backendPublicKey, securityPlatformPublicKey),
+                        listOf(props.backendPublicKey, props.securityPlatformPublicKey),
                 ),
                 config.age?.let { ageKeys ->
                     val developerKeys =
                         ageKeys.map { it.recipient }.filter {
                             it !in
                                 setOf(
-                                    securityTeamPublicKey,
-                                    backendPublicKey,
-                                    securityPlatformPublicKey,
+                                    props.securityTeamPublicKey,
+                                    props.backendPublicKey,
+                                    props.securityPlatformPublicKey,
                                 )
                         }
                     if (developerKeys.isNotEmpty()) {
