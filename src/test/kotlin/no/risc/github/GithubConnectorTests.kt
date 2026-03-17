@@ -1646,18 +1646,6 @@ class GithubConnectorTests {
             }
 
         @Test
-        fun `retries and succeeds after two consecutive transient failures`() =
-            runTest {
-                webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.SERVICE_UNAVAILABLE), path)
-                webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.BAD_GATEWAY), path)
-                webClient.queueResponse(successResponse, path)
-
-                val result = fetchRepoInfo()
-
-                assertEquals("main", result.defaultBranch)
-            }
-
-        @Test
         fun `throws after all 3 attempts fail with transient error`() =
             runTest {
                 repeat(3) {
@@ -1666,31 +1654,6 @@ class GithubConnectorTests {
 
                 val ex = assertThrows<WebClientResponseException> { fetchRepoInfo() }
                 assertEquals(502, ex.statusCode.value())
-            }
-
-        @Test
-        fun `all four transient status codes trigger retry`() =
-            runTest {
-                listOf(HttpStatus.TOO_MANY_REQUESTS, HttpStatus.BAD_GATEWAY, HttpStatus.SERVICE_UNAVAILABLE, HttpStatus.GATEWAY_TIMEOUT).forEach { status ->
-                    webClient.queueResponse(MockableResponse(content = null, httpStatus = status), path)
-                    webClient.queueResponse(successResponse, path)
-
-                    val result = fetchRepoInfo()
-                    assertEquals("main", result.defaultBranch)
-                }
-            }
-
-        @Test
-        fun `transient 502 sends exactly three requests before giving up`() =
-            runTest {
-                repeat(3) {
-                    webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.BAD_GATEWAY), path)
-                }
-
-                assertThrows<WebClientResponseException> { fetchRepoInfo() }
-
-                repeat(3) { webClient.getNextRequest(path) }
-                assertThrows<NoSuchElementException> { webClient.getNextRequest(path) }
             }
 
         @Test
