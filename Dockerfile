@@ -1,4 +1,4 @@
-ARG BUILD_IMAGE=eclipse-temurin:25-jdk-alpine
+ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
 ARG IMAGE=eclipse-temurin:25-alpine
 ARG SOPS_BUILD_IMAGE=golang:1.25.7
 ARG SOPS_VERSION_ARG=3.11.0
