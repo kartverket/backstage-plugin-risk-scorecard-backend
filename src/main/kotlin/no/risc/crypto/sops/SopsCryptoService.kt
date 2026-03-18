@@ -19,6 +19,8 @@ class SopsCryptoService(
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SopsCryptoService::class.java)
+
+        const val EXECUTION_STATUS_OK_CODE = 0
     }
 
     fun extractSopsConfig(ciphertext: String): SopsConfig {
@@ -101,7 +103,7 @@ class SopsCryptoService(
                     BufferedReader(InputStreamReader(inputStream))
                         .readText()
                 when (waitFor()) {
-                    0 -> { // Execution status OK
+                    EXECUTION_STATUS_OK_CODE -> {
                         result
                     }
 
@@ -211,7 +213,7 @@ class SopsCryptoService(
                 outputStream.buffered().also { it.write(text.toByteArray()) }.close()
                 val result = BufferedReader(InputStreamReader(inputStream)).readText()
                 when (waitFor()) {
-                    0 -> { // Execution status = OK
+                    EXECUTION_STATUS_OK_CODE -> {
                         tempConfigFile.delete()
                         result
                     }
