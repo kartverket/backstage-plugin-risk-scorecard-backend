@@ -112,7 +112,7 @@ class SopsCryptoService(
                                 result.contains("no key could decrypt", ignoreCase = true) -> "NO_MATCHING_KEY"
                                 result.contains("authentication failed", ignoreCase = true) -> "AUTHENTICATION_FAILED"
                                 result.contains("could not authenticate", ignoreCase = true) -> "AUTHENTICATION_FAILED"
-                                else -> "DECRYPTION_FAILED"
+                                else -> "" // TODO: Improve the error handling for the else case
                             }
                         throw SOPSDecryptionException(
                             message = result,
