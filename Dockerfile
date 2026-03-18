@@ -10,7 +10,7 @@ COPY . .
 # Get security updates
 RUN apk upgrade --no-cache
 
-RUN ./gradlew build -x test
+RUN ./gradlew build
 
 ### Build SOPS from source ###
 FROM --platform=$BUILDPLATFORM ${SOPS_BUILD_IMAGE} AS sops_build
