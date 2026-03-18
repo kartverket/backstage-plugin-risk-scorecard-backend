@@ -10,6 +10,7 @@ import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
+import no.risc.exception.exceptions.RiScConflictException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
@@ -101,6 +102,18 @@ internal class GlobalExceptionHandler {
             message = ex.message,
             errorCode = ex.errorCode,
             errorMessage = ex.errorMessage,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ResponseBody
+    @ExceptionHandler(RiScConflictException::class)
+    fun handleRiScConflictException(ex: RiScConflictException): ProcessRiScResultDTO {
+        logger.warn(ex.message, ex)
+        return ProcessRiScResultDTO(
+            riScId = ex.riScId,
+            status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+            statusMessage = ex.message,
         )
     }
 
