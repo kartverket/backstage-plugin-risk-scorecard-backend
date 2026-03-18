@@ -83,24 +83,13 @@ jobs:
           architecture: 'x64'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Install SOPS
-        run: |
-          SOPS_VERSION="3.11.0"
-          curl -Lo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
-          chmod +x sops
-          sudo mv sops /usr/local/bin/sops
-          sops --version
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@v3
+        uses: gradle/actions/dependency-submission@v4
 
       - name: Execute Gradle build
         run: ./gradlew build
-
-      - name: Run tests
-        run: ./gradlew test
 
       - name: Set tag
         id: set-tag
@@ -131,7 +120,7 @@ jobs:
 
       - name: Build docker and push
         id: build-docker
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ !github.event.pull_request.draft }}
