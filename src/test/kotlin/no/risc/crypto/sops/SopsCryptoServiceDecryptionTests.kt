@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
-@Disabled
 class SopsCryptoServiceDecryptionTests {
     companion object {
         // OBS! Remember to remove before committing
@@ -207,40 +206,46 @@ class SopsCryptoServiceDecryptionTests {
                 Arguments.of(arbitraryDecryptionParameters2),
             )
 
-        val sopsCryptoService = SopsCryptoService()
+        val sopsCryptoService =
+            SopsCryptoService(
+                SopsCryptoProperties(
+                    backendPublicKey = "age1backend",
+                    securityTeamPublicKey = "age1securityteam",
+                    securityPlatformPublicKey = "age1securityplatform",
+                    agePrivateKey = "AGE-SECRET-KEY-TEST",
+                ),
+            )
     }
 
-    @Disabled
     @Test
     fun `when age key is present and shamir is 1 the ciphertext is successfully decrypted`() {
         sopsCryptoService.decrypt(sopsFileWithShamir1, invalidGCPAccessToken, ageKey1)
     }
 
-    @Disabled
+    @Disabled("Integration test: requires valid GCP access token (placeholder fails validation)")
     @Test
     fun `when gcp access token is valid and shamir is 1 the ciphertext is successfully decrypted`() {
         sopsCryptoService.decrypt(sopsFileWithShamir1, validGCPAccessToken, invalidAgeKey)
     }
 
-    @Disabled
+    @Disabled("Integration test: requires valid GCP access token (placeholder fails validation)")
     @Test
     fun `when age key and gcp access token is present and shamir is 2 the ciphertext is successfully decrypted`() {
         sopsCryptoService.decrypt(sopsFileWithShamir2, validGCPAccessToken, ageKey1)
     }
 
-    @Disabled
+    @Disabled("Integration test: requires valid GCP access token (placeholder fails validation)")
     @Test
     fun `when age key is not present and gcp access token is valid and shamir is 2 the decryption fails`() {
         assertThrows<Exception> { sopsCryptoService.decrypt(sopsFileWithShamir2, validGCPAccessToken, invalidAgeKey) }
     }
 
-    @Disabled
     @Test
     fun `when age and key is present but gcp access token is invalid and shamir is 2 the decryption fails`() {
         assertThrows<Exception> { sopsCryptoService.decrypt(sopsFileWithShamir2, invalidGCPAccessToken, ageKey1) }
     }
 
-    @Disabled
+    @Disabled("Integration test: requires valid GCP access token (placeholder fails validation)")
     @Execution(ExecutionMode.CONCURRENT)
     @ParameterizedTest
     @MethodSource("listOfDecryptionParameters")
@@ -255,7 +260,6 @@ class SopsCryptoServiceDecryptionTests {
         assertTrue(result.contains(clearTextPartOfContent))
     }
 
-    @Disabled
     @Test
     fun `extractSopsConfig should extract sops configuration from ciphertext with shamir threshold 1`() {
         val sopsConfig = sopsCryptoService.extractSopsConfig(sopsFileWithShamir1)
