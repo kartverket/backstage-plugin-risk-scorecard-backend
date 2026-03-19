@@ -14,9 +14,9 @@ class SopsCryptoServiceEncryptionTests {
     private val sopsCryptoService =
         SopsCryptoService(
             SopsCryptoProperties(
-                backendPublicKey = "age1backend",
-                securityTeamPublicKey = "age1securityteam",
-                securityPlatformPublicKey = "age1securityplatform",
+                backendPublicKey = "age18m6cv8vklff5699waclec483sjwm0s3hxkqu637uapkukm65g4qqqfjlfm",
+                securityTeamPublicKey = "age1t8ydajqexjzw238u6duz9h40gcaj23kfealk5r945sn8qkgvvprs6x4ele",
+                securityPlatformPublicKey = "age1qrkc5q5nur6xpm4ldwg7z232nxkv2up84ugmctye70hlxw4chgjsg7ard3",
                 agePrivateKey = "AGE-SECRET-KEY-TEST",
             ),
         )
