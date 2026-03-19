@@ -52,12 +52,13 @@ Requires the Backstage frontend plugin running on port 7007 as the OAuth issuer.
 ### Request Flow
 
 ```
-RiScController → RiScService → GitHubConnector / CryptoServiceConnector
+RiScController → RiScService → GitHubConnector (GitHub API)
+                            → SopsCryptoService (in-process SOPS encrypt/decrypt)
                             → GoogleConnector (GCP KMS for key management)
                             → InitRiScConnector (template generation)
 ```
 
-All external service calls use Spring `WebClient` (reactive), wrapped in coroutines (`runBlocking` / `suspend`). Controllers are synchronous Spring MVC (`@RestController`), services bridge to async via coroutines.
+Encryption/decryption is performed in-process by shelling out to the `sops` binary (built from source in the Docker image). External service calls use Spring `WebClient` (reactive), wrapped in coroutines (`runBlocking` / `suspend`). Controllers are synchronous Spring MVC (`@RestController`), services bridge to async via coroutines.
 
 ### Key Packages (`no.risc.*`)
 
@@ -65,7 +66,7 @@ All external service calls use Spring `WebClient` (reactive), wrapped in corouti
 |---|---|
 | `risc/` | Core CRUD: Controller, Service, Models, DTOs |
 | `github/` | GitHub API integration, branch/PR/commit management |
-| `encryption/` | SOPS encryption via external crypto service |
+| `crypto/sops/` | In-process SOPS encryption/decryption via sops binary |
 | `security/` | JWT validation, auth filters, token extraction |
 | `validation/` | JSON schema validation for RiSc YAML content |
 | `initRiSc/` | RiSc template generation via external service |
