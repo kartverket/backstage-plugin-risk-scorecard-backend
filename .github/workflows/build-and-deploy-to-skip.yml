@@ -144,7 +144,7 @@ jobs:
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           SOPS_OUTPUT=$(docker run --rm --entrypoint sops ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }} --version)
           echo "SOPS version output: $SOPS_OUTPUT"
-          echo "$SOPS_OUTPUT" | grep -q "3.11.0"
+          echo "$SOPS_OUTPUT" | grep -q "3.11.x0"
 
       - name: Set output with build values
         id: setOutput
