@@ -84,18 +84,6 @@ dependencies {
     testImplementation("net.bytebuddy:byte-buddy-agent:1.18.7")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
     testImplementation("io.mockk:mockk:$mockkVersion")
-
-    constraints {
-        implementation("org.apache.commons:commons-lang3:3.20.0") {
-            because("Force secure version to fix CVE in transitive dependency from spring-boot-gradle-plugin")
-        }
-        implementation("io.netty:netty-codec-http2:4.2.10.Final") {
-            because("Force specific version for transitive dependency")
-        }
-        implementation("org.apache.tomcat.embed:tomcat-embed-core:11.0.18") {
-            because("Force secure version to fix vulnerability in version 10.1.43")
-        }
-    }
 }
 
 tasks.withType<Test> {
