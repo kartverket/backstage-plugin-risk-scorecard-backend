@@ -6,6 +6,7 @@ import deserializeContent
 import io.mockk.every
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import mockableResponseFromObject
 import no.risc.config.InitRiScServiceConfig
 import no.risc.exception.exceptions.CreatePullRequestException
@@ -1612,5 +1613,58 @@ class GithubConnectorTests {
                 "Should throw RiScConflictException when all retry attempts return 409.",
             ) { runBlocking { callUpdateOrCreateDraft(riScId) } }
         }
+    }
+
+    @Nested
+    inner class TestRetryOnTransient {
+        private val path = "/$owner/$repository"
+
+        private val successResponse =
+            mockableResponseFromObject(
+                GithubRepositoryDTO(
+                    defaultBranch = "main",
+                    permissions = GithubRepositoryPermissions(admin = false, maintain = false, push = true, triage = false, pull = true),
+                ),
+            )
+
+        private suspend fun fetchRepoInfo() =
+            githubConnector.fetchRepositoryInfo(
+                gitHubAccessToken = "token",
+                repositoryOwner = owner,
+                repositoryName = repository,
+            )
+
+        @Test
+        fun `retries and succeeds after one transient 502 Bad Gateway`() =
+            runTest {
+                webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.BAD_GATEWAY), path)
+                webClient.queueResponse(successResponse, path)
+
+                val result = fetchRepoInfo()
+
+                assertEquals("main", result.defaultBranch)
+            }
+
+        @Test
+        fun `throws after all 3 attempts fail with transient error`() =
+            runTest {
+                repeat(3) {
+                    webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.BAD_GATEWAY), path)
+                }
+
+                val ex = assertThrows<WebClientResponseException> { fetchRepoInfo() }
+                assertEquals(502, ex.statusCode.value())
+            }
+
+        @Test
+        fun `non-transient 404 does not retry`() =
+            runTest {
+                webClient.queueResponse(MockableResponse(content = null, httpStatus = HttpStatus.NOT_FOUND), path)
+
+                assertThrows<WebClientResponseException> { fetchRepoInfo() }
+
+                webClient.getNextRequest(path) // confirm exactly one request was made
+                assertThrows<NoSuchElementException> { webClient.getNextRequest(path) }
+            }
     }
 }
