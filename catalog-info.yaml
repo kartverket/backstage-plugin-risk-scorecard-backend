@@ -1,30 +1,170 @@
 # nonk8s
-apiVersion: "backstage.io/v1alpha1"
-kind: "Component"
+apiVersion: backstage.io/v1alpha1
+kind: Component
 metadata:
-  name: "backstage-plugin-risk-scorecard-backend"
+  name: backstage-plugin-risk-scorecard-backend
+  description: Backend service for the RoS-as-Code risk scorecard Backstage plugin, managing RiSc analyses via GitHub
+  annotations:
+    github.com/project-slug: kartverket/backstage-plugin-risk-scorecard-backend
   tags:
-  - "internal"
+    - public
+    - kotlin
+    - spring-boot
+    - gradle
 spec:
-  type: "service"
-  lifecycle: "production"
-  owner: "skvis"
-  system: "ros-as-code"
+  type: service
+  lifecycle: production
+  owner: skvis
+  system: ros-as-code
   providesApis:
-  - "backstage-plugin-risk-scorecard-backend-api"
+    - backstage-plugin-risk-scorecard-backend-api
+  consumesApis:
+    - github-api
+    - backstage-plugin-risk-crypto-service-api
+    - init-risc-api
 ---
-apiVersion: "backstage.io/v1alpha1"
-kind: "API"
+apiVersion: backstage.io/v1alpha1
+kind: API
 metadata:
-  name: "backstage-plugin-risk-scorecard-backend-api"
+  name: backstage-plugin-risk-scorecard-backend-api
+  description: OpenAPI for backstage-plugin-risk-scorecard-backend
+  annotations:
+    github.com/project-slug: kartverket/backstage-plugin-risk-scorecard-backend
   tags:
-  - "internal"
+    - public
 spec:
-  type: "openapi"
-  lifecycle: "production"
-  owner: "skvis"
+  type: openapi
+  lifecycle: production
+  owner: skvis
   definition: |
+    # Inferred from source — replace with a generated spec for accuracy
     openapi: "3.0.0"
     info:
-        title: backstage-plugin-risk-scorecard-backend API
+      title: backstage-plugin-risk-scorecard-backend API
+      version: "1.0.0"
     paths:
+      /api/risc/{repositoryOwner}/{repositoryName}/all:
+        get:
+          tags: [risc]
+          summary: Get all RiScs (default version)
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: false, schema: {type: string}}
+          responses:
+            "200": {description: List of RiSc content results}
+      /api/risc/{repositoryOwner}/{repositoryName}/{latestSupportedVersion}/all:
+        get:
+          tags: [risc]
+          summary: Get all RiScs for a specific schema version
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: path, name: latestSupportedVersion, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: false, schema: {type: string}}
+          responses:
+            "200": {description: List of RiSc content results}
+      /api/risc/{repositoryOwner}/{repositoryName}:
+        post:
+          tags: [risc]
+          summary: Create a new RiSc
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: true, schema: {type: string}}
+            - {in: query, name: generateDefault, required: false, schema: {type: boolean}}
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: object}
+          responses:
+            "200": {description: Created RiSc result}
+      /api/risc/{repositoryOwner}/{repositoryName}/{id}:
+        put:
+          tags: [risc]
+          summary: Edit a RiSc
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: path, name: id, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: true, schema: {type: string}}
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: object}
+          responses:
+            "200": {description: Updated RiSc result}
+        delete:
+          tags: [risc]
+          summary: Delete a RiSc
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: path, name: id, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: true, schema: {type: string}}
+          responses:
+            "200": {description: Delete RiSc result}
+      /api/risc/{repositoryOwner}/{repositoryName}/publish/{id}:
+        post:
+          tags: [risc]
+          summary: Send a RiSc for publishing
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: path, name: id, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: true, schema: {type: string}}
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: object}
+          responses:
+            "200": {description: Publish RiSc result}
+      /api/risc/{repositoryOwner}/{repositoryName}/{riscId}/difference:
+        post:
+          tags: [risc]
+          summary: Get difference between two RiSc versions
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+            - {in: path, name: riscId, required: true, schema: {type: string}}
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: true, schema: {type: string}}
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: object}
+          responses:
+            "200": {description: Difference between RiSc versions}
+      /api/risc/{repositoryOwner}/{repositoryName}/feedback:
+        post:
+          tags: [risc]
+          summary: Send feedback
+          parameters:
+            - {in: path, name: repositoryOwner, required: true, schema: {type: string}}
+            - {in: path, name: repositoryName, required: true, schema: {type: string}}
+          requestBody:
+            required: true
+            content:
+              application/json:
+                schema: {type: string}
+          responses:
+            "200": {description: Feedback sent}
+      /api/initrisc/descriptors:
+        get:
+          tags: [initrisc]
+          summary: Get all default RiSc type descriptors
+          parameters:
+            - {in: header, name: GCP-Access-Token, required: true, schema: {type: string}}
+            - {in: header, name: GitHub-Access-Token, required: false, schema: {type: string}}
+          responses:
+            "200": {description: List of RiSc type descriptors}
