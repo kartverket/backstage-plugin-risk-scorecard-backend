@@ -1,5 +1,7 @@
 ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
 ARG IMAGE=eclipse-temurin:25-alpine
+ARG SOPS_BUILD_IMAGE=golang:1.25.7
+ARG SOPS_VERSION_ARG=3.11.0
 
 # Make sure the logic is in sync with Dockerfile.M4
 FROM ${BUILD_IMAGE} AS build
@@ -10,12 +12,25 @@ RUN apk upgrade --no-cache
 
 RUN ./gradlew build -x test
 
+### Build SOPS from source ###
+FROM --platform=$BUILDPLATFORM ${SOPS_BUILD_IMAGE} AS sops_build
+ARG TARGETOS
+ARG TARGETARCH
+ARG SOPS_VERSION_ARG
+ARG SOPS_TAG=v${SOPS_VERSION_ARG}
+WORKDIR /src
+RUN git clone --depth 1 --branch "${SOPS_TAG}" https://github.com/getsops/sops.git
+WORKDIR /src/sops/cmd/sops
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags="-s -w" -o /out/sops .
+
 FROM ${IMAGE}
 
 # Create application directory and subdirectories.
 RUN mkdir -p /app /app/logs /app/tmp
 
 COPY --from=build /build/libs/*.jar /app/backend.jar
+COPY --from=sops_build --chown=root:root --chmod=0755 /out/sops /usr/bin/sops
 
 # Get security updates
 RUN apk upgrade --no-cache

@@ -3,6 +3,7 @@ package no.risc.risc.models
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonIgnoreUnknownKeys
+import no.risc.crypto.sops.model.SopsConfig
 import no.risc.utils.KOffsetDateTimeSerializer
 import no.risc.utils.comparison.MigrationChange40
 import no.risc.utils.comparison.MigrationChange41
