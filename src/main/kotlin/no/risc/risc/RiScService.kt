@@ -21,7 +21,7 @@ import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.initRiSc.InitRiScServiceGitHubImpl
+import no.risc.initRiSc.InitRiScService
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DeleteRiScResultDTO

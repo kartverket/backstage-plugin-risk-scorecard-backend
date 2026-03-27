@@ -69,4 +69,11 @@ interface GithubConnectorPort {
         repositoryOwner: String,
         repositoryName: String,
     ): RepositoryInfo
+
+    suspend fun fetchInitRiSc(
+        initRiScId: String,
+        accessToken: String,
+    ): GithubContentResponse
+
+    suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse
 }

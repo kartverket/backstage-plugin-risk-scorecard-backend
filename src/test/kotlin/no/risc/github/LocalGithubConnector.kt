@@ -311,6 +311,14 @@ class LocalGithubConnector(
         return localPrObject(repository, riScId)
     }
 
+    override suspend fun fetchInitRiSc(
+        initRiScId: String,
+        accessToken: String,
+    ): GithubContentResponse = GithubContentResponse(status = GithubStatus.NotFound, data = null)
+
+    override suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
+        GithubContentResponse(status = GithubStatus.NotFound, data = null)
+
     private fun localPrObject(
         repository: String,
         riScId: String,

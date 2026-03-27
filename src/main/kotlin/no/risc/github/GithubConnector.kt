@@ -1283,10 +1283,10 @@ class GithubConnector(
         )
     }
 
-    suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
+    override suspend fun fetchInitRiScDescriptorConfigs(gitHubAccessToken: GithubAccessToken): GithubContentResponse =
         fetchRiScContent(githubHelper.uriToInitRiscConfig(), gitHubAccessToken.value)
 
-    suspend fun fetchInitRiSc(
+    override suspend fun fetchInitRiSc(
         initRiScId: String,
         accessToken: String,
     ): GithubContentResponse =
