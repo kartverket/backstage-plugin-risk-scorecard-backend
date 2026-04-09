@@ -1,4 +1,4 @@
-package no.risc.risc.models
+package no.risc.crypto.sops.model
 
 import kotlinx.serialization.Serializable
 

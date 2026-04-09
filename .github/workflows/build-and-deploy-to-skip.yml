@@ -85,6 +85,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Install SOPS
+        run: |
+          SOPS_VERSION="3.11.0"
+          curl -Lo sops "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
+          chmod +x sops
+          sudo mv sops /usr/local/bin/sops
+          sops --version
+
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v3
 
@@ -129,6 +137,14 @@ jobs:
           push: ${{ !github.event.pull_request.draft }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Verify SOPS is available in container
+        if: ${{ !github.event.pull_request.draft }}
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          SOPS_OUTPUT=$(docker run --rm --entrypoint sops ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }} --version)
+          echo "SOPS version output: $SOPS_OUTPUT"
+          echo "$SOPS_OUTPUT" | grep -q "3.11.0"
 
       - name: Set output with build values
         id: setOutput
