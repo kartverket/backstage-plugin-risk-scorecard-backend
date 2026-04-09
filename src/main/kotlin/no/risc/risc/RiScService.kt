@@ -4,7 +4,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import no.risc.encryption.CryptoServiceIntegration
+import no.risc.crypto.sops.SopsCryptoService
+import no.risc.crypto.sops.model.SopsConfig
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScConflictException
@@ -37,7 +38,6 @@ import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
 import no.risc.risc.models.RiScWrapperObject
-import no.risc.risc.models.SopsConfig
 import no.risc.risc.models.UserInfo
 import no.risc.utils.comparison.compare
 import no.risc.utils.formatRiScFetchSummary
@@ -54,7 +54,7 @@ import org.springframework.stereotype.Service
 class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
-    private val cryptoService: CryptoServiceIntegration,
+    private val sopsCryptoService: SopsCryptoService,
     private val initRiScService: InitRiScService,
 ) {
     companion object {
@@ -165,7 +165,7 @@ class RiScService(
                             errorMessage = "Migration failed",
                         )
                     }
-                }.toDTO(response.sopsConfig?.lastModified ?: "")
+                }.toDTO(response.sopsConfig?.lastmodified ?: "")
             }
 
     /**
@@ -316,7 +316,7 @@ class RiScService(
     ): RiScContentResultDTO =
         if (status == GithubStatus.Success) {
             try {
-                val decryptedContent = cryptoService.decrypt(ciphertext = data(), gcpAccessToken = gcpAccessToken)
+                val decryptedContent = sopsCryptoService.decryptWithSopsConfig(ciphertext = data(), gcpAccessToken = gcpAccessToken)
                 RiScContentResultDTO(
                     riScId = riScId,
                     status = ContentStatus.Success,
@@ -499,9 +499,9 @@ class RiScService(
         }
 
         val encryptedData: String =
-            cryptoService.encrypt(
+            sopsCryptoService.encrypt(
                 text = content.riSc,
-                sopsConfig = sopsConfig,
+                config = sopsConfig,
                 gcpAccessToken = accessTokens.gcpAccessToken,
                 riScId = riScId,
             )

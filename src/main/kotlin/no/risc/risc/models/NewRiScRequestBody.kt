@@ -1,6 +1,7 @@
 package no.risc.risc.models
 
 import kotlinx.serialization.Serializable
+import no.risc.crypto.sops.model.SopsConfig
 
 @Serializable
 data class NewRiScRequestBody(
