@@ -8,12 +8,10 @@ import no.risc.initRiSc.model.GenerateRiScRequestBody
 import no.risc.initRiSc.model.RiScTypeDescriptor
 import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
-import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
 
-@Primary
 @Service
 class InitRiScServiceAirtableImpl(
     private val initRiScServiceConnector: InitRiScServiceConnector,
