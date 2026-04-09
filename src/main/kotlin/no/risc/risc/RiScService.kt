@@ -498,7 +498,7 @@ class RiScService(
             )
         }
 
-            val encryptedData: String =
+        val encryptedData: String =
             cryptoService.encrypt(
                 text = content.riSc,
                 sopsConfig = sopsConfig,
@@ -512,22 +512,26 @@ class RiScService(
                 - error logged,
                 - action ignored through return with statusMessage.
          */
-        val currentStatus = resolveCurrentRiScStatus(
-            owner = owner,
-            repository = repository,
-            riScId = riScId,
-            accessTokens = accessTokens,
-        )
+        val currentStatus =
+            resolveCurrentRiScStatus(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                accessTokens = accessTokens,
+            )
 
         val isDeletionStatus =
             currentStatus == RiScStatus.DeletionDraft ||
-                    currentStatus == RiScStatus.DeletionSentForApproval
+                currentStatus == RiScStatus.DeletionSentForApproval
 
         if (isDeletionStatus) {
             LOGGER.warn(
                 "Skipping update for {}/{} id={} because RiSc is in deletion flow (status={}). " +
-                        "Edit is blocked to avoid branch recreation conflict.",
-                owner, repository, riScId, currentStatus
+                    "Edit is blocked to avoid branch recreation conflict.",
+                owner,
+                repository,
+                riScId,
+                currentStatus,
             )
 
             return ProcessRiScResultDTO(
@@ -535,7 +539,7 @@ class RiScService(
                 status = ProcessingStatus.ErrorWhenUpdatingRiSc,
                 statusMessage =
                     "RiSc is staged for deletion ($currentStatus). " +
-                            "Undo deletion (or publish deletion) before editing.",
+                        "Undo deletion (or publish deletion) before editing.",
             )
         }
 
@@ -586,14 +590,14 @@ class RiScService(
         accessTokens: AccessTokens,
     ): RiScStatus? {
         val metadata =
-            githubConnector.fetchRiScGithubMetadata(owner, repository, accessTokens.githubAccessToken)
+            githubConnector
+                .fetchRiScGithubMetadata(owner, repository, accessTokens.githubAccessToken)
                 .firstOrNull { it.id == riScId } ?: return null
 
         val contents = githubConnector.fetchBranchAndMainRiScContent(riScId, owner, repository, accessTokens.githubAccessToken)
 
         return getRiScStatus(metadata, contents.mainContent, contents.branchContent)
     }
-
 
     suspend fun deleteRiSc(
         owner: String,
