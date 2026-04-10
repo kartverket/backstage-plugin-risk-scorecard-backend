@@ -27,14 +27,14 @@ on:
     branches:
       - main
     paths:
-      - Dockerfile
+      - ../../Dockerfile
       - build.gradle.kts
       - src/**
       - .github/workflows/build-and-deploy-to-skip.yml
       - gradle/wrapper/gradle-wrapper.properties
   push:
     paths:
-      - Dockerfile
+      - ../../Dockerfile
       - build.gradle.kts
       - src/**
       - .github/workflows/build-and-deploy-to-skip.yml

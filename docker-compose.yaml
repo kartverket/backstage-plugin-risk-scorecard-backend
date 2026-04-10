@@ -4,27 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        LOCAL: true
         BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:25-jre-alpine}
-        IMAGE: ${IMAGE:-eclipse-temurin:25-alpine}
+        SOPS_BUILD_IMAGE: golang:1.25.7
+        SOPS_VERSION_ARG: 3.11.0
+        DISTROLESS_IMAGE: ${DISTROLESS_IMAGE:-gcr.io/distroless/java25-debian13}
     ports:
       - "8080:8080"
       - "8081:8081"
+    environment:
+      - LOCAL=true
     env_file:
       - .env
-
-  skip:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - ISSUER_URI=${ISSUER_URI}
-      - GITHUB_APP_ID=${GITHUB_APP_ID}
-      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID}
-      - GITHUB_PRIVATE_KEY_BASE64_ENCODED=${GITHUB_PRIVATE_KEY_BASE64_ENCODED}
-      - RISC_FOLDER_PATH=${RISC_FOLDER_PATH}
-      - FILENAME_PREFIX=${FILENAME_PREFIX}
-      - FILENAME_POSTFIX=${FILENAME_POSTFIX}
-    ports:
-      - "8080:8080"
-      - "8081:8081"
