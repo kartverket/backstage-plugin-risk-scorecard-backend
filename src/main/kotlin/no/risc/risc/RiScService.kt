@@ -331,7 +331,11 @@ class RiScService(
                 if (e is SOPSDecryptionException) {
                     val kmsKeyResourceId =
                         runCatching {
-                            sopsCryptoService.extractSopsConfig(data()).gcp_kms?.firstOrNull()?.resource_id
+                            sopsCryptoService
+                                .extractSopsConfig(data())
+                                .gcp_kms
+                                ?.firstOrNull()
+                                ?.resource_id
                         }.getOrNull()
                     RiScContentResultDTO(
                         riScId = riScId,
