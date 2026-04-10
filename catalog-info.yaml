@@ -1,9 +1,9 @@
-# nonk8s
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: backstage-plugin-risk-scorecard-backend
-  description: Backend service for the RoS-as-Code risk scorecard Backstage plugin, managing RiSc analyses via GitHub
+  description: Backend service for the RoS-as-Code risk scorecard Backstage
+    plugin, managing RiSc analyses via GitHub
   annotations:
     github.com/project-slug: kartverket/backstage-plugin-risk-scorecard-backend
   tags:
@@ -15,13 +15,12 @@ spec:
   type: service
   lifecycle: production
   owner: skvis
-  system: ros-as-code
+  system: system:default/ros-as-code
   providesApis:
-    - backstage-plugin-risk-scorecard-backend-api
-  consumesApis:
-    - github-api
-    - backstage-plugin-risk-crypto-service-api
-    - init-risc-api
+    - api:default/backstage-plugin-risk-scorecard-backend-api
+  dependsOn:
+    - component:default/backstage-plugin-risk-scorecard-frontend
+
 ---
 apiVersion: backstage.io/v1alpha1
 kind: API
@@ -36,9 +35,11 @@ spec:
   type: openapi
   lifecycle: production
   owner: skvis
-  definition: |
+  definition: >
     # Inferred from source — replace with a generated spec for accuracy
+
     openapi: "3.0.0"
+
     info:
       title: backstage-plugin-risk-scorecard-backend API
       version: "1.0.0"
