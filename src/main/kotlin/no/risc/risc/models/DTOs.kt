@@ -65,6 +65,7 @@ data class RiScContentResultDTO(
     val statusMessage: String? = null,
     val errorCode: String? = null,
     val errorMessage: String? = null,
+    val kmsKeyResourceId: String? = null,
     val migrationStatus: MigrationStatus =
         MigrationStatus(
             migrationChanges = false,

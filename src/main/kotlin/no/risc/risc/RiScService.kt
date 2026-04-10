@@ -329,6 +329,10 @@ class RiScService(
                 )
             } catch (e: Exception) {
                 if (e is SOPSDecryptionException) {
+                    val kmsKeyResourceId =
+                        runCatching {
+                            sopsCryptoService.extractSopsConfig(data()).gcp_kms?.firstOrNull()?.resource_id
+                        }.getOrNull()
                     RiScContentResultDTO(
                         riScId = riScId,
                         status = ContentStatus.DecryptionFailed,
@@ -337,6 +341,7 @@ class RiScService(
                         statusMessage = e.errorMessage ?: e.message ?: "Decryption failed",
                         errorCode = e.errorCode,
                         errorMessage = e.errorMessage,
+                        kmsKeyResourceId = kmsKeyResourceId,
                     )
                 } else {
                     RiScContentResultDTO(
