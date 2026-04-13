@@ -51,7 +51,7 @@ jobs:
         run: |
           SOPS_OUTPUT=$(docker run --rm --entrypoint sops "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" --version)
           echo "SOPS version output: $SOPS_OUTPUT"
-          echo "$SOPS_OUTPUT" | grep -q "3.11.0"
+          echo "$SOPS_OUTPUT" | grep -q "3.12.2"
 
       - name: Push the Docker image to Google Artifact Registry
         if: github.ref == 'refs/heads/main'
