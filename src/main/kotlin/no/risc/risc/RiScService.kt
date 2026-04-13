@@ -21,7 +21,7 @@ import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.initRiSc.InitRiScService
+import no.risc.initRiSc.InitRiScServiceGitHubImpl
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DeleteRiScResultDTO
@@ -55,7 +55,7 @@ class RiScService(
     private val githubConnector: GithubConnector,
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val sopsCryptoService: SopsCryptoService,
-    private val initRiScService: InitRiScService,
+    private val initRiScService: InitRiScServiceGitHubImpl,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
