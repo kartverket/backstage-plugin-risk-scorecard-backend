@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component
 @Component
 @ConfigurationProperties(prefix = "init-risc")
 class InitRiScServiceConfig {
-    lateinit var baseUrl: String
     lateinit var repoOwner: String
     lateinit var repoName: String
 }
