@@ -1,7 +1,7 @@
 ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
 ARG IMAGE=eclipse-temurin:25-alpine
 ARG SOPS_BUILD_IMAGE=golang:1.25.7
-ARG SOPS_VERSION_ARG=3.11.0
+ARG SOPS_VERSION_ARG=3.12.2
 
 # Make sure the logic is in sync with Dockerfile.M4
 FROM ${BUILD_IMAGE} AS build
