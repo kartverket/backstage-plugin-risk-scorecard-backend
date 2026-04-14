@@ -62,7 +62,6 @@ class GithubConnectorTests {
     fun beforeEach() {
         val initRiScServiceConfig =
             InitRiScServiceConfig().apply {
-                baseUrl = ""
                 repoName = "init-risc-repo"
                 repoOwner = "owner"
             }
