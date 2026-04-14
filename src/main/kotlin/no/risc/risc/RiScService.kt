@@ -337,6 +337,7 @@ class RiScService(
                         statusMessage = e.errorMessage ?: e.message ?: "Decryption failed",
                         errorCode = e.errorCode,
                         errorMessage = e.errorMessage,
+                        encryptionKeyId = e.encryptionKeyId,
                     )
                 } else {
                     RiScContentResultDTO(
