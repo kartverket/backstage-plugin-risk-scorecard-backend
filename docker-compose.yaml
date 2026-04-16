@@ -4,12 +4,15 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        LOCAL: true
         BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:25-jre-alpine}
-        IMAGE: ${IMAGE:-eclipse-temurin:25-alpine}
+        SOPS_BUILD_IMAGE: golang:1.25.7
+        SOPS_VERSION_ARG: 3.11.0
+        DISTROLESS_IMAGE: ${DISTROLESS_IMAGE:-gcr.io/distroless/java25-debian13}
     ports:
       - "8080:8080"
       - "8081:8081"
+    environment:
+      - LOCAL=true
     env_file:
       - .env
 
