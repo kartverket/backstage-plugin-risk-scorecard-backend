@@ -51,12 +51,18 @@ jobs:
         run: |
           SOPS_OUTPUT=$(docker run --rm --entrypoint sops "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" --version)
           echo "SOPS version output: $SOPS_OUTPUT"
-          echo "$SOPS_OUTPUT" | grep -q "3.11.0"
+          echo "$SOPS_OUTPUT" | grep -q "3.12.2"
 
       - name: Push the Docker image to Google Artifact Registry
         if: github.ref == 'refs/heads/main'
         run: |
           docker push "${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+      - name: Warm up Backstage auth service
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -s --retry 5 --retry-delay 10 --retry-all-errors -o /dev/null -w "%{http_code}" \
+            https://risc-457384642040.europe-north1.run.app/api/auth/.well-known/openid-configuration
 
       - name: Deploy to Cloud Run
         if: github.ref == 'refs/heads/main'

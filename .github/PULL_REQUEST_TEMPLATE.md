@@ -15,4 +15,4 @@ _Etter en kort beskrivelse av oppgaven skal det her være beskrevet hvordan PR'e
 ## ✅ Sjekkliste
 
 - [ ] Branchen er rebaset på `main` eller main er merget inn (Tips: om du bruker grensensittet i GitHub, så kan du velge rebase istedenfor merge. MERK: da må du slette din lokale branch og hente på nytt om du skal gjøre flere endringer).
-- [ ] [Test-sjekklisten i front-end repoet](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend/CONTRIBUTING.md#test-checklist) er gjennomført hensiktsmessig (om relevant for endringen).
+- [ ] [Test-sjekklisten i front-end repoet](https://github.com/kartverket/backstage-plugin-risk-scorecard-frontend/blob/main/CONTRIBUTING.md#test-checklist) er gjennomført hensiktsmessig (om relevant for endringen).

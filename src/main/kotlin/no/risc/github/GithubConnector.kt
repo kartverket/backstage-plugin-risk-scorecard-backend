@@ -1240,7 +1240,7 @@ class GithubConnector(
                     )
                 }
 
-            else -> GithubStatus.InternalError
+            else -> GithubStatus.InternalError.also { LOGGER.error("Unhandled GitHub API error: {}", e.message, e) }
         }
 
     /**

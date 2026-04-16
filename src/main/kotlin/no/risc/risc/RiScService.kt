@@ -506,6 +506,43 @@ class RiScService(
                 riScId = riScId,
             )
 
+        /*
+        Here we check if a user is trying to update a RiSc who's status is either 'DeletionDraft' or is waiting for deletion approval.
+            currentStatus is fetched through the resolveCurrentRiScStatus helper fun, and that's then checked. If true:
+                - error logged,
+                - action ignored through return with statusMessage.
+         */
+        val currentStatus =
+            resolveCurrentRiScStatus(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                accessTokens = accessTokens,
+            )
+
+        val isDeletionStatus =
+            currentStatus == RiScStatus.DeletionDraft ||
+                currentStatus == RiScStatus.DeletionSentForApproval
+
+        if (isDeletionStatus) {
+            LOGGER.warn(
+                "Skipping update for {}/{} id={} because RiSc is in deletion flow (status={}). " +
+                    "Edit is blocked to avoid branch recreation conflict.",
+                owner,
+                repository,
+                riScId,
+                currentStatus,
+            )
+
+            return ProcessRiScResultDTO(
+                riScId = riScId,
+                status = ProcessingStatus.ErrorWhenUpdatingRiSc,
+                statusMessage =
+                    "RiSc is staged for deletion ($currentStatus). " +
+                        "Undo deletion (or publish deletion) before editing.",
+            )
+        }
+
         try {
             val riScApprovalPRStatus =
                 githubConnector.updateOrCreateDraft(
@@ -544,6 +581,22 @@ class RiScService(
                 riScId = riScId,
             )
         }
+    }
+
+    private suspend fun resolveCurrentRiScStatus(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessTokens: AccessTokens,
+    ): RiScStatus? {
+        val metadata =
+            githubConnector
+                .fetchRiScGithubMetadata(owner, repository, accessTokens.githubAccessToken)
+                .firstOrNull { it.id == riScId } ?: return null
+
+        val contents = githubConnector.fetchBranchAndMainRiScContent(riScId, owner, repository, accessTokens.githubAccessToken)
+
+        return getRiScStatus(metadata, contents.mainContent, contents.branchContent)
     }
 
     suspend fun deleteRiSc(
