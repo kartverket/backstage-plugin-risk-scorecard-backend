@@ -27,7 +27,7 @@ on:
     branches:
       - main
     paths:
-      - ../../Dockerfile
+      - Dockerfile
       - build.gradle.kts
       - src/**
       - .github/workflows/build-and-deploy-to-skip.yml
