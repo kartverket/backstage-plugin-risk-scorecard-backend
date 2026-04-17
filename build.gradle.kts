@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.3.0"
+    val kotlinPluginsVersion = "2.3.20"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -38,7 +38,7 @@ val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
 val micrometerVersion = "1.16.4"
 val jsonSchemaValidatorVersion = "1.5.9"
-val nimbusdsVersion = "10.8"
+val nimbusdsVersion = "10.9"
 val bouncyCastleVersion = "1.83"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.3"
