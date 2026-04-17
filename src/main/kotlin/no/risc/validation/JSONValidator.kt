@@ -1,9 +1,9 @@
 package no.risc.validation
 
 import com.networknt.schema.InputFormat
-import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.OutputFormat
-import com.networknt.schema.SpecVersion
+import com.networknt.schema.SchemaRegistry
+import com.networknt.schema.SpecificationVersion
 import com.networknt.schema.output.OutputUnit
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 
 object JSONValidator {
     private val LOGGER: Logger = LoggerFactory.getLogger(JSONValidator::class.java)
-    private val schemaFactory: JsonSchemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
+    private val schemaRegistry: SchemaRegistry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_7)
 
     /**
      * Retrieves the JSON schema for the specified RiSC version from disc.
@@ -94,11 +94,9 @@ object JSONValidator {
         }
 
         try {
-            return try {
-                schemaFactory.getSchema(schema).validate(riScContent, InputFormat.JSON, OutputFormat.LIST)
-            } catch (e: IllegalArgumentException) {
-                schemaFactory.getSchema(schema).validate(riScContent, InputFormat.YAML, OutputFormat.LIST)
-            }
+            val jsonSchema = schemaRegistry.getSchema(schema, InputFormat.JSON)
+            // YAML is a superset of JSON, so InputFormat.YAML handles both JSON and YAML content
+            return jsonSchema.validate(riScContent, InputFormat.YAML, OutputFormat.LIST)
         } catch (e: Exception) {
             throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be validated against schema", riScId)
         }
