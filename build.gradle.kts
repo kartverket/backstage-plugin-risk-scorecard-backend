@@ -3,7 +3,7 @@ plugins {
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "4.0.4"
+    id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
@@ -31,8 +31,8 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.3.10"
-val springBootVersion = "4.0.4"
+val kotlinVersion = "2.3.20"
+val springBootVersion = "4.0.5"
 val springSecurityVersion = "7.0.2"
 val kotlinxSerializationVersion = "1.10.0"
 val kotlinxCoroutinesVersion = "1.10.2"
