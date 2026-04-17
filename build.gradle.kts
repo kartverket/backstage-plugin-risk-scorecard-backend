@@ -83,8 +83,8 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("net.bytebuddy:byte-buddy:1.18.7")
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.7")
+    testImplementation("net.bytebuddy:byte-buddy:1.18.8")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
     testImplementation("io.mockk:mockk:$mockkVersion")
 }
