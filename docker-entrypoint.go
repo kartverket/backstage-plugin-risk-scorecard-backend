@@ -38,8 +38,12 @@ func main() {
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sigChan
-			cmd1.Process.Kill()
-			cmd2.Process.Kill()
+			if cmd1.Process != nil {
+				cmd1.Process.Kill()
+			}
+			if cmd2.Process != nil {
+				cmd2.Process.Kill()
+			}
 			os.Exit(0)
 		}()
 	}
