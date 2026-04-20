@@ -57,6 +57,7 @@ COPY --from=socat_build /out/socat /usr/bin/socat
 
 EXPOSE 8080 8081
 
+USER nonroot
 ENTRYPOINT ["/entrypoint"]
 
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
