@@ -95,8 +95,11 @@ object JSONValidator {
 
         try {
             val jsonSchema = schemaRegistry.getSchema(schema, InputFormat.JSON)
-            // YAML is a superset of JSON, so InputFormat.YAML handles both JSON and YAML content
-            return jsonSchema.validate(riScContent, InputFormat.YAML, OutputFormat.LIST)
+            return try {
+                jsonSchema.validate(riScContent, InputFormat.JSON, OutputFormat.LIST)
+            } catch (e: Exception) {
+                jsonSchema.validate(riScContent, InputFormat.YAML, OutputFormat.LIST)
+            }
         } catch (e: Exception) {
             throw RiScNotValidOnFetchException("RiSc with id: $riScId could not be validated against schema", riScId)
         }
