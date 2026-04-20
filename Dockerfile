@@ -32,7 +32,7 @@ COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
 # Build socat statically
-FROM --platform=$BUILDPLATFORM alpine:latest AS socat_build
+FROM --platform=$BUILDPLATFORM alpine:3.23.4 AS socat_build
 ARG SOCAT_VERSION_ARG
 RUN apk add --no-cache gcc musl-dev make && \
     wget -q http://www.dest-unreach.org/socat/download/socat-${SOCAT_VERSION_ARG}.tar.gz -O - | tar xz && \
