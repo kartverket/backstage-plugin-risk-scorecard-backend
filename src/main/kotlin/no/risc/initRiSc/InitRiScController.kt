@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/initrisc")
 @Tag(name = "initrisc", description = "Init Risc endpoints")
 class InitRiScController(
-    private val initRiScService: InitRiScService,
+    private val initRiScService: InitRiScServiceGitHubImpl,
     private val gitHubAppService: GitHubAppService,
 ) {
     @GetMapping("", "/descriptors")

@@ -76,7 +76,6 @@ jobs:
             --update-env-vars=FILENAME_PREFIX=risc \
             --update-env-vars=FILENAME_POSTFIX=risc \
             --update-env-vars=CRYPTO_SERVICE_URL=https://risc-crypto-457384642040.europe-north1.run.app \
-            --update-env-vars=INIT_RISC_URL=https://initialize-risc-api-457384642040.europe-north1.run.app \
             --update-env-vars=ADDITIONAL_ALLOWED_GCP_KEY_NAMES=spire-ros-5lmr \
             --update-secrets=SLACK_FEEDBACK_WEBHOOK_URL=slack-feedback-webhook-url:latest \
             --update-secrets=BACKEND_PUBLIC_KEY=backend-public-key:latest \
