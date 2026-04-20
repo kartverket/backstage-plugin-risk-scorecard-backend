@@ -12,15 +12,13 @@ import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScScenarioActionStatus
-import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Service
 
-@Primary
 @Service
 class InitRiScServiceGitHubImpl(
     private val githubConnector: GithubConnector,
-) : InitRiScService {
-    override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
+) {
+    suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
         val initRiScDescriptorConfigs = getInitRiScDescriptorConfigs(accessTokens)
         return initRiScDescriptorConfigs
             .map {
@@ -47,7 +45,7 @@ class InitRiScServiceGitHubImpl(
      *
      * @param initRiScId ID of default RiSc to generate the RiSc from.
      */
-    override suspend fun getInitRiSc(
+    suspend fun getInitRiSc(
         initRiScId: String,
         initialContent: String,
         accessTokens: AccessTokens,
