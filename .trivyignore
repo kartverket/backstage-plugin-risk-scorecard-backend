@@ -1,0 +1,8 @@
+# CVE-2026-33186 - google.golang.org/grpc: authorization bypass via HTTP/2 path validation
+# Component: SOPS binary (built from source in Docker image)
+# Justification: This CVE affects gRPC server-side authorization. SOPS uses
+#   gRPC exclusively as a client to call GCP KMS. No gRPC server is exposed,
+#   so the attack vector does not apply.
+# Review date: 2026-04-21
+# Action: Remove this entry when SOPS releases a version with grpc >= 1.79.3
+CVE-2026-33186
