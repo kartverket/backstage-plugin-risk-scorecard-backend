@@ -10,6 +10,7 @@ class SOPSDecryptionException(
     override val message: String,
     val errorCode: String? = null,
     val errorMessage: String? = null,
+    val encryptionKeyId: String? = null,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
     companion object {
