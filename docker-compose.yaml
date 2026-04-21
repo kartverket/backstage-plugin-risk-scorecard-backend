@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: local
       args:
         BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:25-jre-alpine}
         SOPS_BUILD_IMAGE: golang:1.25.7

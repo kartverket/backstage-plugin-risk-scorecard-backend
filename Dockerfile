@@ -42,8 +42,8 @@ RUN apk add --no-cache gcc musl-dev make && \
     mkdir -p /out && \
     cp socat /out/socat
 
-# Final distroless image
-FROM ${DISTROLESS_IMAGE}
+# Final distroless image — production
+FROM ${DISTROLESS_IMAGE} AS production
 
 WORKDIR /app
 
@@ -53,7 +53,6 @@ COPY --from=build /build/libs/*.jar /app/backend.jar
 # Copy binaries
 COPY --from=sops_build /out/sops /usr/bin/sops
 COPY --from=entrypoint_build /out/entrypoint /entrypoint
-COPY --from=socat_build /out/socat /usr/bin/socat
 
 EXPOSE 8080 8081
 
@@ -61,3 +60,7 @@ USER nonroot
 ENTRYPOINT ["/entrypoint"]
 
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
+
+# Local dev image — extends production, adds socat for port forwarding
+FROM production AS local
+COPY --from=socat_build /out/socat /usr/bin/socat
