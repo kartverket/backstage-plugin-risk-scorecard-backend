@@ -59,7 +59,20 @@ class SopsCryptoService(
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig {
         val sopsConfig = extractSopsConfig(ciphertext)
-        val plaintext = decrypt(ciphertext, gcpAccessToken, props.agePrivateKey)
+        val plaintext =
+            try {
+                decrypt(ciphertext, gcpAccessToken, props.agePrivateKey)
+            } catch (e: SOPSDecryptionException) {
+                val keyId =
+                    sopsConfig.gcp_kms?.firstOrNull()?.resource_id
+                        ?: sopsConfig.age?.firstOrNull()?.recipient
+                throw SOPSDecryptionException(
+                    message = e.message,
+                    errorCode = e.errorCode,
+                    errorMessage = e.errorMessage,
+                    encryptionKeyId = keyId,
+                )
+            }
         return RiScWithConfig(plaintext, sopsConfig)
     }
 
