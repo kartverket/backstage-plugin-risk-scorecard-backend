@@ -6,3 +6,23 @@
 # Review date: 2026-04-21
 # Action: Remove this entry when SOPS releases a version with grpc >= 1.79.3
 CVE-2026-33186
+
+# CVE-2026-39883 - go.opentelemetry.io/otel/sdk: vulnerability in OTel SDK
+# Component: SOPS binary (built from source in Docker image)
+# Justification: OTel SDK is a transitive dependency of GCP client libraries
+#   in SOPS. SOPS runs as a short-lived CLI process with no OTel exporters
+#   configured (no OTEL_* env vars set). The library is compiled in but
+#   effectively dormant. No network exposure.
+# Review date: 2026-04-21
+# Action: Remove this entry when SOPS releases a version with otel/sdk >= 1.43.0
+CVE-2026-39883
+
+# CVE-2026-34986 - github.com/go-jose/go-jose/v4: DoS via crafted JWE object
+# Component: SOPS binary (built from source in Docker image)
+# Justification: SOPS does not process JWE objects from untrusted sources.
+#   go-jose is a transitive dependency used for auth with cloud KMS providers.
+#   The DoS attack vector requires attacker-controlled JWE input, which does
+#   not exist in our usage.
+# Review date: 2026-04-21
+# Action: Remove this entry when SOPS releases a version with go-jose >= 4.1.4
+CVE-2026-34986
