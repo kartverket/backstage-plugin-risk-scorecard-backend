@@ -27,6 +27,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+extra["tomcat.version"] = "11.0.21" // Vulnerability in 11.0.20
+
 repositories {
     mavenCentral()
 }
