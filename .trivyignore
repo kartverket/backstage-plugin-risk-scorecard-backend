@@ -26,3 +26,12 @@ CVE-2026-39883
 # Review date: 2026-04-21
 # Action: Remove this entry when SOPS releases a version with go-jose >= 4.1.4
 CVE-2026-34986
+
+# GHSA-xmrv-pmrh-hhx2 - github.com/aws/aws-sdk-go-v2/service/s3: vulnerability in AWS S3 SDK
+# Component: SOPS binary (built from source in Docker image)
+# Justification: SOPS supports S3 as an optional backend, but this project
+#   uses SOPS exclusively for GCP KMS encryption of local YAML files.
+#   The S3 SDK code path is never invoked.
+# Review date: 2026-04-21
+# Action: Remove this entry when SOPS releases a version with aws-sdk-go-v2/service/s3 >= 1.97.3
+GHSA-xmrv-pmrh-hhx2
