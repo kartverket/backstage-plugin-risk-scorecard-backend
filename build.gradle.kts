@@ -1,9 +1,9 @@
 plugins {
-    val kotlinPluginsVersion = "2.3.0"
+    val kotlinPluginsVersion = "2.3.20"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "4.0.4"
+    id("org.springframework.boot") version "4.0.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
@@ -31,15 +31,15 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.3.10"
-val springBootVersion = "4.0.4"
+val kotlinVersion = "2.3.20"
+val springBootVersion = "4.0.5"
 val springSecurityVersion = "7.0.2"
-val kotlinxSerializationVersion = "1.10.0"
+val kotlinxSerializationVersion = "1.11.0"
 val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.16.4"
-val jsonSchemaValidatorVersion = "1.5.9"
-val nimbusdsVersion = "10.8"
-val bouncyCastleVersion = "1.83"
+val micrometerVersion = "1.16.5"
+val jsonSchemaValidatorVersion = "3.0.1"
+val nimbusdsVersion = "10.9"
+val bouncyCastleVersion = "1.84"
 val mockkVersion = "1.14.9"
 val junitVersion = "6.0.3"
 val springdocVersion = "3.0.2"
@@ -83,8 +83,8 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("net.bytebuddy:byte-buddy:1.18.7")
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.7")
+    testImplementation("net.bytebuddy:byte-buddy:1.18.8")
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
     testImplementation("io.mockk:mockk:$mockkVersion")
 }
