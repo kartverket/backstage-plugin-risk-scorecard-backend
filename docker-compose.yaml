@@ -16,6 +16,12 @@ services:
       - LOCAL=true
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      start_period: 30s
+      interval: 5m
+      timeout: 5s
+      retries: 3
 
   skip:
     build:
