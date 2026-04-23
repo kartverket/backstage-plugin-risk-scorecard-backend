@@ -31,7 +31,7 @@ WORKDIR /src
 COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
-# Build socat from sourcec
+# Build socat from source
 FROM --platform=$BUILDPLATFORM alpine:3.23.4 AS socat_build
 ARG SOCAT_VERSION_ARG
 RUN apk add --no-cache \
