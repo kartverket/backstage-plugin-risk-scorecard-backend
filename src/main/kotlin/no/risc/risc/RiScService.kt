@@ -4,15 +4,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import no.risc.crypto.sops.SopsCryptoService
 import no.risc.crypto.sops.model.SopsConfig
+import no.risc.encryption.CryptoServicePort
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScConflictException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.UpdatingRiScException
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.github.RiScGithubMetadata
 import no.risc.github.chooseRiScContentFromStatus
 import no.risc.github.getRiScStatus
@@ -21,7 +21,7 @@ import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
-import no.risc.initRiSc.InitRiScServiceGitHubImpl
+import no.risc.initRiSc.InitRiScService
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
 import no.risc.risc.models.DeleteRiScResultDTO
@@ -52,10 +52,10 @@ import org.springframework.stereotype.Service
 
 @Service
 class RiScService(
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     @Value("\${filename.prefix}") val filenamePrefix: String,
-    private val sopsCryptoService: SopsCryptoService,
-    private val initRiScService: InitRiScServiceGitHubImpl,
+    private val cryptoService: CryptoServicePort,
+    private val initRiScService: InitRiScService,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -316,7 +316,7 @@ class RiScService(
     ): RiScContentResultDTO =
         if (status == GithubStatus.Success) {
             try {
-                val decryptedContent = sopsCryptoService.decryptWithSopsConfig(ciphertext = data(), gcpAccessToken = gcpAccessToken)
+                val decryptedContent = cryptoService.decryptWithSopsConfig(ciphertext = data(), gcpAccessToken = gcpAccessToken)
                 RiScContentResultDTO(
                     riScId = riScId,
                     status = ContentStatus.Success,
@@ -500,7 +500,7 @@ class RiScService(
         }
 
         val encryptedData: String =
-            sopsCryptoService.encrypt(
+            cryptoService.encrypt(
                 text = content.riSc,
                 config = sopsConfig,
                 gcpAccessToken = accessTokens.gcpAccessToken,

@@ -3,7 +3,7 @@ package no.risc.initRiSc
 import kotlinx.serialization.json.Json
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.initRiSc.model.InitRiScDescriptorConfig
@@ -16,9 +16,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class InitRiScServiceGitHubImpl(
-    private val githubConnector: GithubConnector,
-) {
-    suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
+    private val githubConnector: GithubConnectorPort,
+) : InitRiScService {
+    override suspend fun getInitRiScDescriptors(accessTokens: AccessTokens): List<RiScTypeDescriptor> {
         val initRiScDescriptorConfigs = getInitRiScDescriptorConfigs(accessTokens)
         return initRiScDescriptorConfigs
             .map {
@@ -45,7 +45,7 @@ class InitRiScServiceGitHubImpl(
      *
      * @param initRiScId ID of default RiSc to generate the RiSc from.
      */
-    suspend fun getInitRiSc(
+    override suspend fun getInitRiSc(
         initRiScId: String,
         initialContent: String,
         accessTokens: AccessTokens,

@@ -3,7 +3,7 @@ package no.risc.security
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.RepositoryAccessException
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.google.GoogleServiceIntegration
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.models.ProcessingStatus
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class ValidationService(
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     private val googleServiceIntegration: GoogleServiceIntegration,
 ) {
     suspend fun validateAccessTokens(
