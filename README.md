@@ -125,11 +125,11 @@ Because we only rely on GitHub we have used the commit messages to make the deci
 
 ## High level components
 
-This backend handles encrypt and decrypt of RiSc YAML files directly via `SopsCryptoService`, which shells out to the `sops` binary at runtime using a Shamir secret-sharing scheme across Age and GCP KMS key groups.
+This backend handles encrypt and decrypt of RiSc YAML files via its internal `SopsCryptoService`, which shells out to the `sops` binary at runtime using a Shamir secret-sharing scheme across Age and GCP KMS key groups.
 
 <br>
 
-## Simplified Architecture (Warning: Outdated)
+## Simplified Architecture
 
 ![RiSc Architecture](ROS_as_code_arkitektur.png)
 
