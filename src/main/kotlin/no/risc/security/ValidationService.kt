@@ -2,12 +2,14 @@ package no.risc.security
 
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.InvalidAccessTokensException
+import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.github.GithubConnector
 import no.risc.google.GoogleServiceIntegration
 import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.models.ProcessingStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.WebClientResponseException
 
 @Service
 class ValidationService(
@@ -24,6 +26,12 @@ class ValidationService(
         val repositoryInfo =
             try {
                 githubConnector.fetchRepositoryInfo(gitHubAccessToken, repositoryOwner, repositoryName)
+            } catch (e: WebClientResponseException.Unauthorized) {
+                throw InvalidAccessTokensException(
+                    "GitHub access token is invalid or expired for $repositoryOwner/$repositoryName",
+                )
+            } catch (e: PermissionDeniedOnGitHubException) {
+                throw e
             } catch (e: Exception) {
                 throw AccessTokenValidationFailedException(
                     permissionNeeded = gitHubPermissionNeeded,

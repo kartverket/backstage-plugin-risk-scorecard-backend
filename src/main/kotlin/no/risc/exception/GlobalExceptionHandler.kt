@@ -173,7 +173,7 @@ internal class GlobalExceptionHandler {
         )
     }
 
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
     @ResponseBody
     @ExceptionHandler(PermissionDeniedOnGitHubException::class)
     fun handlePermissionDeniedOnGitHubException(ex: PermissionDeniedOnGitHubException): ProcessRiScResultDTO {
