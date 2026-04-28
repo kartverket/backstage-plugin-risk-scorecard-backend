@@ -2,7 +2,7 @@ ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
 ARG SOPS_BUILD_IMAGE=golang:1.26.2
 ARG SOPS_VERSION_ARG=3.12.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.1
-ARG DISTROLESS_IMAGE=gcr.io/distroless/java25-debian13
+ARG DISTROLESS_IMAGE=gcr.io/distroless/java25-debian13@sha256:f25ab728deeafec63d7176a473536f4f4347d42db7e24b3bb0fb7b05ff84d248
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
@@ -38,9 +38,9 @@ RUN apk add --no-cache \
         build-base linux-headers git bash autoconf \
         openssl-dev openssl-libs-static \
         readline-dev readline-static ncurses-static && \
-    git clone --depth 1 --branch ${SOCAT_VERSION_ARG} https://repo.or.cz/socat.git && \
-    cd socat && \
-    autoconf && \
+    git clone --depth 1 --branch ${SOCAT_VERSION_ARG} https://repo.or.cz/socat.git
+WORKDIR /socat
+RUN autoconf && \
     sh ./configure LDFLAGS="-static" && \
     make && \
     mkdir -p /out && cp socat /out/socat
