@@ -34,12 +34,6 @@ repositories {
     mavenCentral()
 }
 
-val kotlinVersion = "2.3.20"
-val springBootVersion = "4.0.5"
-val springSecurityVersion = "7.0.2"
-val kotlinxSerializationVersion = "1.11.0"
-val kotlinxCoroutinesVersion = "1.10.2"
-val micrometerVersion = "1.16.5"
 val jsonSchemaValidatorVersion = "3.0.2"
 val nimbusdsVersion = "10.9"
 val bouncyCastleVersion = "1.84"
@@ -48,11 +42,11 @@ val junitVersion = "6.0.3"
 val springdocVersion = "3.0.3"
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.springframework.boot:spring-boot-starter-webmvc:$springBootVersion")
-    implementation("org.springframework.boot:spring-boot-starter-security:$springBootVersion")
-    implementation("org.springframework.boot:spring-boot-starter-actuator:$springBootVersion")
-    implementation("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
     implementation("org.springframework.security:spring-security-oauth2-jose")
     implementation("org.springframework.security:spring-security-oauth2-resource-server")
@@ -63,15 +57,15 @@ dependencies {
         because("Used by nimbus-jose-jwt for parsing of PEM certificates in dev/prod environments.")
     }
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$kotlinxCoroutinesVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
 
-    implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion") {
+    implementation("io.micrometer:micrometer-registry-prometheus") {
         because("Provides endpoints for health and event monitoring that are used in SKIP and Docker.")
     }
 
@@ -86,9 +80,9 @@ dependencies {
     }
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("net.bytebuddy:byte-buddy:1.18.8")
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxCoroutinesVersion")
+    testImplementation("net.bytebuddy:byte-buddy")
+    testImplementation("net.bytebuddy:byte-buddy-agent")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("io.mockk:mockk:$mockkVersion")
 }
 
