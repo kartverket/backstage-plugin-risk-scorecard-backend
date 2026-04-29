@@ -3,15 +3,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: local
       args:
-        LOCAL: true
         BUILD_IMAGE: ${BUILD_IMAGE:-eclipse-temurin:25-jre-alpine}
-        IMAGE: ${IMAGE:-eclipse-temurin:25-alpine}
+        SOPS_BUILD_IMAGE: golang:1.26.2
+        SOPS_VERSION_ARG: 3.12.2
+        DISTROLESS_IMAGE: ${DISTROLESS_IMAGE:-gcr.io/distroless/java25-debian13}
     ports:
       - "8080:8080"
       - "8081:8081"
+    environment:
+      - LOCAL=true
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      start_period: 30s
+      interval: 5m
+      timeout: 5s
+      retries: 3
 
   skip:
     build:
