@@ -19,5 +19,5 @@ enum class GithubStatus {
 
 data class RiScApprovalPRStatus(
     val pullRequest: GithubPullRequestObject?,
-    val hasClosedPr: Boolean,
+    val hasConvertedPrToDraft: Boolean,
 )

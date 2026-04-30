@@ -206,13 +206,23 @@ class GithubHelper(
     ): String = "/$owner/$repository/pulls/$pullRequestNumber"
 
     /**
-     * The default request body used for closing a pull request.
+     * The default request body used for closing a pull request. Used as a fallback when converting a PR to draft
+     * via GraphQL fails.
      *
      * @see uriToEditPullRequest
      */
     fun bodyToClosePullRequest(): String =
         "{ \"title\":\"Closed\", \"body\": \"The PR was closed when risk scorecard was updated. " +
             "New approval from risk owner is required.\",  \"state\": \"closed\"}"
+
+    /**
+     * The request body used for updating a PR body after it has been converted to draft.
+     *
+     * @see uriToEditPullRequest
+     */
+    fun bodyToUpdatePrBodyWithDraftMessage(): String =
+        "{ \"body\": \"\u26a0\ufe0f This PR was converted to draft because the risk scorecard was updated. " +
+            "New approval from a risk owner is required.\" }"
 
     /**
      * Constructs a request body to create a new branch with.

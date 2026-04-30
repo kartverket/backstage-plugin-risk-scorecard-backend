@@ -58,6 +58,7 @@ class GithubConnector(
     @Value("\${filename.postfix}") private val filenamePostfix: String,
     @Value("\${filename.prefix}") private val filenamePrefix: String,
     private val githubHelper: GithubHelper,
+    private val githubGraphQLConnector: GithubGraphQLConnector,
 ) : WebClientConnector("https://api.github.com/repos") {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(GithubConnector::class.java)
@@ -553,7 +554,7 @@ class GithubConnector(
                 // of default requires approval, then create a new PR.
 
                 // else if a pull request already exists (meaning the RiSc has been approved)
-                // close it if the update requires new approval
+                // convert it to draft if the update requires new approval
                 if (!requiresNewApproval && !prExists && !commitsAheadOfDefaultRequiresApproval) {
                     val pullRequest =
                         createPullRequestForRiSc(
@@ -564,25 +565,82 @@ class GithubConnector(
                             gitHubAccessToken = gitHubAccessToken.value,
                             userInfo = userInfo,
                         )
-                    RiScApprovalPRStatus(pullRequest = pullRequest, hasClosedPr = false)
+                    RiScApprovalPRStatus(pullRequest = pullRequest, hasConvertedPrToDraft = false)
                 } else if (requiresNewApproval && prExists) {
-                    closePullRequestForRiSc(
+                    convertPrToDraftOrClose(
                         owner = owner,
                         repository = repository,
                         riScId = riScId,
                         accessToken = gitHubAccessToken.value,
                     )
-                    RiScApprovalPRStatus(pullRequest = null, hasClosedPr = true)
+                    RiScApprovalPRStatus(pullRequest = null, hasConvertedPrToDraft = true)
                 } else {
-                    RiScApprovalPRStatus(pullRequest = null, hasClosedPr = false)
+                    RiScApprovalPRStatus(pullRequest = null, hasConvertedPrToDraft = false)
                 }
             }
         return riScApprovalPRStatus
     }
 
     /**
+     * Converts the open pull request for the given RiSc to a draft, signalling that the RiSc has been edited and
+     * requires re-approval. If the GraphQL mutation to convert to draft fails, falls back to closing the PR via the
+     * REST API.
+     *
+     * After a successful draft conversion, the PR body is updated to include a traceability message explaining why
+     * the PR was converted.
+     *
+     * @param owner The user/organisation the repository belongs to.
+     * @param repository The repository containing the pull request.
+     * @param riScId The ID of the RiSc whose pull request should be converted to draft.
+     * @param accessToken The GitHub access token for authorization.
+     */
+    private suspend fun convertPrToDraftOrClose(
+        owner: String,
+        repository: String,
+        riScId: String,
+        accessToken: String,
+    ) {
+        val pullRequest =
+            fetchAllPullRequests(owner, repository, accessToken).find { it.head.ref == riScId } ?: return
+
+        val convertedToDraft =
+            githubGraphQLConnector.convertPullRequestToDraft(
+                pullRequestNodeId = pullRequest.nodeId,
+                accessToken = accessToken,
+            )
+
+        if (convertedToDraft) {
+            try {
+                requestToGithubWithJSONBody(
+                    uri = githubHelper.uriToEditPullRequest(owner, repository, pullRequest.number),
+                    accessToken = accessToken,
+                    content = githubHelper.bodyToUpdatePrBodyWithDraftMessage(),
+                    method = HttpMethod.PATCH,
+                ).awaitBodyOrNull<String>()
+            } catch (e: Exception) {
+                LOGGER.warn(
+                    "Converted PR #{} to draft but failed to update body: {}",
+                    pullRequest.number,
+                    e.message,
+                )
+            }
+        } else {
+            LOGGER.warn(
+                "Failed to convert PR #{} to draft via GraphQL, falling back to closing the PR.",
+                pullRequest.number,
+            )
+            closePullRequestForRiSc(
+                owner = owner,
+                repository = repository,
+                riScId = riScId,
+                accessToken = accessToken,
+            )
+        }
+    }
+
+    /**
      * Determines if there exists an open pull request for the given RiSc ID (one from a branch with a name equal to the
-     * ID). If so, the pull request is closed.
+     * ID). If so, the pull request is closed. Used as a fallback when converting a PR to draft fails.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to close the pull request in.
@@ -906,6 +964,75 @@ class GithubConnector(
                         "to ${pullRequestPayload.base} with title \"${pullRequestPayload.title}\"",
             )
         }
+
+    /**
+     * Marks an existing draft pull request for the given RiSc as ready for review, or creates a new PR if none exists.
+     * This is used when a RiSc is re-approved after being converted to draft.
+     *
+     * @param owner The user/organisation that owns the repository.
+     * @param repository The repository containing the pull request.
+     * @param riScId The ID of the RiSc.
+     * @param gitHubAccessToken The GitHub access token for authorization.
+     * @param userInfo Information about the user who approved the changes.
+     * @return The PR object (either the existing one marked ready, or a newly created one).
+     */
+    suspend fun markDraftPrReadyOrCreateNew(
+        owner: String,
+        repository: String,
+        riScId: String,
+        requiresNewApproval: Boolean,
+        gitHubAccessToken: String,
+        userInfo: UserInfo,
+    ): GithubPullRequestObject {
+        val existingDraftPr =
+            fetchAllPullRequests(owner, repository, gitHubAccessToken)
+                .find { it.head.ref == riScId && it.draft }
+
+        if (existingDraftPr != null) {
+            val markedReady =
+                githubGraphQLConnector.markPullRequestReadyForReview(
+                    pullRequestNodeId = existingDraftPr.nodeId,
+                    accessToken = gitHubAccessToken,
+                )
+
+            if (markedReady) {
+                // Update the PR body to reflect the new approval
+                try {
+                    val updatedBody =
+                        "$userInfo has approved the risk scorecard." +
+                            " Merge the pull request to include the changes in the default branch." +
+                            "\nMake sure to delete the branch after merging if auto-deletion is not enabled for your repository"
+                    requestToGithubWithJSONBody(
+                        uri = githubHelper.uriToEditPullRequest(owner, repository, existingDraftPr.number),
+                        accessToken = gitHubAccessToken,
+                        content = mapOf("body" to updatedBody),
+                        method = HttpMethod.PATCH,
+                    ).awaitBodyOrNull<String>()
+                } catch (e: Exception) {
+                    LOGGER.warn(
+                        "Marked PR #{} ready for review but failed to update body: {}",
+                        existingDraftPr.number,
+                        e.message,
+                    )
+                }
+                return existingDraftPr
+            }
+
+            LOGGER.warn(
+                "Failed to mark draft PR #{} ready for review via GraphQL, creating a new PR instead.",
+                existingDraftPr.number,
+            )
+        }
+
+        return createPullRequestForRiSc(
+            owner = owner,
+            repository = repository,
+            riScId = riScId,
+            requiresNewApproval = requiresNewApproval,
+            gitHubAccessToken = gitHubAccessToken,
+            userInfo = userInfo,
+        )
+    }
 
     /**
      * Deletes a RiSc. If the RiSc has never been published, then the branch of the RiSc is deleted without requiring

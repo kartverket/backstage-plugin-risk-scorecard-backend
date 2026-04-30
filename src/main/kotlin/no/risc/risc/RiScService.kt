@@ -569,10 +569,18 @@ class RiScService(
             return ProcessRiScResultDTO(
                 riScId = riScId,
                 status =
-                    if (riScApprovalPRStatus.hasClosedPr) ProcessingStatus.UpdatedRiScRequiresNewApproval else ProcessingStatus.UpdatedRiSc,
+                    if (riScApprovalPRStatus.hasConvertedPrToDraft) {
+                        ProcessingStatus.UpdatedRiScRequiresNewApproval
+                    } else {
+                        ProcessingStatus.UpdatedRiSc
+                    },
                 statusMessage =
                     "Risk scorecard was updated" +
-                        if (riScApprovalPRStatus.hasClosedPr) " and has to be approved by a risk owner again" else "",
+                        if (riScApprovalPRStatus.hasConvertedPrToDraft) {
+                            " and has to be approved by a risk owner again"
+                        } else {
+                            ""
+                        },
             )
         } catch (e: RiScConflictException) {
             throw e
@@ -615,8 +623,8 @@ class RiScService(
             )
 
     /**
-     * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
-     * is made against the provided base branch.
+     * Prepares the provided RiSc for publication. If a draft pull request already exists (from a previous approval that
+     * was converted to draft after editing), marks it as ready for review. Otherwise, creates a new pull request.
      *
      * @param owner The user/organisation the repository belongs to.
      * @param repository The repository to push the RiSc to.
@@ -624,7 +632,6 @@ class RiScService(
      * @param gitHubAccessToken The access token to use for authorization against GitHub.
      * @param userInfo Information about the user that is creating the pull request, i.e., the user that approved the
      *                  changes.
-     * @param baseBranch The name of the default branch of the repository.
      */
     suspend fun publishRiSc(
         owner: String,
@@ -634,7 +641,7 @@ class RiScService(
         userInfo: UserInfo,
     ): PublishRiScResultDTO {
         val pullRequestObject =
-            githubConnector.createPullRequestForRiSc(
+            githubConnector.markDraftPrReadyOrCreateNew(
                 owner = owner,
                 repository = repository,
                 riScId = riScId,

@@ -52,6 +52,7 @@ import java.time.OffsetDateTime
 class GithubConnectorTests {
     private lateinit var githubConnector: GithubConnector
     private lateinit var webClient: MockableWebClient
+    private lateinit var githubGraphQLConnector: GithubGraphQLConnector
     private val filenamePostfix = "risc"
     private val filenamePrefix = "risc"
     private val riscFolderPath = ".security/risc"
@@ -67,6 +68,7 @@ class GithubConnectorTests {
             }
 
         webClient = MockableWebClient()
+        githubGraphQLConnector = spyk(GithubGraphQLConnector())
         githubConnector =
             spyk(
                 GithubConnector(
@@ -79,6 +81,7 @@ class GithubConnectorTests {
                             riScFolderPath = riscFolderPath,
                             initRiScServiceConfig = initRiScServiceConfig,
                         ),
+                    githubGraphQLConnector = githubGraphQLConnector,
                 ),
             )
         every { githubConnector.webClient } returns webClient.webClient
@@ -137,6 +140,7 @@ class GithubConnectorTests {
                     mockableResponseFromObject(
                         riscIdsWithPR.mapIndexed { index, riScID ->
                             GithubPullRequestObject(
+                                nodeId = "PR_node_$index",
                                 url = "https://api.github.com/repos/$owner/$repository/pulls/$index",
                                 title = "Update RiSc",
                                 createdAt = OffsetDateTime.now(),
@@ -559,6 +563,7 @@ class GithubConnectorTests {
             val pullRequests =
                 listOf(
                     GithubPullRequestObject(
+                        nodeId = "PR_node_97",
                         url = "https://api.github.com/repos/$owner/$repository/pulls/97",
                         title = "Unicode Support",
                         createdAt = OffsetDateTime.now().minusHours(2),
@@ -567,6 +572,7 @@ class GithubConnectorTests {
                         number = 97,
                     ),
                     GithubPullRequestObject(
+                        nodeId = "PR_node_84",
                         url = "https://api.github.com/repos/$owner/$repository/pulls/84",
                         title = " Updated risk scorecard",
                         createdAt = OffsetDateTime.now().minusHours(3).minusMinutes(18),
@@ -628,6 +634,7 @@ class GithubConnectorTests {
 
             val pullRequest =
                 GithubPullRequestObject(
+                    nodeId = "PR_node_29",
                     url = "https://api.github.com/repos/$owner/$repository/pulls/29",
                     title = "Updated risk scorecard",
                     createdAt = OffsetDateTime.now(),
@@ -682,6 +689,7 @@ class GithubConnectorTests {
 
             val pullRequest =
                 GithubPullRequestObject(
+                    nodeId = "PR_node_29",
                     url = "https://api.github.com/repos/$owner/$repository/pulls/29",
                     title = "Deleted risk scorecard",
                     createdAt = OffsetDateTime.now(),

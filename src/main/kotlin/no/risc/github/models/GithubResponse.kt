@@ -132,6 +132,8 @@ data class GithubCommitter(
 @Serializable
 @JsonIgnoreUnknownKeys
 data class GithubPullRequestObject(
+    @SerialName("node_id")
+    val nodeId: String,
     @SerialName("html_url")
     val url: String,
     val title: String,
@@ -141,6 +143,7 @@ data class GithubPullRequestObject(
     val head: GithubPullRequestBranch,
     val base: GithubPullRequestBranch,
     val number: Int,
+    val draft: Boolean = false,
 )
 
 /**
