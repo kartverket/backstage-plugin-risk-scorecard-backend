@@ -32,7 +32,7 @@ class ValidationService(
                             "$repositoryOwner/$repositoryName during access token validation",
                 )
             }
-        if (gitHubPermissionNeeded !in repositoryInfo.permissions) {
+        if (!repositoryInfo.hasWriteAccess) {
             throw RepositoryAccessException(
                 permissionNeeded = gitHubPermissionNeeded,
                 message = "Access denied: No ${gitHubPermissionNeeded.name.lowercase()}-access on $repositoryOwner/$repositoryName",

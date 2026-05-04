@@ -12,7 +12,7 @@ enum class GitHubPermission {
 
 data class RepositoryInfo(
     val defaultBranch: String,
-    val permissions: List<GitHubPermission>,
+    val hasWriteAccess: Boolean,
 )
 
 data class GCPAccessToken(

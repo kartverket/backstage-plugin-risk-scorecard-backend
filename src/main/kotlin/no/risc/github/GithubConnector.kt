@@ -1271,12 +1271,7 @@ class GithubConnector(
 
         return RepositoryInfo(
             defaultBranch = repositoryDTO.defaultBranch,
-            permissions =
-                if (repositoryDTO.permissions.push) {
-                    GitHubPermission.entries.toList()
-                } else {
-                    listOf(GitHubPermission.READ)
-                },
+            hasWriteAccess = repositoryDTO.permissions.push,
         )
     }
 
