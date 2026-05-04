@@ -22,7 +22,6 @@ import no.risc.github.models.GithubStatus
 import no.risc.github.models.GithubWriteToFilePayload
 import no.risc.github.models.RiScApprovalPRStatus
 import no.risc.infra.connector.WebClientConnector
-import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.infra.connector.models.RepositoryInfo
 import no.risc.risc.models.DeleteRiScResultDTO
