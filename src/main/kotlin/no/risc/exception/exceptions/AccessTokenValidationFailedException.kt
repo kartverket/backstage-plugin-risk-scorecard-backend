@@ -8,7 +8,7 @@ data class AccessTokenValidationFailedException(
         ProcessRiScResultDTO(
             riScId = "",
             status = ProcessingStatus.AccessTokensValidationFailure,
-            statusMessage = "An error occurred when validation access tokens.",
+            statusMessage = "An error occurred when validating access token.",
         ),
     override val message: String,
 ) : Exception()
