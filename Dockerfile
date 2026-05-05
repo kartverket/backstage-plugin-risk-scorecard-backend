@@ -10,9 +10,6 @@ ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:b1eb8a18891104b7405f29edbb2
 FROM ${BUILD_IMAGE} AS build
 COPY . .
 
-# Get security updates
-RUN apk upgrade --no-cache
-
 RUN ./gradlew build -x test
 
 # Build SOPS from source
