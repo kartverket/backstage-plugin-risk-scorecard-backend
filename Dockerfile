@@ -1,4 +1,4 @@
-ARG BUILD_IMAGE=eclipse-temurin:8-alpine3.23
+ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:fadae232b6a4ff83dec0a6a6474c27aaf2e4fea8efe9a4d7b59aae62edad8c0b
 # We use the eclipse-temurin 'hardened' image for build stage.
 ARG SOPS_BUILD_IMAGE=golang:1.26.2
 ARG SOPS_VERSION_ARG=3.12.2
