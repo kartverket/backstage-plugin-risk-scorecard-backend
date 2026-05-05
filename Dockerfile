@@ -1,7 +1,9 @@
-ARG BUILD_IMAGE=eclipse-temurin:25-jre-alpine
+ARG BUILD_IMAGE=eclipse-temurin:8-alpine3.23@sha256:c2814bb3883e2848fd0bbec554e73f26b2bec74bcce4cbd46dac94878d530d93
+# We use the eclipse-temurin 'hardened' image for build stage.
 ARG SOPS_BUILD_IMAGE=golang:1.26.2
 ARG SOPS_VERSION_ARG=3.12.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.1
+# Fetch distroless images from Google's gcr.io.
 ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:b1eb8a18891104b7405f29edbb2eaca9b34179707957a0e5a41b54d4a45cbdfd
 
 # Build stage for Java app
