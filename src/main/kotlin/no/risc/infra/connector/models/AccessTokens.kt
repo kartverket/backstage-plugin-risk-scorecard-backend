@@ -5,14 +5,9 @@ data class AccessTokens(
     val gcpAccessToken: GCPAccessToken,
 )
 
-enum class GitHubPermission {
-    READ,
-    WRITE,
-}
-
 data class RepositoryInfo(
     val defaultBranch: String,
-    val permissions: List<GitHubPermission>,
+    val hasWriteAccess: Boolean,
 )
 
 data class GCPAccessToken(
