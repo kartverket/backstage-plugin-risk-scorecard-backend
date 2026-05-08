@@ -2,13 +2,7 @@ name: Pharos
 on:
   schedule:
     - cron: '0 6 * * 1-5'
-  workflow_run:
-    workflows:
-      - "Build and deploy RiSC-plugin backend"
-      - "Build and deploy to Spire Cloud Run"
-      - "CodeQL Advanced"
-    types:
-      - completed
+  push:
     branches:
       - main
   workflow_dispatch:
@@ -16,9 +10,6 @@ on:
 jobs:
   pharos:
     name: Run Pharos on docker image
-    if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
     permissions:
       actions: read
       packages: read
@@ -26,6 +17,8 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for image to (probably) be available
+      - run: sleep 360
       - name: "Run Pharos"
         uses: kartverket/pharos@v0.6.0
         with:
