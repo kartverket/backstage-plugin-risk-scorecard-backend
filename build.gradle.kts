@@ -1,9 +1,9 @@
 plugins {
-    val kotlinPluginsVersion = "2.3.20"
+    val kotlinPluginsVersion = "2.3.21"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "4.0.5"
+    id("org.springframework.boot") version "4.0.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
@@ -27,8 +27,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
-extra["tomcat.version"] = "11.0.21" // Vulnerability in 11.0.20
-extra["jackson-bom.version"] = "3.1.2" // Vulnerability in 3.1.0
+extra["tomcat.version"] = "11.0.22" // Vulnerability in 11.0.20
+extra["jackson-bom.version"] = "3.1.3" // Vulnerability in 3.1.0
 
 repositories {
     mavenCentral()
