@@ -41,6 +41,7 @@ class AccessTokenValidationFilter(
         } catch (e: IndexOutOfBoundsException) {
             throw InvalidAccessTokensException(
                 "${request.requestURI} does not have access token}",
+                cause = e,
             )
         }
     }
