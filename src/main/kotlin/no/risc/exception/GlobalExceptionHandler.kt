@@ -1,6 +1,5 @@
 package no.risc.exception
 
-import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.CreatePullRequestException
 import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DeletingRiScException
@@ -9,7 +8,6 @@ import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
-import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.exception.exceptions.RiScConflictException
 import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
@@ -179,22 +177,6 @@ internal class GlobalExceptionHandler {
     fun handlePermissionDeniedOnGitHubException(ex: PermissionDeniedOnGitHubException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
-    }
-
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    @ResponseBody
-    @ExceptionHandler(RepositoryAccessException::class)
-    fun handleNoWriteAccessToRepositoryException(ex: RepositoryAccessException): Any {
-        logger.error(ex.message, ex)
-        return ex.response
-    }
-
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ResponseBody
-    @ExceptionHandler(AccessTokenValidationFailedException::class)
-    fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
-        logger.error(ex.message, ex)
-        return ex.response
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
