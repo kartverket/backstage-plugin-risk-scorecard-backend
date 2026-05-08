@@ -5,7 +5,6 @@ import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
-import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RiScConflictException
@@ -125,14 +124,6 @@ internal class GlobalExceptionHandler {
             status = ProcessingStatus.ErrorWhenUpdatingRiSc,
             statusMessage = ex.message,
         )
-    }
-
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    @ResponseBody
-    @ExceptionHandler(InvalidAccessTokensException::class)
-    fun handleInvalidAccessTokensException(ex: InvalidAccessTokensException): ProcessRiScResultDTO {
-        logger.error(ex.message, ex)
-        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
