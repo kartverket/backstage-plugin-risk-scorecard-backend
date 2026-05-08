@@ -27,7 +27,7 @@ class ValidationService(
                     message =
                         "An error occurred when fetching repository info for " +
                             "$repositoryOwner/$repositoryName during access token validation",
-                    cause = e
+                    cause = e,
                 )
             }
         if (!repositoryInfo.hasWriteAccess) {
