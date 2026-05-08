@@ -194,7 +194,11 @@ internal class GlobalExceptionHandler {
     @ExceptionHandler(AccessTokenValidationFailedException::class)
     fun handleAccessTokenValidationFailedException(ex: AccessTokenValidationFailedException): Any {
         logger.error(ex.message, ex)
-        return ex.response
+        return ProcessRiScResultDTO(
+            riScId = "",
+            status = ProcessingStatus.AccessTokensValidationFailure,
+            statusMessage = ex.message,
+        )
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
