@@ -17,6 +17,8 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for image to (probably) be available
+      - run: sleep 360
       - name: "Run Pharos"
         uses: kartverket/pharos@v0.6.0
         with:

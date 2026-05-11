@@ -8,6 +8,7 @@ ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:70036fed3c5ba28821c5fad98b6
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
+RUN microdnf upgrade -y && microdnf clean all
 COPY . .
 
 RUN ./gradlew build -x test
