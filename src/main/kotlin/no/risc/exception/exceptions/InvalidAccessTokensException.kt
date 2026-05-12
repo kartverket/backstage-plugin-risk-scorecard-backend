@@ -1,5 +1,6 @@
 package no.risc.exception.exceptions
 
-data class InvalidAccessTokensException(
+class InvalidAccessTokensException(
     override val message: String?,
-) : Exception()
+    cause: Throwable? = null,
+) : Exception(message, cause)
