@@ -4,10 +4,11 @@ ARG SOPS_BUILD_IMAGE=golang:1.26.3
 ARG SOPS_VERSION_ARG=3.12.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.1
 # Fetch distroless images from Google's gcr.io.
-ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:b1eb8a18891104b7405f29edbb2eaca9b34179707957a0e5a41b54d4a45cbdfd
+ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:70036fed3c5ba28821c5fad98b613a2fb173cc52fa893b509abedaa2e82ba9c1
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
+
 COPY . .
 
 RUN ./gradlew build -x test
