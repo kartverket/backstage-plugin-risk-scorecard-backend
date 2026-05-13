@@ -176,7 +176,7 @@ enum class ProcessingStatus(
     UpdatedRiScAndCreatedPullRequest("Updated risk scorecard and created pull request"),
     CreatedPullRequest("Created pull request for risk scorecard"),
     ErrorWhenCreatingPullRequest("Error when creating pull request"),
-    InvalidAccessTokens("Invalid access tokens"),
+    InvalidGcpAccessToken("Invalid GCP access token"),
     InvalidGitHubAccessToken("Invalid GitHub access token"),
     NoWriteAccessToRepository("Permission denied: You do not have write access to repository"),
     UpdatedRiScRequiresNewApproval("Updated risk scorecard and requires new approval"),

@@ -1,7 +1,7 @@
 package no.risc.security
 
 import no.risc.exception.exceptions.AccessTokenValidationFailedException
-import no.risc.exception.exceptions.InvalidAccessTokensException
+import no.risc.exception.exceptions.InvalidGcpAccessTokenException
 import no.risc.exception.exceptions.InvalidGithubAccessTokenException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.github.GithubConnector
@@ -43,8 +43,8 @@ class ValidationService(
             )
         }
         if (!googleServiceIntegration.validateAccessToken(gcpAccessToken)) {
-            throw InvalidAccessTokensException(
-                "Invalid risk scorecard result: ${ProcessingStatus.InvalidAccessTokens.message}",
+            throw InvalidGcpAccessTokenException(
+                "Invalid GCP access token for $repositoryOwner/$repositoryName",
             )
         }
     }
