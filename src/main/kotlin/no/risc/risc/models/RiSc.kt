@@ -49,7 +49,11 @@ sealed interface RiSc {
                         parseJSONToClass<RiSc4X>(content)
                     }
 
-                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1, RiScVersion.RiSc5XVersion.VERSION_5_2 -> {
+                    RiScVersion.RiSc5XVersion.VERSION_5_0,
+                    RiScVersion.RiSc5XVersion.VERSION_5_1,
+                    RiScVersion.RiSc5XVersion.VERSION_5_2,
+                    RiScVersion.RiSc5XVersion.VERSION_5_3,
+                    -> {
                         parseJSONToClass<RiSc5X>(content)
                     }
 
@@ -82,6 +86,9 @@ sealed interface RiScVersion {
 
         @SerialName("5.2")
         VERSION_5_2,
+
+        @SerialName("5.3")
+        VERSION_5_3,
         ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
@@ -181,7 +188,7 @@ data class RiSc5XScenario(
 private object RiSc5XScenarioActionSerializer : FlattenSerializer<RiSc5XScenarioAction>(
     serializer = RiSc5XScenarioAction.generatedSerializer(),
     flattenKey = "action",
-    subKeys = listOf("ID", "url", "status", "description", "lastUpdated", "lastUpdatedBy"),
+    subKeys = listOf("ID", "url", "status", "description", "lastUpdated", "lastUpdatedBy", "comment"),
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -197,6 +204,7 @@ data class RiSc5XScenarioAction(
     @Serializable(KNullableOffsetDateTimeSerializer::class)
     val lastUpdated: OffsetDateTime? = null,
     val lastUpdatedBy: String? = null,
+    val comment: String? = null,
 )
 
 /***************

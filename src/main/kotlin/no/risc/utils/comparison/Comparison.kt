@@ -390,6 +390,7 @@ fun compareActions5X(
                     ),
                 lastUpdated = changeForNonMandatorySimpleProperty(oldAction.lastUpdated, newAction.lastUpdated),
                 lastUpdatedBy = changeForNonMandatorySimpleProperty(oldAction.lastUpdatedBy, newAction.lastUpdatedBy),
+                comment = changeForNonMandatorySimpleProperty(oldAction.comment, newAction.comment),
             )
         },
     )

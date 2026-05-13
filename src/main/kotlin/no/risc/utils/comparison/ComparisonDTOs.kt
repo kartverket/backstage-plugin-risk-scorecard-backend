@@ -133,6 +133,7 @@ data class RiSc5XScenarioActionChange(
         OffsetDateTime?,
     >? = null,
     val lastUpdatedBy: SimpleTrackedProperty<String?>? = null,
+    val comment: SimpleTrackedProperty<String?>? = null,
 )
 
 /***************

@@ -1,5 +1,8 @@
 # Schema changelog
 
+## 5.3
+- Adds optional comment field in actions
+
 ## 5.2
 - Removes the unused valuations field
 
