@@ -26,7 +26,6 @@ import no.risc.github.models.GithubRepositoryDTO
 import no.risc.github.models.GithubRepositoryPermissions
 import no.risc.github.models.GithubStatus
 import no.risc.github.models.GithubWriteToFilePayload
-import no.risc.infra.connector.models.GitHubPermission
 import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.risc.models.LastPublished
 import no.risc.risc.models.ProcessingStatus
@@ -478,9 +477,9 @@ class GithubConnectorTests {
                 "Default branch should be the one returned from GitHub.",
             )
             assertEquals(
-                GitHubPermission.entries.toList(),
-                response.permissions,
-                "If the user has push access to the repository, both push and pull access should be returned.",
+                true,
+                response.hasWriteAccess,
+                "If the user has push access to the repository, write access should be granted.",
             )
         }
 
@@ -513,9 +512,9 @@ class GithubConnectorTests {
                 "Default branch should be the one returned from GitHub.",
             )
             assertEquals(
-                listOf(GitHubPermission.READ),
-                response.permissions,
-                "If the user only has pull access to the repository, only pull access should be returned.",
+                false,
+                response.hasWriteAccess,
+                "If the user only has pull access to the repository, write access should not be granted.",
             )
         }
 

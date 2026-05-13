@@ -8,7 +8,6 @@ ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:c0d379ff54ea6d61f3f35736e8f
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
-COPY . .
 
 RUN ./gradlew build -x test
 

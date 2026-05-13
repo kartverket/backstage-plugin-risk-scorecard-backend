@@ -5,7 +5,6 @@ import no.risc.exception.exceptions.InvalidAccessTokensException
 import no.risc.exception.exceptions.RepositoryAccessException
 import no.risc.github.GithubConnector
 import no.risc.google.GoogleServiceIntegration
-import no.risc.infra.connector.models.GitHubPermission
 import no.risc.risc.models.ProcessingStatus
 import org.springframework.stereotype.Service
 
@@ -17,7 +16,6 @@ class ValidationService(
     suspend fun validateAccessTokens(
         gcpAccessToken: String,
         gitHubAccessToken: String,
-        gitHubPermissionNeeded: GitHubPermission,
         repositoryOwner: String,
         repositoryName: String,
     ) {
@@ -26,16 +24,15 @@ class ValidationService(
                 githubConnector.fetchRepositoryInfo(gitHubAccessToken, repositoryOwner, repositoryName)
             } catch (e: Exception) {
                 throw AccessTokenValidationFailedException(
-                    permissionNeeded = gitHubPermissionNeeded,
                     message =
                         "An error occurred when fetching repository info for " +
                             "$repositoryOwner/$repositoryName during access token validation",
+                    cause = e,
                 )
             }
-        if (gitHubPermissionNeeded !in repositoryInfo.permissions) {
+        if (!repositoryInfo.hasWriteAccess) {
             throw RepositoryAccessException(
-                permissionNeeded = gitHubPermissionNeeded,
-                message = "Access denied: No ${gitHubPermissionNeeded.name.lowercase()}-access on $repositoryOwner/$repositoryName",
+                message = "Access denied: No write-access on $repositoryOwner/$repositoryName",
             )
         }
         if (!googleServiceIntegration.validateAccessToken(gcpAccessToken)) {
