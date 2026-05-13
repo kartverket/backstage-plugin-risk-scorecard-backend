@@ -1,6 +1,6 @@
 package no.risc.exception.exceptions
 
-class InvalidGithubAccessTokenException(
+class InvalidGitHubAccessTokenException(
     override val message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
