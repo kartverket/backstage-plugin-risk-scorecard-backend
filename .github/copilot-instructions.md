@@ -26,7 +26,7 @@ Backstage backend plugin for **Risk Management as Code (RiSc)**. Risk assessment
 
 **Local dev:**
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ./run-local.sh          # Runs with spring.profiles.active=local
 # OR via IntelliJ run config: "✨Local Server"
 ```
