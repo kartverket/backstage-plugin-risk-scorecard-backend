@@ -229,7 +229,7 @@ internal class GlobalExceptionHandler {
         logger.error(ex.message, ex)
         return ProcessRiScResultDTO(
             riScId = "",
-            status = ProcessingStatus.InvalidAccessTokens,
+            status = ProcessingStatus.InvalidGitHubAccessToken,
             statusMessage = ex.message,
         )
     }
