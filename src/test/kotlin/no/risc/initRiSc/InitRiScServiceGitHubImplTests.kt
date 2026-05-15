@@ -13,6 +13,7 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScScenarioActionStatus
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -269,6 +270,7 @@ class InitRiScServiceGitHubImplTests {
 
             assertEquals("Title from initialContent", initRiSc5X.title)
             assertEquals("Scope from initialContent", initRiSc5X.scope)
+            assertNull(initRiSc5X.appliesTo)
             assertEquals(2, initRiSc5X.scenarios.size)
             assertEquals("Produktet mangler eller bryter avtaler med tredjeparter", initRiSc5X.scenarios[0].title)
             assertEquals(1, initRiSc5X.scenarios[0].actions.size)
@@ -291,6 +293,7 @@ class InitRiScServiceGitHubImplTests {
 
             assertEquals("Title from initialContent", initRiSc5X.title)
             assertEquals("Scope from initialContent", initRiSc5X.scope)
+            assertNull(initRiSc5X.appliesTo)
             assertEquals(1, initRiSc5X.scenarios.size)
             assertEquals(6, initRiSc5X.scenarios[0].actions.size)
 

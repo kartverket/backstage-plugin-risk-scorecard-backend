@@ -79,7 +79,8 @@ class GithubConnector(
                     .awaitSingle()
             }.also {
                 LOGGER.debug(
-                    "GET to GitHub contents-API responded with {}. RiSc content: {}",
+                    "GET to GitHub contents-API for uri {} responded with {}. RiSc content: {}",
+                    uri,
                     it.statusCode,
                     it.body?.content?.substring(0, 10),
                 )

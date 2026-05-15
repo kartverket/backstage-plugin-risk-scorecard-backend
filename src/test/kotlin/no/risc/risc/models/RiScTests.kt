@@ -1,6 +1,9 @@
 package no.risc.risc.models
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import no.risc.validation.JSONValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -339,6 +342,46 @@ class RiScTests {
                     riScContent = Json.encodeToString(riSc3XWithValuations(RiScVersion.RiSc3XVersion.VERSION_3_3)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are present.",
+        )
+    }
+
+    @Test
+    fun `test RiSc5X preserves appliesTo when parsed and serialized`() {
+        val riScJSONString =
+            """
+            {
+              "schemaVersion": "5.3",
+              "title": "Title",
+              "scope": "Scope",
+              "appliesTo": [
+                "component:default/service-a",
+                "component:default/service-b"
+              ],
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val riSc = RiSc.fromContent(riScJSONString)
+
+        assertTrue(riSc is RiSc5X)
+        val riSc5X = riSc as RiSc5X
+        assertEquals(
+            listOf("component:default/service-a", "component:default/service-b"),
+            riSc5X.appliesTo,
+            "The entity refs should be parsed into the RiSc5X model.",
+        )
+
+        val serializedEntityRefs =
+            Json
+                .parseToJsonElement(riSc5X.toJSON())
+                .jsonObject["appliesTo"]!!
+                .jsonArray
+                .map { it.jsonPrimitive.content }
+
+        assertEquals(
+            listOf("component:default/service-a", "component:default/service-b"),
+            serializedEntityRefs,
+            "The entity refs should be preserved when a RiSc5X model is serialized.",
         )
     }
 

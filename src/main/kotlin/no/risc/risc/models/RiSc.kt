@@ -49,7 +49,10 @@ sealed interface RiSc {
                         parseJSONToClass<RiSc4X>(content)
                     }
 
-                    RiScVersion.RiSc5XVersion.VERSION_5_0, RiScVersion.RiSc5XVersion.VERSION_5_1, RiScVersion.RiSc5XVersion.VERSION_5_2 -> {
+                    RiScVersion.RiSc5XVersion.VERSION_5_0,
+                    RiScVersion.RiSc5XVersion.VERSION_5_1,
+                    RiScVersion.RiSc5XVersion.VERSION_5_2,
+                    RiScVersion.RiSc5XVersion.VERSION_5_3 -> {
                         parseJSONToClass<RiSc5X>(content)
                     }
 
@@ -82,6 +85,9 @@ sealed interface RiScVersion {
 
         @SerialName("5.2")
         VERSION_5_2,
+
+        @SerialName("5.3")
+        VERSION_5_3,
         ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
@@ -146,6 +152,7 @@ data class RiSc5X(
     override val schemaVersion: RiScVersion.RiSc5XVersion,
     val title: String,
     val scope: String,
+    val appliesTo: List<String>? = null,
     val valuations: List<RiScValuation>? = null,
     val scenarios: List<RiSc5XScenario>,
 ) : RiSc {

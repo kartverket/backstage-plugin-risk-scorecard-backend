@@ -183,5 +183,100 @@ class JSONValidatorTests {
         )
     }
 
+    @Test
+    fun `test retrieve version 5_2 schema rejects appliesTo`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.2")
+        val content =
+            """
+            {
+              "schemaVersion": "5.2",
+              "title": "Title",
+              "scope": "Scope",
+              "appliesTo": [
+                "component:default/service-a",
+                "component:default/service-b"
+              ],
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+
+        assertFalse(
+            output.isValid,
+            "The version 5.2 schema should not allow appliesTo.",
+        )
+    }
+
+    @Test
+    fun `test retrieve version 5_3 schema and validate appliesTo`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.3")
+        val content =
+            """
+            {
+              "schemaVersion": "5.3",
+              "title": "Title",
+              "scope": "Scope",
+              "appliesTo": [
+                "component:default/service-a",
+                "component:default/service-b"
+              ],
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+
+        assertTrue(
+            output.isValid,
+        )
+    }
+
+    @Test
+    fun `test retrieve version 5_3 schema accepts missing appliesTo`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.3")
+        val content =
+            """
+            {
+              "schemaVersion": "5.3",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+
+        assertTrue(
+            output.isValid,
+            "appliesTo should be optional in the version 5.3 schema.",
+        )
+    }
+
+    @Test
+    fun `test retrieve version 5_3 schema rejects duplicate appliesTo`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.3")
+        val content =
+            """
+            {
+              "schemaVersion": "5.3",
+              "title": "Title",
+              "scope": "Scope",
+              "appliesTo": [
+                "component:default/service-a",
+                "component:default/service-a"
+              ],
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+
+        assertFalse(
+            output.isValid,
+            "Duplicate appliesTo should fail validation against the version 5.3 schema.",
+        )
+    }
+
     // må skrive en test her for å validere 4.2 opp mot de andre?
 }

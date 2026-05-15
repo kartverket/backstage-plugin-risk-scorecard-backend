@@ -103,6 +103,7 @@ sealed interface RiScChange {
 data class RiSc5XChange(
     val title: SimpleTrackedProperty<String>? = null,
     val scope: SimpleTrackedProperty<String>? = null,
+    val appliesTo: List<SimpleTrackedProperty<String>>? = null,
     val valuations: List<SimpleTrackedProperty<RiScValuation>>,
     val scenarios: List<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>>,
     override val migrationChanges: MigrationStatus,

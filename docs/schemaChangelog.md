@@ -1,5 +1,10 @@
 # Schema changelog
 
+## 5.3
+
+- Adds optional appliesTo field for unencrypted typed references covered by the scorecard, for instance Backstage entity
+  references.
+
 ## 5.2
 - Removes the unused valuations field
 
@@ -53,4 +58,3 @@
 ## 3.3
 - Adds url field in actions
 - Deadline and owner are now optional in actions
-
