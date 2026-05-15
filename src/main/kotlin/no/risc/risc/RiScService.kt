@@ -188,7 +188,7 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
-            riScCacheService.get(owner, repository, latestSupportedVersion)?.let { cached ->
+            riScCacheService.get(owner, repository, latestSupportedVersion, accessTokens.githubAccessToken.value)?.let { cached ->
                 LOGGER.info("Returning {} cached RiScs for {}/{}", cached.size, owner, repository)
                 return@coroutineScope cached
             }
@@ -301,7 +301,7 @@ class RiScService(
                     }
                 }.also { results ->
                     LOGGER.info(formatRiScFetchSummary(owner, repository, results))
-                    riScCacheService.put(owner, repository, latestSupportedVersion, results)
+                    riScCacheService.put(owner, repository, latestSupportedVersion, accessTokens.githubAccessToken.value, results)
                 }
         }
 
