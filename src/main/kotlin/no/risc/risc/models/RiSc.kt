@@ -52,7 +52,8 @@ sealed interface RiSc {
                     RiScVersion.RiSc5XVersion.VERSION_5_0,
                     RiScVersion.RiSc5XVersion.VERSION_5_1,
                     RiScVersion.RiSc5XVersion.VERSION_5_2,
-                    RiScVersion.RiSc5XVersion.VERSION_5_3 -> {
+                    RiScVersion.RiSc5XVersion.VERSION_5_3,
+                    -> {
                         parseJSONToClass<RiSc5X>(content)
                     }
 
