@@ -56,6 +56,7 @@ class RiScService(
     @Value("\${filename.prefix}") val filenamePrefix: String,
     private val sopsCryptoService: SopsCryptoService,
     private val initRiScService: InitRiScServiceGitHubImpl,
+    private val riScCacheService: RiScCacheService,
 ) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(RiScService::class.java)
@@ -187,6 +188,11 @@ class RiScService(
         latestSupportedVersion: String,
     ): List<RiScContentResultDTO> =
         coroutineScope {
+            riScCacheService.get(owner, repository, latestSupportedVersion)?.let { cached ->
+                LOGGER.info("Returning {} cached RiScs for {}/{}", cached.size, owner, repository)
+                return@coroutineScope cached
+            }
+
             LOGGER.info("Fetching all RiScs for $owner/$repository")
 
             val riScGithubMetadataList: List<RiScGithubMetadata> =
@@ -295,6 +301,7 @@ class RiScService(
                     }
                 }.also { results ->
                     LOGGER.info(formatRiScFetchSummary(owner, repository, results))
+                    riScCacheService.put(owner, repository, latestSupportedVersion, results)
                 }
         }
 
@@ -557,6 +564,8 @@ class RiScService(
                     defaultBranch = defaultBranch,
                 )
 
+            riScCacheService.invalidate(owner, repository)
+
             if (riScApprovalPRStatus.pullRequest != null) {
                 return PublishRiScResultDTO(
                     riScId = riScId,
@@ -612,7 +621,7 @@ class RiScService(
                 repository = repository,
                 riScId = riScId,
                 accessToken = accessTokens.githubAccessToken.value,
-            )
+            ).also { riScCacheService.invalidate(owner, repository) }
 
     /**
      * Prepares the provided RiSc for publication by creating a pull request for the drafted changes. The pull request
@@ -648,7 +657,7 @@ class RiScService(
             status = ProcessingStatus.CreatedPullRequest,
             statusMessage = "Pull request was created",
             pendingApproval = pullRequestObject.toPendingApprovalDTO(),
-        )
+        ).also { riScCacheService.invalidate(owner, repository) }
     }
 
     /**
