@@ -22,9 +22,11 @@
       "description": "Optional unencrypted typed target references that the risk scorecard applies to. Backstage catalog entity refs use the backstage: prefix.",
       "type": "array",
       "items": {
-        "type": "string",
-        "pattern": "^[a-z][a-z0-9+.-]*:.+"
-      },
+         "type": "string",
+         "pattern": "^[a-z][a-z0-9+.-]*:.+",
+         "maxLength": 512
+       },
+       "maxItems": 100
       "uniqueItems": true
     },
     "scenarios": {
