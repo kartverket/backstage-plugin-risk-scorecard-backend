@@ -6,7 +6,8 @@ import no.risc.exception.exceptions.CreatingRiScException
 import no.risc.exception.exceptions.DeletingRiScException
 import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
-import no.risc.exception.exceptions.InvalidAccessTokensException
+import no.risc.exception.exceptions.InvalidGcpAccessTokenException
+import no.risc.exception.exceptions.InvalidGitHubAccessTokenException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
@@ -131,10 +132,14 @@ internal class GlobalExceptionHandler {
 
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ResponseBody
-    @ExceptionHandler(InvalidAccessTokensException::class)
-    fun handleInvalidAccessTokensException(ex: InvalidAccessTokensException): ProcessRiScResultDTO {
+    @ExceptionHandler(InvalidGcpAccessTokenException::class)
+    fun handleInvalidGcpAccessTokenException(ex: InvalidGcpAccessTokenException): ProcessRiScResultDTO {
         logger.error(ex.message, ex)
-        return ProcessRiScResultDTO.INVALID_ACCESS_TOKENS
+        return ProcessRiScResultDTO(
+            riScId = "",
+            status = ProcessingStatus.InvalidGcpAccessToken,
+            statusMessage = ex.message,
+        )
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -218,6 +223,18 @@ internal class GlobalExceptionHandler {
             riScId = "",
             status = ex.status,
             statusMessage = ex.status.message,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseBody
+    @ExceptionHandler(InvalidGitHubAccessTokenException::class)
+    fun handleInvalidGithubAccessTokenException(ex: InvalidGitHubAccessTokenException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            riScId = "",
+            status = ProcessingStatus.InvalidGitHubAccessToken,
+            statusMessage = ex.message,
         )
     }
 }
