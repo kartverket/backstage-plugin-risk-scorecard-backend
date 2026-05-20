@@ -63,7 +63,7 @@ class RiScController(
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
         @PathVariable repositoryOwner: String,
         @PathVariable repositoryName: String,
-        @PathVariable latestSupportedVersion: String, // Latest supported version by the frontend
+        @PathVariable latestSupportedVersion: String, // Latest supported version by the frontend.
     ): List<RiScContentResultDTO> {
         val result =
             riScService.fetchAllRiScs(
