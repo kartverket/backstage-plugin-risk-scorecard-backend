@@ -11,6 +11,7 @@ import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
 import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XUnencryptedMetadata
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScScenarioVulnerability
@@ -204,7 +205,7 @@ class ComparisonTests {
             schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_3,
             title = "RiSc version 5.3",
             scope = "A RiSc",
-            appliesTo = appliesTo,
+            unencryptedMetadata = appliesTo?.let(::RiSc5XUnencryptedMetadata),
             scenarios = listOf(),
         )
 

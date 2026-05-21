@@ -2,8 +2,8 @@
 
 ## 5.3
 
-- Adds optional appliesTo field for unencrypted typed references covered by the scorecard, for instance Backstage entity
-  references.
+- Adds optional unencryptedMetadata.appliesTo field for unencrypted typed references covered by the scorecard, for
+  instance Backstage entity references.
 
 ## 5.2
 - Removes the unused valuations field

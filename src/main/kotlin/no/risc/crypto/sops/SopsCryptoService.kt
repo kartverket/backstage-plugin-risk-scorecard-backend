@@ -221,7 +221,7 @@ class SopsCryptoService(
                 "--config",
                 tempConfigFile.absolutePath,
                 "--unencrypted-regex",
-                "^appliesTo$",
+                "^unencryptedMetadata$",
                 "/dev/stdin",
             ).start()
             .run {

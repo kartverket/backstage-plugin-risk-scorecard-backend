@@ -18,16 +18,23 @@
       "description": "The scope of the score card",
       "type": "string"
     },
-    "appliesTo": {
-      "description": "Optional unencrypted typed target references that the risk scorecard applies to. Backstage catalog entity refs use the backstage: prefix.",
-      "type": "array",
-      "items": {
-         "type": "string",
-         "pattern": "^[a-z][a-z0-9+.-]*:.+",
-         "maxLength": 512
+    "unencryptedMetadata": {
+      "description": "Optional unencrypted metadata for the risk scorecard.",
+      "type": "object",
+      "properties": {
+        "appliesTo": {
+          "description": "Optional unencrypted typed target references that the risk scorecard applies to. Backstage catalog entity refs use the backstage: prefix.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9+.-]*:.+",
+            "maxLength": 512
+          },
+          "maxItems": 100,
+          "uniqueItems": true
+        }
       },
-      "maxItems": 100,
-      "uniqueItems": true
+      "additionalProperties": false
     },
     "scenarios": {
       "type": "array",

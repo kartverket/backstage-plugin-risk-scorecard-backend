@@ -77,8 +77,8 @@ fun comparison5X(
         scope = changeForNonMandatorySimpleProperty(migratedOldRiSc.scope, updatedRiSc.scope),
         appliesTo =
             changeForListOfSimpleProperty(
-                migratedOldRiSc.appliesTo ?: emptyList(),
-                updatedRiSc.appliesTo ?: emptyList(),
+                migratedOldRiSc.unencryptedMetadata?.appliesTo ?: emptyList(),
+                updatedRiSc.unencryptedMetadata?.appliesTo ?: emptyList(),
             ).takeIf { it.isNotEmpty() },
         valuations =
             compareValuations(

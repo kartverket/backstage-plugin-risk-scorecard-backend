@@ -346,17 +346,19 @@ class RiScTests {
     }
 
     @Test
-    fun `test RiSc5X preserves appliesTo when parsed and serialized`() {
+    fun `test RiSc5X preserves unencryptedMetadata appliesTo when parsed and serialized`() {
         val riScJSONString =
             """
             {
               "schemaVersion": "5.3",
               "title": "Title",
               "scope": "Scope",
-              "appliesTo": [
-                "component:default/service-a",
-                "component:default/service-b"
-              ],
+              "unencryptedMetadata": {
+                "appliesTo": [
+                  "backstage:component:default/service-a",
+                  "backstage:component:default/service-b"
+                ]
+              },
               "scenarios": []
             }
             """.trimIndent()
@@ -366,20 +368,21 @@ class RiScTests {
         assertTrue(riSc is RiSc5X)
         val riSc5X = riSc as RiSc5X
         assertEquals(
-            listOf("component:default/service-a", "component:default/service-b"),
-            riSc5X.appliesTo,
+            listOf("backstage:component:default/service-a", "backstage:component:default/service-b"),
+            riSc5X.unencryptedMetadata?.appliesTo,
             "The entity refs should be parsed into the RiSc5X model.",
         )
 
         val serializedEntityRefs =
             Json
                 .parseToJsonElement(riSc5X.toJSON())
+                .jsonObject["unencryptedMetadata"]!!
                 .jsonObject["appliesTo"]!!
                 .jsonArray
                 .map { it.jsonPrimitive.content }
 
         assertEquals(
-            listOf("component:default/service-a", "component:default/service-b"),
+            listOf("backstage:component:default/service-a", "backstage:component:default/service-b"),
             serializedEntityRefs,
             "The entity refs should be preserved when a RiSc5X model is serialized.",
         )

@@ -209,7 +209,7 @@ class JSONValidatorTests {
     }
 
     @Test
-    fun `test retrieve version 5_3 schema and validate appliesTo`() {
+    fun `test retrieve version 5_3 schema and validate unencryptedMetadata appliesTo`() {
         val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.3")
         val content =
             """
@@ -217,10 +217,12 @@ class JSONValidatorTests {
               "schemaVersion": "5.3",
               "title": "Title",
               "scope": "Scope",
-              "appliesTo": [
-                "component:default/service-a",
-                "component:default/service-b"
-              ],
+              "unencryptedMetadata": {
+                "appliesTo": [
+                  "backstage:component:default/service-a",
+                  "backstage:component:default/service-b"
+                ]
+              },
               "scenarios": []
             }
             """.trimIndent()
@@ -241,6 +243,7 @@ class JSONValidatorTests {
               "schemaVersion": "5.3",
               "title": "Title",
               "scope": "Scope",
+              "unencryptedMetadata": {},
               "scenarios": []
             }
             """.trimIndent()
@@ -249,12 +252,12 @@ class JSONValidatorTests {
 
         assertTrue(
             output.isValid,
-            "appliesTo should be optional in the version 5.3 schema.",
+            "unencryptedMetadata.appliesTo should be optional in the version 5.3 schema.",
         )
     }
 
     @Test
-    fun `test retrieve version 5_3 schema rejects duplicate appliesTo`() {
+    fun `test retrieve version 5_3 schema rejects duplicate unencryptedMetadata appliesTo`() {
         val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.3")
         val content =
             """
@@ -262,10 +265,12 @@ class JSONValidatorTests {
               "schemaVersion": "5.3",
               "title": "Title",
               "scope": "Scope",
-              "appliesTo": [
-                "component:default/service-a",
-                "component:default/service-a"
-              ],
+              "unencryptedMetadata": {
+                "appliesTo": [
+                  "backstage:component:default/service-a",
+                  "backstage:component:default/service-a"
+                ]
+              },
               "scenarios": []
             }
             """.trimIndent()
