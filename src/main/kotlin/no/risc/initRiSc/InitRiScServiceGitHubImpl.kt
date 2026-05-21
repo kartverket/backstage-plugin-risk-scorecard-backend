@@ -63,6 +63,7 @@ class InitRiScServiceGitHubImpl(
             initRiSc.copy(
                 title = parsedInitialContent.title,
                 scope = parsedInitialContent.scope,
+                unencryptedMetadata = parsedInitialContent.unencryptedMetadata,
             )
         return Json.encodeToString(initRiScWithInitialContent)
     }
