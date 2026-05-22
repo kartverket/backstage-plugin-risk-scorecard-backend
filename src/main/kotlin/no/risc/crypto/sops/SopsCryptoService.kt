@@ -220,6 +220,8 @@ class SopsCryptoService(
                 "yaml",
                 "--config",
                 tempConfigFile.absolutePath,
+                "--unencrypted-regex",
+                "^unencryptedMetadata$",
                 "/dev/stdin",
             ).start()
             .run {

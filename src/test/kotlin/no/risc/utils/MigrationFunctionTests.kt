@@ -8,6 +8,7 @@ import no.risc.risc.models.RiSc
 import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
+import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioVulnerability
@@ -582,6 +583,45 @@ class MigrationFunctionTests {
         assertNull(
             changes50,
             "When no changes have been made, there should not be a migration changes object.",
+        )
+    }
+
+    @Test
+    fun `test migrateFrom52To53`() {
+        val riSc =
+            RiSc5X(
+                schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_2,
+                title = "Title",
+                scope = "Scope",
+                scenarios = emptyList(),
+            )
+        val migrationStatus =
+            MigrationStatus(
+                migrationChanges = false,
+                migrationRequiresNewApproval = false,
+                migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+            )
+
+        val (migratedRiSc, migratedStatus) =
+            migrateFrom52To53(
+                riSc = riSc,
+                migrationStatus = migrationStatus,
+            )
+
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_3,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.3.",
+        )
+        assertEquals(
+            riSc,
+            migratedRiSc.copy(schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_2),
+            "The only change to the RiSc when migrating to version 5.3 should be the schema version.",
+        )
+        assertEquals(
+            migrationStatus,
+            migratedStatus,
+            "Migrating to version 5.3 should not report content changes.",
         )
     }
 

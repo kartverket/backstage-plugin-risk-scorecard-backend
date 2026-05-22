@@ -9,6 +9,9 @@ import no.risc.risc.models.RiSc3XScenarioAction
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc4XScenario
 import no.risc.risc.models.RiSc4XScenarioAction
+import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XScenario
+import no.risc.risc.models.RiSc5XUnencryptedMetadata
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioThreatActor
 import no.risc.risc.models.RiScScenarioVulnerability
@@ -187,6 +190,23 @@ class ComparisonTests {
                         actions = listOf(),
                     ),
                 ),
+        )
+
+    fun riScVersion52() =
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_2,
+            title = "RiSc version 5.2",
+            scope = "A RiSc",
+            scenarios = listOf(),
+        )
+
+    fun riScVersion53(appliesTo: List<String>? = null) =
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_3,
+            title = "RiSc version 5.3",
+            scope = "A RiSc",
+            unencryptedMetadata = appliesTo?.let(::RiSc5XUnencryptedMetadata),
+            scenarios = listOf(),
         )
 
     @Test
@@ -728,6 +748,120 @@ class ComparisonTests {
             ),
             comparisonChanges.scenarios,
             "The changes to the scenarios should include the removed scenario 'acbde' and the added scenarios 'aaaaa' and 'ccccc'.",
+        )
+    }
+
+    @Test
+    fun `test compare RiSc version 5-3 includes appliesTo changes`() {
+        val updatedRiSc =
+            riScVersion53(
+                appliesTo =
+                    listOf(
+                        "component:default/service-a",
+                        "component:default/service-b",
+                    ),
+            )
+        val oldRiSc =
+            riScVersion53(
+                appliesTo =
+                    listOf(
+                        "component:default/service-a",
+                    ),
+            )
+
+        val comparisonResult = compare(updatedRiSc = updatedRiSc, oldRiSc = oldRiSc)
+
+        assertTrue(
+            comparisonResult is RiSc5XChange,
+            "The comparison for a version 5.X RiSc should be of type RiSc5XChange",
+        )
+
+        val comparisonChanges = comparisonResult as RiSc5XChange
+
+        assertEquals(
+            listOf<SimpleTrackedProperty<String>>(
+                AddedProperty(newValue = "component:default/service-b"),
+            ),
+            comparisonChanges.appliesTo,
+            "Added entity refs should be included in the changes.",
+        )
+
+        assertNull(
+            comparisonChanges.title,
+            "No changes have been made to the title field of the RiSc, and it should not be included in the changes.",
+        )
+
+        assertNull(
+            comparisonChanges.scope,
+            "No changes have been made to the scope field of the RiSc, and it should not be included in the changes.",
+        )
+
+        assertEquals(
+            emptyList<SimpleTrackedProperty<RiScValuation>>(),
+            comparisonChanges.valuations,
+            "No valuations were changed, so none should be included in the changes.",
+        )
+
+        assertEquals(
+            emptyList<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>>(),
+            comparisonChanges.scenarios,
+            "No scenarios were changed, so none should be included in the changes.",
+        )
+    }
+
+    @Test
+    fun `test compare RiSc version 5-3 omits unchanged appliesTo`() {
+        val updatedRiSc = riScVersion53()
+        val oldRiSc = riScVersion53()
+
+        val comparisonResult = compare(updatedRiSc = updatedRiSc, oldRiSc = oldRiSc)
+
+        assertTrue(
+            comparisonResult is RiSc5XChange,
+            "The comparison for a version 5.X RiSc should be of type RiSc5XChange",
+        )
+
+        val comparisonChanges = comparisonResult as RiSc5XChange
+
+        assertNull(
+            comparisonChanges.appliesTo,
+            "Unchanged appliesTo should not be included in the changes.",
+        )
+    }
+
+    @Test
+    fun `test compare RiSc version 5-3 includes appliesTo added after migrating old 5-2 RiSc`() {
+        val updatedRiSc =
+            riScVersion53(
+                appliesTo =
+                    listOf(
+                        "component:default/service-a",
+                        "component:default/service-b",
+                    ),
+            )
+        val oldRiSc = riScVersion52()
+
+        val comparisonResult = compare(updatedRiSc = updatedRiSc, oldRiSc = oldRiSc)
+
+        assertTrue(
+            comparisonResult is RiSc5XChange,
+            "The comparison for a version 5.X RiSc should be of type RiSc5XChange",
+        )
+
+        val comparisonChanges = comparisonResult as RiSc5XChange
+
+        assertEquals(
+            MigrationVersions(fromVersion = "5.2", toVersion = "5.3"),
+            comparisonChanges.migrationChanges.migrationVersions,
+            "The old RiSc should be migrated from 5.2 to 5.3 before comparison.",
+        )
+        assertEquals(
+            listOf<SimpleTrackedProperty<String>>(
+                AddedProperty(newValue = "component:default/service-a"),
+                AddedProperty(newValue = "component:default/service-b"),
+            ),
+            comparisonChanges.appliesTo,
+            "Added entity refs should be included in the changes after migration.",
         )
     }
 }
