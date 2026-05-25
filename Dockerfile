@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
 # Build entrypoint binary
-FROM --platform=$BUILDPLATFORM golang:1.26.2 AS entrypoint_build
+FROM --platform=$BUILDPLATFORM golang:1.26.3 AS entrypoint_build
 WORKDIR /src
 COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
