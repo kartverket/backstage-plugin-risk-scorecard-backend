@@ -226,6 +226,7 @@ internal class GlobalExceptionHandler {
         )
     }
 
+    // kommentar
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ResponseBody
     @ExceptionHandler(InvalidGitHubAccessTokenException::class)
