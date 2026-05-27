@@ -1,5 +1,9 @@
 # Schema changelog
 
+## 5.4
+
+- Adds optional comment field to actions. 
+
 ## 5.3
 
 - Adds optional unencryptedMetadata.appliesTo field for unencrypted typed references covered by the scorecard, for

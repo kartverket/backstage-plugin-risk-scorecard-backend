@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v5_2.json",
+  "$id": "https://kartverket.github.io/backstage-plugin-risk-scorecard-backend/risc_schema_en_v5_4.json",
   "title": "Risk Scorecard (RiSc)",
   "description": "Schema for risk scorecard",
   "type": "object",
@@ -8,7 +8,7 @@
     "schemaVersion": {
       "description": "Schema version",
       "type": "string",
-      "default": "'5.2'"
+      "default": "'5.4'"
     },
     "title": {
       "description": "Title of the risk scorecard",
@@ -17,6 +17,24 @@
     "scope": {
       "description": "The scope of the score card",
       "type": "string"
+    },
+    "unencryptedMetadata": {
+      "description": "Optional unencrypted metadata for the risk scorecard.",
+      "type": "object",
+      "properties": {
+        "appliesTo": {
+          "description": "Optional unencrypted typed target references that the risk scorecard applies to. Backstage catalog entity refs use the backstage: prefix.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9+.-]*:.+",
+            "maxLength": 512
+          },
+          "maxItems": 100,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
     },
     "scenarios": {
       "type": "array",
@@ -61,7 +79,13 @@
           "anyOf": [
             {
               "type": "number",
-              "enum": [0.0025, 0.05, 1, 20, 400]
+              "enum": [
+                0.0025,
+                0.05,
+                1,
+                20,
+                400
+              ]
             },
             {
               "type": "number",
@@ -75,7 +99,13 @@
           "anyOf": [
             {
               "type": "number",
-              "enum": [8000, 160000, 3200000, 64000000, 1280000000]
+              "enum": [
+                8000,
+                160000,
+                3200000,
+                64000000,
+                1280000000
+              ]
             },
             {
               "type": "number",
@@ -187,7 +217,9 @@
         },
         "url": {
           "anyOf": [
-            {"$ref": "#/$defs/url"},
+            {
+              "$ref": "#/$defs/url"
+            },
             {
               "type": "string",
               "maxLength": 0
@@ -207,6 +239,9 @@
           "format": "date-time"
         },
         "lastUpdatedBy": {
+          "type": "string"
+        },
+        "comment": {
           "type": "string"
         }
       },
