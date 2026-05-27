@@ -719,9 +719,10 @@ fun migrateFrom52To53(
 fun migrateFrom53To54(
     riSc: RiSc5X,
     migrationStatus: MigrationStatus,
-): Pair<RiSc5X, MigrationStatus> = Pair(
-    riSc.copy(
-        schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
-    ),
-    migrationStatus,
-)
+): Pair<RiSc5X, MigrationStatus> =
+    Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+        ),
+        migrationStatus,
+    )
