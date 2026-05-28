@@ -35,7 +35,7 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.2"
+val jsonSchemaValidatorVersion = "3.0.3"
 val nimbusdsVersion = "10.9"
 val bouncyCastleVersion = "1.84"
 val mockkVersion = "1.14.9"
