@@ -1272,6 +1272,7 @@ class GithubConnector(
         return RepositoryInfo(
             defaultBranch = repositoryDTO.defaultBranch,
             hasWriteAccess = repositoryDTO.permissions.push,
+            isPrivate = repositoryDTO.private,
         )
     }
 

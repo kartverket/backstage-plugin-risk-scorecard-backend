@@ -35,6 +35,7 @@ data class GithubRepositoryDTO(
     @SerialName("default_branch")
     val defaultBranch: String,
     val permissions: GithubRepositoryPermissions,
+    val private: Boolean = false,
 )
 
 /**

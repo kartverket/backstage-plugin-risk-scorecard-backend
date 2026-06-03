@@ -8,6 +8,7 @@ data class AccessTokens(
 data class RepositoryInfo(
     val defaultBranch: String,
     val hasWriteAccess: Boolean,
+    val isPrivate: Boolean,
 )
 
 data class GCPAccessToken(
