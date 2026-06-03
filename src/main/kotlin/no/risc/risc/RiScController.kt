@@ -98,13 +98,13 @@ class RiScController(
                         githubAccessToken = GithubAccessToken(gitHubAccessToken),
                     ),
                 content = newRiSc.toRiScWrapperObject(),
-                defaultBranch =
+                repositoryInfo =
                     githubConnector
                         .fetchRepositoryInfo(
                             repositoryOwner = repositoryOwner,
                             repositoryName = repositoryName,
                             gitHubAccessToken = gitHubAccessToken,
-                        ).defaultBranch,
+                        ),
                 generateDefault = generateDefault,
                 defaultRiScId = newRiSc.defaultRiScId,
             )
@@ -130,13 +130,13 @@ class RiScController(
                     gcpAccessToken = GCPAccessToken(gcpAccessToken),
                     githubAccessToken = GithubAccessToken(gitHubAccessToken),
                 ),
-            defaultBranch =
+            repositoryInfo =
                 githubConnector
                     .fetchRepositoryInfo(
                         repositoryOwner = repositoryOwner,
                         repositoryName = repositoryName,
                         gitHubAccessToken = gitHubAccessToken,
-                    ).defaultBranch,
+                    ),
         )
 
     @DeleteMapping("/{repositoryOwner}/{repositoryName}/{id}", produces = ["application/json"])

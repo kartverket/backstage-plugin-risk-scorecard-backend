@@ -16,6 +16,7 @@ import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
+import no.risc.exception.exceptions.SystemRiScInPublicRepositoryException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.DecryptionFailureDTO
@@ -234,6 +235,18 @@ internal class GlobalExceptionHandler {
         return ProcessRiScResultDTO(
             riScId = "",
             status = ProcessingStatus.InvalidGitHubAccessToken,
+            statusMessage = ex.message,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    @ExceptionHandler(SystemRiScInPublicRepositoryException::class)
+    fun handleSystemRiScInPublicRepositoryException(ex: SystemRiScInPublicRepositoryException): ProcessRiScResultDTO {
+        logger.error(ex.message, ex)
+        return ProcessRiScResultDTO(
+            riScId = "",
+            status = ProcessingStatus.SystemRiScNotAllowedInPublicRepository,
             statusMessage = ex.message,
         )
     }

@@ -189,6 +189,7 @@ enum class ProcessingStatus(
     FailedToCreateSops("Failed to create SOPS configuration"),
     FailedToFetchInitRiScFromGitHub("Failed to fetch initial RiSc from GitHub"),
     FailedToFetchInitRiScConfigFromGitHub("Failed to fetch initial RiSc config from GitHub"),
+    SystemRiScNotAllowedInPublicRepository("System RiSc is not allowed in public repository"),
 }
 
 @Serializable

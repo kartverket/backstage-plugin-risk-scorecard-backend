@@ -11,6 +11,7 @@ import no.risc.exception.exceptions.DifferenceException
 import no.risc.exception.exceptions.RiScConflictException
 import no.risc.exception.exceptions.RiScNotValidOnUpdateException
 import no.risc.exception.exceptions.SOPSDecryptionException
+import no.risc.exception.exceptions.SystemRiScInPublicRepositoryException
 import no.risc.exception.exceptions.UpdatingRiScException
 import no.risc.github.GithubConnector
 import no.risc.github.RiScGithubMetadata
@@ -21,6 +22,7 @@ import no.risc.github.models.GithubPullRequestObject
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
+import no.risc.infra.connector.models.RepositoryInfo
 import no.risc.initRiSc.InitRiScServiceGitHubImpl
 import no.risc.risc.models.ContentStatus
 import no.risc.risc.models.CreateRiScResultDTO
@@ -34,6 +36,7 @@ import no.risc.risc.models.ProcessRiScResultDTO
 import no.risc.risc.models.ProcessingStatus
 import no.risc.risc.models.PublishRiScResultDTO
 import no.risc.risc.models.RiSc
+import no.risc.risc.models.RiSc5X
 import no.risc.risc.models.RiScContentResultDTO
 import no.risc.risc.models.RiScResult
 import no.risc.risc.models.RiScStatus
@@ -43,6 +46,7 @@ import no.risc.utils.comparison.compare
 import no.risc.utils.formatRiScFetchSummary
 import no.risc.utils.generateRiScId
 import no.risc.utils.migrate
+import no.risc.utils.parseJSONToClass
 import no.risc.utils.tryOrDefaultWithErrorLogging
 import no.risc.validation.JSONValidator
 import org.slf4j.Logger
@@ -375,7 +379,7 @@ class RiScService(
         riScId: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-        defaultBranch: String,
+        repositoryInfo: RepositoryInfo,
     ): RiScResult =
         updateOrCreateRiSc(
             owner = owner,
@@ -384,7 +388,7 @@ class RiScService(
             content = content,
             sopsConfig = content.sopsConfig,
             accessTokens = accessTokens,
-            defaultBranch = defaultBranch,
+            repositoryInfo = repositoryInfo,
         )
 
     /**
@@ -404,7 +408,7 @@ class RiScService(
         repository: String,
         content: RiScWrapperObject,
         accessTokens: AccessTokens,
-        defaultBranch: String,
+        repositoryInfo: RepositoryInfo,
         generateDefault: Boolean,
         defaultRiScId: String?,
     ): CreateRiScResultDTO {
@@ -435,7 +439,7 @@ class RiScService(
                     content = riScContentWrapperObject,
                     sopsConfig = content.sopsConfig,
                     accessTokens = accessTokens,
-                    defaultBranch = defaultBranch,
+                    repositoryInfo = repositoryInfo,
                 )
 
             if (result.status != ProcessingStatus.UpdatedRiSc) {
@@ -452,6 +456,8 @@ class RiScService(
                 riScContent = riScContentWrapperObject.riSc,
                 sopsConfig = riScContentWrapperObject.sopsConfig,
             )
+        } catch (e: SystemRiScInPublicRepositoryException) {
+            throw e
         } catch (e: Exception) {
             throw CreatingRiScException(
                 message = "${e.message} for risk scorecard with id $uniqueRiScId",
@@ -479,7 +485,7 @@ class RiScService(
         content: RiScWrapperObject,
         sopsConfig: SopsConfig,
         accessTokens: AccessTokens,
-        defaultBranch: String,
+        repositoryInfo: RepositoryInfo,
     ): RiScResult {
         val validationStatus =
             JSONValidator.validateAgainstSchema(
@@ -497,6 +503,15 @@ class RiScService(
                 riScId = riScId,
                 validationError = validationError,
             )
+        }
+
+        if (!repositoryInfo.isPrivate && content.schemaVersion.startsWith("5")) {
+            val riSc = parseJSONToClass<RiSc5X>(content.riSc)
+            if (riSc.unencryptedMetadata?.appliesTo?.isNotEmpty() == true) {
+                throw SystemRiScInPublicRepositoryException(
+                    message = "System RiSc cannot be saved in a public repository",
+                )
+            }
         }
 
         val encryptedData: String =
@@ -554,7 +569,7 @@ class RiScService(
                     requiresNewApproval = content.isRequiresNewApproval,
                     gitHubAccessToken = accessTokens.githubAccessToken,
                     userInfo = content.userInfo,
-                    defaultBranch = defaultBranch,
+                    defaultBranch = repositoryInfo.defaultBranch,
                 )
 
             if (riScApprovalPRStatus.pullRequest != null) {
