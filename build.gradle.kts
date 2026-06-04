@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.3.21"
+    val kotlinPluginsVersion = "2.4.0"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -35,10 +35,10 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.2"
-val nimbusdsVersion = "10.9"
+val jsonSchemaValidatorVersion = "3.0.3"
+val nimbusdsVersion = "10.9.1"
 val bouncyCastleVersion = "1.84"
-val mockkVersion = "1.14.9"
+val mockkVersion = "1.14.11"
 val junitVersion = "6.1.0"
 val springdocVersion = "3.0.3"
 
