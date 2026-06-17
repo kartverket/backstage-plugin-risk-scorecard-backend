@@ -4,14 +4,14 @@ import no.risc.exception.exceptions.AccessTokenValidationFailedException
 import no.risc.exception.exceptions.InvalidGcpAccessTokenException
 import no.risc.exception.exceptions.InvalidGitHubAccessTokenException
 import no.risc.exception.exceptions.RepositoryAccessException
-import no.risc.github.GithubConnector
+import no.risc.github.GithubConnectorPort
 import no.risc.google.GoogleServiceIntegration
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClientResponseException
 
 @Service
 class ValidationService(
-    private val githubConnector: GithubConnector,
+    private val githubConnector: GithubConnectorPort,
     private val googleServiceIntegration: GoogleServiceIntegration,
 ) {
     suspend fun validateAccessTokens(

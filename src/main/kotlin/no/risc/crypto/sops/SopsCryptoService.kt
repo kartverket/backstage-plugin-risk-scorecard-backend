@@ -2,11 +2,13 @@ package no.risc.crypto.sops
 
 import no.risc.crypto.sops.model.RiScWithConfig
 import no.risc.crypto.sops.model.SopsConfig
+import no.risc.encryption.CryptoServicePort
 import no.risc.exception.exceptions.SOPSDecryptionException
 import no.risc.exception.exceptions.SopsEncryptionException
 import no.risc.infra.connector.models.GCPAccessToken
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import java.io.BufferedReader
 import java.io.File
@@ -14,9 +16,10 @@ import java.io.InputStreamReader
 import kotlin.collections.set
 
 @Service
+@Profile("!(local-crypto | local-sandboxed)")
 class SopsCryptoService(
     private val props: SopsCryptoProperties,
-) {
+) : CryptoServicePort {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SopsCryptoService::class.java)
 
@@ -54,7 +57,7 @@ class SopsCryptoService(
         return cleanConfig
     }
 
-    fun decryptWithSopsConfig(
+    override fun decryptWithSopsConfig(
         ciphertext: String,
         gcpAccessToken: GCPAccessToken,
     ): RiScWithConfig {
@@ -139,7 +142,7 @@ class SopsCryptoService(
             }
     }
 
-    fun encrypt(
+    override fun encrypt(
         text: String,
         config: SopsConfig,
         gcpAccessToken: GCPAccessToken,
