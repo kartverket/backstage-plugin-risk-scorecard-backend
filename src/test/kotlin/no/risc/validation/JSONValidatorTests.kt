@@ -283,5 +283,81 @@ class JSONValidatorTests {
         )
     }
 
+    @Test
+    fun `test retrieve version 5_5 schema accepts external supplier and new vulnerabilities`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.5")
+        val content =
+            """
+            {
+              "schemaVersion": "5.5",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": [
+                {
+                  "title": "Scenario",
+                  "scenario": {
+                    "ID": "ABCDE",
+                    "description": "Description",
+                    "threatActors": ["External supplier"],
+                    "vulnerabilities": [
+                      "Insufficient training",
+                      "Poor governance",
+                      "Excessive privilege"
+                    ],
+                    "risk": {
+                      "probability": 1,
+                      "consequence": 8000
+                    },
+                    "actions": [],
+                    "remainingRisk": {
+                      "probability": 1,
+                      "consequence": 8000
+                    }
+                  }
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+        assertTrue(output.isValid)
+    }
+
+    @Test
+    fun `test retrieve version 5_4 schema rejects external supplier`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.4")
+        val content =
+            """
+            {
+              "schemaVersion": "5.4",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": [
+                {
+                  "title": "Scenario",
+                  "scenario": {
+                    "ID": "ABCDE",
+                    "description": "Description",
+                    "threatActors": ["External supplier"],
+                    "vulnerabilities": ["Flawed design"],
+                    "risk": {
+                      "probability": 1,
+                      "consequence": 8000
+                    },
+                    "actions": [],
+                    "remainingRisk": {
+                      "probability": 1,
+                      "consequence": 8000
+                    }
+                  }
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+        assertFalse(output.isValid)
+    }
+
     // må skrive en test her for å validere 4.2 opp mot de andre?
 }

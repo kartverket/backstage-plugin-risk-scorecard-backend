@@ -47,7 +47,8 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 5.0 -> 5.1 (add lastUpdatedBy field to action)
  * - 5.1 -> 5.2 (remove valuations)
  * - 5.2 -> 5.3 (add unencryptedMetadata.appliesTo)
- * - 5.2 -> 5.4 (add comment field to action)
+ * - 5.3 -> 5.4 (add comment field to action)
+ * - 5.4 -> 5.5 (add enum values for threat actors and vulnerabilities)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -143,6 +144,7 @@ fun migrate(
  * - 5.1 -> 5.2 (remove valuations)
  * - 5.2 -> 5.3 (add unencryptedMetadata.appliesTo)
  * - 5.3 -> 5.4 (add comment field to action)
+ * - 5.4 -> 5.5 (add enum values for threat actors and vulnerabilities)
  *
  * @param riSc The RiSc to migrate
  * @param migrationStatus The migration status so far
@@ -188,6 +190,9 @@ private fun handleMigrate(
 
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_3 ->
                 migrateFrom53To54(riSc, migrationStatus)
+
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_4 ->
+                migrateFrom54To55(riSc, migrationStatus)
 
             else -> {
                 if (riSc.schemaVersion != null) {
@@ -723,6 +728,23 @@ fun migrateFrom53To54(
     Pair(
         riSc.copy(
             schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+        ),
+        migrationStatus,
+    )
+
+/**
+ * Migrate RiSc with changes from 5.4 to 5.5
+ *
+ * Adds threat actor and vulnerability enum values in the schema only.
+ * Existing RiSc content only needs a schemaVersion bump.
+ */
+fun migrateFrom54To55(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> =
+    Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_5,
         ),
         migrationStatus,
     )

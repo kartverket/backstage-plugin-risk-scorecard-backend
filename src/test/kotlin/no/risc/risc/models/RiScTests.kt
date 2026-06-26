@@ -388,6 +388,62 @@ class RiScTests {
         )
     }
 
+    @Test
+    fun `test RiSc5X parses and serializes new 5_5 enum values`() {
+        val riScJSONString =
+            """
+            {
+              "schemaVersion": "5.5",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": [
+                {
+                  "title": "Scenario",
+                  "scenario": {
+                    "ID": "ABCDE",
+                    "description": "Description",
+                    "threatActors": ["External supplier"],
+                    "vulnerabilities": ["Insufficient training", "Poor governance", "Excessive privilege"],
+                    "risk": {"probability": 1, "consequence": 8000},
+                    "remainingRisk": {"probability": 1, "consequence": 8000},
+                    "actions": []
+                  }
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val riSc = RiSc.fromContent(riScJSONString)
+        assertTrue(riSc is RiSc5X)
+
+        val scenario = (riSc as RiSc5X).scenarios.first()
+        assertEquals(RiScScenarioThreatActor.EXTERNAL_SUPPLIER, scenario.threatActors.first())
+        assertEquals(
+            listOf(
+                RiScScenarioVulnerability.INSUFFICIENT_TRAINING,
+                RiScScenarioVulnerability.POOR_GOVERNANCE,
+                RiScScenarioVulnerability.EXCESSIVE_PRIVILEGE,
+            ),
+            scenario.vulnerabilities,
+        )
+
+        val serialized = Json.parseToJsonElement(riSc.toJSON()).jsonObject
+        val serializedScenario =
+            serialized["scenarios"]!!
+                .jsonArray
+                .first()
+                .jsonObject["scenario"]!!
+                .jsonObject
+
+        assertEquals(
+            "External supplier",
+            serializedScenario["threatActors"]!!
+                .jsonArray
+                .first()
+                .jsonPrimitive.content,
+        )
+    }
+
     @ParameterizedTest
     @FieldSource("fromContentArguments")
     fun `test RiSc from content`(

@@ -626,6 +626,45 @@ class MigrationFunctionTests {
     }
 
     @Test
+    fun `test migrateFrom54To55`() {
+        val riSc =
+            RiSc5X(
+                schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+                title = "Title",
+                scope = "Scope",
+                scenarios = emptyList(),
+            )
+        val migrationStatus =
+            MigrationStatus(
+                migrationChanges = false,
+                migrationRequiresNewApproval = false,
+                migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+            )
+
+        val (migratedRiSc, migratedStatus) =
+            migrateFrom54To55(
+                riSc = riSc,
+                migrationStatus = migrationStatus,
+            )
+
+        assertEquals(
+            RiScVersion.RiSc5XVersion.VERSION_5_5,
+            migratedRiSc.schemaVersion,
+            "The schema version should be updated when migrating to version 5.5.",
+        )
+        assertEquals(
+            riSc,
+            migratedRiSc.copy(schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4),
+            "The only change to the RiSc when migrating to version 5.5 should be the schema version.",
+        )
+        assertEquals(
+            migrationStatus,
+            migratedStatus,
+            "Migrating to version 5.5 should not report content changes.",
+        )
+    }
+
+    @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
@@ -710,6 +749,27 @@ class MigrationFunctionTests {
         assertThrows<IllegalStateException>("If an unsupported RiSc is provided, the migrate function should throw an exception") {
             migrate(riSc = UnknownRiSc(content = ""), lastPublished = null, endVersion = "4.2")
         }
+    }
+
+    @Test
+    fun `test migrate from 5_4 to 5_5 is schema version bump only`() {
+        val riSc54 =
+            RiSc5X(
+                schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+                title = "Title",
+                scope = "Scope",
+                scenarios = emptyList(),
+            )
+        val (migratedRiSc, migratedStatus) =
+            migrate(
+                riSc = riSc54,
+                lastPublished = null,
+                endVersion = RiScVersion.RiSc5XVersion.VERSION_5_5,
+            )
+
+        assertEquals(RiScVersion.RiSc5XVersion.VERSION_5_5, migratedRiSc.schemaVersion)
+        assertEquals(riSc54, (migratedRiSc as RiSc5X).copy(schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4))
+        assertEquals(false, migratedStatus.migrationChanges, "Migration 5.4 -> 5.5 should not report data changes.")
     }
 
     @Test

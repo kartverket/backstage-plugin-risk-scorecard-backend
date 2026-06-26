@@ -1,5 +1,10 @@
 # Schema changelog
 
+## 5.5
+
+- Adds threat actor "External supplier".
+- Adds vulnerabilities "Insufficient training", "Poor governance" and "Excessive privilege".
+
 ## 5.4
 
 - Adds optional comment field to actions. 
