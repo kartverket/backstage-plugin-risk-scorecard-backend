@@ -18,7 +18,8 @@ Det er lite sannsynlig at trusselaktøren initierer trusselhendelsen.
 Forutsetter spesifikke svakheter eller feilkonfigurasjoner som inntreffer samtidig.
 Måloppnåelse:
 Målbilde og brukerbehov er kjent og avklart. Få regulatoriske krav. Kjent teknologisk løsning med kun behov for kontinuerlig forbedring og små tilpasninger. Ingen behov for spesialisert kompetanse. Det er tilstrekkelig kompetanse internt og kapasitet kan omfordeles. Liten avhenighet av interne og eksterne. Oversiktlig og lite komplekst kostnadsbilde. Tilsterkkelige rammer.
-3 – Moderat sannsynlighet
+
+3 – Moderat sannsynlighet
 Hendelsen har kjent historikk - den har skjedd flere ganger, enten i egen virksomhet eller andre sammenlignbare virksomheter eller systemer med frekvens årlig eller med noen års mellomrom (1-10 år)
 Tilsiktede hendelser:
 Det er noe sannsynlig at trusselaktøren kan initiere trusselhendelsen.
