@@ -209,6 +209,46 @@ class ComparisonTests {
             scenarios = listOf(),
         )
 
+    fun riScVersion54() =
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+            title = "RiSc version 5.5",
+            scope = "A RiSc",
+            scenarios =
+                listOf(
+                    RiSc5XScenario(
+                        title = "Scenario",
+                        id = "abcde",
+                        description = "Description",
+                        threatActors = listOf(),
+                        vulnerabilities = listOf(),
+                        risk = RiScScenarioRisk(probability = 0.0025, consequence = 8_000.0),
+                        remainingRisk = RiScScenarioRisk(probability = 20.0, consequence = 64_000_000.0),
+                        actions = listOf(),
+                    ),
+                ),
+        )
+
+    fun riScVersion55() =
+        RiSc5X(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_5,
+            title = "RiSc version 5.5",
+            scope = "A RiSc",
+            scenarios =
+                listOf(
+                    RiSc5XScenario(
+                        title = "Scenario",
+                        id = "abcde",
+                        description = "Description",
+                        threatActors = listOf(),
+                        vulnerabilities = listOf(),
+                        risk = RiScScenarioRisk(probability = 0.01, consequence = 100_000.0),
+                        remainingRisk = RiScScenarioRisk(probability = 10.0, consequence = 5_000_000.0),
+                        actions = listOf(),
+                    ),
+                ),
+        )
+
     @Test
     fun `test compare unknown version of updated RiSc throws exception`() {
         val updatedRiSc = UnknownRiSc(content = "{}")
@@ -862,6 +902,49 @@ class ComparisonTests {
             ),
             comparisonChanges.appliesTo,
             "Added entity refs should be included in the changes after migration.",
+        )
+    }
+
+    @Test
+    fun `test compare RiSc version 5-5 includes risk preset migration changes`() {
+        val updatedRiSc = riScVersion55()
+        val oldRiSc = riScVersion54()
+
+        val comparisonResult = compare(updatedRiSc = updatedRiSc, oldRiSc = oldRiSc)
+
+        assertTrue(
+            comparisonResult is RiSc5XChange,
+            "The comparison for a version 5.X RiSc should be of type RiSc5XChange",
+        )
+
+        val comparisonChanges = comparisonResult as RiSc5XChange
+
+        assertEquals(
+            MigrationVersions(fromVersion = "5.4", toVersion = "5.5"),
+            comparisonChanges.migrationChanges.migrationVersions,
+            "The old RiSc should be migrated from 5.4 to 5.5 before comparison.",
+        )
+        assertEquals(
+            MigrationChange55(
+                scenarios =
+                    listOf(
+                        MigrationChange55Scenario(
+                            title = "Scenario",
+                            id = "abcde",
+                            changedRiskProbability = MigrationChangedValue(0.0025, 0.01),
+                            changedRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRemainingRiskProbability = MigrationChangedValue(20.0, 10.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(64_000_000.0, 5_000_000.0),
+                        ),
+                    ),
+            ),
+            comparisonChanges.migrationChanges.migrationChanges55,
+            "The migration changes from version 5.4 to 5.5 should be included in the changes.",
+        )
+        assertEquals(
+            emptyList<TrackedProperty<RiSc5XScenarioChange, RiSc5XScenario>>(),
+            comparisonChanges.scenarios,
+            "No scenario changes should be reported when the updated RiSc matches the migrated old RiSc.",
         )
     }
 }

@@ -1,5 +1,19 @@
 # Schema changelog
 
+## 5.5
+
+- Preset probability and consequence values have been updated to Kartverket's shared risk matrix.
+
+| Level | Probability old value | Probability new value | Consequence old value | Consequence new value |
+|-------|-----------------------|-----------------------|-----------------------|-----------------------|
+| 1     | 0.0025                | 0.01                  | 8 000                 | 100 000               |
+| 2     | 0.05                  | 0.1                   | 160 000               | 500 000               |
+| 3     | 1                     | 1                     | 3 200 000             | 1 500 000             |
+| 4     | 20                    | 10                    | 64 000 000            | 5 000 000             |
+| 5     | 400                   | 100                   | 1 280 000 000         | 30 000 000            |
+
+- Migration from 5.4 remaps old preset values to the new presets for risk and remainingRisk, leaves arbitrary values unchanged, and requires new approval.
+
 ## 5.4
 
 - Adds optional comment field to actions. 

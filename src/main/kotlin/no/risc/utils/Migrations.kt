@@ -33,6 +33,8 @@ import no.risc.utils.comparison.MigrationChange51
 import no.risc.utils.comparison.MigrationChange51Action
 import no.risc.utils.comparison.MigrationChange51Scenario
 import no.risc.utils.comparison.MigrationChange52
+import no.risc.utils.comparison.MigrationChange55
+import no.risc.utils.comparison.MigrationChange55Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 
@@ -47,7 +49,8 @@ import no.risc.utils.comparison.MigrationChangedValue
  * - 5.0 -> 5.1 (add lastUpdatedBy field to action)
  * - 5.1 -> 5.2 (remove valuations)
  * - 5.2 -> 5.3 (add unencryptedMetadata.appliesTo)
- * - 5.2 -> 5.4 (add comment field to action)
+ * - 5.3 -> 5.4 (add comment field to action)
+ * - 5.4 -> 5.5 (change preset probability and consequence values)
  *
  * @param riSc The RiSc to migrate.
  * @param lastPublished The last published version of the RisC to use for migration to 4.2
@@ -143,6 +146,7 @@ fun migrate(
  * - 5.1 -> 5.2 (remove valuations)
  * - 5.2 -> 5.3 (add unencryptedMetadata.appliesTo)
  * - 5.3 -> 5.4 (add comment field to action)
+ * - 5.4 -> 5.5 (change preset probability and consequence values)
  *
  * @param riSc The RiSc to migrate
  * @param migrationStatus The migration status so far
@@ -188,6 +192,9 @@ private fun handleMigrate(
 
             riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_3 ->
                 migrateFrom53To54(riSc, migrationStatus)
+
+            riSc is RiSc5X && riSc.schemaVersion == RiScVersion.RiSc5XVersion.VERSION_5_4 ->
+                migrateFrom54To55(riSc, migrationStatus)
 
             else -> {
                 if (riSc.schemaVersion != null) {
@@ -726,3 +733,107 @@ fun migrateFrom53To54(
         ),
         migrationStatus,
     )
+
+/**
+ * Update a scenario with changes from 5.4 to 5.5.
+ *
+ * The preset values for consequence and probability have been changed to use Kartverket's shared risk matrix.
+ * Arbitrary values are allowed for consequence and probability. We leave arbitrary values as is and migrate only
+ * values equal to the previous preset values.
+ *
+ *  Changes in consequence (in NOK per incident):
+ *  8 000           ->      100 000
+ *  160 000         ->      500 000
+ *  3 200 000       ->      1 500 000
+ *  64 000 000      ->      5 000 000
+ *  1 280 000 000   ->      30 000 000
+ *
+ *  Changes in probability (in incidents per year):
+ *  0.0025  ->      0.01
+ *  0.05    ->      0.1
+ *  1       ->      1
+ *  20      ->      10
+ *  400     ->      100
+ */
+private fun updateScenarioFrom54To55(
+    scenario: RiSc5XScenario,
+    addChanges: (MigrationChange55Scenario) -> Unit,
+): RiSc5XScenario {
+    val consequenceMigrations: Map<Double, Double> =
+        mapOf(
+            8000.0 to 100000.0,
+            160000.0 to 500000.0,
+            3200000.0 to 1500000.0,
+            64000000.0 to 5000000.0,
+            1280000000.0 to 30000000.0,
+        ).withDefault { it }
+
+    val probabilityMigrations: Map<Double, Double> =
+        mapOf(
+            0.0025 to 0.01,
+            0.05 to 0.1,
+            1.0 to 1.0,
+            20.0 to 10.0,
+            400.0 to 100.0,
+        ).withDefault { it }
+
+    val migratedScenario =
+        scenario.copy(
+            risk =
+                scenario.risk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.risk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.risk.probability),
+                ),
+            remainingRisk =
+                scenario.remainingRisk.copy(
+                    consequence = consequenceMigrations.getValue(scenario.remainingRisk.consequence),
+                    probability = probabilityMigrations.getValue(scenario.remainingRisk.probability),
+                ),
+        )
+
+    fun changeValue(
+        oldValue: Double,
+        newValue: Double,
+    ): MigrationChangedValue<Double>? = if (oldValue != newValue) MigrationChangedValue(oldValue, newValue) else null
+
+    val changes =
+        MigrationChange55Scenario(
+            title = scenario.title,
+            id = scenario.id,
+            changedRiskProbability = changeValue(scenario.risk.probability, migratedScenario.risk.probability),
+            changedRiskConsequence = changeValue(scenario.risk.consequence, migratedScenario.risk.consequence),
+            changedRemainingRiskProbability =
+                changeValue(scenario.remainingRisk.probability, migratedScenario.remainingRisk.probability),
+            changedRemainingRiskConsequence =
+                changeValue(scenario.remainingRisk.consequence, migratedScenario.remainingRisk.consequence),
+        )
+
+    if (changes.hasChanges()) addChanges(changes)
+
+    return migratedScenario
+}
+
+/**
+ * Migrate RiSc with changes from 5.4 to 5.5.
+ *
+ * The preset values for consequence and probability have been changed to use Kartverket's shared risk matrix.
+ * Arbitrary values are allowed for consequence and probability. We leave arbitrary values as is and migrate only
+ * values equal to the previous preset values.
+ */
+fun migrateFrom54To55(
+    riSc: RiSc5X,
+    migrationStatus: MigrationStatus,
+): Pair<RiSc5X, MigrationStatus> {
+    val changedScenarios = mutableListOf<MigrationChange55Scenario>()
+    return Pair(
+        riSc.copy(
+            schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_5,
+            scenarios = riSc.scenarios.map { scenario -> updateScenarioFrom54To55(scenario, changedScenarios::add) },
+        ),
+        migrationStatus.copy(
+            migrationChanges = true,
+            migrationRequiresNewApproval = true,
+            migrationChanges55 = if (changedScenarios.isNotEmpty()) MigrationChange55(scenarios = changedScenarios) else null,
+        ),
+    )
+}
