@@ -278,10 +278,13 @@ class GithubHelper(
             "init-risc-def.json",
         )
 
-    fun uriToInitRiSc(initRiScId: String) =
-        repositoryContentsUri(
-            initRiScServiceConfig.repoOwner,
-            initRiScServiceConfig.repoName,
-            "initial-riscs/$initRiScId.json",
-        )
+    fun uriToInitRiSc(
+        initRiScId: String,
+        ref: String? = null,
+    ) = repositoryContentsUri(
+        initRiScServiceConfig.repoOwner,
+        initRiScServiceConfig.repoName,
+        "initial-riscs/$initRiScId.json",
+        branch = ref,
+    )
 }

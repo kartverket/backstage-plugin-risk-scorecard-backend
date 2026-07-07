@@ -5,9 +5,12 @@ import no.risc.github.GitHubAppService
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
 import no.risc.initRiSc.model.RiScTypeDescriptor
+import no.risc.risc.models.RiSc5X
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -27,5 +30,17 @@ class InitRiScController(
                 gcpAccessToken = GCPAccessToken(gcpAccessToken),
                 githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ),
+        )
+
+    @GetMapping("/{id}")
+    suspend fun getInitRiScTemplate(
+        @PathVariable id: String,
+        @RequestParam ref: String? = null,
+        @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
+    ): RiSc5X =
+        initRiScService.getInitRiScTemplate(
+            initRiScId = id,
+            githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
+            ref = ref,
         )
 }

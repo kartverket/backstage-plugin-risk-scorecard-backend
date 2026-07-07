@@ -1281,9 +1281,10 @@ class GithubConnector(
     suspend fun fetchInitRiSc(
         initRiScId: String,
         accessToken: String,
+        ref: String? = null,
     ): GithubContentResponse =
         fetchRiScContent(
-            uri = githubHelper.uriToInitRiSc(initRiScId),
+            uri = githubHelper.uriToInitRiSc(initRiScId, ref),
             accessToken = accessToken,
         )
 }
