@@ -7,6 +7,8 @@ import no.risc.config.InitRiScServiceConfig
 import no.risc.github.models.GithubCreateNewBranchPayload
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.OffsetDateTime
 
 @Component
@@ -285,6 +287,6 @@ class GithubHelper(
         initRiScServiceConfig.repoOwner,
         initRiScServiceConfig.repoName,
         "initial-riscs/$initRiScId.json",
-        branch = ref,
+        branch = ref?.let { URLEncoder.encode(it, StandardCharsets.UTF_8) },
     )
 }

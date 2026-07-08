@@ -1,6 +1,7 @@
 package no.risc.initRiSc
 
 import io.swagger.v3.oas.annotations.tags.Tag
+import no.risc.exception.exceptions.InvalidInitRiScIdException
 import no.risc.github.GitHubAppService
 import no.risc.infra.connector.models.AccessTokens
 import no.risc.infra.connector.models.GCPAccessToken
@@ -37,10 +38,15 @@ class InitRiScController(
         @PathVariable id: String,
         @RequestParam ref: String? = null,
         @RequestHeader("GitHub-Access-Token") gitHubAccessToken: String? = null,
-    ): RiSc5X =
-        initRiScService.getInitRiScTemplate(
+    ): RiSc5X {
+        val validationResult = validateInitRiScId(id)
+        if (!validationResult.isValid) {
+            throw InvalidInitRiScIdException(validationResult.message)
+        }
+        return initRiScService.getInitRiScTemplate(
             initRiScId = id,
             githubAccessToken = gitHubAppService.getGitHubAccessToken(gitHubAccessToken),
             ref = ref,
         )
+    }
 }
