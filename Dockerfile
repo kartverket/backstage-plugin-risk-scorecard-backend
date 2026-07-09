@@ -26,13 +26,13 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
 # Build entrypoint binary
-FROM --platform=$BUILDPLATFORM golang:1.26.2 AS entrypoint_build
+FROM --platform=$BUILDPLATFORM golang:1.26.5 AS entrypoint_build
 WORKDIR /src
 COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
 # Build socat from source
-FROM --platform=$BUILDPLATFORM alpine:3.23.4 AS socat_build
+FROM --platform=$BUILDPLATFORM alpine:3.24.1 AS socat_build
 ARG SOCAT_VERSION_ARG
 RUN apk add --no-cache \
         build-base linux-headers git bash autoconf \
