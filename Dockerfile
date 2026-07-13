@@ -1,6 +1,8 @@
 ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:aa381f8933bc763a4a151325c0b8e41c37f08927208613038aeaa441ff48c448
 # We use the eclipse-temurin 'minimal' image for build stage.
 ARG SOPS_BUILD_IMAGE=golang:1.26.5
+ARG ENTRYPOINT_BUILD_IMAGE=golang:1.26.5
+ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
 ARG SOPS_VERSION_ARG=3.13.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.3
 # Fetch distroless images from Google's gcr.io.
@@ -26,13 +28,13 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
 # Build entrypoint binary
-FROM --platform=$BUILDPLATFORM golang:1.26.2 AS entrypoint_build
+FROM --platform=$BUILDPLATFORM ${ENTRYPOINT_BUILD_IMAGE} AS entrypoint_build
 WORKDIR /src
 COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
 # Build socat from source
-FROM --platform=$BUILDPLATFORM alpine:3.23.4 AS socat_build
+FROM --platform=$BUILDPLATFORM ${SOCAT_BUILD_IMAGE} AS socat_build
 ARG SOCAT_VERSION_ARG
 RUN apk add --no-cache \
         build-base linux-headers git bash autoconf \
