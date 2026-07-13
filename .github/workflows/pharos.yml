@@ -20,7 +20,7 @@ jobs:
       - name: Wait for image to (probably) be available
         run: sleep 360s
       - name: "Run Pharos"
-        uses: kartverket/pharos@v0.6.0
+        uses: kartverket/pharos@v0.6.4
         with:
           image_url: ghcr.io/${{ github.repository }}:latest
           # Backstage config files are misclassified as kubernetes config files, resulting in false security issues
