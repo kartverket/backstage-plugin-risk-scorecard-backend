@@ -28,8 +28,9 @@ java {
 }
 
 extra["tomcat.version"] = "11.0.22" // Vulnerability in 11.0.20
-extra["jackson-bom.version"] = "3.1.3" // Vulnerability in 3.1.0
-extra["netty.version"] = "4.2.13.Final"
+extra["jackson-bom.version"] = "3.1.4" // Vulnerability in 3.1.3
+extra["netty.version"] = "4.2.15.Final"
+extra["logback.version"] = "1.5.35"
 
 repositories {
     mavenCentral()
