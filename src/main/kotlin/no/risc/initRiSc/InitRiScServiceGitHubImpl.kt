@@ -6,6 +6,7 @@ import no.risc.exception.exceptions.RiScNotValidOnFetchException
 import no.risc.github.GithubConnector
 import no.risc.github.models.GithubStatus
 import no.risc.infra.connector.models.AccessTokens
+import no.risc.infra.connector.models.GithubAccessToken
 import no.risc.initRiSc.model.InitRiScDescriptorConfig
 import no.risc.initRiSc.model.RiScTypeDescriptor
 import no.risc.risc.models.ProcessingStatus
@@ -98,12 +99,25 @@ class InitRiScServiceGitHubImpl(
         )
     }
 
+    suspend fun getInitRiScTemplate(
+        initRiScId: String,
+        githubAccessToken: GithubAccessToken,
+        ref: String? = null,
+    ): RiSc5X = getInitRiScFromGitHub(initRiScId, githubAccessToken, ref)
+
     private suspend fun getInitRiScFromGitHub(
         id: String,
         accessTokens: AccessTokens,
+        ref: String? = null,
+    ): RiSc5X = getInitRiScFromGitHub(id, accessTokens.githubAccessToken, ref)
+
+    private suspend fun getInitRiScFromGitHub(
+        id: String,
+        githubAccessToken: GithubAccessToken,
+        ref: String? = null,
     ): RiSc5X {
         val fetchedInitRiSc =
-            githubConnector.fetchInitRiSc(id, accessTokens.githubAccessToken.value)
+            githubConnector.fetchInitRiSc(id, githubAccessToken.value, ref)
 
         if (fetchedInitRiSc.status != GithubStatus.Success || fetchedInitRiSc.data == null) {
             throw FetchException(

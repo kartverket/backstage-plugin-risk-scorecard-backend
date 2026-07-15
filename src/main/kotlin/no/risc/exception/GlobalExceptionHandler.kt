@@ -8,6 +8,7 @@ import no.risc.exception.exceptions.FetchException
 import no.risc.exception.exceptions.GitHubFetchException
 import no.risc.exception.exceptions.InvalidGcpAccessTokenException
 import no.risc.exception.exceptions.InvalidGitHubAccessTokenException
+import no.risc.exception.exceptions.InvalidInitRiScIdException
 import no.risc.exception.exceptions.JSONSchemaFetchException
 import no.risc.exception.exceptions.PermissionDeniedOnGitHubException
 import no.risc.exception.exceptions.RepositoryAccessException
@@ -236,5 +237,13 @@ internal class GlobalExceptionHandler {
             status = ProcessingStatus.InvalidGitHubAccessToken,
             statusMessage = ex.message,
         )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    @ExceptionHandler(InvalidInitRiScIdException::class)
+    fun handleInvalidInitRiScIdException(ex: InvalidInitRiScIdException): Any {
+        logger.error(ex.message, ex)
+        return mapOf("status" to "error", "statusMessage" to ex.message)
     }
 }
