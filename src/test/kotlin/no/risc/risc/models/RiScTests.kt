@@ -388,6 +388,24 @@ class RiScTests {
         )
     }
 
+    @Test
+    fun `test RiSc5X parses schema version 5_5`() {
+        val riScJSONString =
+            """
+            {
+              "schemaVersion": "5.5",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": []
+            }
+            """.trimIndent()
+
+        val riSc = RiSc.fromContent(riScJSONString)
+
+        assertTrue(riSc is RiSc5X)
+        assertEquals(RiScVersion.RiSc5XVersion.VERSION_5_5, riSc.schemaVersion)
+    }
+
     @ParameterizedTest
     @FieldSource("fromContentArguments")
     fun `test RiSc from content`(

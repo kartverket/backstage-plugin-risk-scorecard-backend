@@ -128,6 +128,28 @@ data class MigrationChange52(
     val removedValuationsCount: Int,
 )
 
+// Changes for the migration from version 5.4 to 5.5
+@Serializable
+data class MigrationChange55(
+    val scenarios: List<MigrationChange55Scenario>,
+)
+
+@Serializable
+data class MigrationChange55Scenario(
+    val title: String,
+    val id: String,
+    var changedRiskProbability: MigrationChangedValue<Double>? = null,
+    var changedRiskConsequence: MigrationChangedValue<Double>? = null,
+    var changedRemainingRiskProbability: MigrationChangedValue<Double>? = null,
+    var changedRemainingRiskConsequence: MigrationChangedValue<Double>? = null,
+) {
+    fun hasChanges() =
+        changedRiskConsequence !== null ||
+            changedRiskProbability !== null ||
+            changedRemainingRiskConsequence != null ||
+            changedRemainingRiskProbability != null
+}
+
 // General change object
 @Serializable
 data class MigrationChangedValue<T>(
