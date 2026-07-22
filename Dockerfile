@@ -1,7 +1,6 @@
 ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:aa381f8933bc763a4a151325c0b8e41c37f08927208613038aeaa441ff48c448
 # We use the eclipse-temurin 'minimal' image for build stage.
-ARG SOPS_BUILD_IMAGE=golang:1.26.5
-ARG ENTRYPOINT_BUILD_IMAGE=golang:1.26.5
+ARG GO_BUILD_IMAGE=golang:1.26.5
 ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
 ARG SOPS_VERSION_ARG=3.13.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.3
@@ -15,21 +14,18 @@ COPY . .
 
 RUN ./gradlew build -x test
 
-# Build SOPS from source
-FROM --platform=$BUILDPLATFORM ${SOPS_BUILD_IMAGE} AS sops_build
+# Build SOPS and entrypoint binaries
+FROM --platform=$BUILDPLATFORM ${GO_BUILD_IMAGE} AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
 ARG SOPS_TAG=v${SOPS_VERSION_ARG}
-WORKDIR /src
+WORKDIR /src/sops
 RUN git clone --depth 1 --branch "${SOPS_TAG}" https://github.com/getsops/sops.git
-WORKDIR /src/sops/cmd/sops
+WORKDIR /src/sops/sops/cmd/sops
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
-
-# Build entrypoint binary
-FROM --platform=$BUILDPLATFORM ${ENTRYPOINT_BUILD_IMAGE} AS entrypoint_build
-WORKDIR /src
+WORKDIR /src/entrypoint
 COPY docker-entrypoint.go .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
@@ -56,8 +52,8 @@ WORKDIR /app
 COPY --from=build /build/libs/*.jar /app/backend.jar
 
 # Copy binaries
-COPY --from=sops_build /out/sops /usr/bin/sops
-COPY --from=entrypoint_build /out/entrypoint /entrypoint
+COPY --from=go_build /out/sops /usr/bin/sops
+COPY --from=go_build /out/entrypoint /entrypoint
 
 EXPOSE 8080 8081
 
