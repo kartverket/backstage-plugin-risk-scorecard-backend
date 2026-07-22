@@ -1,11 +1,10 @@
 ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:aa381f8933bc763a4a151325c0b8e41c37f08927208613038aeaa441ff48c448
-# We use the eclipse-temurin 'minimal' image for build stage.
+ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:0aa10bfac55df3fed8ce238f4d35c5f14e9b705be763943e80b92d815e703201
+
 ARG GO_BUILD_IMAGE=golang:1.26.5
 ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
 ARG SOPS_VERSION_ARG=3.13.2
 ARG SOCAT_VERSION_ARG=tag-1.8.1.3
-# Fetch distroless images from Google's gcr.io.
-ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:0aa10bfac55df3fed8ce238f4d35c5f14e9b705be763943e80b92d815e703201
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
