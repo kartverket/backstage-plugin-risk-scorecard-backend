@@ -33,12 +33,12 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.2"
+val jsonSchemaValidatorVersion = "3.0.6"
 val nimbusdsVersion = "10.9.1"
 val bouncyCastleVersion = "1.85"
 val mockkVersion = "1.14.11"
 val junitVersion = "6.1.2"
-val springdocVersion = "3.0.3"
+val springdocVersion = "3.1.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
