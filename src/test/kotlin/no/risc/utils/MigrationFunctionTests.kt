@@ -9,6 +9,7 @@ import no.risc.risc.models.RiSc3X
 import no.risc.risc.models.RiSc3XScenarioVulnerability
 import no.risc.risc.models.RiSc4X
 import no.risc.risc.models.RiSc5X
+import no.risc.risc.models.RiSc5XScenario
 import no.risc.risc.models.RiScScenarioActionStatus
 import no.risc.risc.models.RiScScenarioRisk
 import no.risc.risc.models.RiScScenarioVulnerability
@@ -21,6 +22,8 @@ import no.risc.utils.comparison.MigrationChange41
 import no.risc.utils.comparison.MigrationChange41Scenario
 import no.risc.utils.comparison.MigrationChange42Action
 import no.risc.utils.comparison.MigrationChange42Scenario
+import no.risc.utils.comparison.MigrationChange55
+import no.risc.utils.comparison.MigrationChange55Scenario
 import no.risc.utils.comparison.MigrationChangedTypedValue
 import no.risc.utils.comparison.MigrationChangedValue
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -626,6 +629,94 @@ class MigrationFunctionTests {
     }
 
     @Test
+    fun `test migrateFrom54To55 remaps preset risk values and keeps arbitrary values`() {
+        fun scenario(
+            id: String,
+            riskProbability: Double,
+            riskConsequence: Double,
+            remainingRiskProbability: Double,
+            remainingRiskConsequence: Double,
+        ) = RiSc5XScenario(
+            title = "Scenario $id",
+            id = id,
+            description = "Description",
+            threatActors = emptyList(),
+            vulnerabilities = emptyList(),
+            risk = RiScScenarioRisk(probability = riskProbability, consequence = riskConsequence),
+            remainingRisk = RiScScenarioRisk(probability = remainingRiskProbability, consequence = remainingRiskConsequence),
+            actions = emptyList(),
+        )
+
+        val riSc =
+            RiSc5X(
+                schemaVersion = RiScVersion.RiSc5XVersion.VERSION_5_4,
+                title = "Title",
+                scope = "Scope",
+                scenarios =
+                    listOf(
+                        scenario("AAAAA", 0.0025, 8_000.0, 0.05, 160_000.0),
+                        scenario("BBBBB", 1.0, 3_200_000.0, 20.0, 64_000_000.0),
+                        scenario("CCCCC", 400.0, 1_280_000_000.0, 0.123, 198_000.0),
+                        scenario("DDDDD", 0.123, 198_000.0, 0.456, 654_000.0),
+                    ),
+            )
+
+        val (migratedRiSc, migrationStatus) =
+            migrateFrom54To55(
+                riSc = riSc,
+                migrationStatus =
+                    MigrationStatus(
+                        migrationChanges = false,
+                        migrationRequiresNewApproval = false,
+                        migrationVersions = MigrationVersions(fromVersion = null, toVersion = null),
+                    ),
+            )
+
+        assertEquals(RiScVersion.RiSc5XVersion.VERSION_5_5, migratedRiSc.schemaVersion)
+
+        assertEquals(RiScScenarioRisk(probability = 0.01, consequence = 100_000.0), migratedRiSc.scenarios[0].risk)
+        assertEquals(RiScScenarioRisk(probability = 0.1, consequence = 500_000.0), migratedRiSc.scenarios[0].remainingRisk)
+        assertEquals(RiScScenarioRisk(probability = 1.0, consequence = 1_500_000.0), migratedRiSc.scenarios[1].risk)
+        assertEquals(RiScScenarioRisk(probability = 10.0, consequence = 5_000_000.0), migratedRiSc.scenarios[1].remainingRisk)
+        assertEquals(RiScScenarioRisk(probability = 100.0, consequence = 30_000_000.0), migratedRiSc.scenarios[2].risk)
+        assertEquals(RiScScenarioRisk(probability = 0.123, consequence = 198_000.0), migratedRiSc.scenarios[2].remainingRisk)
+        assertEquals(RiScScenarioRisk(probability = 0.123, consequence = 198_000.0), migratedRiSc.scenarios[3].risk)
+        assertEquals(RiScScenarioRisk(probability = 0.456, consequence = 654_000.0), migratedRiSc.scenarios[3].remainingRisk)
+
+        assertEquals(true, migrationStatus.migrationChanges)
+        assertEquals(true, migrationStatus.migrationRequiresNewApproval)
+        assertEquals(
+            MigrationChange55(
+                scenarios =
+                    listOf(
+                        MigrationChange55Scenario(
+                            title = "Scenario AAAAA",
+                            id = "AAAAA",
+                            changedRiskProbability = MigrationChangedValue(0.0025, 0.01),
+                            changedRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRemainingRiskProbability = MigrationChangedValue(0.05, 0.1),
+                            changedRemainingRiskConsequence = MigrationChangedValue(160_000.0, 500_000.0),
+                        ),
+                        MigrationChange55Scenario(
+                            title = "Scenario BBBBB",
+                            id = "BBBBB",
+                            changedRiskConsequence = MigrationChangedValue(3_200_000.0, 1_500_000.0),
+                            changedRemainingRiskProbability = MigrationChangedValue(20.0, 10.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(64_000_000.0, 5_000_000.0),
+                        ),
+                        MigrationChange55Scenario(
+                            title = "Scenario CCCCC",
+                            id = "CCCCC",
+                            changedRiskProbability = MigrationChangedValue(400.0, 100.0),
+                            changedRiskConsequence = MigrationChangedValue(1_280_000_000.0, 30_000_000.0),
+                        ),
+                    ),
+            ),
+            migrationStatus.migrationChanges55,
+        )
+    }
+
+    @Test
     fun `test migrate`() {
         val resourceUrl = object {}.javaClass.classLoader.getResource("3.2.json")
 
@@ -684,6 +775,25 @@ class MigrationFunctionTests {
             expected41MigrationChanges,
             migrationStatus.migrationChanges41,
             "Changes made from version 4.0 to 4.1 should be included.",
+        )
+
+        val expected55MigrationChanges =
+            MigrationChange55(
+                scenarios =
+                    listOf(
+                        MigrationChange55Scenario(
+                            title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
+                            id = "14Kap",
+                            changedRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRemainingRiskProbability = MigrationChangedValue(0.05, 0.1),
+                            changedRemainingRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                        ),
+                    ),
+            )
+        assertEquals(
+            expected55MigrationChanges,
+            migrationStatus.migrationChanges55,
+            "Changes made from version 5.4 to 5.5 should be included.",
         )
     }
 
