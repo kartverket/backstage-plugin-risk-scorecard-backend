@@ -6,12 +6,14 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import kotlinx.coroutines.runBlocking
 import no.risc.utils.Repository
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import org.springframework.web.servlet.HandlerExceptionResolver
 
 @Component
 @WebFilter(urlPatterns = ["/api/**"])
+@Profile("!(local-sandboxed)")
 class AccessTokenValidationFilter(
     private val validationService: ValidationService,
     private val handlerExceptionResolver: HandlerExceptionResolver,

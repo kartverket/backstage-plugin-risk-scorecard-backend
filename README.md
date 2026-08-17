@@ -33,6 +33,15 @@ Or download a specific version manually. See https://github.com/getsops/sops/rel
 ### Start the app from intelliJ
 To run the application, simply open the repository locally and select `✨Local Server` as your run configuration, then run it.
 
+#### Local Sandbox Mode
+For a fully mocked development environment, you can run the application with the `local-sandboxed` profile. This disables authentication, mocks GitHub storage using the local filesystem, and mocks encryption services.
+Run it using:
+```shell
+./gradlew bootRunLocal
+```
+<br>
+
+
 
 ### Linting and formatting
 
