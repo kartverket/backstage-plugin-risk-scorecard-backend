@@ -11,6 +11,7 @@ ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
+WORKDIR /workspace
 COPY . .
 
 RUN ./gradlew build -x test
@@ -31,7 +32,7 @@ FROM ${IMAGE} AS production
 
 WORKDIR /app
 
-COPY --from=build /build/libs/*.jar /app/backend.jar
+COPY --from=build /workspace/build/libs/*.jar /app/backend.jar
 COPY --from=go_build --chown=root:root --chmod=0755 /out/sops /usr/bin/sops
 
 EXPOSE 8080 8081
@@ -47,7 +48,7 @@ FROM ${LOCAL_IMAGE} AS local
 
 WORKDIR /app
 
-COPY --from=build /build/libs/*.jar /app/backend.jar
+COPY --from=build /workspace/build/libs/*.jar /app/backend.jar
 COPY --from=go_build --chmod=0755 /out/sops /usr/bin/sops
 
 RUN apk --no-cache add socat
