@@ -5,9 +5,9 @@ ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:f89f7e3544edf5
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
 ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:73f2263db8defa233004a7c700fd81e25c8747a530c413bddf74367b68663468
 
-ARG GO_BUILD_IMAGE=golang:1.26.5
+ARG GO_BUILD_IMAGE=golang:1.27.0
 ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
-ARG SOPS_VERSION_ARG=3.13.2
+ARG SOPS_VERSION_ARG=3.13.3
 ARG SOCAT_VERSION_ARG=tag-1.8.1.3
 
 # Build stage for Java app
