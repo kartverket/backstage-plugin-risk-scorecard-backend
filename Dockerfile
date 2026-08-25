@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-jdk-alpine-dev
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
 ARG BUILD_IMAGE=dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac
@@ -14,7 +15,8 @@ FROM ${BUILD_IMAGE} AS build
 WORKDIR /workspace
 COPY . .
 
-RUN ./gradlew build -x test
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew build -x test
 
 ### Build SOPS from source ###
 FROM --platform=$BUILDPLATFORM ${GO_BUILD_IMAGE} AS go_build
@@ -24,7 +26,9 @@ ARG SOPS_VERSION_ARG
 WORKDIR /src
 RUN git clone --depth 1 --branch "v${SOPS_VERSION_ARG}" https://github.com/getsops/sops.git
 WORKDIR /src/sops/cmd/sops
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
 FROM ${IMAGE} AS production
