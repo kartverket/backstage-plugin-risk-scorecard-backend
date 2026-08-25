@@ -1,9 +1,9 @@
 # To update: docker buildx imagetools inspect eclipse-temurin:25.0.3_9-jre-ubi10-minimal
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:f89f7e3544edf5424da4256a1cc54b2637ef85fb877ff5949c783ff7ec1a0a7c
+ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:35f47084a4c1e34636fc8842780d5ca1e85b1b74de139723d1a541137932ddf2
 # To update: docker buildx imagetools inspect gcr.io/distroless/java25:latest
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:73f2263db8defa233004a7c700fd81e25c8747a530c413bddf74367b68663468
+ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:6b3cc781107c28f82934250e56b088c44db3502cb5e9e0335d669fe8210df1cc
 
 ARG GO_BUILD_IMAGE=golang:1.27.0
 ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
