@@ -21,9 +21,8 @@ FROM --platform=$BUILDPLATFORM ${GO_BUILD_IMAGE} AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
-ARG SOPS_TAG=v${SOPS_VERSION_ARG}
 WORKDIR /src
-RUN git clone --depth 1 --branch "${SOPS_TAG}" https://github.com/getsops/sops.git
+RUN git clone --depth 1 --branch "v${SOPS_VERSION_ARG}" https://github.com/getsops/sops.git
 WORKDIR /src/sops/cmd/sops
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
