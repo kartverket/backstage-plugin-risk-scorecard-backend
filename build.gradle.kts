@@ -3,7 +3,7 @@ plugins {
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "4.1.0"
+    id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
@@ -33,12 +33,12 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.2"
+val jsonSchemaValidatorVersion = "3.0.7"
 val nimbusdsVersion = "10.9.1"
 val bouncyCastleVersion = "1.85"
 val mockkVersion = "1.14.11"
-val junitVersion = "6.1.2"
-val springdocVersion = "3.0.3"
+val junitVersion = "6.1.3"
+val springdocVersion = "3.1.0"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")

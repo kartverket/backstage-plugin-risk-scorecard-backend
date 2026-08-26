@@ -1,70 +1,75 @@
-# To update: docker buildx imagetools inspect eclipse-temurin:25.0.3_9-jre-ubi10-minimal
-# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG BUILD_IMAGE=eclipse-temurin:25.0.3_9-jre-ubi10-minimal@sha256:f89f7e3544edf5424da4256a1cc54b2637ef85fb877ff5949c783ff7ec1a0a7c
-# To update: docker buildx imagetools inspect gcr.io/distroless/java25:latest
-# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG DISTROLESS_IMAGE=gcr.io/distroless/java25@sha256:73f2263db8defa233004a7c700fd81e25c8747a530c413bddf74367b68663468
+# syntax=docker/dockerfile:1.7
 
-ARG GO_BUILD_IMAGE=golang:1.26.5
-ARG SOCAT_BUILD_IMAGE=alpine:3.24.1
-ARG SOPS_VERSION_ARG=3.13.2
-ARG SOCAT_VERSION_ARG=tag-1.8.1.3
+# To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-jdk-alpine-dev
+# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
+ARG BUILD_IMAGE=dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac
+
+# To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-alpine
+# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
+ARG IMAGE=dhi.io/eclipse-temurin:25-alpine@sha256:d637909e179731a82d0764f4726755d5ccde5a100431bc01a75b7f795977ed8f
+
+# Non-hardened base for the local dev image (needs a shell + apk to add socat)
+ARG LOCAL_DEV_IMAGE=eclipse-temurin:25-jre-alpine
+
+ARG GO_BUILD_IMAGE=golang:1.27.0
+ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
 FROM ${BUILD_IMAGE} AS build
-
+WORKDIR /workspace
 COPY . .
 
-RUN ./gradlew build -x test
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew build -x test
 
-# Build SOPS and entrypoint binaries
+### Build SOPS from source ###
 FROM --platform=$BUILDPLATFORM ${GO_BUILD_IMAGE} AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
-ARG SOPS_TAG=v${SOPS_VERSION_ARG}
-WORKDIR /src/sops
-RUN git clone --depth 1 --branch "${SOPS_TAG}" https://github.com/getsops/sops.git
-WORKDIR /src/sops/sops/cmd/sops
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+WORKDIR /src
+RUN git clone --depth 1 --branch "v${SOPS_VERSION_ARG}" https://github.com/getsops/sops.git
+WORKDIR /src/sops/cmd/sops
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
-WORKDIR /src/entrypoint
-COPY docker-entrypoint.go .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/entrypoint docker-entrypoint.go
 
-# Build socat from source
-FROM --platform=$BUILDPLATFORM ${SOCAT_BUILD_IMAGE} AS socat_build
-ARG SOCAT_VERSION_ARG
-RUN apk add --no-cache \
-        build-base linux-headers git bash autoconf \
-        openssl-dev openssl-libs-static \
-        readline-dev readline-static ncurses-static && \
-    git clone --depth 1 --branch ${SOCAT_VERSION_ARG} https://repo.or.cz/socat.git
-WORKDIR /socat
-RUN autoconf && \
-    sh ./configure LDFLAGS="-static" && \
-    make && \
-    mkdir -p /out && cp socat /out/socat
-
-# Final distroless image — production
-FROM ${DISTROLESS_IMAGE} AS production
+FROM ${IMAGE} AS production
 
 WORKDIR /app
 
-# Copy Java app
-COPY --from=build /build/libs/*.jar /app/backend.jar
-
-# Copy binaries
-COPY --from=go_build /out/sops /usr/bin/sops
-COPY --from=go_build /out/entrypoint /entrypoint
+COPY --from=build /workspace/build/libs/*.jar /app/backend.jar
+COPY --from=go_build --chown=root:root --chmod=0755 /out/sops /usr/bin/sops
 
 EXPOSE 8080 8081
 
+# Hardened DHI runtime images already run as a non-root user and ship no
+# package manager or shell, so run the JVM directly as PID 1.
 USER nonroot
-ENTRYPOINT ["/entrypoint"]
 
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
 
-# Local dev image — extends production, adds socat for port forwarding
-FROM production AS local
-COPY --from=socat_build /out/socat /usr/bin/socat
+# Local dev image — adds socat to relay traffic to host.docker.internal.
+FROM ${LOCAL_DEV_IMAGE} AS local
+
+WORKDIR /app
+
+COPY --from=build /workspace/build/libs/*.jar /app/backend.jar
+COPY --from=go_build --chmod=0755 /out/sops /usr/bin/sops
+
+RUN apk --no-cache add socat
+
+ENV LOCAL=true
+
+COPY --chmod=0755 docker-entrypoint.sh /docker-entrypoint.sh
+
+EXPOSE 8080 8081
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
+
+# Use the health endpoint of the application to provide information through docker about the health state of the application
+HEALTHCHECK --start-period=30s --start-interval=10s --interval=5m \
+    CMD wget -O - --quiet --tries=1 http://localhost:8081/actuator/health | grep UP || exit 1

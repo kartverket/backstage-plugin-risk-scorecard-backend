@@ -138,7 +138,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "4.0",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "4.0"),
                     riScContent = Json.encodeToString(riSc4XWithoutValuations(RiScVersion.RiSc4XVersion.VERSION_4_0)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.0 when valuations are not present.",
@@ -148,7 +148,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "4.1",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "4.1"),
                     riScContent = Json.encodeToString(riSc4XWithoutValuations(RiScVersion.RiSc4XVersion.VERSION_4_1)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.1 when valuations are not present.",
@@ -161,7 +161,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "4.0",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "4.0"),
                     riScContent = Json.encodeToString(riSc4XWithValuations(RiScVersion.RiSc4XVersion.VERSION_4_0)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.0 when valuations are present.",
@@ -171,7 +171,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "4.1",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "4.1"),
                     riScContent = Json.encodeToString(riSc4XWithValuations(RiScVersion.RiSc4XVersion.VERSION_4_1)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 4.1 when valuations are present.",
@@ -220,7 +220,6 @@ class RiScTests {
                                     title = "Title",
                                     id = "12345",
                                     description = "Description",
-                                    url = "https://example.org",
                                     status = RiSc3X4XScenarioActionStatus.COMPLETED,
                                     owner = "Ola Nordmann",
                                     deadline = "2024-12-12",
@@ -231,28 +230,31 @@ class RiScTests {
                                     description = "Description",
                                     status = RiSc3X4XScenarioActionStatus.ABORTED,
                                     owner = "Ola Nordmann",
+                                    deadline = "2024-12-12",
                                 ),
                                 RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "34567",
                                     description = "Description",
-                                    url = "https://example.org",
                                     status = RiSc3X4XScenarioActionStatus.NOT_STARTED,
+                                    owner = "Ola Nordmann",
                                     deadline = "2020-10-10",
                                 ),
                                 RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "45678",
                                     description = "Description",
-                                    url = "https://example.org",
                                     status = RiSc3X4XScenarioActionStatus.ON_HOLD,
+                                    owner = "Ola Nordmann",
+                                    deadline = "2024-12-12",
                                 ),
                                 RiSc3XScenarioAction(
                                     title = "Title",
                                     id = "56789",
                                     description = "Description",
-                                    url = "https://example.org",
                                     status = RiSc3X4XScenarioActionStatus.IN_PROGRESS,
+                                    owner = "Ola Nordmann",
+                                    deadline = "2024-12-12",
                                 ),
                             ),
                         existingActions = "Existing actions",
@@ -307,7 +309,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "3.2",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "3.2"),
                     riScContent = Json.encodeToString(riSc3XWithoutValuations(RiScVersion.RiSc3XVersion.VERSION_3_2)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.2 when valuations are not present.",
@@ -316,7 +318,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "3.3",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "3.3"),
                     riScContent = Json.encodeToString(riSc3XWithoutValuations(RiScVersion.RiSc3XVersion.VERSION_3_3)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are not present.",
@@ -329,7 +331,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "3.2",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "3.2"),
                     riScContent = Json.encodeToString(riSc3XWithValuations(RiScVersion.RiSc3XVersion.VERSION_3_2)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.2 when valuations are present.",
@@ -338,7 +340,7 @@ class RiScTests {
             JSONValidator
                 .validateAgainstSchema(
                     riScId = "abcde",
-                    schema = "3.3",
+                    schema = JSONValidator.getSchemaOnUpdate(riScId = "abcde", schemaVersion = "3.3"),
                     riScContent = Json.encodeToString(riSc3XWithValuations(RiScVersion.RiSc3XVersion.VERSION_3_3)),
                 ).isValid,
             "All choices of missing or present attributes in the RiSc model should validate correctly with the JSON schema for version 3.3 when valuations are present.",
