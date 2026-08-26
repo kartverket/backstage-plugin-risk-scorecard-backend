@@ -98,5 +98,7 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 }
 
 tasks.named("build") {
-    dependsOn("addKtlintFormatGitPreCommitHook")
+    if (rootProject.file(".git").exists()) {
+        dependsOn("addKtlintCheckGitPreCommitHook")
+    }
 }
