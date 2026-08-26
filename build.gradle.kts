@@ -96,3 +96,7 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
         "-Dio.netty.tryReflectionSetAccessible=true",
     )
 }
+
+tasks.named("build") {
+    dependsOn("addKtlintFormatGitPreCommitHook")
+}

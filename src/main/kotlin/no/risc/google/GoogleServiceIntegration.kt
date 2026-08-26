@@ -57,7 +57,7 @@ class GoogleServiceIntegration(
         try {
             googleOAuthApiConnector.webClient
                 .get()
-                .uri{uriBuilder -> uriBuilder.queryParam("access_token", token).build()}
+                .uri { uriBuilder -> uriBuilder.queryParam("access_token", token).build() }
                 .retrieve()
                 .awaitBody<String>()
         } catch (_: WebClientResponseException.BadRequest) {
