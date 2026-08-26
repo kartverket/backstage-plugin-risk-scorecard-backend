@@ -742,11 +742,11 @@ fun migrateFrom53To54(
  * values equal to the previous preset values.
  *
  *  Changes in consequence (in NOK per incident):
- *  8 000           ->      100 000
- *  160 000         ->      500 000
- *  3 200 000       ->      1 500 000
- *  64 000 000      ->      5 000 000
- *  1 280 000 000   ->      30 000 000
+ *  8 000           ->      10 000
+ *  160 000         ->      600 000
+ *  3 200 000       ->      5 000 000
+ *  64 000 000      ->      50 000 000
+ *  1 280 000 000   ->      250 000 000
  *
  *  Changes in probability (in incidents per year):
  *  0.0025  ->      0.01
@@ -761,11 +761,11 @@ private fun updateScenarioFrom54To55(
 ): RiSc5XScenario {
     val consequenceMigrations: Map<Double, Double> =
         mapOf(
-            8000.0 to 100000.0,
-            160000.0 to 500000.0,
-            3200000.0 to 1500000.0,
-            64000000.0 to 5000000.0,
-            1280000000.0 to 30000000.0,
+            8000.0 to 10000.0,
+            160000.0 to 600000.0,
+            3200000.0 to 5000000.0,
+            64000000.0 to 50000000.0,
+            1280000000.0 to 250000000.0,
         ).withDefault { it }
 
     val probabilityMigrations: Map<Double, Double> =

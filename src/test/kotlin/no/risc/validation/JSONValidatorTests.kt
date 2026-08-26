@@ -302,12 +302,12 @@ class JSONValidatorTests {
                     "vulnerabilities": [],
                     "risk": {
                       "probability": 0.01,
-                      "consequence": 100000
+                      "consequence": 10000
                     },
                     "actions": [],
                     "remainingRisk": {
                       "probability": 100,
-                      "consequence": 30000000
+                      "consequence": 250000000
                     }
                   }
                 }

@@ -674,11 +674,11 @@ class MigrationFunctionTests {
 
         assertEquals(RiScVersion.RiSc5XVersion.VERSION_5_5, migratedRiSc.schemaVersion)
 
-        assertEquals(RiScScenarioRisk(probability = 0.01, consequence = 100_000.0), migratedRiSc.scenarios[0].risk)
-        assertEquals(RiScScenarioRisk(probability = 0.1, consequence = 500_000.0), migratedRiSc.scenarios[0].remainingRisk)
-        assertEquals(RiScScenarioRisk(probability = 1.0, consequence = 1_500_000.0), migratedRiSc.scenarios[1].risk)
-        assertEquals(RiScScenarioRisk(probability = 10.0, consequence = 5_000_000.0), migratedRiSc.scenarios[1].remainingRisk)
-        assertEquals(RiScScenarioRisk(probability = 100.0, consequence = 30_000_000.0), migratedRiSc.scenarios[2].risk)
+        assertEquals(RiScScenarioRisk(probability = 0.01, consequence = 10_000.0), migratedRiSc.scenarios[0].risk)
+        assertEquals(RiScScenarioRisk(probability = 0.1, consequence = 600_000.0), migratedRiSc.scenarios[0].remainingRisk)
+        assertEquals(RiScScenarioRisk(probability = 1.0, consequence = 5_000_000.0), migratedRiSc.scenarios[1].risk)
+        assertEquals(RiScScenarioRisk(probability = 10.0, consequence = 50_000_000.0), migratedRiSc.scenarios[1].remainingRisk)
+        assertEquals(RiScScenarioRisk(probability = 100.0, consequence = 250_000_000.0), migratedRiSc.scenarios[2].risk)
         assertEquals(RiScScenarioRisk(probability = 0.123, consequence = 198_000.0), migratedRiSc.scenarios[2].remainingRisk)
         assertEquals(RiScScenarioRisk(probability = 0.123, consequence = 198_000.0), migratedRiSc.scenarios[3].risk)
         assertEquals(RiScScenarioRisk(probability = 0.456, consequence = 654_000.0), migratedRiSc.scenarios[3].remainingRisk)
@@ -693,22 +693,22 @@ class MigrationFunctionTests {
                             title = "Scenario AAAAA",
                             id = "AAAAA",
                             changedRiskProbability = MigrationChangedValue(0.0025, 0.01),
-                            changedRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRiskConsequence = MigrationChangedValue(8_000.0, 10_000.0),
                             changedRemainingRiskProbability = MigrationChangedValue(0.05, 0.1),
-                            changedRemainingRiskConsequence = MigrationChangedValue(160_000.0, 500_000.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(160_000.0, 600_000.0),
                         ),
                         MigrationChange55Scenario(
                             title = "Scenario BBBBB",
                             id = "BBBBB",
-                            changedRiskConsequence = MigrationChangedValue(3_200_000.0, 1_500_000.0),
+                            changedRiskConsequence = MigrationChangedValue(3_200_000.0, 5_000_000.0),
                             changedRemainingRiskProbability = MigrationChangedValue(20.0, 10.0),
-                            changedRemainingRiskConsequence = MigrationChangedValue(64_000_000.0, 5_000_000.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(64_000_000.0, 50_000_000.0),
                         ),
                         MigrationChange55Scenario(
                             title = "Scenario CCCCC",
                             id = "CCCCC",
                             changedRiskProbability = MigrationChangedValue(400.0, 100.0),
-                            changedRiskConsequence = MigrationChangedValue(1_280_000_000.0, 30_000_000.0),
+                            changedRiskConsequence = MigrationChangedValue(1_280_000_000.0, 250_000_000.0),
                         ),
                     ),
             ),
