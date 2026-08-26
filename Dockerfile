@@ -1,12 +1,16 @@
 # syntax=docker/dockerfile:1.7
+
 # To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-jdk-alpine-dev
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
 ARG BUILD_IMAGE=dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac
+
 # To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-alpine
 # Use the top-level "Digest:" value (Index Digest, safe for all platforms)
 ARG IMAGE=dhi.io/eclipse-temurin:25-alpine@sha256:d637909e179731a82d0764f4726755d5ccde5a100431bc01a75b7f795977ed8f
-# Non-hardened base for the local dev image (needs a shell + apk to add socat).
-ARG LOCAL_IMAGE=eclipse-temurin:25-jre-alpine
+
+# Non-hardened base for the local dev image (needs a shell + apk to add socat)
+ARG LOCAL_DEV_IMAGE=eclipse-temurin:25-jre-alpine
+
 ARG GO_BUILD_IMAGE=golang:1.27.0
 ARG SOPS_VERSION_ARG=3.13.3
 
@@ -47,7 +51,7 @@ USER nonroot
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
 
 # Local dev image — adds socat to relay traffic to host.docker.internal.
-FROM ${LOCAL_IMAGE} AS local
+FROM ${LOCAL_DEV_IMAGE} AS local
 
 WORKDIR /app
 
