@@ -784,9 +784,9 @@ class MigrationFunctionTests {
                         MigrationChange55Scenario(
                             title = "Ondsinnet bruker ønsker å ta ned løsningen. ",
                             id = "14Kap",
-                            changedRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRiskConsequence = MigrationChangedValue(8_000.0, 10_000.0),
                             changedRemainingRiskProbability = MigrationChangedValue(0.05, 0.1),
-                            changedRemainingRiskConsequence = MigrationChangedValue(8_000.0, 100_000.0),
+                            changedRemainingRiskConsequence = MigrationChangedValue(8_000.0, 10_000.0),
                         ),
                     ),
             )
