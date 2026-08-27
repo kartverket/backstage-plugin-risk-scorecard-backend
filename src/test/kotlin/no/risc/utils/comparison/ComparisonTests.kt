@@ -242,7 +242,7 @@ class ComparisonTests {
                         description = "Description",
                         threatActors = listOf(),
                         vulnerabilities = listOf(),
-                        risk = RiScScenarioRisk(probability = 0.01, consequence = 10_000.0),
+                        risk = RiScScenarioRisk(probability = 0.02, consequence = 10_000.0),
                         remainingRisk = RiScScenarioRisk(probability = 10.0, consequence = 50_000_000.0),
                         actions = listOf(),
                     ),
@@ -931,7 +931,7 @@ class ComparisonTests {
                         MigrationChange55Scenario(
                             title = "Scenario",
                             id = "abcde",
-                            changedRiskProbability = MigrationChangedValue(0.0025, 0.01),
+                            changedRiskProbability = MigrationChangedValue(0.0025, 0.02),
                             changedRiskConsequence = MigrationChangedValue(8_000.0, 10_000.0),
                             changedRemainingRiskProbability = MigrationChangedValue(20.0, 10.0),
                             changedRemainingRiskConsequence = MigrationChangedValue(64_000_000.0, 50_000_000.0),

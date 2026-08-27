@@ -749,11 +749,11 @@ fun migrateFrom53To54(
  *  1 280 000 000   ->      250 000 000
  *
  *  Changes in probability (in incidents per year):
- *  0.0025  ->      0.01
+ *  0.0025  ->      0.02
  *  0.05    ->      0.1
  *  1       ->      1
  *  20      ->      10
- *  400     ->      100
+ *  400     ->      50
  */
 private fun updateScenarioFrom54To55(
     scenario: RiSc5XScenario,
@@ -770,11 +770,11 @@ private fun updateScenarioFrom54To55(
 
     val probabilityMigrations: Map<Double, Double> =
         mapOf(
-            0.0025 to 0.01,
+            0.0025 to 0.02,
             0.05 to 0.1,
             1.0 to 1.0,
             20.0 to 10.0,
-            400.0 to 100.0,
+            400.0 to 50.0,
         ).withDefault { it }
 
     val migratedScenario =

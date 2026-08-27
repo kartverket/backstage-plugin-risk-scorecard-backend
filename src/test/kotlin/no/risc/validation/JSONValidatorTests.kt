@@ -301,12 +301,12 @@ class JSONValidatorTests {
                     "threatActors": [],
                     "vulnerabilities": [],
                     "risk": {
-                      "probability": 0.01,
+                      "probability": 0.02,
                       "consequence": 10000
                     },
                     "actions": [],
                     "remainingRisk": {
-                      "probability": 100,
+                      "probability": 50,
                       "consequence": 250000000
                     }
                   }
