@@ -12,11 +12,11 @@ updates:
           - "*"
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
-    directory: "/.github/"
+    directory: "/"
     schedule:
       interval: "weekly"
     groups:
-      all-github-actions:
+      github-actions-dependencies:
         patterns:
           - "*"
   # Maintain docker images
