@@ -1,21 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-# To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-jdk-alpine-dev
-# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG BUILD_IMAGE=dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac
-
-# To update: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-alpine
-# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
-ARG IMAGE=dhi.io/eclipse-temurin:25-alpine@sha256:d637909e179731a82d0764f4726755d5ccde5a100431bc01a75b7f795977ed8f
-
-# Non-hardened base for the local dev image (needs a shell + apk to add socat)
-ARG LOCAL_DEV_IMAGE=eclipse-temurin:25-jre-alpine
-
-ARG GO_BUILD_IMAGE=golang:1.27.0
 ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
-FROM ${BUILD_IMAGE} AS build
+FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac AS build
 WORKDIR /workspace
 COPY . .
 
@@ -23,7 +11,7 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew build -x test
 
 ### Build SOPS from source ###
-FROM --platform=$BUILDPLATFORM ${GO_BUILD_IMAGE} AS go_build
+FROM --platform=$BUILDPLATFORM golang:1.27.0 AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
@@ -35,7 +23,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
-FROM ${IMAGE} AS production
+FROM dhi.io/eclipse-temurin:25-alpine@sha256:d637909e179731a82d0764f4726755d5ccde5a100431bc01a75b7f795977ed8f AS production
 
 WORKDIR /app
 
@@ -50,8 +38,8 @@ USER nonroot
 
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
 
-# Local dev image — adds socat to relay traffic to host.docker.internal.
-FROM ${LOCAL_DEV_IMAGE} AS local
+# Local dev image — non-hardened base with a shell + apk to add socat, so it can relay traffic to host.docker.internal.
+FROM eclipse-temurin:25-jre-alpine AS local
 
 WORKDIR /app
 
