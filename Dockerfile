@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew build -x test
 
 ### Build SOPS from source ###
-FROM --platform=$BUILDPLATFORM golang:1.27.0 AS go_build
+FROM --platform=$BUILDPLATFORM golang:1.27.1 AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
