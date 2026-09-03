@@ -1,4 +1,10 @@
 version: 2
+registries:
+  dhi:
+    type: docker-registry
+    url: https://dhi.io
+    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
 updates:
   # Maintain dependencies for Gradle
   - package-ecosystem: "gradle"
@@ -22,6 +28,8 @@ updates:
   # Maintain docker images
   - package-ecosystem: "docker"
     directory: "/"
+    registries:
+      - dhi
     schedule:
       interval: "daily"
     groups:
