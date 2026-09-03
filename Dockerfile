@@ -3,9 +3,6 @@
 ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
-# Dependabot updates the digest below on this FROM line.
-# To update manually: docker buildx imagetools inspect dhi.io/eclipse-temurin:25-jdk-alpine-dev
-# Use the top-level "Digest:" value (Index Digest, safe for all platforms)
 FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:04099db397673721bbb4e1e860815ad147f9a5c0d6468bdc2119b581bd48dfac AS build
 WORKDIR /workspace
 COPY . .
