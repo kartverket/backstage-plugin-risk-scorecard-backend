@@ -36,3 +36,7 @@ updates:
       all-docker-dependencies:
         patterns:
           - "*"
+    ignore:
+      # Stay on Java 25 for eclipse-temurin; ignore major version bumps
+      - dependency-name: "dhi.io/eclipse-temurin"
+        update-types: ["version-update:semver-major"]
