@@ -38,5 +38,5 @@ updates:
           - "*"
     ignore:
       # Stay on Java 25 for eclipse-temurin; ignore major version bumps
-      - dependency-name: "dhi.io/eclipse-temurin"
+      - dependency-name: "eclipse-temurin"
         update-types: ["version-update:semver-major"]
