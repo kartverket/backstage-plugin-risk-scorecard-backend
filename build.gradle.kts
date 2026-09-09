@@ -38,7 +38,7 @@ val nimbusdsVersion = "10.9.1"
 val bouncyCastleVersion = "1.85"
 val mockkVersion = "1.14.11"
 val junitVersion = "6.1.3"
-val springdocVersion = "3.1.0"
+val springdocVersion = "3.1.1"
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
