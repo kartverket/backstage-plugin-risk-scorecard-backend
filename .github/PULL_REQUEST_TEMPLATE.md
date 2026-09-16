@@ -4,6 +4,8 @@ Lenke til Jira-kort
 
 ## Løsning 🔑
 
-- [ ] KI har blitt brukt til å gjennomføre endringene
+- [ ] 🤖 KI har bidratt til utvikling av denne endringen
 
 ## Testing 🧪
+
+- [ ] Jeg har testet mine endringer
