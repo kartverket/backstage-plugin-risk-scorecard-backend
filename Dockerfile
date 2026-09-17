@@ -3,7 +3,7 @@
 ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
-FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:134db1387ba5a116315ccb6724bd3b2b8481c17d234b932aba9a3002bee97cc2 AS build
+FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:17c1b56218efe96f7a9044d2711280ce197242304a7c892660cd5676c3ba0d7f AS build
 WORKDIR /workspace
 COPY . .
 
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
-FROM dhi.io/eclipse-temurin:25-alpine@sha256:11cbc39d3c913cbd612e1b544709740d6d5f271d574913b68c18a5b6d508254b AS production
+FROM dhi.io/eclipse-temurin:25-alpine@sha256:75113362038faeaa6d9e09e1e04efdae6ff2db0129f7366c9961ffdd608c69a4 AS production
 
 WORKDIR /app
 
