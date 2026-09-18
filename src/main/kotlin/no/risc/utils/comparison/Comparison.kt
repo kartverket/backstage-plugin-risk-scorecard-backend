@@ -21,7 +21,7 @@ import kotlin.collections.component2
 
 /**
  * Compares the updated RiSc to the new old RiSc. Currently supported for RiSc versions 3.2 through
- * 5.3. Comparisons are made by first migrating the old RiSc to the version of the updated RiSc, if
+ * 5.5. Comparisons are made by first migrating the old RiSc to the version of the updated RiSc, if
  * differing. Then, the migrated version of the old RiSc is compared against the updated RiSc.
  *
  * @param updatedRiSc The newest version of the RiSc.
