@@ -26,3 +26,4 @@ jobs:
           # Backstage config files are misclassified as kubernetes config files, resulting in false security issues
           skip_dirs: '.security/.backstage/component,.security/.backstage/system'
           skip_files: 'catalog-info.yaml,.security/catalog-info.yaml'
+          trivy_vex: 'true'
