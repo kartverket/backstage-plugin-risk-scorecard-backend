@@ -28,6 +28,7 @@ java {
 }
 
 extra["logback.version"] = "1.5.35"
+extra["tomcat.version"] = "11.0.25"
 
 repositories {
     mavenCentral()
