@@ -543,6 +543,25 @@ class GithubConnectorTests {
                 fetchRepositoryInfo()
             }
         }
+
+        @Test
+        fun `test fetch repository info rejects authority-style owner`() {
+            val exception =
+                assertThrows<IllegalArgumentException> {
+                    runBlocking {
+                        githubConnector.fetchRepositoryInfo(
+                            gitHubAccessToken = "accessToken",
+                            repositoryOwner = "//evil.example",
+                            repositoryName = repository,
+                        )
+                    }
+                }
+
+            assertEquals(
+                "GitHub API URI must be an absolute path without an authority",
+                exception.message,
+            )
+        }
     }
 
     @Nested
