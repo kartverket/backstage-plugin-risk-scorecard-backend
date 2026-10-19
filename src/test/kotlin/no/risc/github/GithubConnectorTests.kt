@@ -558,7 +558,7 @@ class GithubConnectorTests {
                 }
 
             assertEquals(
-                "GitHub API URI must be an absolute path without an authority",
+                "GitHub API URI must be an absolute path and must not specify a host",
                 exception.message,
             )
         }
