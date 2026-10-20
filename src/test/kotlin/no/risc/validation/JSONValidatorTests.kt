@@ -283,5 +283,45 @@ class JSONValidatorTests {
         )
     }
 
+    @Test
+    fun `test retrieve version 5_5 schema and validate new risk presets`() {
+        val schema = JSONValidator.getSchemaOnUpdate(riScId = "abc", schemaVersion = "5.5")
+        val content =
+            """
+            {
+              "schemaVersion": "5.5",
+              "title": "Title",
+              "scope": "Scope",
+              "scenarios": [
+                {
+                  "title": "Scenario",
+                  "scenario": {
+                    "ID": "ABCDE",
+                    "description": "Description",
+                    "threatActors": [],
+                    "vulnerabilities": [],
+                    "risk": {
+                      "probability": 0.02,
+                      "consequence": 10000
+                    },
+                    "actions": [],
+                    "remainingRisk": {
+                      "probability": 50,
+                      "consequence": 250000000
+                    }
+                  }
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val output = JSONValidator.validateAgainstSchema(riScId = "abc", riScContent = content, schema = schema)
+
+        assertTrue(
+            output.isValid,
+            "Content using version 5.5 preset values should validate against the version 5.5 schema.",
+        )
+    }
+
     // må skrive en test her for å validere 4.2 opp mot de andre?
 }

@@ -54,6 +54,7 @@ sealed interface RiSc {
                     RiScVersion.RiSc5XVersion.VERSION_5_2,
                     RiScVersion.RiSc5XVersion.VERSION_5_3,
                     RiScVersion.RiSc5XVersion.VERSION_5_4,
+                    RiScVersion.RiSc5XVersion.VERSION_5_5,
                     -> {
                         parseJSONToClass<RiSc5X>(content)
                     }
@@ -93,6 +94,9 @@ sealed interface RiScVersion {
 
         @SerialName("5.4")
         VERSION_5_4,
+
+        @SerialName("5.5")
+        VERSION_5_5,
         ;
 
         override fun asString(): String = serializer().descriptor.getElementName(ordinal)
