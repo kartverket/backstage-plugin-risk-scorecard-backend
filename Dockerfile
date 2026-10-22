@@ -3,7 +3,7 @@
 ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
-FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:083b00d079f9bb5913ed184983634b39da95cd579c618ab59334405f54ea7f7e AS build
+FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:be33fd5578e683f0d5db4537bde79486e01082af437146811168a917a4674acd AS build
 WORKDIR /workspace
 COPY . .
 
