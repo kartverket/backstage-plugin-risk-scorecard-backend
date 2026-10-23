@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
-FROM dhi.io/eclipse-temurin:25-alpine@sha256:0f947299651eea29537b025c58884ed363265277c9100dcc1b91ccdf9f2d1db3 AS java-runtime
+FROM ghcr.io/kartverket/emudhra-images/jre/dhi:jre-25.0-alpine3.24@sha256:f0b12aab0f96059700032dada95e0bf85e8e0e7404d92246370a0a752ed21c4d AS java-runtime
 
 FROM alpine:3.24 AS cert-builder
 
