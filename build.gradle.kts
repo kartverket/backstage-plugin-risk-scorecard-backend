@@ -1,9 +1,9 @@
 plugins {
-    val kotlinPluginsVersion = "2.4.10"
+    val kotlinPluginsVersion = "2.4.21"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
 }
@@ -34,7 +34,7 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.7"
+val jsonSchemaValidatorVersion = "3.0.8"
 val nimbusdsVersion = "10.10"
 val bouncyCastleVersion = "1.86"
 val mockkVersion = "1.14.11"
