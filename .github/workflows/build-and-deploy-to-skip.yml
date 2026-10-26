@@ -3,19 +3,19 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: 'Commit hash to deploy'
-        default: ''
+        description: "Commit hash to deploy"
+        default: ""
         type: string
       dev:
-        description: 'Deploy to dev'
+        description: "Deploy to dev"
         required: true
         type: boolean
       sandbox:
-        description: 'Deploy to sandbox'
+        description: "Deploy to sandbox"
         required: true
         type: boolean
       prod:
-        description: 'Deploy to prod'
+        description: "Deploy to prod"
         required: true
         type: boolean
   pull_request:
@@ -78,9 +78,9 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          distribution: 'temurin'
-          java-version: '25'
-          architecture: 'x64'
+          distribution: "temurin"
+          java-version: "25.0.5+2"
+          architecture: "x64"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -150,7 +150,7 @@ jobs:
       - name: Set output with build values
         id: setOutput
         run: |
-          echo "image_url=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-docker.outputs.digest }}" >> $GITHUB_OUTPUT  
+          echo "image_url=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-docker.outputs.digest }}" >> $GITHUB_OUTPUT
 
   dev-deploy-argo:
     name: Deploy to atgcp1-dev
