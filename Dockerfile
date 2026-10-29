@@ -39,7 +39,7 @@ USER nonroot
 CMD ["java", "--add-opens", "java.base/java.nio=ALL-UNNAMED", "-Dio.netty.tryReflectionSetAccessible=true", "-jar", "/app/backend.jar"]
 
 # Local dev image — non-hardened base with a shell + apk to add socat, so it can relay traffic to host.docker.internal.
-FROM eclipse-temurin:25-jre-alpine AS local
+FROM ghcr.io/kartverket/emudhra-images/jdk/dockerhub:jdk-25.0-alpine3.24@sha256:9040fd4372ac7c4581712c77ba9324a175ff9f9679ab3ff60ea5c12eb02fcdb9 AS local
 
 WORKDIR /app
 
