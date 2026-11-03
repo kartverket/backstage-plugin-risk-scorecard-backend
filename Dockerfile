@@ -3,7 +3,7 @@
 ARG SOPS_VERSION_ARG=3.13.3
 
 # Build stage for Java app
-FROM dhi.io/eclipse-temurin:25-jdk-alpine-dev@sha256:17c1b56218efe96f7a9044d2711280ce197242304a7c892660cd5676c3ba0d7f AS build
+FROM dhi.io/eclipse-temurin:25-jdk-alpine3.24-dev@sha256:7b9e77da049189f7628f64b52daa9b53f2726619aad0f434b2da3d9f2e13bb2d AS build
 WORKDIR /workspace
 COPY . .
 
@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew build -x test
 
 ### Build SOPS from source ###
-FROM --platform=$BUILDPLATFORM golang:1.27.1 AS go_build
+FROM --platform=$BUILDPLATFORM golang:1.27.3 AS go_build
 ARG TARGETOS
 ARG TARGETARCH
 ARG SOPS_VERSION_ARG
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /out/sops .
 
-FROM dhi.io/eclipse-temurin:25-alpine@sha256:75113362038faeaa6d9e09e1e04efdae6ff2db0129f7366c9961ffdd608c69a4 AS production
+FROM dhi.io/eclipse-temurin:25-alpine3.24@sha256:e839cf792bc75ba4ecfc665fab79e8af108fadf46006954c87b7dd3c3f19d7a8 AS production
 
 WORKDIR /app
 

@@ -1120,16 +1120,27 @@ class GithubConnector(
         accessToken: String,
         method: HttpMethod,
         attachBody: (RequestBodySpec) -> RequestHeadersSpec<*> = { it },
-    ): ResponseSpec =
-        webClient
+    ): ResponseSpec {
+        require(uri.startsWith("/") && !uri.startsWith("//")) {
+            "GitHub API URI must be an absolute path and must not specify a host"
+        }
+        val queryStart = uri.indexOf('?')
+        val path = if (queryStart == -1) uri else uri.substring(0, queryStart)
+        val query = if (queryStart == -1) null else uri.substring(queryStart + 1)
+
+        return webClient
             .method(method)
-            .uri(uri)
-            .header("Accept", "application/vnd.github.json")
+            .uri { uriBuilder ->
+                uriBuilder.path(path)
+                query?.let { uriBuilder.query(it) }
+                uriBuilder.build()
+            }.header("Accept", "application/vnd.github.json")
             .header("Authorization", "token $accessToken")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .let(attachBody)
             .retrieve()
             .also { LOGGER.debug("Sending ${method.name()}-request to $uri") }
+    }
 
     /**
      * Returns true if this HTTP error is a well-known transient condition that is safe to retry
