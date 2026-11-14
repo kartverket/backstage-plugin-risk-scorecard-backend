@@ -11,6 +11,7 @@ import no.risc.utils.comparison.MigrationChange42
 import no.risc.utils.comparison.MigrationChange50
 import no.risc.utils.comparison.MigrationChange51
 import no.risc.utils.comparison.MigrationChange52
+import no.risc.utils.comparison.MigrationChange55
 import no.risc.utils.comparison.RiScChange
 import java.time.OffsetDateTime
 
@@ -89,6 +90,7 @@ data class MigrationStatus(
     val migrationChanges50: MigrationChange50? = null,
     val migrationChanges51: MigrationChange51? = null,
     val migrationChanges52: MigrationChange52? = null,
+    val migrationChanges55: MigrationChange55? = null,
 )
 
 @Serializable
