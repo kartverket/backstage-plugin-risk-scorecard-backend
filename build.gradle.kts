@@ -12,6 +12,17 @@ ktlint {
     version.set("1.6.0")
 }
 
+// io.spring.dependency-management forces Spring Boot's managed Kotlin version (= the Kotlin plugin version) onto
+// every configuration, including ktlint's. ktlint must run with the Kotlin compiler version it was built against.
+configurations.matching { it.name.startsWith("ktlint") }.configureEach {
+    resolutionStrategy.eachDependency {
+        val requestedVersion = requested.version
+        if (requested.group == "org.jetbrains.kotlin" && !requestedVersion.isNullOrEmpty()) {
+            useVersion(requestedVersion)
+        }
+    }
+}
+
 group = "no"
 version = "0.0.1-SNAPSHOT"
 
