@@ -1,5 +1,5 @@
 plugins {
-    val kotlinPluginsVersion = "2.4.10"
+    val kotlinPluginsVersion = "2.4.21"
     kotlin("jvm") version kotlinPluginsVersion
     kotlin("plugin.spring") version kotlinPluginsVersion
     kotlin("plugin.serialization") version kotlinPluginsVersion
@@ -10,6 +10,17 @@ plugins {
 
 ktlint {
     version.set("1.6.0")
+}
+
+// io.spring.dependency-management forces Spring Boot's managed Kotlin version (= the Kotlin plugin version) onto
+// every configuration, including ktlint's. ktlint must run with the Kotlin compiler version it was built against.
+configurations.matching { it.name.startsWith("ktlint") }.configureEach {
+    resolutionStrategy.eachDependency {
+        val requestedVersion = requested.version
+        if (requested.group == "org.jetbrains.kotlin" && !requestedVersion.isNullOrEmpty()) {
+            useVersion(requestedVersion)
+        }
+    }
 }
 
 group = "no"
@@ -34,10 +45,10 @@ repositories {
     mavenCentral()
 }
 
-val jsonSchemaValidatorVersion = "3.0.8"
+val jsonSchemaValidatorVersion = "3.0.9"
 val nimbusdsVersion = "10.10"
-val bouncyCastleVersion = "1.86"
-val mockkVersion = "1.14.11"
+val bouncyCastleVersion = "1.87"
+val mockkVersion = "1.14.12"
 val junitVersion = "6.1.3"
 val springdocVersion = "3.2.0"
 
